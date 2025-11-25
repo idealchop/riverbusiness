@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { consumptionData, deliveries, sanitationVisits } from '@/lib/data';
 import Link from 'next/link';
 import { ArrowRight, Bot, Calendar, Truck } from 'lucide-react';
+import { Chatbot } from '@/components/chatbot';
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
@@ -78,23 +79,7 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
-              Predictive Tools
-            </CardTitle>
-            <CardDescription>
-              Use AI to forecast usage and set goals.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/dashboard/predict" className="flex items-center justify-between text-sm font-medium text-primary hover:underline">
-              <span>Explore AI predictions</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </CardContent>
-        </Card>
+        <Chatbot />
       </div>
       
       <Card className="lg:col-span-2">
