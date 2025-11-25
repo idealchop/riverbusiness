@@ -1,6 +1,6 @@
 'use client';
 
-import { useChat } from '@vercel/ai/react';
+import { useChat } from 'ai/react';
 import {
   Card,
   CardContent,
