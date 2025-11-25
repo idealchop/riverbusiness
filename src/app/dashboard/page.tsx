@@ -13,11 +13,20 @@ import { Chatbot } from '@/components/chatbot';
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
+const chartData = consumptionData.map(d => ({
+  ...d,
+  consumptionLiters: parseFloat(gallonToLiter(d.consumptionGallons).toFixed(2))
+}));
+
 const chartConfig = {
   gallons: {
     label: "Gallons",
     color: "hsl(var(--chart-1))",
   },
+  liters: {
+    label: "Liters",
+    color: "hsl(var(--chart-2))",
+  }
 };
 
 export default function DashboardPage() {
@@ -31,12 +40,12 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Water Consumption</CardTitle>
           <CardDescription>
-            Your water usage for the last 14 days.
+            Your water usage for the last 14 days, shown in gallons and liters.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-64 w-full">
-            <AreaChart accessibilityLayer data={consumptionData} margin={{ left: -20, right: 20, top: 10, bottom: 0 }}>
+            <AreaChart accessibilityLayer data={chartData} margin={{ left: -20, right: 20, top: 10, bottom: 0 }}>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="date"
@@ -46,6 +55,16 @@ export default function DashboardPage() {
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { day: 'numeric', month: 'short'})}
               />
               <YAxis
+                yAxisId="left"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => `${value}`}
+                
+              />
+               <YAxis
+                yAxisId="right"
+                orientation="right"
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
@@ -53,11 +72,22 @@ export default function DashboardPage() {
               />
               <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
               <Area
+                yAxisId="left"
                 dataKey="consumptionGallons"
                 type="natural"
                 fill="var(--color-gallons)"
                 fillOpacity={0.4}
                 stroke="var(--color-gallons)"
+                name="Gallons"
+              />
+               <Area
+                yAxisId="right"
+                dataKey="consumptionLiters"
+                type="natural"
+                fill="var(--color-liters)"
+                fillOpacity={0.3}
+                stroke="var(--color-liters)"
+                name="Liters"
               />
             </AreaChart>
           </ChartContainer>
