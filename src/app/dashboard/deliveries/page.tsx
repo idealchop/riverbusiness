@@ -8,6 +8,19 @@ import { deliveries } from '@/lib/data';
 import { MoreHorizontal, Paperclip, Truck } from 'lucide-react';
 
 export default function DeliveriesPage() {
+  const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
+    switch (status) {
+      case 'Delivered':
+        return 'default';
+      case 'In Transit':
+        return 'secondary';
+      case 'Pending':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -34,11 +47,11 @@ export default function DeliveriesPage() {
                 <TableCell>{delivery.volumeGallons.toLocaleString()}</TableCell>
                 <TableCell>{(delivery.volumeGallons * 3.78541).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
                 <TableCell>
-                  <Badge variant={delivery.status === 'Delivered' ? 'default' : delivery.status === 'In Transit' ? 'secondary' : 'outline'}
+                  <Badge variant={getStatusBadgeVariant(delivery.status)}
                     className={
-                      delivery.status === 'Delivered' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      : delivery.status === 'In Transit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                      delivery.status === 'Delivered' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                      : delivery.status === 'In Transit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
                     }
                   >
                     {delivery.status}

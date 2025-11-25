@@ -9,7 +9,7 @@ import { FileText, Eye } from 'lucide-react';
 
 export default function QualityPage() {
   return (
-    <Tabs defaultValue="compliance">
+    <Tabs defaultValue="compliance" className="flex flex-col gap-4">
       <TabsList className="grid w-full grid-cols-2 md:w-96">
         <TabsTrigger value="compliance">Compliance Reports</TabsTrigger>
         <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
@@ -39,9 +39,9 @@ export default function QualityPage() {
                     <TableCell>
                       <Badge variant={report.status === 'Compliant' ? 'default' : 'destructive'}
                        className={
-                        report.status === 'Compliant' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : report.status === 'Non-compliant' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        report.status === 'Compliant' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                        : report.status === 'Non-compliant' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
                       }>
                         {report.status}
                       </Badge>
@@ -87,9 +87,9 @@ export default function QualityPage() {
                     <TableCell>
                       <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
                       className={
-                        visit.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                        visit.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                        : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
                       }>
                         {visit.status}
                       </Badge>
