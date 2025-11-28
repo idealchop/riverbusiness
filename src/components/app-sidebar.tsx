@@ -11,15 +11,11 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Bot, Droplet, LayoutDashboard, LifeBuoy, ShieldCheck, Truck } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
-  { href: '/dashboard/quality', label: 'Quality', icon: ShieldCheck },
-  { href: '/dashboard/predict', label: 'Predictive Tools', icon: Bot },
-  { href: '/dashboard/support', label: 'Support', icon: LifeBuoy },
 ];
 
 export function AppSidebar() {
