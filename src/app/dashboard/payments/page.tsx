@@ -38,53 +38,23 @@ import {
 } from 'recharts';
 
 const paymentHistory = [
-  {
-    id: 'INV-07-2024',
-    date: '2024-07-15',
-    description: 'July 2024 Invoice',
-    amount: 150.0,
-    status: 'Paid',
-  },
-  {
-    id: 'INV-06-2024',
-    date: '2024-06-15',
-    description: 'June 2024 Invoice',
-    amount: 145.0,
-    status: 'Paid',
-  },
-  {
-    id: 'INV-05-2024',
-    date: '2024-05-15',
-    description: 'May 2024 Invoice',
-    amount: 0.0,
-    status: 'Paid',
-  },
-  {
-    id: 'INV-04-2024',
-    date: '2024-04-15',
-    description: 'April 2024 Invoice',
-    amount: 152.0,
-    status: 'Paid',
-  },
-  {
-    id: 'INV-03-2024',
-    date: '2024-03-15',
-    description: 'March 2024 Invoice',
-    amount: 148.0,
-    status: 'Paid',
-  },
-  {
-    id: 'INV-02-2024',
-    date: '2024-02-15',
-    description: 'February 2024 Invoice',
-    amount: 155.0,
-    status: 'Paid',
-  },
+    { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
+    { id: 'INV-07-2024', date: '2024-07-15', description: 'July 2024 Invoice', amount: 150.0, status: 'Paid' },
+    { id: 'INV-06-2024', date: '2024-06-15', description: 'June 2024 Invoice', amount: 145.0, status: 'Paid' },
+    { id: 'INV-05-2024', date: '2024-05-15', description: 'May 2024 Invoice', amount: 0.0, status: 'Paid' },
+    { id: 'INV-04-2024', date: '2024-04-15', description: 'April 2024 Invoice', amount: 152.0, status: 'Paid' },
+    { id: 'INV-03-2024', date: '2024-03-15', description: 'March 2024 Invoice', amount: 148.0, status: 'Paid' },
+    { id: 'INV-02-2024', date: '2024-02-15', description: 'February 2024 Invoice', amount: 155.0, status: 'Paid' },
+    { id: 'INV-01-2024', date: '2024-01-15', description: 'January 2024 Invoice', amount: 160.0, status: 'Paid' },
+    { id: 'INV-12-2023', date: '2023-12-15', description: 'December 2023 Invoice', amount: 158.0, status: 'Paid' },
+    { id: 'INV-11-2023', date: '2023-11-15', description: 'November 2023 Invoice', amount: 154.0, status: 'Paid' },
+    { id: 'INV-10-2023', date: '2023-10-15', description: 'October 2023 Invoice', amount: 150.0, status: 'Paid' },
+    { id: 'INV-09-2023', date: '2023-09-15', description: 'September 2023 Invoice', amount: 147.0, status: 'Paid' },
 ];
 
-const totalPaid = paymentHistory.reduce((sum, item) => sum + item.amount, 0);
+const totalPaid = paymentHistory.filter(p => p.status === 'Paid').reduce((sum, item) => sum + item.amount, 0);
 
-const chartData = paymentHistory.map(p => ({
+const chartData = paymentHistory.filter(p => p.status === 'Paid').map(p => ({
     month: new Date(p.date).toLocaleString('default', { month: 'short' }),
     amount: p.amount
 })).reverse();
@@ -94,6 +64,7 @@ export default function PaymentsPage() {
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
+  const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -155,7 +126,7 @@ export default function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paymentHistory.slice(0, 3).map((payment) => (
+                {paymentHistory.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">{payment.id}</TableCell>
                     <TableCell>{payment.date}</TableCell>
@@ -163,9 +134,13 @@ export default function PaymentsPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          payment.status === 'Paid' ? 'default' : 'outline'
+                          payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')
                         }
-                        className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200"
+                        className={
+                          payment.status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                          : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
+                        }
                       >
                         {payment.status}
                       </Badge>
@@ -191,7 +166,7 @@ export default function PaymentsPage() {
             <CardTitle>Available for Payout</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <p className="text-4xl font-bold">₱155.00</p>
+            <p className="text-4xl font-bold">₱{upcomingPayment ? upcomingPayment.amount.toFixed(2) : '0.00'}</p>
             <div className="text-sm text-primary-foreground/80 flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
                 <p>**** **** **** 4242</p>
