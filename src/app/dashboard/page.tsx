@@ -61,7 +61,7 @@ export default function DashboardPage() {
               </div>
               <Progress value={consumptionPercentage} />
               <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
-              <div className="flex flex-col items-end mt-4 gap-2">
+              <div className="flex flex-col items-end mt-4 gap-1">
                 <Button variant="outline" asChild>
                   <Link href="/dashboard/water-stations">View Details</Link>
                 </Button>
