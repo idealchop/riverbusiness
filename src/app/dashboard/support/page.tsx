@@ -20,7 +20,7 @@ export default function SupportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4 rounded-md border p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Phone className="h-6 w-6" />
                 </div>
                 <div>
@@ -29,7 +29,7 @@ export default function SupportPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4 rounded-md border p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Mail className="h-6 w-6" />
                 </div>
                 <div>
@@ -39,7 +39,7 @@ export default function SupportPage() {
               </div>
               <Separator className="my-4" />
               <div className="text-sm text-muted-foreground pt-4">
-                Our support team is available Monday to Friday, 9:00 AM to 5:00 PM.
+                will reach out to you as soon as possible, thank you
               </div>
             </CardContent>
           </Card>
