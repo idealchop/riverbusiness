@@ -48,8 +48,8 @@ export default function DashboardPage() {
                 <span>Feedback</span>
             </Button>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 flex-grow">
-            <Card className="flex flex-col h-[calc(100vh-14rem)] relative">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 items-stretch">
+            <Card className="flex flex-col relative">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Droplet className="h-6 w-6 text-primary" />
@@ -59,7 +59,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <p className="text-5xl font-bold tracking-tight">{averageLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
-                    <div className="h-48 w-full">
+                    <div className="h-48 w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={consumptionChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                             <defs>
@@ -97,64 +97,62 @@ export default function DashboardPage() {
                 </div>
             </Card>
         
-            <div className="flex flex-col gap-4">
-                <Card className="flex flex-col relative lg:col-span-1 flex-grow">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Truck className="h-6 w-6 text-primary"/>
-                            Last Delivery
-                        </CardTitle>
-                        <CardDescription>Water delivered over the last few months.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-grow flex flex-col items-start justify-between">
-                        <p className="text-5xl font-bold tracking-tight">{lastDeliveryLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
-                        <div className="h-48 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={deliveryChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                    <defs>
-                                        <linearGradient id="colorDelivery" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                                    <Tooltip
-                                        cursor={false}
-                                        contentStyle={{
-                                            backgroundColor: 'hsl(var(--background))',
-                                            border: '1px solid hsl(var(--border))',
-                                            borderRadius: 'var(--radius)',
-                                        }}
-                                        labelStyle={{color: 'hsl(var(--foreground))'}}
-                                        formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Delivered on ${new Date(props.payload.date).toLocaleDateString()}`]}
-                                        labelFormatter={() => ''}
-                                    />
-                                    <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorDelivery)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </CardContent>
-                    <div className="absolute bottom-4 right-4 flex gap-2">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
-                                    <LifeBuoy className="h-4 w-4 mr-2" />
-                                    <span>Support</span>
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[800px] h-[550px]">
-                                <DialogHeader>
-                                <DialogTitle>Support</DialogTitle>
-                                <DialogDescription>
-                                    Get help with your account and services.
-                                </DialogDescription>
-                                </DialogHeader>
-                                <SupportPage />
-                            </DialogContent>
-                        </Dialog>
+            <Card className="flex flex-col relative">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Truck className="h-6 w-6 text-primary"/>
+                        Last Delivery
+                    </CardTitle>
+                    <CardDescription>Water delivered over the last few months.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow flex flex-col items-start justify-between">
+                    <p className="text-5xl font-bold tracking-tight">{lastDeliveryLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
+                    <div className="h-48 w-full mt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={deliveryChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <defs>
+                                    <linearGradient id="colorDelivery" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                                <Tooltip
+                                    cursor={false}
+                                    contentStyle={{
+                                        backgroundColor: 'hsl(var(--background))',
+                                        border: '1px solid hsl(var(--border))',
+                                        borderRadius: 'var(--radius)',
+                                    }}
+                                    labelStyle={{color: 'hsl(var(--foreground))'}}
+                                    formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Delivered on ${new Date(props.payload.date).toLocaleDateString()}`]}
+                                    labelFormatter={() => ''}
+                                />
+                                <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorDelivery)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
-                </Card>
-            </div>
+                </CardContent>
+                <div className="absolute bottom-4 right-4 flex gap-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
+                                <LifeBuoy className="h-4 w-4 mr-2" />
+                                <span>Support</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[800px] h-[550px]">
+                            <DialogHeader>
+                            <DialogTitle>Support</DialogTitle>
+                            <DialogDescription>
+                                Get help with your account and services.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <SupportPage />
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </Card>
         </div>
     </div>
     );
