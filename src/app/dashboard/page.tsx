@@ -81,6 +81,33 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
                     </div>
                 </CardContent>
+                <div className="absolute bottom-4 right-4 flex gap-2">
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[625px]">
+                            <WaterStationsPage />
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
+                                <LifeBuoy className="h-4 w-4 mr-2" />
+                                <span>Support</span>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[800px] h-[550px]">
+                            <DialogHeader>
+                            <DialogTitle>Support</DialogTitle>
+                            <DialogDescription>
+                                Get help with your account and services.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <SupportPage />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </Card>
         
             <Card className="flex flex-col relative lg:col-span-1 h-[calc(100vh-14rem)]">
@@ -119,33 +146,6 @@ export default function DashboardPage() {
                         </ResponsiveContainer>
                     </div>
                 </CardContent>
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[625px]">
-                            <WaterStationsPage />
-                        </DialogContent>
-                    </Dialog>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
-                                <LifeBuoy className="h-4 w-4 mr-2" />
-                                <span>Support</span>
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[800px] h-[550px]">
-                            <DialogHeader>
-                            <DialogTitle>Support</DialogTitle>
-                            <DialogDescription>
-                                Get help with your account and services.
-                            </DialogDescription>
-                            </DialogHeader>
-                            <SupportPage />
-                        </DialogContent>
-                    </Dialog>
-                </div>
             </Card>
         </div>
     </div>
