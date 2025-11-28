@@ -3,97 +3,142 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData } from '@/lib/data';
-import { TrendingDown, LifeBuoy } from 'lucide-react';
+import { TrendingDown, LifeBuoy, Droplet, Truck } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import SupportPage from './support/page';
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
 export default function DashboardPage() {
-  const totalGallonsPurchased = deliveries
-    .filter(delivery => delivery.status === 'Delivered')
-    .reduce((total, delivery) => total + delivery.volumeGallons, 0);
-  const totalLitersPurchased = gallonToLiter(totalGallonsPurchased);
+    const last7DaysConsumption = consumptionData.slice(-7);
+    const averageGallons = last7DaysConsumption.reduce((total, record) => total + record.consumptionGallons, 0) / last7DaysConsumption.length;
+    const averageLiters = gallonToLiter(averageGallons);
 
-  const totalGallonsConsumed = consumptionData.reduce((total, record) => total + record.consumptionGallons, 0);
-  const totalLitersConsumed = gallonToLiter(totalGallonsConsumed);
+    const lastDelivery = deliveries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const lastDeliveryLiters = lastDelivery ? gallonToLiter(lastDelivery.volumeGallons) : 0;
+    
+    const consumptionChartData = last7DaysConsumption.map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
+    const deliveryChartData = deliveries.filter(d=>d.status === 'Delivered').slice(0,7).map(d => ({ date: d.date, value: gallonToLiter(d.volumeGallons) })).reverse();
 
-  const litersLeft = totalLitersPurchased - totalLitersConsumed;
-  const consumptionPercentage = (totalLitersPurchased > 0) ? (totalLitersConsumed / totalLitersPurchased) * 100 : 0;
-  
-  return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 h-full">
-      <Card className="lg:col-span-1 flex flex-col h-[calc(100vh-10rem)] relative">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-5.5-4-3.5 2.5-5.5 4-3 3.5-3 5.5a7 7 0 0 0 7 7z"></path><path d="M12 22c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path></svg>
-            Total Water Purchased
-          </CardTitle>
-          <CardDescription>Total volume of water purchased to date.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow flex flex-col items-center justify-center">
-            <div className="flex items-baseline gap-2">
-                <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                <p className="text-lg text-muted-foreground">Liters</p>
+    const chartConfig = {
+        value: {
+            label: "Liters",
+            color: "hsl(var(--chart-1))",
+        },
+    };
+
+    return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 h-full">
+        <Card className="flex flex-col h-[calc(100vh-10rem)] relative">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Droplet className="h-6 w-6 text-primary" />
+                    Average Daily Usage
+                </CardTitle>
+                <CardDescription>Your water usage over the last 7 days.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col items-start justify-between">
+                <p className="text-5xl font-bold tracking-tight">{averageLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
+                <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={consumptionChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                        <defs>
+                            <linearGradient id="colorUsage" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                        <Tooltip 
+                            cursor={false}
+                            contentStyle={{
+                                backgroundColor: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: 'var(--radius)',
+                            }}
+                            labelStyle={{color: 'hsl(var(--foreground))'}}
+                            formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Usage on ${new Date(props.payload.date).toLocaleDateString()}`]}
+                            labelFormatter={() => ''}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorUsage)" />
+                    </AreaChart>
+                </ResponsiveContainer>
+                </div>
+            </CardContent>
+             <div className="absolute bottom-4 right-4">
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[625px]">
+                        <WaterStationsPage />
+                    </DialogContent>
+                </Dialog>
             </div>
-        </CardContent>
-        <div className="absolute bottom-4 right-4">
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[625px]">
-                    <WaterStationsPage />
-                </DialogContent>
-            </Dialog>
-        </div>
-      </Card>
+        </Card>
       
-      <Card className="flex flex-col relative lg:col-span-2 h-[calc(100vh-10rem)]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingDown className="h-6 w-6 text-primary"/>
-            Consumption Overview
-          </CardTitle>
-          <CardDescription>Your water usage versus your total supply.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 flex-grow flex flex-col justify-center">
-          <div>
-            <div className="flex justify-between mb-1">
-                <p className="text-sm font-medium">Consumed</p>
-                <p className="text-sm">{totalLitersConsumed.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
+        <Card className="flex flex-col relative lg:col-span-1 h-[calc(100vh-10rem)]">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-6 w-6 text-primary"/>
+                    Last Delivery
+                </CardTitle>
+                <CardDescription>Water delivered over the last few months.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow flex flex-col items-start justify-between">
+                <p className="text-5xl font-bold tracking-tight">{lastDeliveryLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
+                <div className="h-48 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={deliveryChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                            <defs>
+                                <linearGradient id="colorDelivery" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                            <Tooltip
+                                cursor={false}
+                                contentStyle={{
+                                    backgroundColor: 'hsl(var(--background))',
+                                    border: '1px solid hsl(var(--border))',
+                                    borderRadius: 'var(--radius)',
+                                }}
+                                labelStyle={{color: 'hsl(var(--foreground))'}}
+                                formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Delivered on ${new Date(props.payload.date).toLocaleDateString()}`]}
+                                labelFormatter={() => ''}
+                            />
+                            <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorDelivery)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </CardContent>
+            <div className="absolute bottom-4 right-4">
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
+                            <LifeBuoy className="h-4 w-4 mr-2" />
+                            <span>Support</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[800px] h-[550px]">
+                        <DialogHeader>
+                        <DialogTitle>Support</DialogTitle>
+                        <DialogDescription>
+                            Get help with your account and services.
+                        </DialogDescription>
+                        </DialogHeader>
+                        <SupportPage />
+                    </DialogContent>
+                </Dialog>
             </div>
-            <div className="flex justify-between text-muted-foreground mb-2">
-                <p className="text-sm">Remaining</p>
-                <p className="text-sm">{litersLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
-            </div>
-            <Progress value={consumptionPercentage} />
-            <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
-          </div>
-        </CardContent>
-        <div className="absolute bottom-4 right-4">
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
-                        <LifeBuoy className="h-4 w-4 mr-2" />
-                        <span>Support</span>
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[800px] h-[550px]">
-                  <DialogHeader>
-                    <DialogTitle>Support</DialogTitle>
-                    <DialogDescription>
-                      Get help with your account and services.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <SupportPage />
-                </DialogContent>
-            </Dialog>
-        </div>
-      </Card>
+        </Card>
     </div>
-  );
+    );
 }
