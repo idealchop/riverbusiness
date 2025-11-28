@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { deliveries } from '@/lib/data';
 import { MoreHorizontal, Paperclip, Truck } from 'lucide-react';
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function DeliveriesPage() {
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
@@ -22,12 +23,12 @@ export default function DeliveriesPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Delivery Tracking</CardTitle>
-        <CardDescription>Monitor all water deliveries to ensure timely supply.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <>
+      <DialogHeader>
+        <DialogTitle>Delivery Tracking</DialogTitle>
+        <DialogDescription>Monitor all water deliveries to ensure timely supply.</DialogDescription>
+      </DialogHeader>
+      <div className="py-4">
         <Table>
           <TableHeader>
             <TableRow>
@@ -80,7 +81,7 @@ export default function DeliveriesPage() {
             ))}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 }

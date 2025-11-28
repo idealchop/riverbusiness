@@ -10,6 +10,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import SupportPage from './support/page';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import Link from 'next/link';
+import DeliveriesPage from './deliveries/page';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -143,12 +144,17 @@ export default function DashboardPage() {
                         </ResponsiveContainer>
                     </div>
                     <div className="w-full flex justify-end mt-4">
-                        <Link href="/dashboard/deliveries" passHref>
-                           <Button className="bg-primary/90 hover:bg-primary">
-                               <History className="h-4 w-4 mr-2" />
-                               History
-                           </Button>
-                        </Link>
+                        <Dialog>
+                           <DialogTrigger asChild>
+                               <Button className="bg-primary/90 hover:bg-primary">
+                                   <History className="h-4 w-4 mr-2" />
+                                   History
+                               </Button>
+                           </DialogTrigger>
+                            <DialogContent className="sm:max-w-4xl">
+                                <DeliveriesPage />
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </CardContent>
             </Card>
