@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 flex-grow">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -41,7 +41,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="h-6 w-6 text-primary"/>
@@ -49,7 +49,7 @@ export default function DashboardPage() {
             </CardTitle>
             <CardDescription>Your water usage versus your total supply.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-grow flex flex-col justify-center">
             <div>
               <div className="flex justify-between mb-1">
                   <p className="text-sm font-medium">Consumed</p>
