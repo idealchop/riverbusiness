@@ -35,8 +35,8 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  className={cn("justify-start", pathname === item.href && "bg-accent text-accent-foreground")}
+                  isActive={pathname.startsWith(item.href)}
+                  className={cn("justify-start", pathname.startsWith(item.href) && "bg-accent text-accent-foreground")}
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
