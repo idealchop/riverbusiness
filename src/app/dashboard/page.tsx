@@ -9,6 +9,7 @@ import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import SupportPage from './support/page';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { WaterAnimation } from '@/components/water-animation';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -51,7 +52,7 @@ export default function DashboardPage() {
             </Button>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <Card className="flex flex-col">
+            <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Waves className="h-6 w-6 text-primary" />
@@ -60,7 +61,10 @@ export default function DashboardPage() {
                     <CardDescription>Total water purchased from all deliveries.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
-                    <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
+                    <div className="relative">
+                        <WaterAnimation />
+                        <p className="relative z-10 text-5xl font-bold tracking-tight text-white">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                    </div>
                     <div className="h-48 w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={deliveryChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -102,7 +106,7 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
         
-            <Card className="flex flex-col">
+            <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Droplets className="h-6 w-6 text-primary"/>
@@ -111,7 +115,10 @@ export default function DashboardPage() {
                     <CardDescription>Estimated remaining water based on consumption.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
-                    <p className="text-5xl font-bold tracking-tight">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
+                    <div className="relative">
+                        <WaterAnimation />
+                        <p className="relative z-10 text-5xl font-bold tracking-tight text-white">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                    </div>
                     <div className="h-48 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={consumptionChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
@@ -162,5 +169,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    
