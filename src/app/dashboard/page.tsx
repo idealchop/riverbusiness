@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
 export default function DashboardPage() {
-  const totalGallonsPurchased = deliveries.reduce((total, delivery) => total + delivery.volumeGallons, 0);
+  const totalGallonsPurchased = deliveries
+    .filter(delivery => delivery.status === 'Delivered')
+    .reduce((total, delivery) => total + delivery.volumeGallons, 0);
   const totalLitersPurchased = gallonToLiter(totalGallonsPurchased);
 
   const totalGallonsConsumed = consumptionData.reduce((total, record) => total + record.consumptionGallons, 0);
