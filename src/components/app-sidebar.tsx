@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
-  { href: '/dashboard/water-stations', label: 'Water Stations', icon: Droplet },
 ];
 
 export function AppSidebar() {
