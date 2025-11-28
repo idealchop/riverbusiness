@@ -23,7 +23,6 @@ export function Chatbot() {
     <Card className="flex flex-col h-[400px]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Bot className="h-5 w-5" />
           River Assistant
         </CardTitle>
         <CardDescription>
