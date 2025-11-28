@@ -71,8 +71,7 @@
 
 @layer utilities {
   @keyframes wave {
-    0% { transform: translateX(0); }
-    50% { transform: translateX(-25%); }
-    100% { transform: translateX(-50%); }
+    0% { transform: translateX(0) rotate(0deg); }
+    100% { transform: translateX(-50%) rotate(360deg); }
   }
 }

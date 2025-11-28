@@ -63,7 +63,7 @@ export default function DashboardPage() {
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div className="relative">
                         <WaterAnimation />
-                        <p className="relative z-10 text-5xl font-bold tracking-tight text-white">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                        <p className="relative z-10 text-5xl font-bold tracking-tight text-primary-foreground">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
@@ -117,7 +117,7 @@ export default function DashboardPage() {
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div className="relative">
                         <WaterAnimation />
-                        <p className="relative z-10 text-5xl font-bold tracking-tight text-white">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                        <p className="relative z-10 text-5xl font-bold tracking-tight text-primary-foreground">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
