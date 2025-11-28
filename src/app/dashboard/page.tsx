@@ -21,7 +21,6 @@ export default function DashboardPage() {
   const totalGallonsConsumed = consumptionData.reduce((total, record) => total + record.consumptionGallons, 0);
   const totalLitersConsumed = gallonToLiter(totalGallonsConsumed);
 
-  const gallonsLeft = totalGallonsPurchased - totalGallonsConsumed;
   const litersLeft = totalLitersPurchased - totalLitersConsumed;
   const consumptionPercentage = (totalLitersPurchased > 0) ? (totalLitersConsumed / totalLitersPurchased) * 100 : 0;
   
@@ -39,10 +38,6 @@ export default function DashboardPage() {
             <div className="flex items-baseline gap-2">
                 <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                 <p className="text-lg text-muted-foreground">Liters</p>
-            </div>
-             <div className="flex items-baseline gap-2 mt-2">
-                <p className="text-3xl font-bold tracking-tight text-muted-foreground">{totalGallonsPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                <p className="text-md text-muted-foreground">Gallons</p>
             </div>
         </CardContent>
         <div className="absolute bottom-4 right-4">
@@ -69,11 +64,11 @@ export default function DashboardPage() {
           <div>
             <div className="flex justify-between mb-1">
                 <p className="text-sm font-medium">Consumed</p>
-                <p className="text-sm">{totalLitersConsumed.toLocaleString(undefined, { maximumFractionDigits: 0 })} L / {totalGallonsConsumed.toLocaleString(undefined, { maximumFractionDigits: 0 })} Gal</p>
+                <p className="text-sm">{totalLitersConsumed.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
             </div>
             <div className="flex justify-between text-muted-foreground mb-2">
                 <p className="text-sm">Remaining</p>
-                <p className="text-sm">{litersLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })} L / {gallonsLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })} Gal</p>
+                <p className="text-sm">{litersLeft.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
             </div>
             <Progress value={consumptionPercentage} />
             <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
