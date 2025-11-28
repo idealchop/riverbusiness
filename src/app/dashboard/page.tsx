@@ -43,6 +43,10 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6 h-full">
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">{greeting}, {userName}!</h1>
+            <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                <span>Feedback</span>
+            </Button>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 flex-grow">
             <Card className="flex flex-col h-[calc(100vh-14rem)] relative">
@@ -94,12 +98,6 @@ export default function DashboardPage() {
             </Card>
         
             <div className="flex flex-col gap-4">
-                <div className="flex justify-end">
-                    <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        <span>Feedback</span>
-                    </Button>
-                </div>
                 <Card className="flex flex-col relative lg:col-span-1 flex-grow">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
