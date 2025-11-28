@@ -41,7 +41,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="flex flex-col">
+        <Card className="flex flex-col relative">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="h-6 w-6 text-primary"/>
@@ -61,19 +61,19 @@ export default function DashboardPage() {
               </div>
               <Progress value={consumptionPercentage} />
               <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
-              <div className="flex flex-col items-end mt-4 gap-1">
+              <div className="flex flex-col items-end mt-4 gap-2">
                 <Button variant="outline" asChild>
                   <Link href="/dashboard/water-stations">View Details</Link>
-                </Button>
-                 <Button asChild>
-                    <Link href="/dashboard/support" aria-label="Support">
-                        <LifeBuoy className="h-4 w-4 mr-2" />
-                        <span>Support</span>
-                    </Link>
                 </Button>
               </div>
             </div>
           </CardContent>
+           <Button asChild className="absolute bottom-4 right-4">
+              <Link href="/dashboard/support" aria-label="Support">
+                  <LifeBuoy className="h-4 w-4 mr-2" />
+                  <span>Support</span>
+              </Link>
+          </Button>
         </Card>
       </div>
     </div>
