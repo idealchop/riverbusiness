@@ -1,14 +1,19 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { deliveries } from '@/lib/data';
-import { MoreHorizontal, Paperclip, Truck } from 'lucide-react';
+import { deliveries as allDeliveries } from '@/lib/data';
+import { MoreHorizontal, Paperclip, Search, Truck } from 'lucide-react';
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 export default function DeliveriesPage() {
+  const [deliveries, setDeliveries] = useState(allDeliveries);
+  const [searchTerm, setSearchTerm] = useState('');
+
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
       case 'Delivered':
@@ -20,7 +25,33 @@ export default function DeliveriesPage() {
       default:
         return 'outline';
     }
-  }
+  };
+
+  const handleSearch = () => {
+    const filteredDeliveries = allDeliveries.filter(delivery => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        delivery.id.toLowerCase().includes(searchLower) ||
+        new Date(delivery.date).toLocaleDateString().toLowerCase().includes(searchLower) ||
+        delivery.status.toLowerCase().includes(searchLower)
+      );
+    });
+    setDeliveries(filteredDeliveries);
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    if (term === '') {
+      setDeliveries(allDeliveries);
+    }
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   return (
     <>
@@ -28,7 +59,20 @@ export default function DeliveriesPage() {
         <DialogTitle>Delivery Tracking</DialogTitle>
         <DialogDescription>Monitor all water deliveries to ensure timely supply.</DialogDescription>
       </DialogHeader>
-      <div className="py-4">
+      <div className="py-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Input 
+            placeholder="Search by ID, date, or status..."
+            value={searchTerm}
+            onChange={handleSearchInputChange}
+            onKeyDown={handleSearchKeyDown}
+            className="flex-1"
+          />
+          <Button onClick={handleSearch}>
+            <Search className="mr-2 h-4 w-4" />
+            Search
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
