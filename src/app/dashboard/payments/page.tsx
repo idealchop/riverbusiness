@@ -184,7 +184,7 @@ export default function PaymentsPage() {
                             <DialogTitle>Choose a Plan</DialogTitle>
                             <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
                         </DialogHeader>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
                             {plans.slice(0, 3).map(plan => {
                                 const image = getImageForPlan(plan.imageId);
                                 return (
@@ -200,7 +200,7 @@ export default function PaymentsPage() {
                                 );
                             })}
                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                             {plans.slice(3).map(plan => {
                                 const image = getImageForPlan(plan.imageId);
                                 return (
