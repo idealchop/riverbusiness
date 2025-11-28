@@ -151,7 +151,7 @@ export default function DashboardPage() {
                                    History
                                </Button>
                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-4xl">
+                            <DialogContent className="sm:max-w-[625px]">
                                 <DeliveriesPage />
                             </DialogContent>
                         </Dialog>
