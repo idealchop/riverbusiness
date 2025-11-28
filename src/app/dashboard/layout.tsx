@@ -25,11 +25,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from '@/components/app-sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function DashboardLayout({
   children,
@@ -132,11 +136,51 @@ export default function DashboardLayout({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Username</DropdownMenuItem>
-              <DropdownMenuItem>Change Password</DropdownMenuItem>
-              <DropdownMenuItem>Client ID</DropdownMenuItem>
+               <Dialog>
+                  <DialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>My Account</DropdownMenuItem>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>My Account</DialogTitle>
+                      <DialogDescription>
+                        Manage your account settings.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Tabs defaultValue="username">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="username"><User className="mr-2"/>Username</TabsTrigger>
+                        <TabsTrigger value="password"><KeyRound className="mr-2"/>Password</TabsTrigger>
+                        <TabsTrigger value="clientid"><Info className="mr-2"/>Client ID</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="username" className="py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username</Label>
+                          <Input id="username" defaultValue="Juan dela Cruz" />
+                        </div>
+                        <Button className="mt-4">Save</Button>
+                      </TabsContent>
+                      <TabsContent value="password" className="py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="current-password">Current Password</Label>
+                          <Input id="current-password" type="password" />
+                          <Label htmlFor="new-password">New Password</Label>
+                          <Input id="new-password" type="password" />
+                          <Label htmlFor="confirm-password">Confirm New Password</Label>
+                          <Input id="confirm-password" type="password" />
+                        </div>
+                        <Button className="mt-4">Change Password</Button>
+                      </TabsContent>
+                      <TabsContent value="clientid" className="py-4">
+                         <div className="space-y-2">
+                            <Label>Client ID</Label>
+                            <Input readOnly value="CL-12345-67890" />
+                            <p className="text-sm text-muted-foreground">This is your unique client identifier.</p>
+                         </div>
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
+                </Dialog>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Logout</DropdownMenuItem>
             </DropdownMenuContent>
