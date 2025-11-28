@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const consumptionPercentage = (totalLitersPurchased > 0) ? (totalLitersConsumed / totalLitersPurchased) * 100 : 0;
 
   return (
-    <div className="grid gap-8">
+    <div className="flex flex-col h-full">
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="flex justify-end">
+      <div className="absolute bottom-6 right-6">
         <Button asChild variant="outline">
             <Link href="/dashboard/support">
                 <LifeBuoy className="mr-2 h-4 w-4" />
