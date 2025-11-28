@@ -54,7 +54,7 @@ export default function AdminLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar collapsible="icon">
         <AppSidebar />
       </Sidebar>
       <SidebarInset className="flex flex-col">
