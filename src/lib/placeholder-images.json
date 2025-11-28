@@ -23,6 +23,36 @@
       "description": "PayMaya QR Code",
       "imageUrl": "https://images.unsplash.com/photo-1662383729882-e03ce8e00887?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxxciUyMGNvZGV8ZW58MHx8fHwxNzY0MjIyOTYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "qr code"
+    },
+    {
+      "id": "plan-family",
+      "description": "A happy family.",
+      "imageUrl": "https://images.unsplash.com/photo-1542037104857-ffbb0b9155fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxoYXBweSUyMGZhbWlseXxlbnwwfHx8fDE3NjQyMjE4MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "happy family"
+    },
+    {
+      "id": "plan-sme",
+      "description": "A group of professionals in a small office.",
+      "imageUrl": "https://images.unsplash.com/photo-1687422810663-c316494f725a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzbWFsbCUyMGJ1c2luZXNzfGVufDB8fHx8MTc2NDI3MTA3MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "small business"
+    },
+    {
+      "id": "plan-commercial",
+      "description": "A modern office building.",
+      "imageUrl": "https://images.unsplash.com/photo-1431540015161-0bf868a2d407?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8b2ZmaWNlJTIwYnVpbGRpbmd8ZW58MHx8fHwxNzY0MjMxODM1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "office building"
+    },
+    {
+      "id": "plan-corporate",
+      "description": "A team of corporate professionals in a meeting.",
+      "imageUrl": "https://images.unsplash.com/photo-1714974528737-3e6c7e4d11af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjb3Jwb3JhdGUlMjBtZWV0aW5nfGVufDB8fHx8MTc2NDI1NDAwMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "corporate meeting"
+    },
+    {
+      "id": "plan-enterprise",
+      "description": "A large industrial facility.",
+      "imageUrl": "https://images.unsplash.com/photo-1655876726270-2caec425d0cd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxpbmR1c3RyaWFsJTIwZmFjdG9yeXxlbnwwfHx8fDE3NjQyNzc0OTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "industrial factory"
     }
   ]
 }

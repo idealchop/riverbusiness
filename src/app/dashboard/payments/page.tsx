@@ -62,9 +62,11 @@ const chartData = paymentHistory.filter(p => p.status === 'Paid').map(p => ({
 })).reverse();
 
 const plans = [
-    { name: 'Basic', price: 50, description: 'Up to 5,000 gallons/month' },
-    { name: 'Standard', price: 100, description: 'Up to 15,000 gallons/month' },
-    { name: 'Premium', price: 150, description: 'Unlimited gallons/month' },
+    { name: 'Family', price: 50, description: 'For families and personal home use', imageId: 'plan-family' },
+    { name: 'SME', price: 100, description: 'For small teams, kiosks, and home offices', imageId: 'plan-sme' },
+    { name: 'Commercial', price: 150, description: 'For growing offices and warehouses', imageId: 'plan-commercial' },
+    { name: 'Corporate', price: 250, description: 'For multi-site companies and BPOs', imageId: 'plan-corporate' },
+    { name: 'Enterprise', price: 500, description: 'Customize and pay based on consumption', imageId: 'plan-enterprise' },
 ];
 
 
@@ -74,13 +76,17 @@ export default function PaymentsPage() {
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
   const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
   
-  const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number; description: string} | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<(typeof plans)[0] | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
-  const handlePlanSelection = (plan: { name: string; price: number; description: string}) => {
+  const handlePlanSelection = (plan: (typeof plans)[0]) => {
     setSelectedPlan(plan);
     setShowPaymentDialog(true);
   };
+  
+  const getImageForPlan = (imageId: string) => {
+    return PlaceHolderImages.find(p => p.id === imageId);
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -173,28 +179,42 @@ export default function PaymentsPage() {
                     <DialogTrigger asChild>
                         <Button className="bg-primary/90 hover:bg-primary">Invoice</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[625px]">
+                    <DialogContent className="sm:max-w-4xl">
                         <DialogHeader>
                             <DialogTitle>Choose a Plan</DialogTitle>
                             <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
                         </DialogHeader>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
-                            {plans.map(plan => (
-                                <Card key={plan.name} className="flex flex-col">
-                                    <CardHeader>
-                                        <CardTitle>{plan.name}</CardTitle>
-                                        <CardDescription>{plan.description}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="flex-grow">
-                                        <p className="text-4xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
-                                    </CardContent>
-                                    <div className="p-4 pt-0">
-                                        <Button className="w-full" onClick={() => handlePlanSelection(plan)}>
-                                            Choose Plan
-                                        </Button>
-                                    </div>
-                                </Card>
-                            ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+                            {plans.slice(0, 3).map(plan => {
+                                const image = getImageForPlan(plan.imageId);
+                                return (
+                                    <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
+                                        <CardContent className="p-0">
+                                            {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-[2/1]" data-ai-hint={image.imageHint} />}
+                                        </CardContent>
+                                        <CardHeader>
+                                            <CardTitle>{plan.name}</CardTitle>
+                                            <CardDescription>{plan.description}</CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                            {plans.slice(3).map(plan => {
+                                const image = getImageForPlan(plan.imageId);
+                                return (
+                                    <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
+                                        <CardContent className="p-0">
+                                           {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-[2/1]" data-ai-hint={image.imageHint} />}
+                                        </CardContent>
+                                        <CardHeader>
+                                            <CardTitle>{plan.name}</CardTitle>
+                                            <CardDescription>{plan.description}</CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                );
+                            })}
                         </div>
                     </DialogContent>
                 </Dialog>
