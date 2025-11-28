@@ -9,7 +9,7 @@ import { Chatbot } from '@/components/chatbot';
 export default function SupportPage() {
 
   return (
-    <div className="grid gap-8 md:grid-cols-2">
+    <div className="grid gap-8 md:grid-cols-2 h-full content-start">
       <div className="space-y-8">
           <Card>
             <CardHeader>

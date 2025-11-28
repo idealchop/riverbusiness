@@ -1,14 +1,14 @@
 'use client'
 
 import React from 'react';
-import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData } from '@/lib/data';
 import { TrendingDown, LifeBuoy } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
-import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import SupportPage from './support/page';
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
@@ -74,12 +74,25 @@ export default function DashboardPage() {
             <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
           </div>
         </CardContent>
-         <Button asChild className="absolute bottom-4 right-4 bg-primary/90 hover:bg-primary">
-            <Link href="/dashboard/support" aria-label="Support">
-                <LifeBuoy className="h-4 w-4 mr-2" />
-                <span>Support</span>
-            </Link>
-        </Button>
+        <div className="absolute bottom-4 right-4">
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
+                        <LifeBuoy className="h-4 w-4 mr-2" />
+                        <span>Support</span>
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[800px] h-[550px]">
+                  <DialogHeader>
+                    <DialogTitle>Support</DialogTitle>
+                    <DialogDescription>
+                      Get help with your account and services.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <SupportPage />
+                </DialogContent>
+            </Dialog>
+        </div>
       </Card>
     </div>
   );

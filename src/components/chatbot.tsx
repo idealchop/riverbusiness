@@ -20,7 +20,7 @@ export function Chatbot() {
   });
 
   return (
-    <Card className="flex flex-col h-[400px]">
+    <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           River Assistant
