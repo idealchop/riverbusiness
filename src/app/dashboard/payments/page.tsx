@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -36,6 +36,8 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const paymentHistory = [
     { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
@@ -59,12 +61,26 @@ const chartData = paymentHistory.filter(p => p.status === 'Paid').map(p => ({
     amount: p.amount
 })).reverse();
 
+const plans = [
+    { name: 'Basic', price: 50, description: 'Up to 5,000 gallons/month' },
+    { name: 'Standard', price: 100, description: 'Up to 15,000 gallons/month' },
+    { name: 'Premium', price: 150, description: 'Unlimited gallons/month' },
+];
+
 
 export default function PaymentsPage() {
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
   const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
+  
+  const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number; description: string} | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+
+  const handlePlanSelection = (plan: { name: string; price: number; description: string}) => {
+    setSelectedPlan(plan);
+    setShowPaymentDialog(true);
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -153,7 +169,35 @@ export default function PaymentsPage() {
               </TableBody>
             </Table>
              <div className="flex justify-end mt-4">
-                <Button variant="outline">Create Invoice</Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline">Invoice</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[625px]">
+                        <DialogHeader>
+                            <DialogTitle>Choose a Plan</DialogTitle>
+                            <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+                            {plans.map(plan => (
+                                <Card key={plan.name} className="flex flex-col">
+                                    <CardHeader>
+                                        <CardTitle>{plan.name}</CardTitle>
+                                        <CardDescription>{plan.description}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex-grow">
+                                        <p className="text-4xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+                                    </CardContent>
+                                    <div className="p-4 pt-0">
+                                        <Button className="w-full" onClick={() => handlePlanSelection(plan)}>
+                                            Choose Plan
+                                        </Button>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
           </CardContent>
         </Card>
@@ -180,6 +224,49 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
       </div>
+
+       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Complete Your Payment</DialogTitle>
+                    <DialogDescription>
+                        You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. 
+                        Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.
+                    </DialogDescription>
+                </DialogHeader>
+                <Tabs defaultValue="qr" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="qr"><QrCode className="mr-2" /> QR Code</TabsTrigger>
+                        <TabsTrigger value="bank"><CreditCard className="mr-2"/> Bank/Card</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="qr">
+                        <div className="flex flex-col items-center gap-4 py-4">
+                            <p className="text-sm text-muted-foreground text-center">Scan the QR code with your mobile banking or e-wallet app.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {gcashQr && <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />}
+                                {paymayaQr && <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />}
+                                {bankQr && <Image src={bankQr.imageUrl} alt="Bank QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />}
+                            </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="bank">
+                         <div className="space-y-4 py-4">
+                            <div className="text-center">
+                                <p className="font-semibold">Bank Transfer</p>
+                                <p className="text-sm text-muted-foreground">BDO Unibank: 123-456-7890</p>
+                                <p className="text-sm text-muted-foreground">Account Name: River Business Inc.</p>
+                            </div>
+                             <Separator />
+                             <div className="text-center">
+                                <p className="font-semibold">Credit/Debit Card</p>
+                                <p className="text-sm text-muted-foreground">Card payments are processed securely.</p>
+                                <Button className="mt-2">Pay with Card</Button>
+                            </div>
+                         </div>
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
