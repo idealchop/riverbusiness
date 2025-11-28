@@ -81,7 +81,7 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
                     </div>
                 </CardContent>
-                <div className="absolute bottom-4 right-4 flex gap-2">
+                <div className="absolute bottom-4 left-4 flex gap-2">
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
@@ -90,6 +90,8 @@ export default function DashboardPage() {
                             <WaterStationsPage />
                         </DialogContent>
                     </Dialog>
+                </div>
+                 <div className="absolute bottom-4 right-4 flex gap-2">
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
