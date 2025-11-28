@@ -89,7 +89,10 @@ export default function DashboardPage() {
                     <div className="w-full flex justify-end mt-4">
                         <Dialog>
                             <DialogTrigger asChild>
-                                <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
+                                <Button className="bg-primary/90 hover:bg-primary">
+                                    <Droplet className="h-4 w-4 mr-2" />
+                                    Water Station
+                                </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[625px]">
                                 <WaterStationsPage />
