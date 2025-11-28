@@ -56,7 +56,7 @@ const paymentHistory = [
     id: 'INV-05-2024',
     date: '2024-05-15',
     description: 'May 2024 Invoice',
-    amount: 160.0,
+    amount: 0.0,
     status: 'Paid',
   },
   {
