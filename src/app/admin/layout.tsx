@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from '@/components/app-sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -148,6 +148,28 @@ export default function AdminLayout({
                         Manage your account settings.
                       </DialogDescription>
                     </DialogHeader>
+                     <div className="flex items-center space-x-4 py-4">
+                        {userAvatar && (
+                            <div className="relative">
+                                <Image
+                                    src={userAvatar.imageUrl}
+                                    width={80}
+                                    height={80}
+                                    alt={userAvatar.description}
+                                    data-ai-hint={userAvatar.imageHint}
+                                    className="rounded-full"
+                                />
+                                <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8">
+                                    <Camera className="h-4 w-4" />
+                                    <Input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                </Button>
+                            </div>
+                        )}
+                        <div>
+                            <h4 className="font-semibold text-lg">Juan dela Cruz</h4>
+                            <p className="text-sm text-muted-foreground">juandelacruz@email.com</p>
+                        </div>
+                    </div>
                     <Tabs defaultValue="username">
                       <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="username"><User className="mr-2"/>Username</TabsTrigger>
