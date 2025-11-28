@@ -71,9 +71,6 @@ export default function DashboardPage() {
                   <WaterStationsPage />
                 </DialogContent>
               </Dialog>
-              <Button asChild className="bg-primary/90 hover:bg-primary">
-                <Link href="/dashboard/quality">Permits</Link>
-              </Button>
             </div>
           </div>
         </CardContent>
