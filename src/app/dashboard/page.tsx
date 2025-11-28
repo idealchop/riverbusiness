@@ -24,8 +24,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid gap-6 md:grid-cols-2 flex-grow">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3 flex-grow">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-5.5-4-3.5 2.5-5.5 4-3 3.5-3 5.5a7 7 0 0 0 7 7z"></path><path d="M12 22c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path></svg>
@@ -41,7 +41,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="flex flex-col">
+        <Card className="flex flex-col lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="h-6 w-6 text-primary"/>
