@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import SupportPage from './support/page';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import Link from 'next/link';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -140,6 +141,14 @@ export default function DashboardPage() {
                                 <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorUsage)" />
                             </AreaChart>
                         </ResponsiveContainer>
+                    </div>
+                    <div className="w-full flex justify-end mt-4">
+                        <Link href="/dashboard/deliveries" passHref>
+                           <Button className="bg-primary/90 hover:bg-primary">
+                               <History className="h-4 w-4 mr-2" />
+                               History
+                           </Button>
+                        </Link>
                     </div>
                 </CardContent>
             </Card>
