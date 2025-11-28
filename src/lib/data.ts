@@ -1,4 +1,4 @@
-import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit } from '@/lib/types';
+import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation } from '@/lib/types';
 
 export const consumptionData: ConsumptionRecord[] = [
   { date: '2024-07-01', consumptionGallons: 150 },
@@ -37,4 +37,10 @@ export const sanitationVisits: SanitationVisit[] = [
   { id: 'VIS-002', scheduledDate: '2024-06-20', status: 'Completed', assignedTo: 'Jane Smith', reportUrl: '#' },
   { id: 'VIS-003', scheduledDate: '2024-05-15', status: 'Completed', assignedTo: 'John Doe', reportUrl: '#' },
   { id: 'VIS-004', scheduledDate: '2024-04-10', status: 'Cancelled', assignedTo: 'Jane Smith' },
+];
+
+export const waterStations: WaterStation[] = [
+    { id: 'WS-001', name: 'Aqua Pure Fill', location: '123 Main St, Anytown', permitUrl: '#' },
+    { id: 'WS-002', name: 'Crystal Clear Water', location: '456 Oak Ave, Anytown', permitUrl: '#' },
+    { id: 'WS-003', name: 'H2Oasis', location: '789 Pine Ln, Anytown', permitUrl: '#' },
 ];

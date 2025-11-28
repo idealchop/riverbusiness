@@ -25,3 +25,10 @@ export interface SanitationVisit {
   assignedTo: string;
   reportUrl?: string;
 }
+
+export interface WaterStation {
+  id: string;
+  name: string;
+  location: string;
+  permitUrl: string;
+}
