@@ -2,20 +2,30 @@ import type { SVGProps } from "react";
 
 export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 256 256"
       {...props}
     >
-      <path d="M12 2L7 7c-1.5 1.5-1.5 4.5 0 6s4.5 1.5 6 0l5-5c1.5-1.5 1.5-4.5 0-6s-4.5-1.5-6 0z" />
-      <path d="M12 22s-7-4-7-9c0-4.4 3.6-8 8-8s8 3.6 8 8c0 5-7 9-7 9z" fill="currentColor" opacity="0.2" />
-      <path d="M12 12v10" />
-      <path d="M12 2L7 7" />
+      <rect width="256" height="256" fill="none" />
+      <path
+        d="M89.3,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,160Z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="16"
+      />
+      <path
+        d="M194.7,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,194.7,160Z"
+        opacity="0.2"
+        fill="currentColor"
+      />
+      <path
+        d="M89.3,224l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,224Z"
+        opacity="0.2"
+        fill="currentColor"
+      />
     </svg>
   );
 }
