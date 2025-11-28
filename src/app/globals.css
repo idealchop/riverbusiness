@@ -68,10 +68,3 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
-
-@layer utilities {
-  @keyframes wave {
-    0% { transform: translateX(0) rotate(0deg); }
-    100% { transform: translateX(-50%) rotate(360deg); }
-  }
-}

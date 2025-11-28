@@ -9,7 +9,6 @@ import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import SupportPage from './support/page';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { WaterAnimation } from '@/components/water-animation';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -61,9 +60,8 @@ export default function DashboardPage() {
                     <CardDescription>Total water purchased from all deliveries.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
-                    <div className="relative">
-                        <WaterAnimation />
-                        <p className="relative z-10 text-5xl font-bold tracking-tight text-primary-foreground">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                    <div>
+                        <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
@@ -115,9 +113,8 @@ export default function DashboardPage() {
                     <CardDescription>Estimated remaining water based on consumption.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
-                    <div className="relative">
-                        <WaterAnimation />
-                        <p className="relative z-10 text-5xl font-bold tracking-tight text-primary-foreground">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                    <div>
+                        <p className="text-5xl font-bold tracking-tight">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
