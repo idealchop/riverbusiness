@@ -63,7 +63,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="flex justify-center">
+      <div className="flex justify-end">
         <Button asChild variant="outline">
             <Link href="/dashboard/support">
                 <LifeBuoy className="mr-2 h-4 w-4" />
