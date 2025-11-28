@@ -66,7 +66,7 @@ export default function DashboardPage() {
         </Card>
       </div>
       <div className="absolute bottom-6 right-6">
-        <Button asChild variant="outline">
+        <Button asChild>
             <Link href="/dashboard/support">
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 Support
