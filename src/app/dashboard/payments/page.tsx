@@ -86,21 +86,21 @@ export default function PaymentsPage() {
                 <p className="font-medium">July 2024 Invoice</p>
                 <p className="text-sm text-muted-foreground">Paid on July 15, 2024</p>
               </div>
-              <p className="font-medium">$150.00</p>
+              <p className="font-medium">₱150.00</p>
             </div>
             <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <p className="font-medium">June 2024 Invoice</p>
                 <p className="text-sm text-muted-foreground">Paid on June 15, 2024</p>
               </div>
-              <p className="font-medium">$145.00</p>
+              <p className="font-medium">₱145.00</p>
             </div>
             <div className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium">May 2024 Invoice</p>
                 <p className="text-sm text-muted-foreground">Paid on May 15, 2024</p>
               </div>
-              <p className="font-medium">$160.00</p>
+              <p className="font-medium">₱160.00</p>
             </div>
           </div>
         </div>
