@@ -71,9 +71,10 @@ export default function DashboardPage() {
         </Card>
       </div>
       <div className="absolute bottom-6 right-6">
-        <Button asChild className="rounded-full h-14 w-14 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button asChild className="rounded-full h-14 px-6 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
             <Link href="/dashboard/support" aria-label="Support">
                 <LifeBuoy className="h-6 w-6" />
+                <span>Support</span>
             </Link>
         </Button>
       </div>
