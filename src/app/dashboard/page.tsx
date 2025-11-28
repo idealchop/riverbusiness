@@ -61,12 +61,15 @@ export default function DashboardPage() {
               </div>
               <Progress value={consumptionPercentage} />
               <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
+              <div className="flex justify-end mt-4">
+                <Button variant="outline">View Details</Button>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
       <div className="absolute bottom-6 right-6">
-        <Button asChild>
+        <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Link href="/dashboard/support">
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 Support
