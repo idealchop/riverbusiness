@@ -179,7 +179,7 @@ export default function PaymentsPage() {
                     <DialogTrigger asChild>
                         <Button className="bg-primary/90 hover:bg-primary">Invoice</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-5xl">
+                    <DialogContent className="sm:max-w-4xl">
                         <DialogHeader>
                             <DialogTitle>Choose a Plan</DialogTitle>
                             <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
@@ -200,7 +200,7 @@ export default function PaymentsPage() {
                                 );
                             })}
                         </div>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                             {plans.slice(3).map(plan => {
                                 const image = getImageForPlan(plan.imageId);
                                 return (
@@ -290,3 +290,5 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+    
