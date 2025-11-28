@@ -32,3 +32,12 @@ export interface WaterStation {
   location: string;
   permitUrl: string;
 }
+
+export interface AppUser {
+    id: string;
+    name: string;
+    email: string;
+    totalConsumptionLiters: number;
+    accountStatus: 'Active' | 'Inactive' | 'Suspended';
+    lastLogin: string;
+}

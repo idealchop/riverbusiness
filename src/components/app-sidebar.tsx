@@ -11,12 +11,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { LayoutDashboard, CreditCard, Droplet } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Droplet, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
+  { href: '/admin', label: 'Admin', icon: Users },
 ];
 
 export function AppSidebar() {

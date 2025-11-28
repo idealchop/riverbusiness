@@ -1,4 +1,4 @@
-import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation } from '@/lib/types';
+import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
 
 export const consumptionData: ConsumptionRecord[] = [
   { date: '2024-07-01', consumptionGallons: 150 },
@@ -43,4 +43,12 @@ export const waterStations: WaterStation[] = [
     { id: 'WS-001', name: 'Aqua Pure Fill', location: '123 Main St, Anytown', permitUrl: '#' },
     { id: 'WS-002', name: 'Crystal Clear Water', location: '456 Oak Ave, Anytown', permitUrl: '#' },
     { id: 'WS-003', name: 'H2Oasis', location: '789 Pine Ln, Anytown', permitUrl: '#' },
+];
+
+export const appUsers: AppUser[] = [
+    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
+    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
+    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', totalConsumptionLiters: 1500, accountStatus: 'Suspended', lastLogin: '2024-07-18' },
 ];
