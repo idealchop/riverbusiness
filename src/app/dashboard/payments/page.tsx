@@ -161,70 +161,22 @@ export default function PaymentsPage() {
 
       {/* Right Sidebar */}
       <div className="flex flex-col gap-6">
-        <Card className="bg-primary text-primary-foreground">
-          <CardHeader>
-            <CardTitle>Available for Payout</CardTitle>
+        <Card className="bg-foreground text-background">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Available for Payout</CardTitle>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className="h-6 w-6 opacity-50"><rect width="256" height="256" fill="none"></rect><path d="M89.3,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,160Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16"></path><path d="M194.7,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,194.7,160Z" opacity="0.2" fill="currentColor"></path><path d="M89.3,224l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,224Z" opacity="0.2" fill="currentColor"></path></svg>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-4xl font-bold">₱{upcomingPayment ? upcomingPayment.amount.toFixed(2) : '0.00'}</p>
-            <div className="text-sm text-primary-foreground/80 flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                <p>**** **** **** 4242</p>
+            <div className="text-sm text-background/70 flex items-center justify-between">
+                <p>**** **** **** 5678</p>
+                <CreditCard className="h-5 w-5" />
             </div>
+             <p className="text-sm text-background/70">Juan dela Cruz</p>
             <div className='flex items-center gap-2'>
-                <Button variant="secondary" className='w-full'>Manage Account</Button>
-                <Button variant="ghost" className='w-full bg-primary-foreground/20 hover:bg-primary-foreground/30'>Request Payout</Button>
+                <Button variant="secondary" className='w-full text-foreground'>Manage Account</Button>
+                <Button variant="default" className='w-full bg-primary/90 hover:bg-primary'>Request Payout</Button>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <QrCode className="h-5 w-5" />
-                Pay with QR
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-around items-center gap-2">
-             <div className="flex flex-col items-center gap-2">
-                {gcashQr && (
-                 <Image
-                    src={gcashQr.imageUrl}
-                    width={64}
-                    height={64}
-                    alt={gcashQr.description}
-                    data-ai-hint={gcashQr.imageHint}
-                    className="rounded-md"
-                  />
-                )}
-                <p className="text-xs font-medium">GCash</p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                {bankQr && (
-                  <Image
-                    src={bankQr.imageUrl}
-                    width={64}
-                    height={64}
-                    alt={bankQr.description}
-                    data-ai-hint={bankQr.imageHint}
-                    className="rounded-md"
-                  />
-                )}
-                <p className="text-xs font-medium">Bank</p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                {paymayaQr && (
-                  <Image
-                    src={paymayaQr.imageUrl}
-                    width={64}
-                    height={64}
-                    alt={paymayaQr.description}
-                    data-ai-hint={paymayaQr.imageHint}
-                    className="rounded-md"
-                  />
-                )}
-                <p className="text-xs font-medium">PayMaya</p>
-              </div>
           </CardContent>
         </Card>
       </div>
