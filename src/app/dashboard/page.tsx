@@ -29,18 +29,26 @@ export default function DashboardPage() {
     }, []);
 
 
-    const last7DaysConsumption = consumptionData.slice(-7);
-    const averageGallons = last7DaysConsumption.reduce((total, record) => total + record.consumptionGallons, 0) / last7DaysConsumption.length;
-    const averageLiters = gallonToLiter(averageGallons);
-
+    const deliveredPurchases = deliveries.filter(d => d.status === 'Delivered');
+    const totalGallonsPurchased = deliveredPurchases.reduce((total, record) => total + record.volumeGallons, 0);
+    
+    let averageLiters = 0;
+    if (deliveredPurchases.length > 0) {
+        const firstDeliveryDate = new Date(deliveredPurchases[deliveredPurchases.length - 1].date);
+        const lastDeliveryDate = new Date(deliveredPurchases[0].date);
+        const diffTime = Math.abs(lastDeliveryDate.getTime() - firstDeliveryDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include the start day
+        averageLiters = gallonToLiter(totalGallonsPurchased / diffDays);
+    }
+    
     const lastDelivery = deliveries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const lastDeliveryLiters = lastDelivery ? gallonToLiter(lastDelivery.volumeGallons) : 0;
     
-    const consumptionChartData = last7DaysConsumption.map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
+    const consumptionChartData = consumptionData.slice(-7).map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
     const deliveryChartData = deliveries.filter(d=>d.status === 'Delivered').slice(0,7).map(d => ({ date: d.date, value: gallonToLiter(d.volumeGallons) })).reverse();
 
     return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">{greeting}, {userName}!</h1>
             <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
@@ -48,14 +56,14 @@ export default function DashboardPage() {
                 <span>Feedback</span>
             </Button>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 items-stretch">
-            <Card className="flex flex-col relative">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Droplet className="h-6 w-6 text-primary" />
                         Average Daily Usage
                     </CardTitle>
-                    <CardDescription>Your water usage over the last 7 days.</CardDescription>
+                    <CardDescription>Based on your purchase history.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <p className="text-5xl font-bold tracking-tight">{averageLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl text-muted-foreground">Liters</span></p>
@@ -85,19 +93,9 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
                     </div>
                 </CardContent>
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[625px]">
-                            <WaterStationsPage />
-                        </DialogContent>
-                    </Dialog>
-                </div>
             </Card>
         
-            <Card className="flex flex-col relative">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Truck className="h-6 w-6 text-primary"/>
@@ -133,26 +131,34 @@ export default function DashboardPage() {
                         </ResponsiveContainer>
                     </div>
                 </CardContent>
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
-                                <LifeBuoy className="h-4 w-4 mr-2" />
-                                <span>Support</span>
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[800px] h-[550px]">
-                            <DialogHeader>
-                            <DialogTitle>Support</DialogTitle>
-                            <DialogDescription>
-                                Get help with your account and services.
-                            </DialogDescription>
-                            </DialogHeader>
-                            <SupportPage />
-                        </DialogContent>
-                    </Dialog>
-                </div>
             </Card>
+        </div>
+        <div className="flex justify-end gap-2">
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[625px]">
+                    <WaterStationsPage />
+                </DialogContent>
+            </Dialog>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
+                        <LifeBuoy className="h-4 w-4 mr-2" />
+                        <span>Support</span>
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[800px] h-[550px]">
+                    <DialogHeader>
+                    <DialogTitle>Support</DialogTitle>
+                    <DialogDescription>
+                        Get help with your account and services.
+                    </DialogDescription>
+                    </DialogHeader>
+                    <SupportPage />
+                </DialogContent>
+            </Dialog>
         </div>
     </div>
     );
