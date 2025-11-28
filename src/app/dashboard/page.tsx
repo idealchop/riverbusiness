@@ -24,7 +24,7 @@ export default function DashboardPage() {
   
   return (
     <div className="flex flex-col h-full">
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card className="flex flex-col aspect-square">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -41,7 +41,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="flex flex-col relative md:col-span-2">
+        <Card className="flex flex-col relative md:col-span-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="h-6 w-6 text-primary"/>
