@@ -38,7 +38,7 @@ export default function SupportPage() {
                 </div>
               </div>
               <Separator className="my-4" />
-              <div className="text-sm text-muted-foreground pt-4">
+              <div className="text-sm text-muted-foreground pt-4 font-bold">
                 will reach out to you as soon as possible, thank you
               </div>
             </CardContent>
