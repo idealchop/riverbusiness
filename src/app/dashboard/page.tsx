@@ -7,6 +7,8 @@ import { deliveries, consumptionData } from '@/lib/data';
 import { TrendingDown, LifeBuoy } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import WaterStationsPage from './water-stations/page';
+import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
@@ -24,7 +26,7 @@ export default function DashboardPage() {
   
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 h-full">
-      <Card className="lg:col-span-1 flex flex-col">
+      <Card className="lg:col-span-1 flex flex-col h-[calc(100vh-10rem)]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-5.5-4-3.5 2.5-5.5 4-3 3.5-3 5.5a7 7 0 0 0 7 7z"></path><path d="M12 22c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"></path></svg>
@@ -40,7 +42,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
       
-      <Card className="flex flex-col relative lg:col-span-2">
+      <Card className="flex flex-col relative lg:col-span-2 h-[calc(100vh-10rem)]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingDown className="h-6 w-6 text-primary"/>
@@ -61,9 +63,14 @@ export default function DashboardPage() {
             <Progress value={consumptionPercentage} />
             <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
             <div className="flex justify-end mt-4 gap-2">
-              <Button asChild className="bg-primary/90 hover:bg-primary">
-                <Link href="/dashboard/water-stations">Water Station</Link>
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[625px]">
+                  <WaterStationsPage />
+                </DialogContent>
+              </Dialog>
               <Button asChild className="bg-primary/90 hover:bg-primary">
                 <Link href="/dashboard/quality">Permits</Link>
               </Button>

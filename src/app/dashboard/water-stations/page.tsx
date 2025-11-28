@@ -1,20 +1,23 @@
+'use client'
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { waterStations } from '@/lib/data';
 import { FileText, MapPin } from 'lucide-react';
+import { DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { X } from 'lucide-react';
 
 export default function WaterStationsPage() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Water Stations</CardTitle>
-        <CardDescription>
+    <>
+      <DialogHeader>
+        <DialogTitle>Water Stations</DialogTitle>
+        <DialogDescription>
           View the water stations that supply to you and their compliance status.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </DialogDescription>
+      </DialogHeader>
+      <div className="py-4">
         <Table>
           <TableHeader>
             <TableRow>
@@ -43,7 +46,7 @@ export default function WaterStationsPage() {
             ))}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+      </div>
+    </>
   );
 }
