@@ -86,6 +86,16 @@ export default function DashboardPage() {
                         </AreaChart>
                     </ResponsiveContainer>
                     </div>
+                    <div className="w-full flex justify-end mt-4">
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[625px]">
+                                <WaterStationsPage />
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </CardContent>
             </Card>
         
@@ -128,14 +138,6 @@ export default function DashboardPage() {
             </Card>
         </div>
         <div className="flex justify-end gap-2">
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button className="bg-primary/90 hover:bg-primary">Water Station</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[625px]">
-                    <WaterStationsPage />
-                </DialogContent>
-            </Dialog>
             <Dialog>
                 <DialogTrigger asChild>
                     <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
