@@ -190,7 +190,7 @@ export default function PaymentsPage() {
                                 return (
                                     <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
                                         <CardContent className="p-0">
-                                            {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-video" data-ai-hint={image.imageHint} />}
+                                            {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg w-full h-32 object-cover" data-ai-hint={image.imageHint} />}
                                         </CardContent>
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
@@ -206,7 +206,7 @@ export default function PaymentsPage() {
                                 return (
                                     <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
                                         <CardContent className="p-0">
-                                           {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-video" data-ai-hint={image.imageHint} />}
+                                           {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg w-full h-32 object-cover" data-ai-hint={image.imageHint} />}
                                         </CardContent>
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
