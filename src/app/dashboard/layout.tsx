@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import Image from 'next/image';
 import {
@@ -58,7 +59,7 @@ export default function DashboardLayout({
       </Sidebar>
       <SidebarInset className="flex flex-col">
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-          <SidebarTrigger className="flex md:hidden" />
+          <SidebarTrigger />
           <div className="flex-1" />
           <Popover>
             <PopoverTrigger asChild>
