@@ -61,22 +61,20 @@ export default function DashboardPage() {
               </div>
               <Progress value={consumptionPercentage} />
               <p className="text-right text-sm text-muted-foreground mt-2">{consumptionPercentage.toFixed(1)}% of total supply used</p>
-              <div className="flex justify-end mt-4">
+              <div className="flex justify-end mt-4 gap-2">
                 <Button variant="outline" asChild>
                   <Link href="/dashboard/water-stations">View Details</Link>
+                </Button>
+                 <Button asChild>
+                    <Link href="/dashboard/support" aria-label="Support">
+                        <LifeBuoy className="h-4 w-4 mr-2" />
+                        <span>Support</span>
+                    </Link>
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
-      <div className="absolute bottom-6 right-6">
-        <Button asChild className="rounded-full h-14 px-6 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Link href="/dashboard/support" aria-label="Support">
-                <LifeBuoy className="h-6 w-6 mr-2" />
-                <span>Support</span>
-            </Link>
-        </Button>
       </div>
     </div>
   );
