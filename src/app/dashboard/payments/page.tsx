@@ -179,7 +179,7 @@ export default function PaymentsPage() {
                     <DialogTrigger asChild>
                         <Button className="bg-primary/90 hover:bg-primary">Invoice</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-4xl">
+                    <DialogContent className="sm:max-w-5xl">
                         <DialogHeader>
                             <DialogTitle>Choose a Plan</DialogTitle>
                             <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
@@ -190,7 +190,7 @@ export default function PaymentsPage() {
                                 return (
                                     <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
                                         <CardContent className="p-0">
-                                            {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-[2/1]" data-ai-hint={image.imageHint} />}
+                                            {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-video" data-ai-hint={image.imageHint} />}
                                         </CardContent>
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
@@ -200,13 +200,13 @@ export default function PaymentsPage() {
                                 );
                             })}
                         </div>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
                             {plans.slice(3).map(plan => {
                                 const image = getImageForPlan(plan.imageId);
                                 return (
                                     <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
                                         <CardContent className="p-0">
-                                           {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-[2/1]" data-ai-hint={image.imageHint} />}
+                                           {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg object-cover aspect-video" data-ai-hint={image.imageHint} />}
                                         </CardContent>
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
