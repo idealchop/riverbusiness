@@ -26,7 +26,16 @@ import {
   CreditCard,
   QrCode,
   Download,
+  Receipt,
 } from 'lucide-react';
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from 'recharts';
 
 const paymentHistory = [
   {
@@ -50,9 +59,36 @@ const paymentHistory = [
     amount: 160.0,
     status: 'Paid',
   },
+  {
+    id: 'INV-04-2024',
+    date: '2024-04-15',
+    description: 'April 2024 Invoice',
+    amount: 152.0,
+    status: 'Paid',
+  },
+  {
+    id: 'INV-03-2024',
+    date: '2024-03-15',
+    description: 'March 2024 Invoice',
+    amount: 148.0,
+    status: 'Paid',
+  },
+  {
+    id: 'INV-02-2024',
+    date: '2024-02-15',
+    description: 'February 2024 Invoice',
+    amount: 155.0,
+    status: 'Paid',
+  },
 ];
 
 const totalPaid = paymentHistory.reduce((sum, item) => sum + item.amount, 0);
+
+const chartData = paymentHistory.map(p => ({
+    month: new Date(p.date).toLocaleString('default', { month: 'short' }),
+    amount: p.amount
+})).reverse();
+
 
 export default function PaymentsPage() {
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
@@ -65,22 +101,46 @@ export default function PaymentsPage() {
       <div className="lg:col-span-2 flex flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Total Paid</CardTitle>
-            <CardDescription>
-              Total amount of payments received from your account.
-            </CardDescription>
+            <CardTitle>Total Balance Paid</CardTitle>
+            <CardDescription>Total amount of payments received from your account.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold tracking-tight">
-              ₱{totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
+            <div className="flex items-baseline gap-4">
+              <p className="text-4xl font-bold tracking-tight">
+                ₱{totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="h-64 mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <defs>
+                          <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                          </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₱${value}`} />
+                      <Tooltip 
+                        contentStyle={{
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 'var(--radius)',
+                        }}
+                        labelStyle={{color: 'hsl(var(--foreground))'}}
+                        formatter={(value: number) => [`₱${value.toFixed(2)}`, 'Amount']}
+                      />
+                      <Area type="monotone" dataKey="amount" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorAmount)" />
+                  </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Transaction History</CardTitle>
+            <CardTitle>Partner Transactions</CardTitle>
             <CardDescription>
-              A record of your recent invoices and payments.
+              Recent invoices submitted and payments received.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -95,7 +155,7 @@ export default function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paymentHistory.map((payment) => (
+                {paymentHistory.slice(0, 3).map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">{payment.id}</TableCell>
                     <TableCell>{payment.date}</TableCell>
@@ -117,6 +177,9 @@ export default function PaymentsPage() {
                 ))}
               </TableBody>
             </Table>
+             <div className="flex justify-end mt-4">
+                <Button variant="outline">Create Invoice</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -125,38 +188,18 @@ export default function PaymentsPage() {
       <div className="flex flex-col gap-6">
         <Card className="bg-primary text-primary-foreground">
           <CardHeader>
-            <CardTitle>Next Bill Due</CardTitle>
+            <CardTitle>Available for Payout</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-4xl font-bold">₱155.00</p>
-            <div className="text-sm text-primary-foreground/80">
-                <p>Due on August 15, 2024</p>
-                <p>Invoice #INV-08-2024</p>
+            <div className="text-sm text-primary-foreground/80 flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                <p>**** **** **** 4242</p>
             </div>
-            <Button variant="secondary">Pay Now</Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Payment Methods
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="font-medium">Visa ending in 4242</p>
-                <p className="text-sm text-muted-foreground">Expires 12/2026</p>
-              </div>
-              <Button variant="ghost" size="sm">
-                Manage
-              </Button>
+            <div className='flex items-center gap-2'>
+                <Button variant="secondary" className='w-full'>Manage Account</Button>
+                <Button variant="ghost" className='w-full bg-primary-foreground/20 hover:bg-primary-foreground/30'>Request Payout</Button>
             </div>
-            <Button variant="outline" className="w-full">
-              Add new method
-            </Button>
           </CardContent>
         </Card>
 
