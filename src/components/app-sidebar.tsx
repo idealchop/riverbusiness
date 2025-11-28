@@ -11,11 +11,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
 ];
 
 export function AppSidebar() {
@@ -35,8 +36,8 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
-                  className={cn("justify-start", pathname.startsWith(item.href) && "bg-accent text-accent-foreground")}
+                  isActive={pathname === item.href}
+                  className={cn("justify-start", pathname === item.href && "bg-accent text-accent-foreground")}
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
