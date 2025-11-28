@@ -171,7 +171,7 @@ export default function PaymentsPage() {
              <div className="flex justify-end mt-4">
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button variant="outline">Invoice</Button>
+                        <Button className="bg-primary/90 hover:bg-primary">Invoice</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[625px]">
                         <DialogHeader>
