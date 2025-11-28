@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
-  { href: '/admin', label: 'Admin', icon: Users },
 ];
 
 export function AppSidebar() {
