@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -130,6 +130,10 @@ export default function DashboardPage() {
                     </div>
                 </CardContent>
                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        <span>Feedback</span>
+                    </Button>
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
