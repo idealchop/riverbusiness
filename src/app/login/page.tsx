@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Logo } from '@/components/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const loginSchema = z.object({
   smartId: z.string().min(1, { message: 'Smart ID is required.' }),
@@ -33,14 +34,14 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     console.log(data);
-    // For demonstration, we'll assume a new user and redirect to onboarding
-    // In a real app, you'd check if the user is new here.
     if (data.smartId.includes('new')) {
         router.push('/onboarding');
     } else {
         router.push('/dashboard');
     }
   };
+
+  const loginImage = PlaceHolderImages.find(p => p.id === 'login-background');
 
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
@@ -78,29 +79,17 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
-      <div className="hidden bg-primary lg:flex lg:items-center lg:justify-center lg:p-12">
-        <div className="text-primary-foreground text-center max-w-md">
-            <h2 className="text-4xl font-bold mb-4">Welcome back!</h2>
-            <h3 className="text-2xl mb-4">Please sign in to your River Business account</h3>
-            <p className="text-lg opacity-80 mb-8">
-                Manage your water consumption, track deliveries, and ensure quality with our comprehensive dashboard.
-            </p>
-            <Card className="bg-card/20 border-0">
-                <CardHeader>
-                    <CardTitle className="text-primary-foreground">Sales Report</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Image
-                        src="https://picsum.photos/seed/river-chart/600/350"
-                        alt="Sales Report Chart"
-                        width={600}
-                        height={350}
-                        data-ai-hint="chart dashboard"
-                        className="rounded-lg shadow-2xl"
-                    />
-                </CardContent>
-            </Card>
-        </div>
+      <div className="hidden bg-muted lg:block">
+        {loginImage && (
+            <Image
+            src={loginImage.imageUrl}
+            alt={loginImage.description}
+            width="1920"
+            height="1080"
+            data-ai-hint={loginImage.imageHint}
+            className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+            />
+        )}
       </div>
     </div>
   );

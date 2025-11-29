@@ -65,6 +65,12 @@
       "description": "Delivery person with a single family in the background.",
       "imageUrl": "https://images.unsplash.com/photo-1744277943279-9404adfdea93?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxkZWxpdmVyeSUyMGZhbWlseXxlbnwwfHx8fDE3NjQzOTMxOTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "delivery family"
+    },
+    {
+      "id": "login-background",
+      "description": "A beautiful river flowing through a lush landscape.",
+      "imageUrl": "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+      "imageHint": "river landscape"
     }
   ]
 }
