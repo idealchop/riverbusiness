@@ -17,15 +17,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  {
-    label: 'Monitor',
-    icon: Monitor,
-    subItems: [
-      { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
-      { href: '/dashboard/quality', label: 'Quality', icon: CheckSquare },
-      { href: '/dashboard/predict', label: 'Predictions', icon: TrendingUp },
-    ],
-  },
+  { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
+  { href: '/dashboard/quality', label: 'Quality', icon: CheckSquare },
+  { href: '/dashboard/predict', label: 'Predictions', icon: TrendingUp },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
 ];
 
@@ -43,7 +37,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           {menuItems.map((item) => (
-             item.subItems ? (
+             'subItems' in item && item.subItems ? (
               <Accordion type="single" collapsible key={item.label} className="w-full">
                 <AccordionItem value="item-1" className="border-none">
                   <AccordionTrigger className="w-full justify-start hover:no-underline [&[data-state=open]>svg]:-rotate-90">
