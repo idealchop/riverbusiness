@@ -235,7 +235,7 @@ export default function PaymentsPage() {
              <div className="flex justify-end mt-4">
                 <Dialog open={isInvoiceDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) resetFlow(); else setIsInvoiceDialogOpen(true); }}>
                     <DialogTrigger asChild>
-                        <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsInvoiceDialogOpen(true)}>Invoice</Button>
+                        <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsInvoiceDialogOpen(true)}>Create Invoice</Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-4xl">
                         {step === 'selectClient' && (
