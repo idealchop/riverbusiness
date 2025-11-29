@@ -34,7 +34,7 @@ export default function AdminPage() {
     const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
     const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser & { permissions: Permission[] } | null>(null);
-    const [newUser, setNewUser] = useState({ id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}`, name: '', role: 'Member' as 'Admin' | 'Member', accountStatus: 'Active' as 'Active' | 'Suspended', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0, permissions: ['view_dashboard', 'view_payments'] as Permission[] });
+    const [newUser, setNewUser] = useState({ id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}`, name: '', role: 'Member' as 'Admin' | 'Member', accountStatus: 'Active' as 'Active' | 'Suspended', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0, permissions: ['view_dashboard'] as Permission[] });
 
     const getStatusBadgeVariant = (status: 'Active' | 'Inactive' | 'Suspended'): 'default' | 'secondary' | 'destructive' => {
         switch (status) {
@@ -48,10 +48,6 @@ export default function AdminPage() {
                 return 'secondary';
         }
     };
-
-    const getRoleBadgeVariant = (role: 'Admin' | 'Member'): 'default' | 'secondary' => {
-        return role === 'Admin' ? 'default' : 'secondary';
-    }
     
     const getLoginStatusBadgeVariant = (status: 'Success' | 'Failure'): 'default' | 'destructive' => {
         return status === 'Success' ? 'default' : 'destructive';
@@ -144,18 +140,6 @@ export default function AdminPage() {
                                                 <Label htmlFor="name" className="text-right">Name</Label>
                                                 <Input id="name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="col-span-3" />
                                             </div>
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="role" className="text-right">Role</Label>
-                                                <Select value={newUser.role} onValueChange={(value: 'Admin' | 'Member') => setNewUser({...newUser, role: value, permissions: value === 'Admin' ? allPermissions.map(p => p.id) : ['view_dashboard']})}>
-                                                    <SelectTrigger className="col-span-3">
-                                                        <SelectValue placeholder="Select a role" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="Admin">Admin</SelectItem>
-                                                        <SelectItem value="Member">Member</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
                                         </div>
                                         <DialogFooter>
                                             <DialogClose asChild>
@@ -173,7 +157,6 @@ export default function AdminPage() {
                                     <TableRow>
                                         <TableHead>User ID</TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Role</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Last Login</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
@@ -184,16 +167,6 @@ export default function AdminPage() {
                                         <TableRow key={user.id}>
                                             <TableCell className="font-medium">{user.id}</TableCell>
                                             <TableCell>{user.name}</TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={getRoleBadgeVariant(user.role)}
-                                                    className={
-                                                        user.role === 'Admin' ? 'border-primary text-primary' : ''
-                                                    }
-                                                >
-                                                    {user.role}
-                                                </Badge>
-                                            </TableCell>
                                             <TableCell>
                                                 <Badge 
                                                     variant={getStatusBadgeVariant(user.accountStatus)}
@@ -221,7 +194,7 @@ export default function AdminPage() {
                                                 </DropdownMenuItem>
                                                  <DropdownMenuItem onClick={() => openPermissionsDialog(user)}>
                                                     <ShieldCheck className="mr-2 h-4 w-4" />
-                                                    Assign Roles/Permissions
+                                                    Assign Permissions
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem>
                                                     <KeyRound className="mr-2 h-4 w-4" />
@@ -231,7 +204,7 @@ export default function AdminPage() {
                                                  <DropdownMenuItem>
                                                     <View className="mr-2 h-4 w-4" />
                                                     View as User
-                                                </DropdownMenuItem>
+                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem className="text-red-600" onClick={() => openDeleteDialog(user)}>
                                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -304,25 +277,6 @@ export default function AdminPage() {
                                 <Input id="edit-name" value={selectedUser.name} onChange={(e) => setSelectedUser({...selectedUser, name: e.target.value})} className="col-span-3" />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="edit-role" className="text-right">Role</Label>
-                                <Select 
-                                  value={selectedUser.role} 
-                                  onValueChange={(value: 'Admin' | 'Member') => setSelectedUser({
-                                      ...selectedUser, 
-                                      role: value, 
-                                      permissions: value === 'Admin' ? allPermissions.map(p => p.id) : selectedUser.permissions.filter(p => allPermissions.find(ap => ap.id === p))
-                                  })}
-                                >
-                                    <SelectTrigger className="col-span-3">
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Admin">Admin</SelectItem>
-                                        <SelectItem value="Member">Member</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="edit-status" className="text-right">Status</Label>
                                 <Select value={selectedUser.accountStatus} onValueChange={(value: 'Active' | 'Inactive' | 'Suspended') => setSelectedUser({...selectedUser, accountStatus: value})}>
                                     <SelectTrigger className="col-span-3">
@@ -366,36 +320,13 @@ export default function AdminPage() {
             <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Assign Roles & Permissions</DialogTitle>
+                        <DialogTitle>Assign Permissions</DialogTitle>
                         <DialogDescription>
                             Manage permissions for <span className="font-bold">{selectedUser?.name}</span>.
                         </DialogDescription>
                     </DialogHeader>
                     {selectedUser && (
                         <div className="py-4 space-y-6">
-                             <div className="space-y-2">
-                                <Label>Role</Label>
-                                <Select 
-                                    value={selectedUser.role}
-                                    onValueChange={(value: 'Admin' | 'Member') => {
-                                        const isAdmin = value === 'Admin';
-                                        setSelectedUser({
-                                            ...selectedUser,
-                                            role: value,
-                                            permissions: isAdmin ? allPermissions.map(p => p.id) : []
-                                        });
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Admin">Admin (Full Access)</SelectItem>
-                                        <SelectItem value="Member">Member (Custom Permissions)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <Separator />
                             <div className="space-y-4">
                                 <Label>Permissions</Label>
                                 <div className="space-y-4">
@@ -408,7 +339,6 @@ export default function AdminPage() {
                                             <Switch
                                                 checked={selectedUser.permissions.includes(permission.id)}
                                                 onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
-                                                disabled={selectedUser.role === 'Admin'}
                                             />
                                         </div>
                                     ))}
@@ -427,3 +357,6 @@ export default function AdminPage() {
         </div>
     );
 }
+
+
+    
