@@ -128,3 +128,58 @@ export const commercialPlans = [
         ]
     }
 ];
+
+export const corporatePlans = [
+    {
+        name: 'Enterprise Basic',
+        price: 30000,
+        liters: '10,000',
+        refillFrequency: '1-2/day',
+        employees: '150 - 250',
+        stations: '2-3',
+        recommended: false,
+    },
+    {
+        name: 'Enterprise Plus',
+        price: 50000,
+        liters: '16,600',
+        refillFrequency: '2-3/day',
+        employees: '250 - 350',
+        stations: '2-3',
+        recommended: true,
+    },
+    {
+        name: 'Enterprise Elite',
+        price: 75000,
+        liters: '25,000',
+        refillFrequency: '3+/day',
+        employees: '350 - 500',
+        stations: '3-4',
+        recommended: false,
+    },
+    {
+        name: 'Enterprise Pro',
+        price: 100000,
+        liters: '33,000+',
+        refillFrequency: 'Continuous',
+        employees: '500+',
+        stations: '5+',
+        recommended: false,
+    }
+];
+
+export const enterprisePlans = [
+    {
+        name: 'Custom Enterprise Solution',
+        price: 0,
+        liters: 'Custom',
+        refillFrequency: 'Dedicated Support',
+        recommended: false,
+        details: [
+            'Tailored pricing based on high-volume needs',
+            'Dedicated account manager and support',
+            'Advanced analytics and reporting',
+            'Contact us for a personalized quote'
+        ]
+    }
+];

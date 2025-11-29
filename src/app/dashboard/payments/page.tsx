@@ -50,7 +50,7 @@ import {
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { clientTypes, familyPlans, smePlans, commercialPlans } from '@/lib/plans';
+import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
 const paymentHistory = [
@@ -86,7 +86,9 @@ const icons: { [key: string]: React.ElementType } = {
 type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
 type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
 type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string };
-type AnyPlan = FamilyPlan | SmePlan | CommercialPlan;
+type CorporatePlan = (typeof corporatePlans)[0] & { details?: string[], employees?: string, stations?: string };
+type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: string[] };
+type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
 
 
 export default function PaymentsPage() {
@@ -102,18 +104,7 @@ export default function PaymentsPage() {
 
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
-    if (clientType.name === 'Family' || clientType.name === 'SME' || clientType.name === 'Commercial') {
-      setStep('selectPlan');
-    } else {
-      setSelectedPlan({ 
-        name: clientType.name, 
-        price: clientType.price,
-        liters: 'N/A',
-        refillFrequency: 'N/A',
-        recommended: false
-      });
-      setStep('payment');
-    }
+    setStep('selectPlan');
   };
   
   const handlePlanSelect = (plan: AnyPlan) => {
@@ -127,11 +118,7 @@ export default function PaymentsPage() {
       setSelectedPlan(null);
     } else if (step === 'payment') {
       setSelectedPlan(null);
-      if (selectedClientType?.name === 'Family' || selectedClientType?.name === 'SME' || selectedClientType?.name === 'Commercial') {
-        setStep('selectPlan');
-      } else {
-        setStep('selectClient');
-      }
+      setStep('selectPlan');
     }
   };
 
@@ -368,7 +355,7 @@ export default function PaymentsPage() {
                                         {customSmePlan && (() => {
                                             const plan = customSmePlan;
                                             return (
-                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
                                                      {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                                     <CardHeader>
                                                         <CardTitle>{plan.name}</CardTitle>
@@ -419,7 +406,7 @@ export default function PaymentsPage() {
                                         {customCommercialPlan && (() => {
                                             const plan = customCommercialPlan;
                                             return (
-                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
                                                      {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                                     <CardHeader>
                                                         <CardTitle>{plan.name}</CardTitle>
@@ -435,6 +422,55 @@ export default function PaymentsPage() {
                                         })()}
                                     </div>
                                 )}
+                                {selectedClientType.name === 'Corporate' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {corporatePlans.map(plan => {
+                                            const isCorporatePlan = 'employees' in plan;
+                                            return (
+                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                    {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
+                                                    <CardHeader>
+                                                        <CardTitle>{plan.name}</CardTitle>
+                                                        <p className="text-2xl font-bold">₱{plan.price.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                            <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                            <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                                        </div>
+                                                        <div className="flex-grow"></div>
+                                                        <Separator />
+                                                        <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                            {isCorporatePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
+                                                            {isCorporatePlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Stations</span>}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                                {selectedClientType.name === 'Enterprise' && (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {enterprisePlans.map(plan => (
+                                            <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                <CardHeader>
+                                                    <CardTitle>{plan.name}</CardTitle>
+                                                    <p className="text-2xl font-bold">Contact Us</p>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                    <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
+                                                        {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
+                                                    </ul>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
                               </div>
                             </div>
                           </>
@@ -448,9 +484,11 @@ export default function PaymentsPage() {
                                 </DialogTitle>
                                <DialogDescription>
                                    {'details' in selectedPlan ? (
-                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span>. Billed at ₱{selectedPlan.price.toFixed(2)} per liter.</>
+                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Billed at ₱{selectedPlan.price.toFixed(2)} per liter.</>
+                                   ) : 'employees' in selectedPlan && typeof selectedPlan.price === 'number' ? (
+                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} using your preferred method.</>
                                    ) : (
-                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.</>
+                                    <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Please contact us for a personalized quote.</>
                                    )}
                                </DialogDescription>
                              </DialogHeader>
@@ -506,7 +544,6 @@ export default function PaymentsPage() {
         <Card className="bg-foreground text-background">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Available for Payout</CardTitle>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" className="h-6 w-6 opacity-50"><rect width="256" height="256" fill="none"></rect><path d="M89.3,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,160Z" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="16"></path><path d="M194.7,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,194.7,160Z" opacity="0.2" fill="currentColor"></path><path d="M89.3,224l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,224Z" opacity="0.2" fill="currentColor"></path></svg>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p className="text-4xl font-bold">₱{upcomingPayment ? upcomingPayment.amount.toFixed(2) : '0.00'}</p>
