@@ -91,7 +91,7 @@ export default function AdminPage() {
                             <div className="flex justify-between items-center">
                                 <div>
                                     <CardTitle>User Management</CardTitle>
-                                    <CardDescription>Monitor and manage application users.</CardDescription>
+                                    <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
                                 <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                                     <DialogTrigger asChild>
@@ -319,5 +319,7 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
 
     
