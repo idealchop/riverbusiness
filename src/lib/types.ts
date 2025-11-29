@@ -33,6 +33,14 @@ export interface WaterStation {
   permitUrl: string;
 }
 
+export type Permission = 
+  | 'view_dashboard' 
+  | 'view_payments' 
+  | 'manage_deliveries' 
+  | 'view_quality_reports' 
+  | 'manage_users' 
+  | 'access_admin_panel';
+
 export interface AppUser {
     id: string;
     name: string;
@@ -41,6 +49,7 @@ export interface AppUser {
     totalConsumptionLiters: number;
     accountStatus: 'Active' | 'Inactive' | 'Suspended';
     lastLogin: string;
+    permissions?: Permission[];
 }
 
 export interface LoginLog {

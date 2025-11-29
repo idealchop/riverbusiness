@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck } from 'lucide-react';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,16 +14,27 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AppUser } from '@/lib/types';
+import { AppUser, Permission } from '@/lib/types';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 
+const allPermissions: { id: Permission, label: string, description: string }[] = [
+    { id: 'view_dashboard', label: 'View Dashboard', description: 'Can view the main dashboard.' },
+    { id: 'view_payments', label: 'View Payments', description: 'Can view payment history and billing.' },
+    { id: 'manage_deliveries', label: 'Manage Deliveries', description: 'Can track and manage water deliveries.' },
+    { id: 'view_quality_reports', label: 'View Quality Reports', description: 'Can access water quality and compliance reports.' },
+    { id: 'manage_users', label: 'Manage Users', description: 'Can add, edit, and delete other users.' },
+    { id: 'access_admin_panel', label: 'Access Admin Panel', description: 'Can access the administrative section.' },
+];
 
 export default function AdminPage() {
-    const [appUsers, setAppUsers] = useState(initialAppUsers);
+    const [appUsers, setAppUsers] = useState(initialAppUsers.map(u => ({...u, permissions: u.role === 'Admin' ? allPermissions.map(p => p.id) : ['view_dashboard', 'view_payments']})));
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
     const [isEditUserOpen, setIsEditUserOpen] = useState(false);
     const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-    const [newUser, setNewUser] = useState({ id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}`, name: '', role: 'Member' as 'Admin' | 'Member', accountStatus: 'Active' as 'Active' | 'Suspended', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0 });
+    const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<AppUser & { permissions: Permission[] } | null>(null);
+    const [newUser, setNewUser] = useState({ id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}`, name: '', role: 'Member' as 'Admin' | 'Member', accountStatus: 'Active' as 'Active' | 'Suspended', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0, permissions: ['view_dashboard', 'view_payments'] as Permission[] });
 
     const getStatusBadgeVariant = (status: 'Active' | 'Inactive' | 'Suspended'): 'default' | 'secondary' | 'destructive' => {
         switch (status) {
@@ -49,7 +60,7 @@ export default function AdminPage() {
     const handleAddUser = () => {
         setAppUsers([...appUsers, { ...newUser, id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}` }]);
         setIsAddUserOpen(false);
-        setNewUser({ id: `USR-${(appUsers.length + 2).toString().padStart(3, '0')}`, name: '', role: 'Member', accountStatus: 'Active', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0 });
+        setNewUser({ id: `USR-${(appUsers.length + 2).toString().padStart(3, '0')}`, name: '', role: 'Member', accountStatus: 'Active', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0, permissions: ['view_dashboard'] });
     };
 
     const handleEditUser = () => {
@@ -68,15 +79,38 @@ export default function AdminPage() {
         }
     };
 
-    const openEditDialog = (user: AppUser) => {
+    const handleSavePermissions = () => {
+        if (selectedUser) {
+            setAppUsers(appUsers.map(u => u.id === selectedUser.id ? selectedUser : u));
+            setIsPermissionsOpen(false);
+            setSelectedUser(null);
+        }
+    };
+
+    const openEditDialog = (user: AppUser & { permissions: Permission[] }) => {
         setSelectedUser({ ...user });
         setIsEditUserOpen(true);
     }
     
     const openDeleteDialog = (user: AppUser) => {
-        setSelectedUser(user);
+        setSelectedUser(user as AppUser & { permissions: Permission[] });
         setIsDeleteUserOpen(true);
     }
+
+    const openPermissionsDialog = (user: AppUser & { permissions: Permission[] }) => {
+        setSelectedUser({ ...user });
+        setIsPermissionsOpen(true);
+    }
+
+    const handlePermissionChange = (permissionId: Permission, checked: boolean) => {
+        if (selectedUser) {
+            const newPermissions = checked
+                ? [...selectedUser.permissions, permissionId]
+                : selectedUser.permissions.filter(p => p !== permissionId);
+            setSelectedUser({ ...selectedUser, permissions: newPermissions });
+        }
+    };
+
 
     return (
         <div className="flex flex-col h-full gap-4">
@@ -112,7 +146,7 @@ export default function AdminPage() {
                                             </div>
                                             <div className="grid grid-cols-4 items-center gap-4">
                                                 <Label htmlFor="role" className="text-right">Role</Label>
-                                                <Select value={newUser.role} onValueChange={(value: 'Admin' | 'Member') => setNewUser({...newUser, role: value})}>
+                                                <Select value={newUser.role} onValueChange={(value: 'Admin' | 'Member') => setNewUser({...newUser, role: value, permissions: value === 'Admin' ? allPermissions.map(p => p.id) : ['view_dashboard']})}>
                                                     <SelectTrigger className="col-span-3">
                                                         <SelectValue placeholder="Select a role" />
                                                     </SelectTrigger>
@@ -185,13 +219,18 @@ export default function AdminPage() {
                                                     <UserCog className="mr-2 h-4 w-4" />
                                                     Edit User
                                                 </DropdownMenuItem>
-                                                 <DropdownMenuItem>
+                                                 <DropdownMenuItem onClick={() => openPermissionsDialog(user)}>
                                                     <ShieldCheck className="mr-2 h-4 w-4" />
                                                     Assign Roles/Permissions
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem>
                                                     <KeyRound className="mr-2 h-4 w-4" />
                                                     Reset Password
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                 <DropdownMenuItem>
+                                                    <View className="mr-2 h-4 w-4" />
+                                                    View as User
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem className="text-red-600" onClick={() => openDeleteDialog(user)}>
@@ -266,7 +305,14 @@ export default function AdminPage() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="edit-role" className="text-right">Role</Label>
-                                <Select value={selectedUser.role} onValueChange={(value: 'Admin' | 'Member') => setSelectedUser({...selectedUser, role: value})}>
+                                <Select 
+                                  value={selectedUser.role} 
+                                  onValueChange={(value: 'Admin' | 'Member') => setSelectedUser({
+                                      ...selectedUser, 
+                                      role: value, 
+                                      permissions: value === 'Admin' ? allPermissions.map(p => p.id) : selectedUser.permissions.filter(p => allPermissions.find(ap => ap.id === p))
+                                  })}
+                                >
                                     <SelectTrigger className="col-span-3">
                                         <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
@@ -316,10 +362,68 @@ export default function AdminPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Assign Roles & Permissions</DialogTitle>
+                        <DialogDescription>
+                            Manage permissions for <span className="font-bold">{selectedUser?.name}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedUser && (
+                        <div className="py-4 space-y-6">
+                             <div className="space-y-2">
+                                <Label>Role</Label>
+                                <Select 
+                                    value={selectedUser.role}
+                                    onValueChange={(value: 'Admin' | 'Member') => {
+                                        const isAdmin = value === 'Admin';
+                                        setSelectedUser({
+                                            ...selectedUser,
+                                            role: value,
+                                            permissions: isAdmin ? allPermissions.map(p => p.id) : []
+                                        });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Admin">Admin (Full Access)</SelectItem>
+                                        <SelectItem value="Member">Member (Custom Permissions)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Separator />
+                            <div className="space-y-4">
+                                <Label>Permissions</Label>
+                                <div className="space-y-4">
+                                    {allPermissions.map((permission) => (
+                                        <div key={permission.id} className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-base">{permission.label}</Label>
+                                                <p className="text-sm text-muted-foreground">{permission.description}</p>
+                                            </div>
+                                            <Switch
+                                                checked={selectedUser.permissions.includes(permission.id)}
+                                                onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
+                                                disabled={selectedUser.role === 'Admin'}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleSavePermissions}>Save Permissions</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
-
-    
-
-    
