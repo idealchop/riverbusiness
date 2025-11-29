@@ -34,10 +34,10 @@ export function AppSidebar() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
-                  className={cn("justify-start", pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard') && "bg-accent text-accent-foreground")}
+                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                  className={cn("justify-start")}
                   tooltip={item.label}
                 >
                   <item.icon className="h-5 w-5" />
