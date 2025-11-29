@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { clientTypes } from '@/lib/plans';
+import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
 import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
@@ -254,26 +254,21 @@ export default function OnboardingPage() {
                             <div key={client.name}
                                  onClick={() => handleClientTypeSelect(client.name)}
                                  className={cn(
-                                     "border rounded-lg p-4 cursor-pointer transition-all flex flex-col aspect-square",
+                                     "border rounded-lg p-0 cursor-pointer transition-all flex flex-col aspect-square overflow-hidden relative",
                                      selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
                                  )}>
                                 {image && (
-                                    <div className="relative w-full h-1/2">
-                                        <Image
-                                            src={image.imageUrl}
-                                            alt={client.name}
-                                            fill
-                                            className={cn(
-                                                "mx-auto object-contain",
-                                                client.name === 'Family' ? 'rounded-md' : 'rounded-full'
-                                            )}
-                                            data-ai-hint={image.imageHint}
-                                        />
-                                    </div>
+                                    <Image
+                                        src={image.imageUrl}
+                                        alt={client.name}
+                                        fill
+                                        className={cn("object-cover")}
+                                        data-ai-hint={image.imageHint}
+                                    />
                                 )}
-                                <div className="h-1/2 flex flex-col justify-center items-center text-center">
-                                    <p className="font-semibold">{client.name}</p>
-                                    <p className="text-xs text-muted-foreground">{client.description}</p>
+                                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                                    <p className="font-semibold text-white">{client.name}</p>
+                                    <p className="text-xs text-white/80">{client.description}</p>
                                 </div>
                             </div>
                           )
