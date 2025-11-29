@@ -34,11 +34,7 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     console.log(data);
-    if (data.smartId.includes('new')) {
-        router.push('/onboarding');
-    } else {
-        router.push('/dashboard');
-    }
+    router.push('/onboarding');
   };
 
   const loginImage = PlaceHolderImages.find(p => p.id === 'login-background');
