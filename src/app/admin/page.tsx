@@ -38,7 +38,6 @@ type NewUserFormValues = z.infer<typeof newUserSchema>;
 
 export default function AdminPage() {
     const [appUsers, setAppUsers] = useState(initialAppUsers);
-    const [selectedUser, setSelectedUser] = useState<any>(null);
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -164,8 +163,10 @@ export default function AdminPage() {
                                 )}
                             />
                             <DialogFooter>
-                                <Button variant="secondary" onClick={() => setIsCreateUserOpen(false)}>Cancel</Button>
-                                <Button type="submit">Create User</Button>
+                                <DialogClose asChild>
+                                  <Button variant="secondary" className="bg-secondary text-secondary-foreground">Cancel</Button>
+                                </DialogClose>
+                                <Button type="submit" className="bg-primary text-primary-foreground">Create User</Button>
                             </DialogFooter>
                         </form>
                     </Form>
@@ -345,66 +346,6 @@ export default function AdminPage() {
         </Tabs>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <Card>
-                <CardHeader>
-                    <CardTitle>User Management</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Last Login</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {appUsers.map((user) => (
-                                    <TableRow key={user.id}>
-                                        <TableCell>{user.id}</TableCell>
-                                        <TableCell>{user.name}</TableCell>
-                                        <TableCell>{user.email}</TableCell>
-                                        <TableCell>{user.accountStatus}</TableCell>
-                                        <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <UserCog className="mr-2 h-4 w-4" />
-                                                        Edit User
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                                        Assign Permissions
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <KeyRound className="mr-2 h-4 w-4" />
-                                                        Reset Password
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-red-600">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete User
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>Bar Chart Example</CardTitle>
@@ -430,3 +371,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
