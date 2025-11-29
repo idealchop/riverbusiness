@@ -20,6 +20,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Users, Briefcase, Building, Layers, Factory, Droplet, RefreshCw, User, Home, Building2, QrCode, CreditCard, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 
 const onboardingSchema = z.object({
