@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
 
     const totalLitersPurchased = 1000;
-    const remainingLiters = 1000;
+    const remainingLiters = 800;
     
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
     const deliveryChartData = deliveries.filter(d=>d.status === 'Delivered').slice(0,7).map(d => ({ date: d.date, value: gallonToLiter(d.volumeGallons) })).reverse();
@@ -110,7 +110,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div>
-                        <p className="text-5xl font-bold tracking-tight">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                        <p className="text-5xl font-bold tracking-tight">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-3xl text-muted-foreground">/{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
