@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, paymentHistory } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn, MessageSquare, Star, Receipt } from 'lucide-react';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn, MessageSquare, Star, Handshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -220,7 +220,7 @@ export default function AdminPage() {
                             activeTab === 'transactions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
                         )}
                     >
-                        <Receipt className="mr-2 h-4 w-4" />Transactions
+                        <Handshake className="mr-2 h-4 w-4" />Transactions
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="users" className="flex-1 mt-4">
@@ -427,9 +427,9 @@ export default function AdminPage() {
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="secondary">Cancel</Button>
+                            <Button variant="secondary" className="bg-secondary/90 hover:bg-secondary">Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleAddUser}>Add User</Button>
+                        <Button onClick={handleAddUser} className="bg-primary/90 hover:bg-primary">Add User</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -465,7 +465,7 @@ export default function AdminPage() {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button onClick={() => setIsUserInfoOpen(false)}>Done</Button>
+                            <Button onClick={() => setIsUserInfoOpen(false)} className="bg-primary/90 hover:bg-primary">Done</Button>
                         </DialogClose>
                     </DialogFooter>
                 </DialogContent>
@@ -495,7 +495,7 @@ export default function AdminPage() {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button onClick={() => { setIsResetPasswordOpen(false); setSelectedUser(null); }}>Done</Button>
+                            <Button onClick={() => { setIsResetPasswordOpen(false); setSelectedUser(null); }} className="bg-primary/90 hover:bg-primary">Done</Button>
                         </DialogClose>
                     </DialogFooter>
                 </DialogContent>
@@ -530,9 +530,9 @@ export default function AdminPage() {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="secondary" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setSelectedUser(null)} className="bg-secondary/90 hover:bg-secondary">Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleEditUser}>Save Changes</Button>
+                        <Button onClick={handleEditUser} className="bg-primary/90 hover:bg-primary">Save Changes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -547,7 +547,7 @@ export default function AdminPage() {
                     </DialogHeader>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="secondary" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setSelectedUser(null)} className="bg-secondary/90 hover:bg-secondary">Cancel</Button>
                         </DialogClose>
                         <Button variant="destructive" onClick={handleDeleteUser}>Delete User</Button>
                     </DialogFooter>
@@ -585,9 +585,9 @@ export default function AdminPage() {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="secondary" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setSelectedUser(null)} className="bg-secondary/90 hover:bg-secondary">Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleSavePermissions}>Save Permissions</Button>
+                        <Button onClick={handleSavePermissions} className="bg-primary/90 hover:bg-primary">Save Permissions</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -631,7 +631,7 @@ export default function AdminPage() {
                     </div>
                      <DialogFooter>
                         <DialogClose asChild>
-                            <Button>Close</Button>
+                            <Button className="bg-primary/90 hover:bg-primary">Close</Button>
                         </DialogClose>
                     </DialogFooter>
                 </DialogContent>
