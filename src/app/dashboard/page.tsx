@@ -20,8 +20,8 @@ const gallonToLiter = (gallons: number) => gallons * 3.78541;
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
     const [greeting, setGreeting] = useState('');
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
-    const [totalLitersPurchased, setTotalLitersPurchased] = useState(1000);
-    const [remainingLiters, setRemainingLiters] = useState(800);
+    const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
+    const [remainingLiters, setRemainingLiters] = useState(0);
 
     useEffect(() => {
         if (initialUserName) {
@@ -51,7 +51,13 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     .reduce((acc, curr) => acc + gallonToLiter(curr.volumeGallons), 0);
                     
                 setRemainingLiters(Math.max(0, purchased - consumed));
+            } else {
+                setTotalLitersPurchased(800);
+                setRemainingLiters(800);
             }
+        } else {
+             setTotalLitersPurchased(800);
+             setRemainingLiters(800);
         }
     }, []);
 
@@ -181,7 +187,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     <div className="w-full flex justify-end mt-4">
                         <Dialog>
                            <DialogTrigger asChild>
-                               <Button className="bg-primary/90 hover:bg-primary">
+                               <Button className="bg-primary/90 hoverbg-primary">
                                    <History className="h-4 w-4 mr-2" />
                                    History
                                </Button>
@@ -203,3 +209,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
     
 
+
+
+    
