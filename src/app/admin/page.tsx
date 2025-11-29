@@ -86,6 +86,7 @@ export default function AdminPage() {
             permissions: ['view_dashboard'],
             password: password
         });
+        setShowNewPassword(false);
         setIsAddUserOpen(true);
     };
 
@@ -313,6 +314,15 @@ export default function AdminPage() {
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Name</Label>
                             <Input id="name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="col-span-3" />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Password</Label>
+                            <div className="col-span-3 flex items-center gap-2 relative">
+                                <Input value={newUser.password} readOnly type={showNewPassword ? 'text' : 'password'} />
+                                <Button size="icon" variant="ghost" className="absolute right-1" onClick={() => setShowNewPassword(!showNewPassword)}>
+                                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
