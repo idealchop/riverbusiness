@@ -302,7 +302,7 @@ export default function OnboardingPage() {
                                         src={image.imageUrl}
                                         alt={client.name}
                                         fill
-                                        className={cn("object-cover")}
+                                        className={cn("object-contain p-4")}
                                         data-ai-hint={image.imageHint}
                                     />
                                 )}
@@ -349,5 +349,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
