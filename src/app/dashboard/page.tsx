@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import SupportPage from './support/page';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import Link from 'next/link';
 import DeliveriesPage from './deliveries/page';
+import { Input } from '@/components/ui/input';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -110,7 +111,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div>
-                        <p className="text-5xl font-bold tracking-tight">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-3xl text-muted-foreground">/{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> <span className="text-xl">Liters</span></p>
+                        <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-3xl text-muted-foreground">/{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
