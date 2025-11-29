@@ -5,7 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -16,8 +15,6 @@ import {
 } from "@/components/ui/popover";
 import {
   Sidebar,
-  SidebarContent,
-  SidebarHeader,
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
@@ -25,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AdminSidebar } from '@/components/admin-sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera } from 'lucide-react';
+import { Bell, Camera, Info, KeyRound, User } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -70,7 +67,7 @@ export default function AdminLayout({
         <AdminSidebar />
       </Sidebar>
       <SidebarInset>
-         <div className="flex flex-col h-full">
+         <div className="flex flex-col h-screen">
             <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
             <SidebarTrigger />
             <div className="flex-1" />
@@ -218,7 +215,7 @@ export default function AdminLayout({
             </DropdownMenu>
             </header>
             <main className="flex-1 overflow-auto p-4 sm:p-6">
-            {children}
+              {children}
             </main>
         </div>
       </SidebarInset>

@@ -31,13 +31,13 @@ export default function AdminPage() {
     }
 
     return (
-        <Tabs defaultValue="users">
-            <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="users" className="flex flex-col h-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
                 <TabsTrigger value="users">User Management</TabsTrigger>
                 <TabsTrigger value="logs">Login Logs</TabsTrigger>
             </TabsList>
-            <TabsContent value="users">
-                <Card>
+            <TabsContent value="users" className="flex-1">
+                <Card className="h-full">
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <div>
@@ -127,8 +127,8 @@ export default function AdminPage() {
                     </CardContent>
                 </Card>
             </TabsContent>
-            <TabsContent value="logs">
-                 <Card>
+            <TabsContent value="logs" className="flex-1">
+                 <Card className="h-full">
                     <CardHeader>
                         <CardTitle>Login Logs</CardTitle>
                         <CardDescription>View a history of user login attempts.</CardDescription>
