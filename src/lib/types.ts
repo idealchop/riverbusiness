@@ -47,7 +47,7 @@ export interface AppUser {
     email: string;
     password?: string;
     totalConsumptionLiters: number;
-    accountStatus: 'Active' | 'Inactive' | 'Suspended';
+    accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
 }
@@ -60,3 +60,5 @@ export interface LoginLog {
   ipAddress: string;
   status: 'Success' | 'Failure';
 }
+
+    

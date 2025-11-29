@@ -50,7 +50,7 @@ export const appUsers: AppUser[] = [
     { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
     { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
     { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Suspended', lastLogin: '2024-07-18' },
+    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Inactive', lastLogin: '2024-07-18' },
 ];
 
 export const loginLogs: LoginLog[] = [
@@ -61,3 +61,5 @@ export const loginLogs: LoginLog[] = [
   { id: 'LOG-005', userId: 'USR-005', userName: 'Ethan Davis', timestamp: '2024-07-20T10:36:10Z', ipAddress: '198.51.100.8', status: 'Success' },
   { id: 'LOG-006', userId: 'USR-003', userName: 'Charlie Brown', timestamp: '2024-06-15T18:05:12Z', ipAddress: '192.0.2.14', status: 'Success' },
 ]
+
+    

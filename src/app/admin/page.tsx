@@ -43,7 +43,7 @@ export default function AdminPage() {
     const [newUser, setNewUser] = useState({ 
         id: '',
         name: '', 
-        accountStatus: 'Active' as 'Active' | 'Suspended', 
+        accountStatus: 'Active' as 'Active' | 'Inactive', 
         lastLogin: new Date().toISOString(), 
         totalConsumptionLiters: 0, 
         permissions: ['view_dashboard'] as Permission[],
@@ -57,14 +57,12 @@ export default function AdminPage() {
     const [showResetPassword, setShowResetPassword] = useState(false);
 
 
-    const getStatusBadgeVariant = (status: 'Active' | 'Inactive' | 'Suspended'): 'default' | 'secondary' | 'destructive' => {
+    const getStatusBadgeVariant = (status: 'Active' | 'Inactive'): 'default' | 'secondary' => {
         switch (status) {
             case 'Active':
                 return 'default';
             case 'Inactive':
                 return 'secondary';
-            case 'Suspended':
-                return 'destructive';
             default:
                 return 'secondary';
         }
@@ -416,14 +414,13 @@ export default function AdminPage() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="edit-status" className="text-right">Status</Label>
-                                <Select value={selectedUser.accountStatus} onValueChange={(value: 'Active' | 'Inactive' | 'Suspended') => setSelectedUser({...selectedUser, accountStatus: value})}>
+                                <Select value={selectedUser.accountStatus} onValueChange={(value: 'Active' | 'Inactive') => setSelectedUser({...selectedUser, accountStatus: value})}>
                                     <SelectTrigger className="col-span-3">
                                         <SelectValue placeholder="Select a status" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Active">Active</SelectItem>
                                         <SelectItem value="Inactive">Inactive</SelectItem>
-                                        <SelectItem value="Suspended">Suspended</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -495,3 +492,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
