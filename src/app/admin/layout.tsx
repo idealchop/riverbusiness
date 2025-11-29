@@ -23,7 +23,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { AppSidebar } from '@/components/app-sidebar';
+import { AdminSidebar } from '@/components/admin-sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Bell, Truck, User, KeyRound, Info, Camera } from 'lucide-react';
 import { deliveries } from '@/lib/data';
@@ -67,7 +67,7 @@ export default function AdminLayout({
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
-        <AppSidebar />
+        <AdminSidebar />
       </Sidebar>
       <SidebarInset>
          <div className="flex flex-col h-full">
