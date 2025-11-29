@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,10 +82,10 @@ export default function AdminPage() {
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
                 <DialogTrigger asChild>
                      <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90">
-                        <CardHeader>
+                        <CardHeader className="p-4">
                             <CardTitle>Make an Account</CardTitle>
                         </CardHeader>
-                        <CardFooter>
+                        <CardFooter className="p-4 pt-0">
                             <p className="flex items-center text-sm">
                                 Create User <UserPlus className="h-4 w-4 ml-1" />
                             </p>
@@ -174,30 +174,30 @@ export default function AdminPage() {
             </Dialog>
 
             <Card className="bg-primary text-primary-foreground">
-                <CardHeader>
+                <CardHeader className="p-4">
                     <CardTitle>Warning Card</CardTitle>
                 </CardHeader>
-                 <CardFooter>
+                 <CardFooter className="p-4 pt-0">
                     <a href="#" className="flex items-center text-sm hover:underline">
                         View Details <ChevronRight className="h-4 w-4 ml-1" />
                     </a>
                 </CardFooter>
             </Card>
             <Card className="bg-primary text-primary-foreground">
-                <CardHeader>
+                <CardHeader className="p-4">
                     <CardTitle>Success Card</CardTitle>
                 </CardHeader>
-                 <CardFooter>
+                 <CardFooter className="p-4 pt-0">
                     <a href="#" className="flex items-center text-sm hover:underline">
                         View Details <ChevronRight className="h-4 w-4 ml-1" />
                     </a>
                 </CardFooter>
             </Card>
             <Card className="bg-primary text-primary-foreground">
-                <CardHeader>
+                <CardHeader className="p-4">
                     <CardTitle>Danger Card</CardTitle>
                 </CardHeader>
-                <CardFooter>
+                <CardFooter className="p-4 pt-0">
                     <a href="#" className="flex items-center text-sm hover:underline">
                         View Details <ChevronRight className="h-4 w-4 ml-1" />
                     </a>
