@@ -98,7 +98,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div>
-                        <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
+                        <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-3xl text-muted-foreground">/{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
