@@ -185,28 +185,12 @@ export default function PaymentsPage() {
                             <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
                         </DialogHeader>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
-                            {plans.slice(0, 3).map(plan => {
+                            {plans.map(plan => {
                                 const image = getImageForPlan(plan.imageId);
                                 return (
                                     <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
                                         <CardContent className="p-0">
                                             {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg w-full h-32 object-cover" data-ai-hint={image.imageHint} />}
-                                        </CardContent>
-                                        <CardHeader>
-                                            <CardTitle>{plan.name}</CardTitle>
-                                            <CardDescription>{plan.description}</CardDescription>
-                                        </CardHeader>
-                                    </Card>
-                                );
-                            })}
-                        </div>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                            {plans.slice(3).map(plan => {
-                                const image = getImageForPlan(plan.imageId);
-                                return (
-                                    <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
-                                        <CardContent className="p-0">
-                                           {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg w-full h-32 object-cover" data-ai-hint={image.imageHint} />}
                                         </CardContent>
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
