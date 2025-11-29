@@ -10,8 +10,11 @@ import { MoreHorizontal, Paperclip, Search, Truck } from 'lucide-react';
 import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
+// Conversion rate
+const gallonToLiter = (gallons: number) => gallons * 3.78541;
+
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState(allDeliveries);
+  const [deliveries, setDeliveries] = useState(allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})));
   const [searchTerm, setSearchTerm] = useState('');
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
@@ -28,7 +31,7 @@ export default function DeliveriesPage() {
   };
 
   const handleSearch = () => {
-    const filteredDeliveries = allDeliveries.filter(delivery => {
+    const filteredDeliveries = allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})).filter(delivery => {
       const searchLower = searchTerm.toLowerCase();
       return (
         delivery.id.toLowerCase().includes(searchLower) ||
@@ -43,7 +46,7 @@ export default function DeliveriesPage() {
     const term = e.target.value;
     setSearchTerm(term);
     if (term === '') {
-      setDeliveries(allDeliveries);
+      setDeliveries(allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})));
     }
   };
 
@@ -78,7 +81,6 @@ export default function DeliveriesPage() {
             <TableRow>
               <TableHead>Delivery ID</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Volume (Gallons)</TableHead>
               <TableHead>Volume (Liters)</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -89,8 +91,7 @@ export default function DeliveriesPage() {
               <TableRow key={delivery.id}>
                 <TableCell className="font-medium">{delivery.id}</TableCell>
                 <TableCell>{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                <TableCell>{delivery.volumeGallons.toLocaleString()}</TableCell>
-                <TableCell>{(delivery.volumeGallons * 3.78541).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>{delivery.volumeLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(delivery.status)}
                     className={
