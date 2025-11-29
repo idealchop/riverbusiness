@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff } from 'lucide-react';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -172,8 +172,8 @@ export default function AdminPage() {
         <div className="flex flex-col h-full gap-4">
             <Tabs defaultValue="users" className="flex flex-col flex-1">
                 <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="users">User Management</TabsTrigger>
-                    <TabsTrigger value="logs">Login Logs</TabsTrigger>
+                    <TabsTrigger value="users"><Users className="mr-2 h-4 w-4" />User Management</TabsTrigger>
+                    <TabsTrigger value="logs"><LogIn className="mr-2 h-4 w-4" />Login Logs</TabsTrigger>
                 </TabsList>
                 <TabsContent value="users" className="flex-1 mt-4">
                     <Card className="h-full flex flex-col">
@@ -492,5 +492,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
