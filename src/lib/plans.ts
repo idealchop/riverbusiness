@@ -1,4 +1,5 @@
 
+
 export const clientTypes = [
     { name: 'Family', price: 50, description: 'For families and personal home use', imageId: 'plan-family' },
     { name: 'SME', price: 100, description: 'For small teams, kiosks, and home offices', imageId: 'plan-sme' },
@@ -9,135 +10,44 @@ export const clientTypes = [
 
 export const familyPlans = [
     {
-        name: 'Starter',
-        price: 0,
-        recommended: false,
-        details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Family',
+        name: 'Family Plan',
         price: 0,
         recommended: true,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Customize Your Plan',
-        price: 0,
-        recommended: false,
         details: [
-            'Tailored for unique consumption needs',
-            'All standard benefits included'
+            { label: 'Details', value: 'Admin-configured' },
         ]
     }
 ]
 
 export const smePlans = [
     {
-        name: 'Micro',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Starter',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Professional',
+        name: 'SME Plan',
         price: 0,
         recommended: true,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Customize Your Plan',
-        price: 0,
-        recommended: false,
         details: [
-            'Tailored for unique consumption needs',
-            'All standard benefits included'
+            { label: 'Details', value: 'Admin-configured' },
         ]
     }
 ]
 
 export const commercialPlans = [
     {
-        name: 'Growth',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Pro',
+        name: 'Commercial Plan',
         price: 0,
         recommended: true,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Business',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Customize Your Plan',
-        price: 0,
-        recommended: false,
         details: [
-            'Tailored for unique consumption needs',
-            'All standard benefits included'
+            { label: 'Details', value: 'Admin-configured' },
         ]
     }
 ];
 
 export const corporatePlans = [
     {
-        name: 'Enterprise Basic',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Enterprise Plus',
+        name: 'Corporate Plan',
         price: 0,
         recommended: true,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Enterprise Elite',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
-        ]
-    },
-    {
-        name: 'Enterprise Pro',
-        price: 0,
-        recommended: false,
-         details: [
-            'Details to be configured by admin'
+        details: [
+            { label: 'Details', value: 'Admin-configured' },
         ]
     }
 ];
@@ -150,9 +60,9 @@ export const enterprisePlans = [
         recommended: false,
         imageId: 'plan-enterprise-customized',
         details: [
-            'Tailored for high-volume needs',
-            'Dedicated account manager and support',
-            'Advanced analytics and reporting'
+            { label: 'Liters/Month', value: 'Custom' },
+            { label: 'Deliveries', value: 'Custom' },
+            { label: 'Stations', value: 'Custom' },
         ]
     },
     {
@@ -162,9 +72,9 @@ export const enterprisePlans = [
         recommended: false,
         imageId: 'plan-enterprise-flowing',
         details: [
-            'Pay only for what you consume',
-            'Ideal for fluctuating water needs',
-            'Flexible and transparent billing'
+            { label: 'Liters/Month', value: 'Usage-based' },
+            { label: 'Deliveries', value: 'On-demand' },
+            { label: 'Billing', value: 'Pay-as-you-go' },
         ]
     }
 ];

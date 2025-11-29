@@ -97,7 +97,7 @@ export default function OnboardingPage() {
   };
   
   const handlePlanSelect = (plan: AnyPlan) => {
-    if (plan.name.toLowerCase().includes('customize')) {
+    if (plan.name.toLowerCase().includes('custom')) {
         setSelectedPlan(plan);
         setDialogView('customize');
     } else {
@@ -112,7 +112,7 @@ export default function OnboardingPage() {
     const form = e.target as HTMLFormElement;
     const liters = form.querySelector<HTMLInputElement>('input[name="litersPerMonth"]')?.value;
     const deliveries = form.querySelector<HTMLInputElement>('input[name="deliveriesPerWeek"]')?.value;
-    const station = form.querySelector<HTMLInputElement>('input[name="waterStation"]')?.value;
+    const station = form.querySelector<HTMLSelectElement>('select[name="waterStation"]')?.value;
     
     if (liters && deliveries && station) {
         setCustomPlanDetails({
@@ -140,15 +140,17 @@ export default function OnboardingPage() {
         case 'Enterprise': plans = enterprisePlans; break;
     }
 
+    const isEnterprise = selectedClientType === 'Enterprise';
+
     return (
         <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className={isEnterprise ? "sm:max-w-4xl" : "sm:max-w-md"}>
                 <DialogHeader>
                     <DialogTitle>Choose Your {selectedClientType} Plan</DialogTitle>
                     <DialogDescription>Select the best plan that fits your needs.</DialogDescription>
                 </DialogHeader>
                 {dialogView === 'list' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
+                    <div className={cn("grid gap-6 py-4", isEnterprise ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                         {plans.map((plan) => (
                             <Card key={plan.name} className={cn(
                                 "flex flex-col cursor-pointer hover:border-primary transition-all",
@@ -326,7 +328,7 @@ export default function OnboardingPage() {
                                     </div>
                                 ) : (
                                     <p className="text-muted-foreground">
-                                        {selectedPlan.price > 0 ? `₱${selectedPlan.price.toLocaleString()}/month` : 'Details configured by admin.'}
+                                        Details will be configured by an administrator.
                                     </p>
                                 )}
                             </div>
@@ -346,5 +348,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
