@@ -59,7 +59,7 @@ export default function AdminPage() {
                                         {user.accountStatus}
                                     </Badge>
                                 </TableCell>
-                                <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(user.lastLogin).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                                 <TableCell className="text-right">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>

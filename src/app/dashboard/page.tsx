@@ -77,7 +77,7 @@ export default function DashboardPage() {
                                     borderRadius: 'var(--radius)',
                                 }}
                                 labelStyle={{color: 'hsl(var(--foreground))'}}
-                                formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Delivered on ${new Date(props.payload.date).toLocaleDateString()}`]}
+                                formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Delivered on ${new Date(props.payload.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`]}
                                 labelFormatter={() => ''}
                             />
                             <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorDelivery)" />
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                                         borderRadius: 'var(--radius)',
                                     }}
                                     labelStyle={{color: 'hsl(var(--foreground))'}}
-                                    formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Usage on ${new Date(props.payload.date).toLocaleDateString()}`]}
+                                    formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Usage on ${new Date(props.payload.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`]}
                                     labelFormatter={() => ''}
                                 />
                                 <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorUsage)" />

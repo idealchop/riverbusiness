@@ -151,7 +151,7 @@ export default function PaymentsPage() {
                 {paymentHistory.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">{payment.id}</TableCell>
-                    <TableCell>{payment.date}</TableCell>
+                    <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                     <TableCell>{payment.description}</TableCell>
                     <TableCell>
                       <Badge

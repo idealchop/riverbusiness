@@ -110,7 +110,7 @@ export default function DashboardLayout({
                             {delivery.status}
                             </Badge>
                         </p>
-                        <p className="text-xs text-muted-foreground">{new Date(delivery.date).toLocaleDateString()}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                         </div>
                     </div>
                     ))}

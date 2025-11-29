@@ -35,7 +35,7 @@ export default function QualityPage() {
                 {complianceReports.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell className="font-medium">{report.id}</TableCell>
-                    <TableCell>{new Date(report.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                     <TableCell>
                       <Badge variant={report.status === 'Compliant' ? 'default' : 'destructive'}
                        className={
@@ -83,7 +83,7 @@ export default function QualityPage() {
                 {sanitationVisits.map((visit) => (
                   <TableRow key={visit.id}>
                     <TableCell className="font-medium">{visit.id}</TableCell>
-                    <TableCell>{new Date(visit.scheduledDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                     <TableCell>
                       <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
                       className={

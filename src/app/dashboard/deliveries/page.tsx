@@ -32,7 +32,7 @@ export default function DeliveriesPage() {
       const searchLower = searchTerm.toLowerCase();
       return (
         delivery.id.toLowerCase().includes(searchLower) ||
-        new Date(delivery.date).toLocaleDateString().toLowerCase().includes(searchLower) ||
+        new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toLowerCase().includes(searchLower) ||
         delivery.status.toLowerCase().includes(searchLower)
       );
     });
@@ -88,7 +88,7 @@ export default function DeliveriesPage() {
             {deliveries.map((delivery) => (
               <TableRow key={delivery.id}>
                 <TableCell className="font-medium">{delivery.id}</TableCell>
-                <TableCell>{new Date(delivery.date).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                 <TableCell>{delivery.volumeGallons.toLocaleString()}</TableCell>
                 <TableCell>{(delivery.volumeGallons * 3.78541).toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
                 <TableCell>
