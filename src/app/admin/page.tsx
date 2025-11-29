@@ -56,7 +56,6 @@ export default function AdminPage() {
                                 <TableRow>
                                     <TableHead>User ID</TableHead>
                                     <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
                                     <TableHead>Role</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Last Login</TableHead>
@@ -68,7 +67,6 @@ export default function AdminPage() {
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.id}</TableCell>
                                         <TableCell>{user.name}</TableCell>
-                                        <TableCell>{user.email}</TableCell>
                                         <TableCell>
                                             <Badge
                                                 variant={getRoleBadgeVariant(user.role)}
