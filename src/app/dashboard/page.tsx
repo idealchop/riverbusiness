@@ -166,6 +166,10 @@ export default function DashboardPage() {
                                </Button>
                            </DialogTrigger>
                             <DialogContent className="sm:max-w-[625px]">
+                                <DialogHeader>
+                                    <DialogTitle>Delivery Tracking</DialogTitle>
+                                    <DialogDescription>Monitor all water deliveries to ensure timely supply.</DialogDescription>
+                                </DialogHeader>
                                 <DeliveriesPage />
                             </DialogContent>
                         </Dialog>
