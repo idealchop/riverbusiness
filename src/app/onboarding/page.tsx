@@ -20,7 +20,7 @@ const onboardingSchema = z.object({
   businessName: z.string().min(1, { message: 'Business name is required.' }),
   address: z.string().min(1, { message: 'Address is required.' }),
   contactNumber: z.string().min(10, { message: 'Please enter a valid contact number.' }),
-  clientType: z.string({ required_error: 'Please select a client type.' }),
+  waterPlan: z.string({ required_error: 'Please select a water plan.' }),
 });
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>;
@@ -110,14 +110,14 @@ export default function OnboardingPage() {
               />
               <FormField
                 control={form.control}
-                name="clientType"
+                name="waterPlan"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client Type</FormLabel>
+                    <FormLabel>Water Plan</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select your client type" />
+                          <SelectValue placeholder="Select your water plan" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
