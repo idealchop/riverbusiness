@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +27,6 @@ const onboardingSchema = z.object({
   businessName: z.string().min(1, { message: 'Business name is required.' }),
   address: z.string().min(1, { message: 'Address is required.' }),
   contactNumber: z.string().min(10, { message: 'Please enter a valid contact number.' }),
-  waterPlan: z.string({ required_error: 'Please select a water plan.' }),
 });
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>;
@@ -68,17 +66,27 @@ export default function OnboardingPage() {
 
   const onSubmit = (data: OnboardingFormValues) => {
     console.log('Onboarding data:', data);
-    const clientType = clientTypes.find(ct => ct.name === data.waterPlan);
-    if (clientType) {
-        setSelectedClientType(clientType);
+    // The plan selection now triggers the dialog directly.
+    // The form submission can be considered complete at this stage
+    // and the rest is handled by the dialog flow.
+    // We just need a client type to have been selected.
+    if (selectedClientType) {
         setIsInvoiceDialogOpen(true);
     } else {
         toast({
-            title: 'Onboarding Complete!',
-            description: 'Your information has been saved successfully.',
+            variant: "destructive",
+            title: 'No Water Plan Selected',
+            description: 'Please select a water plan to proceed.',
         });
-        router.push('/dashboard');
     }
+  };
+
+  const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
+    setSelectedClientType(clientType);
+    // You can choose to open the dialog immediately or wait for form submission
+    // Opening it immediately after selection is more interactive.
+    setIsInvoiceDialogOpen(true);
+    setStep('selectPlan');
   };
 
   const handlePlanSelect = (plan: AnyPlan) => {
@@ -90,11 +98,15 @@ export default function OnboardingPage() {
     if (step === 'payment') {
       setStep('selectPlan');
       setSelectedPlan(null);
+    } else if (step === 'selectPlan') {
+        setIsInvoiceDialogOpen(false);
+        setSelectedClientType(null);
     }
   };
 
   const resetFlow = () => {
     setStep('selectPlan');
+    setSelectedClientType(null);
     setSelectedPlan(null);
     setIsInvoiceDialogOpen(false);
   }
@@ -112,6 +124,11 @@ export default function OnboardingPage() {
     return PlaceHolderImages.find(p => p.id === imageId);
   }
 
+    const getIconForClientType = (typeName: string) => {
+    const Icon = icons[typeName];
+    return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
+  }
+
   const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : selectedClientType?.name === 'Commercial' ? commercialPlans: [];
   const regularSmePlans = smePlans.filter(p => !p.details);
   const customSmePlan = smePlans.find(p => p.details);
@@ -121,8 +138,8 @@ export default function OnboardingPage() {
 
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-lg mx-4">
+    <div className="flex items-center justify-center min-h-screen bg-background py-12">
+      <Card className="w-full max-w-2xl mx-4">
         <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-2 font-semibold text-2xl mb-4">
                 <Logo className="h-10 w-10 text-primary" />
@@ -134,82 +151,85 @@ export default function OnboardingPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Juan dela Cruz" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="businessName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Business Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="River Business Inc." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="123 Main St, Anytown" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contactNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Number</FormLabel>
-                    <FormControl>
-                      <Input type="tel" placeholder="09123456789" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="waterPlan"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Water Plan</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your water plan" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {clientTypes.map((type) => (
-                          <SelectItem key={type.name} value={type.name}>
-                            {type.name} - <span className="text-muted-foreground text-xs">{type.description}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Juan dela Cruz" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="businessName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="River Business Inc." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                        <Input placeholder="123 Main St, Anytown" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="contactNumber"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Contact Number</FormLabel>
+                        <FormControl>
+                        <Input type="tel" placeholder="09123456789" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <Label>Water Plan</Label>
+                <p className="text-sm text-muted-foreground">Choose the client type to see the recommended plans.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 py-4">
+                    {clientTypes.map(client => {
+                        const image = getImageForPlan(client.imageId);
+                        return (
+                            <Card 
+                                key={client.name} 
+                                className={cn("flex flex-col cursor-pointer hover:shadow-lg transition-shadow text-center", selectedClientType?.name === client.name && "border-primary ring-2 ring-primary")}
+                                onClick={() => handleClientTypeSelect(client)}
+                            >
+                                <CardContent className="p-4 flex flex-col items-center justify-center flex-1">
+                                    {image ? <Image src={image.imageUrl} alt={client.name} width={80} height={80} className="rounded-full mb-4 w-16 h-16 object-cover" data-ai-hint={image.imageHint} /> : getIconForClientType(client.name)
+                                    }
+                                    <h3 className="font-semibold text-sm">{client.name}</h3>
+                                    <p className="text-xs text-muted-foreground">{client.description}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+              </div>
+              
               <Button type="submit" className="w-full mt-6">
                 Complete Onboarding
               </Button>
@@ -224,7 +244,8 @@ export default function OnboardingPage() {
                 <>
                   <DialogHeader>
                     <DialogTitle className="flex items-center">
-                      Choose a Plan
+                        <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
+                        Choose a Plan
                     </DialogTitle>
                     <DialogDescription>Select the best plan from the options below.</DialogDescription>
                   </DialogHeader>
