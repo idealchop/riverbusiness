@@ -302,7 +302,7 @@ export default function OnboardingPage() {
                                         src={image.imageUrl}
                                         alt={client.name}
                                         fill
-                                        className={cn("object-contain p-4")}
+                                        className={cn("object-cover")}
                                         data-ai-hint={image.imageHint}
                                     />
                                 )}
