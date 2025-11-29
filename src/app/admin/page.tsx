@@ -179,7 +179,7 @@ export default function AdminPage() {
                         value="users"
                         className={cn(
                             "data-[state=active]:shadow-none transition-all duration-200",
-                            activeTab === 'users' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'
+                            activeTab === 'users' ? 'bg-primary/90 text-white' : 'bg-gray-200 text-gray-700'
                         )}
                     >
                         <Users className="mr-2 h-4 w-4" />User Management
@@ -188,7 +188,7 @@ export default function AdminPage() {
                         value="logs"
                         className={cn(
                             "data-[state=active]:shadow-none transition-all duration-200",
-                            activeTab === 'logs' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                            activeTab === 'logs' ? 'bg-primary/90 text-white' : 'bg-gray-200 text-gray-700'
                         )}
                     >
                         <LogIn className="mr-2 h-4 w-4" />Login Logs
@@ -202,7 +202,7 @@ export default function AdminPage() {
                                     <CardTitle>User Management</CardTitle>
                                     <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
-                                <Button onClick={openAddUserDialog} className="bg-green-500 hover:bg-green-600">
+                                <Button onClick={openAddUserDialog}>
                                     <UserPlus className="mr-2 h-4 w-4" />
                                     Add User
                                 </Button>
@@ -346,7 +346,7 @@ export default function AdminPage() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleAddUser} className="bg-green-500 hover:bg-green-600">Add User</Button>
+                        <Button onClick={handleAddUser}>Add User</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
