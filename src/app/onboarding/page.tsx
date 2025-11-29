@@ -50,7 +50,7 @@ type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | Enterpris
 
 const steps = [
     { id: 'info', name: 'Your Information' },
-    { id: 'plan', name: 'Select Plan' },
+    { id: 'plan', name: 'Water Plan' },
     { id: 'payment', name: 'Payment' }
 ];
 
@@ -160,7 +160,7 @@ export default function OnboardingPage() {
     case 1: // Select Plan
         return (
             <div className="py-4">
-                <h3 className="text-lg font-semibold mb-2">Choose a Plan</h3>
+                <h3 className="text-lg font-semibold mb-2">Choose a Water Plan</h3>
                 <p className="text-sm text-muted-foreground mb-4">Select the best plan from the options below.</p>
                 <Tabs defaultValue="Family" className="w-full">
                     <TabsList className="grid w-full grid-cols-5">
@@ -346,7 +346,7 @@ export default function OnboardingPage() {
             <Progress value={progressValue} className="w-full" />
             <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                 {steps.map((step, index) => (
-                    <div key={step.id} className={cn("text-center", currentStep >= index && "text-primary font-semibold")}>
+                    <div key={step.id} className={cn("text-center w-1/3", currentStep >= index && "text-primary font-semibold")}>
                         {step.name}
                     </div>
                 ))}
@@ -372,3 +372,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
