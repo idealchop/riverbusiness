@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn } from 'lucide-react';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs } from '@/lib/data';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn, MessageSquare, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,6 +40,7 @@ export default function AdminPage() {
     const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
     const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
     const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser & { permissions: Permission[] } | null>(null);
     const [activeTab, setActiveTab] = useState('users');
     
@@ -170,6 +171,15 @@ export default function AdminPage() {
         });
     };
 
+    const renderStars = (rating: number) => {
+        return (
+            <div className="flex">
+                {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={`h-4 w-4 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                ))}
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col h-full gap-4">
@@ -179,7 +189,7 @@ export default function AdminPage() {
                         value="users"
                         className={cn(
                             "data-[state=active]:shadow-none transition-all duration-200",
-                            activeTab === 'users' ? 'bg-primary/90 text-white' : 'bg-gray-200 text-gray-700'
+                            activeTab === 'users' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
                         )}
                     >
                         <Users className="mr-2 h-4 w-4" />User Management
@@ -188,7 +198,7 @@ export default function AdminPage() {
                         value="logs"
                         className={cn(
                             "data-[state=active]:shadow-none transition-all duration-200",
-                            activeTab === 'logs' ? 'bg-primary/90 text-white' : 'bg-gray-200 text-gray-700'
+                            activeTab === 'logs' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
                         )}
                     >
                         <LogIn className="mr-2 h-4 w-4" />Login Logs
@@ -202,10 +212,16 @@ export default function AdminPage() {
                                     <CardTitle>User Management</CardTitle>
                                     <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
-                                <Button onClick={openAddUserDialog}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    Add User
-                                </Button>
+                                <div className="flex gap-2">
+                                     <Button variant="outline" onClick={() => setIsFeedbackOpen(true)}>
+                                        <MessageSquare className="mr-2 h-4 w-4" />
+                                        View Feedback
+                                    </Button>
+                                    <Button onClick={openAddUserDialog} className="bg-primary/90 hover:bg-primary">
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Add User
+                                    </Button>
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent className="flex-1">
@@ -505,6 +521,47 @@ export default function AdminPage() {
                             <Button variant="outline" onClick={() => setSelectedUser(null)}>Cancel</Button>
                         </DialogClose>
                         <Button onClick={handleSavePermissions}>Save Permissions</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>User Feedback</DialogTitle>
+                        <DialogDescription>
+                            Here's what your users are saying.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Feedback</TableHead>
+                                    <TableHead>Rating</TableHead>
+                                    <TableHead>Timestamp</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {feedbackLogs.map((log) => (
+                                    <TableRow key={log.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{log.userName}</div>
+                                            <div className="text-sm text-muted-foreground">{log.userId}</div>
+                                        </TableCell>
+                                        <TableCell className="max-w-xs truncate">{log.feedback}</TableCell>
+                                        <TableCell>{renderStars(log.rating)}</TableCell>
+                                        <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                     <DialogFooter>
+                        <DialogClose asChild>
+                            <Button>Close</Button>
+                        </DialogClose>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
