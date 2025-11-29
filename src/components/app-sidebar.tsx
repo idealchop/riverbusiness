@@ -11,12 +11,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Home, CreditCard } from 'lucide-react';
+import { Home, CreditCard, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
+  { href: '/admin', label: 'Admin', icon: Shield },
 ];
 
 export function AppSidebar() {
@@ -36,7 +37,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                  isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
                   className={cn("justify-start")}
                   tooltip={item.label}
                 >
