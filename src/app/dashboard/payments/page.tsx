@@ -123,7 +123,9 @@ export default function PaymentsPage() {
   const handleBack = () => {
     if (step === 'selectPlan') {
       setStep('selectClient');
+      setSelectedPlan(null);
     } else if (step === 'payment') {
+      setSelectedPlan(null);
       if (selectedClientType?.name === 'Family' || selectedClientType?.name === 'SME') {
         setStep('selectPlan');
       } else {
@@ -149,6 +151,9 @@ export default function PaymentsPage() {
   }
   
   const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : [];
+  const regularSmePlans = smePlans.filter(p => !p.details);
+  const customSmePlan = smePlans.find(p => p.details);
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -274,69 +279,107 @@ export default function PaymentsPage() {
                               </DialogTitle>
                               <DialogDescription>Select the best plan for your client from the options below.</DialogDescription>
                             </DialogHeader>
-                            <div className="flex gap-4 py-4">
-                              <Card className="w-1/3">
+                            <div className="flex flex-col md:flex-row gap-4 py-4">
+                              <Card className="w-full md:w-1/4">
                                   <CardContent className="p-4 flex flex-col items-center text-center">
                                     {selectedClientType.imageId && getImageForPlan(selectedClientType.imageId) && <Image src={getImageForPlan(selectedClientType.imageId)!.imageUrl} alt={selectedClientType.name} width={100} height={100} className="rounded-lg object-cover mb-4" />}
                                     <h3 className="text-lg font-bold">{selectedClientType.name}</h3>
                                     <p className="text-sm text-muted-foreground">{selectedClientType.description}</p>
                                   </CardContent>
                               </Card>
-                              <div className="w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {(currentPlans as AnyPlan[]).map(plan => {
-                                    const isSmePlan = 'employees' in plan;
-                                    const isFamilyPlan = 'persons' in plan;
-                                    return (
-                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", (plan as SmePlan).details && 'md:col-span-2' )}>
-                                        {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                        <CardHeader>
-                                            <CardTitle>{plan.name}</CardTitle>
-                                            {(plan as {details?: any[]}).details ? (
-                                                <p className="text-2xl font-bold">Custom</p>
-                                            ) : (
-                                                <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                                            )}
-                                        </CardHeader>
-                                        <CardContent className="space-y-4 flex-grow flex flex-col">
-                                            {(plan as SmePlan).details ? (
-                                                <div className="space-y-2 text-sm">
-                                                   <div className="space-y-1">
-                                                      <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                      <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters}</p>
-                                                  </div>
-                                                  <div className="space-y-1">
-                                                      <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                      <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                                  </div>
-                                                  <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4">
-                                                      {(plan as SmePlan).details!.map(detail => <li key={detail}>{detail}</li>)}
-                                                  </ul>
+                              <div className="w-full md:w-3/4">
+                                {selectedClientType.name === 'Family' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {familyPlans.map(plan => (
+                                        <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-3' )}>
+                                            {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
+                                            <CardHeader>
+                                                <CardTitle>{plan.name}</CardTitle>
+                                                {plan.details ? (
+                                                    <p className="text-2xl font-bold">Custom</p>
+                                                ) : (
+                                                    <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                                                )}
+                                            </CardHeader>
+                                            <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                {plan.details ? (
+                                                    <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
+                                                        {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
+                                                    </ul>
+                                                ) : (
+                                                    <>
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                            <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                            <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                                        </div>
+                                                    </>
+                                                )}
+                                                <div className="flex-grow"></div>
+                                                <Separator />
+                                                <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                   <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span>
+                                                   {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>}
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                        <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                        <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                                    </div>
-                                                </>
-                                            )}
-                                            <div className="flex-grow"></div>
-                                            <Separator />
-                                             <div className="text-xs text-muted-foreground flex items-center justify-between">
-                                                {isFamilyPlan && <span className="flex items-center gap-1"><User className="w-3 h-3"/> {(plan as FamilyPlan).persons}</span>}
-                                                {isSmePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {(plan as SmePlan).employees} Employees</span>}
-                                                
-                                                {isFamilyPlan && !(plan as FamilyPlan).details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{(plan as FamilyPlan).gallons} Gallons/week</span>}
-                                                {isSmePlan && !(plan as SmePlan).details && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {(plan as SmePlan).stations} Station</span>}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                    )
-                                })}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                    </div>
+                                )}
+                                {selectedClientType.name === 'SME' && (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {regularSmePlans.map(plan => {
+                                                const isSmePlan = 'employees' in plan;
+                                                return (
+                                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                        {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
+                                                        <CardHeader>
+                                                            <CardTitle>{plan.name}</CardTitle>
+                                                            <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                                <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                                <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                                            </div>
+                                                            <div className="flex-grow"></div>
+                                                            <Separator />
+                                                            <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                                {isSmePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
+                                                                {isSmePlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>}
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })}
+                                        </div>
+                                        {customSmePlan && (() => {
+                                            const plan = customSmePlan;
+                                            return (
+                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                     {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
+                                                    <CardHeader>
+                                                        <CardTitle>{plan.name}</CardTitle>
+                                                         <p className="text-2xl font-bold">Custom</p>
+                                                    </CardHeader>
+                                                     <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                        <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
+                                                            {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
+                                                        </ul>
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        })()}
+                                    </div>
+                                )}
                               </div>
                             </div>
                           </>
@@ -389,7 +432,7 @@ export default function PaymentsPage() {
                              </Tabs>
                            </>
                         )}
-                        <DialogFooter>
+                         <DialogFooter>
                           <DialogClose asChild>
                             <Button type="button" variant="secondary" onClick={resetFlow}>
                               Close
