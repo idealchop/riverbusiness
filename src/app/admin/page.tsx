@@ -275,7 +275,7 @@ export default function AdminPage() {
                                             <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
+                                                <Button className="bg-primary/10 hover:bg-primary/20 text-primary" size="icon">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                                 </DropdownMenuTrigger>
@@ -427,7 +427,7 @@ export default function AdminPage() {
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline">Cancel</Button>
+                            <Button variant="secondary">Cancel</Button>
                         </DialogClose>
                         <Button onClick={handleAddUser}>Add User</Button>
                     </DialogFooter>
@@ -530,7 +530,7 @@ export default function AdminPage() {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setSelectedUser(null)}>Cancel</Button>
                         </DialogClose>
                         <Button onClick={handleEditUser}>Save Changes</Button>
                     </DialogFooter>
@@ -547,7 +547,7 @@ export default function AdminPage() {
                     </DialogHeader>
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setSelectedUser(null)}>Cancel</Button>
                         </DialogClose>
                         <Button variant="destructive" onClick={handleDeleteUser}>Delete User</Button>
                     </DialogFooter>
@@ -585,7 +585,7 @@ export default function AdminPage() {
                     )}
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button variant="outline" onClick={() => setSelectedUser(null)}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => setSelectedUser(null)}>Cancel</Button>
                         </DialogClose>
                         <Button onClick={handleSavePermissions}>Save Permissions</Button>
                     </DialogFooter>
