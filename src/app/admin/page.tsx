@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -94,27 +95,80 @@ export default function AdminPage() {
                 <CardHeader>
                     <CardTitle>Area Chart Example</CardTitle>
                 </CardHeader>
-                <CardContent className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={areaChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                             <defs>
-                                <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                            <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip 
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--background))',
-                                    border: '1px solid hsl(var(--border))',
-                                    borderRadius: 'var(--radius)',
-                                }}
-                            />
-                            <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorArea)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                <CardContent>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={areaChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                <defs>
+                                    <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                                <Tooltip 
+                                    contentStyle={{
+                                        backgroundColor: 'hsl(var(--background))',
+                                        border: '1px solid hsl(var(--border))',
+                                        borderRadius: 'var(--radius)',
+                                    }}
+                                />
+                                <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorArea)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                     <div className="mt-6">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Last Login</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {latestUsers.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell>{user.name}</TableCell>
+                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell>{user.accountStatus}</TableCell>
+                                        <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem>
+                                                        <UserCog className="mr-2 h-4 w-4" />
+                                                        Edit User
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem>
+                                                        <ShieldCheck className="mr-2 h-4 w-4" />
+                                                        Assign Permissions
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem>
+                                                        <KeyRound className="mr-2 h-4 w-4" />
+                                                        Reset Password
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem className="text-red-600">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete User
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
             <Card>
@@ -139,63 +193,6 @@ export default function AdminPage() {
                 </CardContent>
             </Card>
         </div>
-        
-        <Card>
-            <CardHeader>
-                <CardTitle>Datatable Example</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Last Login</TableHead>
-                             <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {latestUsers.map((user) => (
-                            <TableRow key={user.id}>
-                                <TableCell>{user.name}</TableCell>
-                                <TableCell>{user.email}</TableCell>
-                                <TableCell>{user.accountStatus}</TableCell>
-                                <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem>
-                                                <UserCog className="mr-2 h-4 w-4" />
-                                                Edit User
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem>
-                                                <ShieldCheck className="mr-2 h-4 w-4" />
-                                                Assign Permissions
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem>
-                                                <KeyRound className="mr-2 h-4 w-4" />
-                                                Reset Password
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem className="text-red-600">
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Delete User
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
     </div>
   );
 }
