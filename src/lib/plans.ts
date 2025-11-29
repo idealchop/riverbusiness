@@ -11,25 +11,22 @@ export const familyPlans = [
     {
         name: 'Starter',
         price: 0,
-        liters: '250',
-        refillFrequency: '1/week',
-        persons: '1-3',
         recommended: false,
+        details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Family',
         price: 0,
-        liters: '400',
-        refillFrequency: '1-2/week',
-        persons: '3-5',
         recommended: true,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Customize Your Plan',
         price: 0,
-        liters: 'Custom',
-        refillFrequency: 'Custom',
-        persons: '1-5+',
         recommended: false,
         details: [
             'Tailored for unique consumption needs',
@@ -42,37 +39,30 @@ export const smePlans = [
     {
         name: 'Micro',
         price: 0,
-        liters: '500',
-        refillFrequency: '1-2/week',
-        employees: '5 - 10',
-        stations: '1',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Starter',
         price: 0,
-        liters: '1,000',
-        refillFrequency: '2-3/week',
-        employees: '10 - 20',
-        stations: '1',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Professional',
         price: 0,
-        liters: '2,000',
-        refillFrequency: '3-4/week',
-        employees: '20 - 40',
-        stations: '1',
         recommended: true,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Customize Your Plan',
         price: 0,
-        liters: 'Custom',
-        refillFrequency: 'Custom',
-        employees: 'Custom',
-        stations: 'Custom',
         recommended: false,
         details: [
             'Tailored for unique consumption needs',
@@ -85,37 +75,30 @@ export const commercialPlans = [
     {
         name: 'Growth',
         price: 0,
-        liters: '3,000',
-        refillFrequency: '4-5/week',
-        employees: '40 - 70',
-        stations: '2',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Pro',
         price: 0,
-        liters: '4,000',
-        refillFrequency: '5-6/week',
-        employees: '70 - 100',
-        stations: '2-3',
         recommended: true,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Business',
         price: 0,
-        liters: '6,000',
-        refillFrequency: 'Daily',
-        employees: '100 - 150',
-        stations: '2-3',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Customize Your Plan',
         price: 0,
-        liters: 'Custom',
-        refillFrequency: 'Custom',
-        employees: 'Custom',
-        stations: 'Custom',
         recommended: false,
         details: [
             'Tailored for unique consumption needs',
@@ -128,38 +111,34 @@ export const corporatePlans = [
     {
         name: 'Enterprise Basic',
         price: 0,
-        liters: '10,000',
-        refillFrequency: '1-2/day',
-        employees: '150 - 250',
-        stations: '2-3',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Enterprise Plus',
         price: 0,
-        liters: '16,600',
-        refillFrequency: '2-3/day',
-        employees: '250 - 350',
-        stations: '2-3',
         recommended: true,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Enterprise Elite',
         price: 0,
-        liters: '25,000',
-        refillFrequency: '3+/day',
-        employees: '350 - 500',
-        stations: '3-4',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     },
     {
         name: 'Enterprise Pro',
         price: 0,
-        liters: '33,000+',
-        refillFrequency: 'Continuous',
-        employees: '500+',
-        stations: '5+',
         recommended: false,
+         details: [
+            'Details to be configured by admin'
+        ]
     }
 ];
 

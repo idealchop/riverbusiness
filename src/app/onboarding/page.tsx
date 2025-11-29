@@ -38,12 +38,6 @@ const icons: { [key: string]: React.ElementType } = {
     Enterprise: Factory,
 };
 
-type Plan = {
-    name: string;
-    price: number;
-    [key: string]: any;
-};
-
 type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
 type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
 type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string };
@@ -58,7 +52,7 @@ export default function OnboardingPage() {
   
   const [selectedClientType, setSelectedClientType] = React.useState<string>('Commercial');
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
-  const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(commercialPlans.find(p => p.name === 'Growth') || null);
+  const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
@@ -135,11 +129,6 @@ export default function OnboardingPage() {
                             <CardContent className="flex-grow space-y-4">
                                 <ul className="space-y-2 text-sm text-muted-foreground">
                                     {plan.details?.map(detail => <li key={detail} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary"/>{detail}</li>)}
-                                    {'liters' in plan && plan.liters && <li><span className="font-semibold text-foreground">{plan.liters}</span> Liters/Month</li>}
-                                    {'refillFrequency' in plan && plan.refillFrequency && <li><span className="font-semibold text-foreground">{plan.refillFrequency}</span> Refills</li>}
-                                    {'persons' in plan && plan.persons && <li>For <span className="font-semibold text-foreground">{plan.persons}</span> People</li>}
-                                    {'employees' in plan && plan.employees && <li>For <span className="font-semibold text-foreground">{plan.employees}</span> People</li>}
-                                    {'stations' in plan && plan.stations && <li><span className="font-semibold text-foreground">{plan.stations}</span> Water Station</li>}
                                 </ul>
                             </CardContent>
                         </Card>
