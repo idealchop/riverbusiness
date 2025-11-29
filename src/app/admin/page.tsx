@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -41,6 +41,18 @@ export default function AdminPage() {
     const [appUsers, setAppUsers] = useState(initialAppUsers);
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [greeting, setGreeting] = useState('');
+
+    useEffect(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) {
+            setGreeting('Good morning');
+        } else if (hour < 18) {
+            setGreeting('Good afternoon');
+        } else {
+            setGreeting('Good evening');
+        }
+    }, []);
 
     const form = useForm<NewUserFormValues>({
         resolver: zodResolver(newUserSchema),
@@ -74,10 +86,12 @@ export default function AdminPage() {
         { month: 'June', value: 18000 },
     ];
 
+    const adminUser = appUsers.find(user => user.role === 'Admin');
+
 
   return (
     <div className="flex flex-col gap-6">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
@@ -372,5 +386,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
