@@ -137,10 +137,58 @@ export default function OnboardingPage() {
           <Form {...form}>
             <form className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="fullName" render={({ field }) => ( <FormItem> <FormLabel className="font-bold">Full Name</FormLabel> <FormControl> <Input placeholder="Juan dela Cruz" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                <FormField control={form.control} name="businessName" render={({ field }) => ( <FormItem> <FormLabel className="font-bold">Business Name</FormLabel> <FormControl> <Input placeholder="River Business Inc." {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                <FormField control={form.control} name="address" render={({ field }) => ( <FormItem> <FormLabel className="font-bold">Address</FormLabel> <FormControl> <Input placeholder="123 Main St, Anytown" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                <FormField control={form.control} name="contactNumber" render={({ field }) => ( <FormItem> <FormLabel className="font-bold">Contact Number</FormLabel> <FormControl> <Input type="tel" placeholder="09123456789" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Juan dela Cruz" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="businessName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Business Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="River Business Inc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="123 Main St, Anytown" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="contactNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Contact Number</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="09123456789" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </form>
           </Form>
@@ -376,5 +424,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
