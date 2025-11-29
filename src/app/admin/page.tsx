@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -213,7 +214,7 @@ export default function AdminPage() {
                                     <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
                                 <div className="flex gap-2">
-                                     <Button variant="outline" onClick={() => setIsFeedbackOpen(true)}>
+                                     <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsFeedbackOpen(true)}>
                                         <MessageSquare className="mr-2 h-4 w-4" />
                                         View Feedback
                                     </Button>
