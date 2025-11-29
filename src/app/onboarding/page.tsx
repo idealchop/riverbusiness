@@ -55,7 +55,7 @@ export default function OnboardingPage() {
   const [step, setStep] = React.useState<'selectPlan' | 'payment'>('selectPlan');
   const [selectedClientType, setSelectedClientType] = React.useState<(typeof clientTypes)[0] | null>(null);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = React.useState(false);
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
 
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
@@ -67,43 +67,37 @@ export default function OnboardingPage() {
 
   const onSubmit = (data: OnboardingFormValues) => {
     console.log('Onboarding data:', data);
-    if (selectedClientType) {
-        setIsInvoiceDialogOpen(true);
-        setStep('selectPlan');
+    if (selectedPlan) {
+        setStep('payment');
+        setIsPlanDialogOpen(true);
     } else {
         toast({
             variant: "destructive",
             title: 'No Water Plan Selected',
-            description: 'Please select a client type to proceed.',
+            description: 'Please select a client type and a plan to proceed.',
         });
     }
   };
 
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
+    setStep('selectPlan');
+    setIsPlanDialogOpen(true);
   };
 
   const handlePlanSelect = (plan: AnyPlan) => {
     setSelectedPlan(plan);
-    setStep('payment');
+    setIsPlanDialogOpen(false);
   };
-
+  
   const handleBack = () => {
     if (step === 'payment') {
       setStep('selectPlan');
-      setSelectedPlan(null);
-    } else if (step === 'selectPlan') {
-        setIsInvoiceDialogOpen(false);
-        // Do not reset client type, so user can re-open dialog without re-selecting
+      setIsPlanDialogOpen(true); // Re-open plan selection
+    } else {
+      setIsPlanDialogOpen(false);
     }
   };
-
-  const resetFlow = () => {
-    setStep('selectPlan');
-    setSelectedClientType(null);
-    setSelectedPlan(null);
-    setIsInvoiceDialogOpen(false);
-  }
 
   const completeOnboardingAndRedirect = () => {
     // This is the final step
@@ -123,7 +117,6 @@ export default function OnboardingPage() {
     return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
   }
 
-  const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : selectedClientType?.name === 'Commercial' ? commercialPlans: [];
   const regularSmePlans = smePlans.filter(p => !p.details);
   const customSmePlan = smePlans.find(p => p.details);
 
@@ -232,13 +225,13 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
       
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+      <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
           <DialogContent className="sm:max-w-4xl">
               {step === 'selectPlan' && selectedClientType && (
                 <>
                   <DialogHeader>
                     <DialogTitle className="flex items-center">
-                       <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
+                       <Button variant="ghost" size="icon" onClick={() => setIsPlanDialogOpen(false)} className="mr-2"><X className="h-4 w-4" /></Button>
                       Choose a Plan
                     </DialogTitle>
                     <DialogDescription>Select the best plan from the options below.</DialogDescription>
@@ -501,13 +494,13 @@ export default function OnboardingPage() {
                             </div>
                        </TabsContent>
                    </Tabs>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={completeOnboardingAndRedirect}>
+                        Finish
+                        </Button>
+                    </DialogFooter>
                  </>
               )}
-               <DialogFooter>
-                <Button type="button" variant="secondary" onClick={completeOnboardingAndRedirect}>
-                  Finish
-                </Button>
-              </DialogFooter>
           </DialogContent>
       </Dialog>
     </div>
