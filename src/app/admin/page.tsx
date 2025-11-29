@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AppUser, Permission } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
 
 const allPermissions: { id: Permission, label: string, description: string }[] = [
     { id: 'view_dashboard', label: 'View Dashboard', description: 'Can view the main dashboard.' },
@@ -39,6 +41,7 @@ export default function AdminPage() {
     const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
     const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser & { permissions: Permission[] } | null>(null);
+    const [activeTab, setActiveTab] = useState('users');
     
     const [newUser, setNewUser] = useState({ 
         id: '',
@@ -170,10 +173,26 @@ export default function AdminPage() {
 
     return (
         <div className="flex flex-col h-full gap-4">
-            <Tabs defaultValue="users" className="flex flex-col flex-1">
-                <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="users"><Users className="mr-2 h-4 w-4" />User Management</TabsTrigger>
-                    <TabsTrigger value="logs"><LogIn className="mr-2 h-4 w-4" />Login Logs</TabsTrigger>
+            <Tabs defaultValue="users" onValueChange={setActiveTab} className="flex flex-col flex-1">
+                <TabsList className="grid w-full max-w-md grid-cols-2 p-0 bg-transparent gap-2">
+                    <TabsTrigger 
+                        value="users"
+                        className={cn(
+                            "data-[state=active]:shadow-none transition-all duration-200",
+                            activeTab === 'users' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-700'
+                        )}
+                    >
+                        <Users className="mr-2 h-4 w-4" />User Management
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="logs"
+                        className={cn(
+                            "data-[state=active]:shadow-none transition-all duration-200",
+                            activeTab === 'logs' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
+                        )}
+                    >
+                        <LogIn className="mr-2 h-4 w-4" />Login Logs
+                    </TabsTrigger>
                 </TabsList>
                 <TabsContent value="users" className="flex-1 mt-4">
                     <Card className="h-full flex flex-col">
@@ -183,7 +202,7 @@ export default function AdminPage() {
                                     <CardTitle>User Management</CardTitle>
                                     <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
-                                <Button onClick={openAddUserDialog}>
+                                <Button onClick={openAddUserDialog} className="bg-green-500 hover:bg-green-600">
                                     <UserPlus className="mr-2 h-4 w-4" />
                                     Add User
                                 </Button>
@@ -327,7 +346,7 @@ export default function AdminPage() {
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleAddUser}>Add User</Button>
+                        <Button onClick={handleAddUser} className="bg-green-500 hover:bg-green-600">Add User</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
