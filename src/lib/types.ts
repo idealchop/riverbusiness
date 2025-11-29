@@ -45,7 +45,7 @@ export interface AppUser {
     id: string;
     name: string;
     email: string;
-    role: 'Admin' | 'Member';
+    password?: string;
     totalConsumptionLiters: number;
     accountStatus: 'Active' | 'Inactive' | 'Suspended';
     lastLogin: string;

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View } from 'lucide-react';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AppUser, Permission } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
 
 const allPermissions: { id: Permission, label: string, description: string }[] = [
     { id: 'view_dashboard', label: 'View Dashboard', description: 'Can view the main dashboard.' },
@@ -27,14 +26,32 @@ const allPermissions: { id: Permission, label: string, description: string }[] =
     { id: 'access_admin_panel', label: 'Access Admin Panel', description: 'Can access the administrative section.' },
 ];
 
+const generatePassword = () => {
+    return Math.random().toString(36).slice(-8);
+}
+
 export default function AdminPage() {
+    const { toast } = useToast();
     const [appUsers, setAppUsers] = useState(initialAppUsers.map(u => ({...u, permissions: u.role === 'Admin' ? allPermissions.map(p => p.id) : ['view_dashboard', 'view_payments']})));
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
     const [isEditUserOpen, setIsEditUserOpen] = useState(false);
     const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
     const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser & { permissions: Permission[] } | null>(null);
-    const [newUser, setNewUser] = useState({ id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}`, name: '', role: 'Member' as 'Admin' | 'Member', accountStatus: 'Active' as 'Active' | 'Suspended', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0, permissions: ['view_dashboard'] as Permission[] });
+    
+    const [newUser, setNewUser] = useState({ 
+        id: '',
+        name: '', 
+        accountStatus: 'Active' as 'Active' | 'Suspended', 
+        lastLogin: new Date().toISOString(), 
+        totalConsumptionLiters: 0, 
+        permissions: ['view_dashboard'] as Permission[],
+        password: ''
+    });
+    
+    const [createdUserInfo, setCreatedUserInfo] = useState<{ id: string, name: string, password: string} | null>(null);
+    const [isUserInfoOpen, setIsUserInfoOpen] = useState(false);
+
 
     const getStatusBadgeVariant = (status: 'Active' | 'Inactive' | 'Suspended'): 'default' | 'secondary' | 'destructive' => {
         switch (status) {
@@ -53,10 +70,30 @@ export default function AdminPage() {
         return status === 'Success' ? 'default' : 'destructive';
     }
 
+    const openAddUserDialog = () => {
+        const id = `USR-${(appUsers.length + 1).toString().padStart(3, '0')}`;
+        const password = generatePassword();
+        setNewUser({
+            id: id,
+            name: '',
+            accountStatus: 'Active',
+            lastLogin: new Date().toISOString(),
+            totalConsumptionLiters: 0,
+            permissions: ['view_dashboard'],
+            password: password
+        });
+        setIsAddUserOpen(true);
+    };
+
     const handleAddUser = () => {
-        setAppUsers([...appUsers, { ...newUser, id: `USR-${(appUsers.length + 1).toString().padStart(3, '0')}` }]);
+        const userToAdd = {
+            ...newUser,
+            email: `${newUser.name.toLowerCase().replace(/\s/g, '.')}@example.com`,
+        };
+        setAppUsers([...appUsers, userToAdd]);
+        setCreatedUserInfo({ id: userToAdd.id, name: userToAdd.name, password: userToAdd.password });
         setIsAddUserOpen(false);
-        setNewUser({ id: `USR-${(appUsers.length + 2).toString().padStart(3, '0')}`, name: '', role: 'Member', accountStatus: 'Active', lastLogin: new Date().toISOString(), totalConsumptionLiters: 0, permissions: ['view_dashboard'] });
+        setIsUserInfoOpen(true);
     };
 
     const handleEditUser = () => {
@@ -107,6 +144,13 @@ export default function AdminPage() {
         }
     };
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({
+            title: "Copied to clipboard!",
+        });
+    };
+
 
     return (
         <div className="flex flex-col h-full gap-4">
@@ -123,32 +167,10 @@ export default function AdminPage() {
                                     <CardTitle>User Management</CardTitle>
                                     <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
-                                <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button>
-                                            <UserPlus className="mr-2 h-4 w-4" />
-                                            Add User
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Add New User</DialogTitle>
-                                            <DialogDescription>Fill in the details to create a new user.</DialogDescription>
-                                        </DialogHeader>
-                                        <div className="grid gap-4 py-4">
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="name" className="text-right">Name</Label>
-                                                <Input id="name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="col-span-3" />
-                                            </div>
-                                        </div>
-                                        <DialogFooter>
-                                            <DialogClose asChild>
-                                                <Button variant="outline">Cancel</Button>
-                                            </DialogClose>
-                                            <Button onClick={handleAddUser}>Add User</Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
+                                <Button onClick={openAddUserDialog}>
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Add User
+                                </Button>
                             </div>
                         </CardHeader>
                         <CardContent className="flex-1">
@@ -264,6 +286,61 @@ export default function AdminPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+             <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New User</DialogTitle>
+                        <DialogDescription>Fill in the details to create a new user.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">Name</Label>
+                            <Input id="name" value={newUser.name} onChange={(e) => setNewUser({...newUser, name: e.target.value})} className="col-span-3" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleAddUser}>Add User</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+             <Dialog open={isUserInfoOpen} onOpenChange={setIsUserInfoOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>User Created Successfully</DialogTitle>
+                        <DialogDescription>
+                            Please save the following credentials for the new user: <span className="font-bold">{createdUserInfo?.name}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {createdUserInfo && (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">User ID</Label>
+                                <div className="col-span-3 flex items-center gap-2">
+                                    <Input value={createdUserInfo.id} readOnly />
+                                    <Button size="icon" variant="ghost" onClick={() => copyToClipboard(createdUserInfo.id)}><ClipboardCopy className="h-4 w-4" /></Button>
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">Password</Label>
+                                <div className="col-span-3 flex items-center gap-2">
+                                    <Input value={createdUserInfo.password} readOnly type="password" />
+                                     <Button size="icon" variant="ghost" onClick={() => copyToClipboard(createdUserInfo.password)}><ClipboardCopy className="h-4 w-4" /></Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button onClick={() => setIsUserInfoOpen(false)}>Done</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -357,6 +434,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-
-    

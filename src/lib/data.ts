@@ -46,11 +46,11 @@ export const waterStations: WaterStation[] = [
 ];
 
 export const appUsers: AppUser[] = [
-    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', role: 'Member', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
-    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', role: 'Member', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
-    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', role: 'Member', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', role: 'Member', totalConsumptionLiters: 1500, accountStatus: 'Suspended', lastLogin: '2024-07-18' },
+    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
+    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
+    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Suspended', lastLogin: '2024-07-18' },
 ];
 
 export const loginLogs: LoginLog[] = [
