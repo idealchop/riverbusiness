@@ -13,9 +13,7 @@ export const familyPlans = [
         name: 'Family Plan',
         price: 0,
         recommended: true,
-        details: [
-            { label: 'Details', value: 'Admin-configured' },
-        ]
+        details: 'Admin-configured'
     }
 ]
 
@@ -24,9 +22,7 @@ export const smePlans = [
         name: 'SME Plan',
         price: 0,
         recommended: true,
-        details: [
-            { label: 'Details', value: 'Admin-configured' },
-        ]
+        details: 'Admin-configured'
     }
 ]
 
@@ -35,9 +31,7 @@ export const commercialPlans = [
         name: 'Commercial Plan',
         price: 0,
         recommended: true,
-        details: [
-            { label: 'Details', value: 'Admin-configured' },
-        ]
+        details: 'Admin-configured'
     }
 ];
 
@@ -46,9 +40,7 @@ export const corporatePlans = [
         name: 'Corporate Plan',
         price: 0,
         recommended: true,
-        details: [
-            { label: 'Details', value: 'Admin-configured' },
-        ]
+        details: 'Admin-configured'
     }
 ];
 

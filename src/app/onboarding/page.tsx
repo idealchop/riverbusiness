@@ -41,10 +41,10 @@ const icons: { [key: string]: React.ElementType } = {
     Enterprise: Factory,
 };
 
-type FamilyPlan = (typeof familyPlans)[0] & { details?: { label: string; value: string; }[] };
-type SmePlan = (typeof smePlans)[0] & { details?: { label: string; value: string; }[], employees?: string, stations?: string };
-type CommercialPlan = (typeof commercialPlans)[0] & { details?: { label: string; value: string; }[], employees?: string, stations?: string };
-type CorporatePlan = (typeof corporatePlans)[0] & { details?: { label: string; value: string; }[], employees?: string, stations?: string };
+type FamilyPlan = (typeof familyPlans)[0] & { details?: string };
+type SmePlan = (typeof smePlans)[0] & { details?: string };
+type CommercialPlan = (typeof commercialPlans)[0] & { details?: string };
+type CorporatePlan = (typeof corporatePlans)[0] & { details?: string };
 type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: { label: string; value: string; }[], imageId?: string, description?: string };
 type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
 
@@ -58,7 +58,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const [selectedClientType, setSelectedClientType] = React.useState<string>('Commercial');
+  const [selectedClientType, setSelectedClientType] = React.useState<string | null>(null);
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
@@ -92,7 +92,7 @@ export default function OnboardingPage() {
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
-    setDialogView('list');
+    setDialogView(clientTypeName === 'Enterprise' ? 'list' : 'customize');
     setIsPlanDialogOpen(true);
   };
   
@@ -120,6 +120,10 @@ export default function OnboardingPage() {
             deliveriesPerWeek: parseInt(deliveries),
             waterStation: station
         });
+        if (!selectedPlan) {
+            let planName = `${selectedClientType} Plan`;
+            setSelectedPlan({name: planName, price: 0});
+        }
         setIsPlanDialogOpen(false);
     } else {
         toast({
@@ -132,21 +136,27 @@ export default function OnboardingPage() {
   
   const renderPlanDialog = () => {
     let plans: AnyPlan[] = [];
-    switch (selectedClientType) {
-        case 'Family': plans = familyPlans; break;
-        case 'SME': plans = smePlans; break;
-        case 'Commercial': plans = commercialPlans; break;
-        case 'Corporate': plans = corporatePlans; break;
-        case 'Enterprise': plans = enterprisePlans; break;
+    let isEnterprise = false;
+    let title = `Choose Your ${selectedClientType} Plan`
+
+    if (selectedClientType === 'Enterprise') {
+        plans = enterprisePlans;
+        isEnterprise = true;
+    } else if (selectedClientType) {
+        title = `Customize Your ${selectedClientType} Plan`;
     }
 
-    const isEnterprise = selectedClientType === 'Enterprise';
 
     return (
-        <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+        <Dialog open={isPlanDialogOpen} onOpenChange={(isOpen) => {
+            setIsPlanDialogOpen(isOpen);
+            if (!isOpen) {
+                setDialogView('list');
+            }
+        }}>
             <DialogContent className={isEnterprise ? "sm:max-w-4xl" : "sm:max-w-md"}>
                 <DialogHeader>
-                    <DialogTitle>Choose Your {selectedClientType} Plan</DialogTitle>
+                    <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>Select the best plan that fits your needs.</DialogDescription>
                 </DialogHeader>
                 {dialogView === 'list' ? (
@@ -162,7 +172,7 @@ export default function OnboardingPage() {
                                     {plan.recommended && <Badge className="w-fit">Recommended</Badge>}
                                 </CardHeader>
                                 <CardContent className="flex-grow space-y-4">
-                                   {plan.details ? (
+                                   {'details' in plan && Array.isArray(plan.details) ? (
                                         <ul className="space-y-2 text-sm text-muted-foreground">
                                             {plan.details?.map(detail => (
                                                 <li key={detail.label} className="flex justify-between">
@@ -204,7 +214,7 @@ export default function OnboardingPage() {
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setDialogView('list')}>Back</Button>
+                            {selectedClientType === 'Enterprise' && <Button variant="ghost" onClick={() => setDialogView('list')}>Back</Button>}
                             <Button type="submit">Save Customization</Button>
                         </div>
                     </form>
@@ -327,12 +337,12 @@ export default function OnboardingPage() {
                                         <p>Station: {customPlanDetails.waterStation}</p>
                                     </div>
                                 ) : (
-                                    <p className="text-muted-foreground">
-                                        Details will be configured by an administrator.
-                                    </p>
+                                    'details' in selectedPlan && typeof selectedPlan.details !== 'string' && selectedPlan.details?.map(d => (
+                                        <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
+                                    ))
                                 )}
                             </div>
-                            <Button variant="outline" onClick={() => setIsPlanDialogOpen(true)}>Change Plan</Button>
+                            <Button variant="outline" onClick={() => handleClientTypeSelect(selectedClientType!)}>Change Plan</Button>
                         </div>
                     </div>
                 )}
