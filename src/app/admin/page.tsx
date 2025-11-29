@@ -21,16 +21,6 @@ export default function AdminPage() {
     const [appUsers, setAppUsers] = useState(initialAppUsers);
     const [selectedUser, setSelectedUser] = useState<any>(null);
 
-    const areaChartData = [
-        { date: 'Mar 1', value: 20000 },
-        { date: 'Mar 3', value: 35000 },
-        { date: 'Mar 5', value: 28000 },
-        { date: 'Mar 7', value: 32000 },
-        { date: 'Mar 9', value: 25000 },
-        { date: 'Mar 11', value: 38000 },
-        { date: 'Mar 13', value: 42000 },
-    ];
-
     const barChartData = [
         { month: 'January', value: 5000 },
         { month: 'February', value: 8000 },
@@ -39,8 +29,6 @@ export default function AdminPage() {
         { month: 'May', value: 12000 },
         { month: 'June', value: 18000 },
     ];
-
-    const latestUsers = initialAppUsers.slice(0, 5);
 
 
   return (
@@ -93,35 +81,14 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Area Chart Example</CardTitle>
+                    <CardTitle>User Management</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={areaChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                                <defs>
-                                    <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip 
-                                    contentStyle={{
-                                        backgroundColor: 'hsl(var(--background))',
-                                        border: '1px solid hsl(var(--border))',
-                                        borderRadius: 'var(--radius)',
-                                    }}
-                                />
-                                <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorArea)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                     <div className="mt-6">
+                    <div>
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>ID</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Status</TableHead>
@@ -130,8 +97,9 @@ export default function AdminPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {latestUsers.map((user) => (
+                                {appUsers.map((user) => (
                                     <TableRow key={user.id}>
+                                        <TableCell>{user.id}</TableCell>
                                         <TableCell>{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>{user.accountStatus}</TableCell>
