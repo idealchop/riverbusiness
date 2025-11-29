@@ -11,12 +11,21 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Home, CreditCard, Droplet, Target, BarChart, FileCheck2, User, HelpCircle, Truck, TrendingUp, CheckSquare, Settings } from 'lucide-react';
+import { Home, CreditCard, Droplet, Target, BarChart, FileCheck2, User, HelpCircle, Truck, TrendingUp, CheckSquare, Settings, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
+  {
+    label: 'Monitor',
+    icon: Monitor,
+    subItems: [
+      { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
+      { href: '/dashboard/quality', label: 'Quality', icon: CheckSquare },
+      { href: '/dashboard/predict', label: 'Predictions', icon: TrendingUp },
+    ],
+  },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
 ];
 
