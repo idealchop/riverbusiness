@@ -160,7 +160,7 @@ export default function OnboardingPage() {
                     name="fullName"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Full Name</FormLabel>
+                        <FormLabel className="font-bold">Full Name</FormLabel>
                         <FormControl>
                         <Input placeholder="Juan dela Cruz" {...field} />
                         </FormControl>
@@ -173,7 +173,7 @@ export default function OnboardingPage() {
                     name="businessName"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Business Name</FormLabel>
+                        <FormLabel className="font-bold">Business Name</FormLabel>
                         <FormControl>
                         <Input placeholder="River Business Inc." {...field} />
                         </FormControl>
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
                     name="address"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel className="font-bold">Address</FormLabel>
                         <FormControl>
                         <Input placeholder="123 Main St, Anytown" {...field} />
                         </FormControl>
@@ -199,7 +199,7 @@ export default function OnboardingPage() {
                     name="contactNumber"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Contact Number</FormLabel>
+                        <FormLabel className="font-bold">Contact Number</FormLabel>
                         <FormControl>
                         <Input type="tel" placeholder="09123456789" {...field} />
                         </FormControl>
