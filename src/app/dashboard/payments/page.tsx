@@ -27,6 +27,7 @@ import {
   QrCode,
   Download,
   Receipt,
+  X,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -36,7 +37,7 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const paymentHistory = [
@@ -179,12 +180,12 @@ export default function PaymentsPage() {
                     <DialogTrigger asChild>
                         <Button className="bg-primary/90 hover:bg-primary">Invoice</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-4xl">
+                    <DialogContent className="sm:max-w-5xl">
                         <DialogHeader>
                             <DialogTitle>Choose a Plan</DialogTitle>
                             <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
                         </DialogHeader>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 py-4">
                             {plans.map(plan => {
                                 const image = getImageForPlan(plan.imageId);
                                 return (
@@ -200,6 +201,13 @@ export default function PaymentsPage() {
                                 );
                             })}
                         </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button type="button" variant="secondary">
+                              Close
+                            </Button>
+                          </DialogClose>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -274,5 +282,7 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+    
 
     
