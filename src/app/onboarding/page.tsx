@@ -166,6 +166,7 @@ export default function OnboardingPage() {
                         </div>
                     </div>
                     <div className="flex justify-end gap-2">
+                         <Button type="button" variant="outline" onClick={() => setIsPlanDialogOpen(false)}>Cancel</Button>
                         <Button type="submit">Save Customization</Button>
                     </div>
                 </form>
@@ -249,16 +250,15 @@ export default function OnboardingPage() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       {clientTypes.map((client) => {
                           const image = getImageForPlan(client.imageId);
-                          const isEnterprise = client.name === 'Enterprise';
                           return (
                             <div key={client.name}
                                  onClick={() => handleClientTypeSelect(client.name)}
                                  className={cn(
-                                     "border rounded-lg p-4 text-center cursor-pointer transition-all flex flex-col justify-center items-center aspect-square",
+                                     "border rounded-lg p-4 cursor-pointer transition-all flex flex-col aspect-square",
                                      selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
                                  )}>
                                 {image && (
-                                    <div className="relative w-20 h-20 mb-2">
+                                    <div className="relative w-full h-1/2">
                                         <Image
                                             src={image.imageUrl}
                                             alt={client.name}
@@ -271,8 +271,10 @@ export default function OnboardingPage() {
                                         />
                                     </div>
                                 )}
-                                <p className="font-semibold">{client.name}</p>
-                                <p className="text-xs text-muted-foreground">{client.description}</p>
+                                <div className="h-1/2 flex flex-col justify-center items-center text-center">
+                                    <p className="font-semibold">{client.name}</p>
+                                    <p className="text-xs text-muted-foreground">{client.description}</p>
+                                </div>
                             </div>
                           )
                       })}
