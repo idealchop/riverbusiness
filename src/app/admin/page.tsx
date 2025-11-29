@@ -90,7 +90,7 @@ export default function AdminPage() {
 
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 font-sans">
         <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
