@@ -154,6 +154,8 @@ export default function OnboardingPage() {
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
     const peopleAccommodated = calculatePeopleAccommodated(customLiters);
+    const reorderedDaysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 
     return (
         <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
@@ -177,13 +179,14 @@ export default function OnboardingPage() {
                         </div>
                         <div className="grid gap-2">
                             <Label>Delivery Days</Label>
-                            <div className="flex flex-wrap gap-2">
-                                {daysOfWeek.map(day => (
+                            <div className="flex flex-wrap gap-2 justify-center">
+                                {reorderedDaysOfWeek.map(day => (
                                     <Button
                                         key={day}
                                         type="button"
                                         variant={selectedDays.includes(day) ? 'default' : 'outline'}
                                         onClick={() => toggleDay(day)}
+                                        className={cn(day === 'Sun' ? 'flex-grow basis-full max-w-xs mx-auto' : 'flex-1')}
                                     >
                                         {day}
                                     </Button>
