@@ -170,15 +170,28 @@ export const corporatePlans = [
 
 export const enterprisePlans = [
     {
-        name: 'Custom Enterprise Solution',
+        name: 'Customized Plan',
         price: 0,
-        liters: 'Custom',
-        refillFrequency: 'Dedicated Support',
+        description: 'Tailored for predictable, prepaid enterprise solutions.',
         recommended: false,
+        imageId: 'plan-enterprise-customized',
         details: [
             'Tailored pricing based on high-volume needs',
             'Dedicated account manager and support',
             'Advanced analytics and reporting',
+            'Contact us for a personalized quote'
+        ]
+    },
+    {
+        name: 'Flowing Plan',
+        price: 0,
+        description: 'For pure usage-based, pay-as-you-go enterprise clients.',
+        recommended: false,
+        imageId: 'plan-enterprise-flowing',
+        details: [
+            'Pay only for what you consume',
+            'Ideal for fluctuating water needs',
+            'Flexible and transparent billing',
             'Contact us for a personalized quote'
         ]
     }

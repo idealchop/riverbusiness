@@ -87,7 +87,7 @@ type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
 type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
 type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string };
 type CorporatePlan = (typeof corporatePlans)[0] & { details?: string[], employees?: string, stations?: string };
-type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: string[] };
+type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: string[], imageId?: string, description?: string };
 type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
 
 
@@ -455,20 +455,23 @@ export default function PaymentsPage() {
                                     </div>
                                 )}
                                 {selectedClientType.name === 'Enterprise' && (
-                                    <div className="grid grid-cols-1 gap-4">
-                                        {enterprisePlans.map(plan => (
-                                            <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                                <CardHeader>
-                                                    <CardTitle>{plan.name}</CardTitle>
-                                                    <p className="text-2xl font-bold">Contact Us</p>
-                                                </CardHeader>
-                                                <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                    <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
-                                                        {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
-                                                    </ul>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {enterprisePlans.map(plan => {
+                                            const image = plan.imageId ? getImageForPlan(plan.imageId) : null;
+                                            return (
+                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                    {image && <Image src={image.imageUrl} alt={plan.name} width={300} height={150} className="rounded-t-lg object-cover w-full h-32" data-ai-hint={image.imageHint} />}
+                                                    <CardHeader>
+                                                        <CardTitle>{plan.name}</CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                                                        <div className="flex-grow"></div>
+                                                        <Button className="w-full mt-4">Select Plan</Button>
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        })}
                                     </div>
                                 )}
                               </div>
@@ -484,8 +487,10 @@ export default function PaymentsPage() {
                                 </DialogTitle>
                                <DialogDescription>
                                    {'details' in selectedPlan ? (
-                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Billed at ₱{selectedPlan.price.toFixed(2)} per liter.</>
+                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Please contact us for a personalized quote.</>
                                    ) : 'employees' in selectedPlan && typeof selectedPlan.price === 'number' ? (
+                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} using your preferred method.</>
+                                   ) : 'persons' in selectedPlan && typeof selectedPlan.price === 'number' ? (
                                       <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} using your preferred method.</>
                                    ) : (
                                     <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Please contact us for a personalized quote.</>
