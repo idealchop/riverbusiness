@@ -38,6 +38,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
                   className={cn("justify-start", pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard') && "bg-accent text-accent-foreground")}
+                  tooltip={item.label}
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
