@@ -20,8 +20,8 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Users, Briefcase, Building, Layers, Factory, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 
 const onboardingSchema = z.object({
@@ -41,10 +41,10 @@ const icons: { [key: string]: React.ElementType } = {
     Enterprise: Factory,
 };
 
-type FamilyPlan = (typeof familyPlans)[0] & { details?: string };
-type SmePlan = (typeof smePlans)[0] & { details?: string };
-type CommercialPlan = (typeof commercialPlans)[0] & { details?: string };
-type CorporatePlan = (typeof corporatePlans)[0] & { details?: string };
+type FamilyPlan = (typeof familyPlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
+type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
+type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
+type CorporatePlan = (typeof corporatePlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
 type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: { label: string; value: string; }[], imageId?: string, description?: string };
 type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
 
@@ -92,7 +92,11 @@ export default function OnboardingPage() {
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
-    setDialogView(clientTypeName === 'Enterprise' ? 'list' : 'customize');
+    if (clientTypeName === 'Enterprise') {
+      setDialogView('list');
+    } else {
+      setDialogView('customize');
+    }
     setIsPlanDialogOpen(true);
   };
   
@@ -121,7 +125,12 @@ export default function OnboardingPage() {
             waterStation: station
         });
         if (!selectedPlan) {
-            let planName = `${selectedClientType} Plan`;
+            let planName = `Custom ${selectedClientType} Plan`;
+            if (selectedClientType === 'Family') planName = familyPlans[0].name;
+            if (selectedClientType === 'SME') planName = smePlans[0].name;
+            if (selectedClientType === 'Commercial') planName = commercialPlans[0].name;
+            if (selectedClientType === 'Corporate') planName = corporatePlans[0].name;
+
             setSelectedPlan({name: planName, price: 0});
         }
         setIsPlanDialogOpen(false);
@@ -137,15 +146,26 @@ export default function OnboardingPage() {
   const renderPlanDialog = () => {
     let plans: AnyPlan[] = [];
     let isEnterprise = false;
-    let title = `Choose Your ${selectedClientType} Plan`
+    let title = `Customize Your ${selectedClientType} Plan`
 
-    if (selectedClientType === 'Enterprise') {
+    if (selectedClientType === 'Family') {
+        plans = familyPlans;
+        title = 'Customize Family Plan'
+    } else if (selectedClientType === 'SME') {
+        plans = smePlans;
+        title = 'Customize SME Plan'
+    } else if (selectedClientType === 'Commercial') {
+        plans = commercialPlans;
+        title = 'Customize Commercial Plan'
+    } else if (selectedClientType === 'Corporate') {
+        plans = corporatePlans;
+        title = 'Customize Corporate Plan'
+    } else if (selectedClientType === 'Enterprise') {
         plans = enterprisePlans;
         isEnterprise = true;
-    } else if (selectedClientType) {
-        title = `Customize Your ${selectedClientType} Plan`;
+        title = `Choose Your Enterprise Plan`
     }
-
+    
 
     return (
         <Dialog open={isPlanDialogOpen} onOpenChange={(isOpen) => {
@@ -157,9 +177,14 @@ export default function OnboardingPage() {
             <DialogContent className={isEnterprise ? "sm:max-w-4xl" : "sm:max-w-md"}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
-                    <DialogDescription>Select the best plan that fits your needs.</DialogDescription>
+                    <DialogDescription>
+                      {dialogView === 'list' 
+                        ? 'Select the best plan that fits your needs.'
+                        : 'Please provide the details for your water plan.'
+                      }
+                    </DialogDescription>
                 </DialogHeader>
-                {dialogView === 'list' ? (
+                {dialogView === 'list' && isEnterprise ? (
                     <div className={cn("grid gap-6 py-4", isEnterprise ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                         {plans.map((plan) => (
                             <Card key={plan.name} className={cn(
@@ -174,7 +199,7 @@ export default function OnboardingPage() {
                                 <CardContent className="flex-grow space-y-4">
                                    {'details' in plan && Array.isArray(plan.details) ? (
                                         <ul className="space-y-2 text-sm text-muted-foreground">
-                                            {plan.details?.map(detail => (
+                                            {(plan as EnterprisePlan).details?.map(detail => (
                                                 <li key={detail.label} className="flex justify-between">
                                                     <span>{detail.label}</span>
                                                     <span className="font-semibold text-foreground">{detail.value}</span>
@@ -299,11 +324,13 @@ export default function OnboardingPage() {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       {clientTypes.map((client) => {
                           const image = getImageForPlan(client.imageId);
+                          const isEnterprise = client.name === 'Enterprise';
                           return (
                             <div key={client.name}
                                  onClick={() => handleClientTypeSelect(client.name)}
                                  className={cn(
-                                     "border rounded-lg p-4 text-center cursor-pointer transition-all",
+                                     "border rounded-lg p-4 text-center cursor-pointer transition-all flex flex-col justify-center",
+                                     isEnterprise ? "" : "aspect-square",
                                      selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
                                  )}>
                                 {image && (
@@ -336,11 +363,10 @@ export default function OnboardingPage() {
                                         <p>{customPlanDetails.deliveriesPerWeek} Deliveries/Week</p>
                                         <p>Station: {customPlanDetails.waterStation}</p>
                                     </div>
-                                ) : (
-                                    'details' in selectedPlan && typeof selectedPlan.details !== 'string' && selectedPlan.details?.map(d => (
-                                        <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
-                                    ))
-                                )}
+                                ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as EnterprisePlan).details?.map(d => (
+                                    <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
+                                ))
+                                }
                             </div>
                             <Button variant="outline" onClick={() => handleClientTypeSelect(selectedClientType!)}>Change Plan</Button>
                         </div>
