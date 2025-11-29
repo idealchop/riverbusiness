@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
+import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -20,6 +21,8 @@ import { Users, Briefcase, Building, Layers, Factory, Check } from 'lucide-react
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 const onboardingSchema = z.object({
   fullName: z.string().min(1, { message: 'Required' }),
@@ -38,13 +41,18 @@ const icons: { [key: string]: React.ElementType } = {
     Enterprise: Factory,
 };
 
-type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
-type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
-type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string };
-type CorporatePlan = (typeof corporatePlans)[0] & { details?: string[], employees?: string, stations?: string };
-type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: string[], imageId?: string, description?: string };
+type FamilyPlan = (typeof familyPlans)[0] & { details?: { label: string; value: string; }[] };
+type SmePlan = (typeof smePlans)[0] & { details?: { label: string; value: string; }[], employees?: string, stations?: string };
+type CommercialPlan = (typeof commercialPlans)[0] & { details?: { label: string; value: string; }[], employees?: string, stations?: string };
+type CorporatePlan = (typeof corporatePlans)[0] & { details?: { label: string; value: string; }[], employees?: string, stations?: string };
+type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: { label: string; value: string; }[], imageId?: string, description?: string };
 type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
 
+interface CustomPlanDetails {
+    litersPerMonth: number;
+    deliveriesPerWeek: number;
+    waterStation: string;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -53,6 +61,9 @@ export default function OnboardingPage() {
   const [selectedClientType, setSelectedClientType] = React.useState<string>('Commercial');
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
+  const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
+  const [dialogView, setDialogView] = React.useState<'list' | 'customize'>('list');
+
   
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
@@ -65,7 +76,7 @@ export default function OnboardingPage() {
   });
 
   const onSubmit = (data: OnboardingFormValues) => {
-    console.log(data, selectedClientType, selectedPlan);
+    console.log(data, selectedClientType, selectedPlan, customPlanDetails);
     toast({
         title: 'Onboarding Complete!',
         description: 'Your information has been saved.',
@@ -80,32 +91,53 @@ export default function OnboardingPage() {
   const handleClientTypeSelect = (clientTypeName: string) => {
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
+    setCustomPlanDetails(null);
+    setDialogView('list');
     setIsPlanDialogOpen(true);
   };
   
   const handlePlanSelect = (plan: AnyPlan) => {
-    setSelectedPlan(plan);
-    setIsPlanDialogOpen(false);
+    if (plan.name.toLowerCase().includes('customize')) {
+        setSelectedPlan(plan);
+        setDialogView('customize');
+    } else {
+        setSelectedPlan(plan);
+        setCustomPlanDetails(null);
+        setIsPlanDialogOpen(false);
+    }
+  };
+
+  const handleSaveCustomization = (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const liters = form.querySelector<HTMLInputElement>('input[name="litersPerMonth"]')?.value;
+    const deliveries = form.querySelector<HTMLInputElement>('input[name="deliveriesPerWeek"]')?.value;
+    const station = form.querySelector<HTMLInputElement>('input[name="waterStation"]')?.value;
+    
+    if (liters && deliveries && station) {
+        setCustomPlanDetails({
+            litersPerMonth: parseInt(liters),
+            deliveriesPerWeek: parseInt(deliveries),
+            waterStation: station
+        });
+        setIsPlanDialogOpen(false);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Incomplete Information",
+            description: "Please fill out all fields for your custom plan.",
+        })
+    }
   };
   
   const renderPlanDialog = () => {
     let plans: AnyPlan[] = [];
     switch (selectedClientType) {
-        case 'Family':
-            plans = familyPlans;
-            break;
-        case 'SME':
-            plans = smePlans;
-            break;
-        case 'Commercial':
-            plans = commercialPlans;
-            break;
-        case 'Corporate':
-            plans = corporatePlans;
-            break;
-        case 'Enterprise':
-            plans = enterprisePlans;
-            break;
+        case 'Family': plans = familyPlans; break;
+        case 'SME': plans = smePlans; break;
+        case 'Commercial': plans = commercialPlans; break;
+        case 'Corporate': plans = corporatePlans; break;
+        case 'Enterprise': plans = enterprisePlans; break;
     }
 
     return (
@@ -115,25 +147,66 @@ export default function OnboardingPage() {
                     <DialogTitle>Choose Your {selectedClientType} Plan</DialogTitle>
                     <DialogDescription>Select the best plan that fits your needs.</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
-                    {plans.map((plan) => (
-                        <Card key={plan.name} className={cn(
-                            "flex flex-col cursor-pointer hover:border-primary",
-                            plan.recommended && "border-primary ring-2 ring-primary",
-                            selectedPlan?.name === plan.name && "border-primary ring-2 ring-primary"
-                        )} onClick={() => handlePlanSelect(plan)}>
-                            <CardHeader>
-                                <CardTitle>{plan.name}</CardTitle>
-                                {plan.recommended && <Badge className="w-fit">Recommended</Badge>}
-                            </CardHeader>
-                            <CardContent className="flex-grow space-y-4">
-                                <ul className="space-y-2 text-sm text-muted-foreground">
-                                    {plan.details?.map(detail => <li key={detail} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary"/>{detail}</li>)}
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                {dialogView === 'list' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
+                        {plans.map((plan) => (
+                            <Card key={plan.name} className={cn(
+                                "flex flex-col cursor-pointer hover:border-primary transition-all",
+                                plan.recommended && "border-primary ring-1 ring-primary",
+                                selectedPlan?.name === plan.name && "border-primary ring-2 ring-primary"
+                            )} onClick={() => handlePlanSelect(plan)}>
+                                <CardHeader>
+                                    <CardTitle>{plan.name}</CardTitle>
+                                    {plan.recommended && <Badge className="w-fit">Recommended</Badge>}
+                                </CardHeader>
+                                <CardContent className="flex-grow space-y-4">
+                                   {plan.details ? (
+                                        <ul className="space-y-2 text-sm text-muted-foreground">
+                                            {plan.details?.map(detail => (
+                                                <li key={detail.label} className="flex justify-between">
+                                                    <span>{detail.label}</span>
+                                                    <span className="font-semibold text-foreground">{detail.value}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <form onSubmit={handleSaveCustomization}>
+                        <div className="py-4 space-y-4">
+                             <div className="grid gap-2">
+                                <Label htmlFor="litersPerMonth">Liters/Month</Label>
+                                <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="deliveriesPerWeek">Deliveries/Week</Label>
+                                <Input id="deliveriesPerWeek" name="deliveriesPerWeek" type="number" placeholder="e.g., 2" />
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="waterStation">Water Station</Label>
+                                <Select name="waterStation">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a water station" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {waterStations.map(station => (
+                                            <SelectItem key={station.id} value={station.name}>{station.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" onClick={() => setDialogView('list')}>Back</Button>
+                            <Button type="submit">Save Customization</Button>
+                        </div>
+                    </form>
+                )}
             </DialogContent>
         </Dialog>
     );
@@ -239,20 +312,28 @@ export default function OnboardingPage() {
                   </div>
               </div>
               
-              {selectedPlan && (
-                <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Selected Plan</h3>
-                    <div className="mt-4 border rounded-lg p-4 flex justify-between items-center">
-                        <div>
-                            <p className="font-bold text-lg">{selectedPlan.name}</p>
-                            <p className="text-muted-foreground">
-                                {selectedPlan.price > 0 ? `₱${selectedPlan.price.toLocaleString()}/month` : 'Custom Pricing'}
-                            </p>
+                {selectedPlan && (
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Selected Plan</h3>
+                        <div className="mt-4 border rounded-lg p-4 flex justify-between items-start">
+                            <div>
+                                <p className="font-bold text-lg">{selectedPlan.name}</p>
+                                {customPlanDetails ? (
+                                     <div className="text-sm text-muted-foreground">
+                                        <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month</p>
+                                        <p>{customPlanDetails.deliveriesPerWeek} Deliveries/Week</p>
+                                        <p>Station: {customPlanDetails.waterStation}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-muted-foreground">
+                                        {selectedPlan.price > 0 ? `₱${selectedPlan.price.toLocaleString()}/month` : 'Details configured by admin.'}
+                                    </p>
+                                )}
+                            </div>
+                            <Button variant="outline" onClick={() => setIsPlanDialogOpen(true)}>Change Plan</Button>
                         </div>
-                        <Button variant="outline" onClick={() => setIsPlanDialogOpen(true)}>Change Plan</Button>
                     </div>
-                </div>
-              )}
+                )}
 
               <div className="flex justify-end pt-8">
                 <Button type="submit" className="w-full" disabled={!selectedPlan}>Complete Onboarding</Button>
@@ -265,3 +346,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
