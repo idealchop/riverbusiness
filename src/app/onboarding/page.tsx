@@ -50,7 +50,6 @@ type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | Enterpris
 
 const steps = [
     { id: 'info', name: 'Your Information' },
-    { id: 'clientType', name: 'Client Type' },
     { id: 'plan', name: 'Select Plan' },
     { id: 'payment', name: 'Payment' }
 ];
@@ -60,7 +59,6 @@ export default function OnboardingPage() {
   const { toast } = useToast();
   
   const [currentStep, setCurrentStep] = React.useState(0);
-  const [selectedClientType, setSelectedClientType] = React.useState<(typeof clientTypes)[0] | null>(null);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
 
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
@@ -76,11 +74,7 @@ export default function OnboardingPage() {
       const isValid = await form.trigger();
       if (!isValid) return;
     }
-    if (currentStep === 1 && !selectedClientType) {
-        toast({ variant: 'destructive', title: 'Please select a client type.' });
-        return;
-    }
-    if (currentStep === 2 && !selectedPlan) {
+    if (currentStep === 1 && !selectedPlan) {
         toast({ variant: 'destructive', title: 'Please select a plan.' });
         return;
     }
@@ -102,11 +96,6 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
-    setSelectedClientType(clientType);
-    setSelectedPlan(null); // Reset plan when client type changes
-  };
-
   const handlePlanSelect = (plan: AnyPlan) => {
     setSelectedPlan(plan);
     handleNext();
@@ -118,7 +107,7 @@ export default function OnboardingPage() {
 
   const getIconForClientType = (typeName: string) => {
     const Icon = icons[typeName];
-    return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
+    return Icon ? <Icon className="w-5 h-5 mr-2" /> : null;
   }
 
   const regularSmePlans = smePlans.filter(p => !p.details);
@@ -168,131 +157,115 @@ export default function OnboardingPage() {
             </form>
           </Form>
         );
-      case 1: // Select Client Type
-        return (
-            <div className="space-y-2 pt-4">
-                <Label className="font-bold">Select Your Client Type</Label>
-                <p className="text-sm text-muted-foreground">Choose the category that best fits you to see recommended plans.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 py-4">
-                    {clientTypes.map(client => {
-                        const image = getImageForPlan(client.imageId);
-                        return (
-                            <Card 
-                                key={client.name} 
-                                className={cn("flex flex-col cursor-pointer hover:shadow-lg transition-shadow text-center", selectedClientType?.name === client.name && "border-primary ring-2 ring-primary")}
-                                onClick={() => handleClientTypeSelect(client)}
-                            >
-                                <CardContent className="p-4 flex flex-col items-center justify-center flex-1">
-                                    {image ? <Image src={image.imageUrl} alt={client.name} width={80} height={80} className="rounded-full mb-4 w-16 h-16 object-cover" data-ai-hint={image.imageHint} /> : getIconForClientType(client.name)}
-                                    <h3 className="font-semibold text-sm">{client.name}</h3>
-                                    <p className="text-xs text-muted-foreground">{client.description}</p>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    case 2: // Select Plan
+    case 1: // Select Plan
         return (
             <div className="py-4">
-                <h3 className="text-lg font-semibold mb-2">Choose a Plan for {selectedClientType?.name}</h3>
+                <h3 className="text-lg font-semibold mb-2">Choose a Plan</h3>
                 <p className="text-sm text-muted-foreground mb-4">Select the best plan from the options below.</p>
-                
-                {selectedClientType?.name === 'Family' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {familyPlans.map(plan => (
-                            <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-2' )}>
-                                {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
-                                <CardHeader>
-                                    <CardTitle>{plan.name}</CardTitle>
-                                    {plan.details ? <p className="text-2xl font-bold">Custom</p> : <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>}
-                                </CardHeader>
-                                <CardContent className="space-y-4 flex-grow flex flex-col">
-                                    {plan.details ? <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">{plan.details!.map(detail => <li key={detail}>{detail}</li>)}</ul> : <> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> </>}
-                                    <div className="flex-grow"></div>
-                                    <Separator />
-                                    <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span> {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>} </div>
-                                </CardContent>
-                                {plan.details && <CardContent><Button className="w-full" onClick={(e) => { e.stopPropagation(); handlePlanSelect(plan); }}>Select Custom Plan</Button></CardContent>}
-                            </Card>
+                <Tabs defaultValue="Family" className="w-full">
+                    <TabsList className="grid w-full grid-cols-5">
+                        {clientTypes.map(client => (
+                             <TabsTrigger key={client.name} value={client.name}>
+                                {getIconForClientType(client.name)}
+                                {client.name}
+                            </TabsTrigger>
                         ))}
-                    </div>
-                )}
-                {selectedClientType?.name === 'SME' && (
-                    <div className="grid grid-cols-1 gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {regularSmePlans.map(plan => (
-                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                    </TabsList>
+                    <TabsContent value="Family">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                            {familyPlans.map(plan => (
+                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-2' )}>
                                     {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
-                                    <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p> </CardHeader>
-                                    <CardContent className="space-y-4 flex-grow flex flex-col"> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> <div className="flex-grow"></div> <Separator /> <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> {'employees' in plan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>} {'stations' in plan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>} </div> </CardContent>
+                                    <CardHeader>
+                                        <CardTitle>{plan.name}</CardTitle>
+                                        {plan.details ? <p className="text-2xl font-bold">Custom</p> : <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>}
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 flex-grow flex flex-col">
+                                        {plan.details ? <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">{plan.details!.map(detail => <li key={detail}>{detail}</li>)}</ul> : <> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> </>}
+                                        <div className="flex-grow"></div>
+                                        <Separator />
+                                        <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span> {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>} </div>
+                                    </CardContent>
+                                    {plan.details && <CardContent><Button className="w-full" onClick={(e) => { e.stopPropagation(); handlePlanSelect(plan); }}>Select Custom Plan</Button></CardContent>}
                                 </Card>
                             ))}
                         </div>
-                        {customSmePlan && (
-                            <Card key={customSmePlan.name} onClick={() => handlePlanSelect(customSmePlan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
-                                {customSmePlan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
-                                <CardHeader> <CardTitle>{customSmePlan.name}</CardTitle> <p className="text-2xl font-bold">Custom</p> </CardHeader>
-                                <CardContent className="space-y-4 flex-grow flex flex-col"> <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">{customSmePlan.details!.map(detail => <li key={detail}>{detail}</li>)}</ul> <div className="flex-grow" /> <Button className="w-full mt-4" onClick={(e) => { e.stopPropagation(); handlePlanSelect(customSmePlan); }}>Select Plan</Button> </CardContent>
-                            </Card>
-                        )}
-                    </div>
-                )}
-                 {selectedClientType?.name === 'Commercial' && (
-                          <div className="grid grid-cols-1 gap-4">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  {regularCommercialPlans.map(plan => {
-                                      const isCommercialPlan = 'employees' in plan;
-                                      return (
-                                          <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                              {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
-                                              <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p> </CardHeader>
-                                              <CardContent className="space-y-4 flex-grow flex flex-col"> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> <div className="flex-grow"></div> <Separator /> <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> {isCommercialPlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>} {isCommercialPlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>} </div> </CardContent>
-                                          </Card>
-                                      )
-                                  })}
-                              </div>
-                              {customCommercialPlan && (() => {
-                                  const plan = customCommercialPlan;
-                                  return (
-                                      <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
-                                           {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
-                                          <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">Custom</p> </CardHeader>
-                                           <CardContent className="space-y-4 flex-grow flex flex-col"> <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">{plan.details!.map(detail => <li key={detail}>{detail}</li>)}</ul> <div className="flex-grow" /> <Button className="w-full mt-4" onClick={(e) => { e.stopPropagation(); handlePlanSelect(plan); }}>Select Plan</Button> </CardContent>
-                                      </Card>
-                                  )
-                              })()}
-                          </div>
-                )}
-                {selectedClientType?.name === 'Corporate' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {corporatePlans.map(plan => (
-                            <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
-                                <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">₱{plan.price.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/month</span></p> </CardHeader>
-                                <CardContent className="space-y-4 flex-grow flex flex-col"> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> <div className="flex-grow"></div> <Separator /> <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> {'employees' in plan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>} {'stations' in plan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Stations</span>} </div> </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-                {selectedClientType?.name === 'Enterprise' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {enterprisePlans.map(plan => {
-                            const image = plan.imageId ? getImageForPlan(plan.imageId) : null;
-                            return (
-                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                    {image && <Image src={image.imageUrl} alt={plan.name} width={300} height={150} className="rounded-t-lg object-cover w-full h-32" data-ai-hint={image.imageHint} />}
-                                    <CardHeader> <CardTitle>{plan.name}</CardTitle> </CardHeader>
-                                    <CardContent className="space-y-4 flex-grow flex flex-col"> <p className="text-sm text-muted-foreground">{plan.description}</p> <div className="flex-grow"></div> <Button className="w-full mt-4" onClick={(e) => { e.stopPropagation(); handlePlanSelect(plan); }}>Select Plan</Button> </CardContent>
+                    </TabsContent>
+                    <TabsContent value="SME">
+                        <div className="grid grid-cols-1 gap-4 pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {regularSmePlans.map(plan => (
+                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                        {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
+                                        <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p> </CardHeader>
+                                        <CardContent className="space-y-4 flex-grow flex flex-col"> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> <div className="flex-grow"></div> <Separator /> <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> {'employees' in plan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>} {'stations' in plan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>} </div> </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                            {customSmePlan && (
+                                <Card key={customSmePlan.name} onClick={() => handlePlanSelect(customSmePlan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
+                                    {customSmePlan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
+                                    <CardHeader> <CardTitle>{customSmePlan.name}</CardTitle> <p className="text-2xl font-bold">Custom</p> </CardHeader>
+                                    <CardContent className="space-y-4 flex-grow flex flex-col"> <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">{customSmePlan.details!.map(detail => <li key={detail}>{detail}</li>)}</ul> <div className="flex-grow" /> <Button className="w-full mt-4" onClick={(e) => { e.stopPropagation(); handlePlanSelect(customSmePlan); }}>Select Plan</Button> </CardContent>
                                 </Card>
-                            )
-                        })}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="Commercial">
+                        <div className="grid grid-cols-1 gap-4 pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {regularCommercialPlans.map(plan => {
+                                    const isCommercialPlan = 'employees' in plan;
+                                    return (
+                                        <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                            {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
+                                            <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p> </CardHeader>
+                                            <CardContent className="space-y-4 flex-grow flex flex-col"> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> <div className="flex-grow"></div> <Separator /> <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> {isCommercialPlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>} {isCommercialPlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>} </div> </CardContent>
+                                        </Card>
+                                    )
+                                })}
+                            </div>
+                            {customCommercialPlan && (() => {
+                                const plan = customCommercialPlan;
+                                return (
+                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
+                                            {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
+                                        <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">Custom</p> </CardHeader>
+                                            <CardContent className="space-y-4 flex-grow flex flex-col"> <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">{plan.details!.map(detail => <li key={detail}>{detail}</li>)}</ul> <div className="flex-grow" /> <Button className="w-full mt-4" onClick={(e) => { e.stopPropagation(); handlePlanSelect(plan); }}>Select Plan</Button> </CardContent>
+                                    </Card>
+                                )
+                            })()}
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="Corporate">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
+                            {corporatePlans.map(plan => (
+                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                    {plan.recommended && <Badge className="absolute -top-2 -right-2 z-10">Recommended</Badge>}
+                                    <CardHeader> <CardTitle>{plan.name}</CardTitle> <p className="text-2xl font-bold">₱{plan.price.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/month</span></p> </CardHeader>
+                                    <CardContent className="space-y-4 flex-grow flex flex-col"> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Liters Included</p> <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p> </div> <div className="space-y-1"> <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p> <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p> </div> <div className="flex-grow"></div> <Separator /> <div className="text-xs text-muted-foreground flex items-center justify-between pt-4"> {'employees' in plan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>} {'stations' in plan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Stations</span>} </div> </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="Enterprise">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                            {enterprisePlans.map(plan => {
+                                const image = plan.imageId ? getImageForPlan(plan.imageId) : null;
+                                return (
+                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                        {image && <Image src={image.imageUrl} alt={plan.name} width={300} height={150} className="rounded-t-lg object-cover w-full h-32" data-ai-hint={image.imageHint} />}
+                                        <CardHeader> <CardTitle>{plan.name}</CardTitle> </CardHeader>
+                                        <CardContent className="space-y-4 flex-grow flex flex-col"> <p className="text-sm text-muted-foreground">{plan.description}</p> <div className="flex-grow"></div> <Button className="w-full mt-4" onClick={(e) => { e.stopPropagation(); handlePlanSelect(plan); }}>Select Plan</Button> </CardContent>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+                    </TabsContent>
+                </Tabs>
             </div>
         );
-        case 3: // Payment
+        case 2: // Payment
             const getPlanPrice = () => {
                 if (!selectedPlan) return 'N/A';
                 if ('price' in selectedPlan && typeof selectedPlan.price === 'number' && selectedPlan.price > 0) {
@@ -399,5 +372,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
