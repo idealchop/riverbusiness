@@ -1,4 +1,4 @@
-import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, LoginLog, Feedback } from '@/lib/types';
+import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, LoginLog, Feedback, Payment } from '@/lib/types';
 
 export const consumptionData: ConsumptionRecord[] = [
   { date: '2024-07-01', consumptionGallons: 150 },
@@ -45,12 +45,13 @@ export const waterStations: WaterStation[] = [
     { id: 'WS-003', name: 'H2Oasis', location: '789 Pine Ln, Anytown', permitUrl: '#' },
 ];
 
-export const appUsers: AppUser[] = [
-    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
-    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
-    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Inactive', lastLogin: '2024-07-18' },
+export const appUsers: (AppUser & { role?: 'Admin' | 'User' })[] = [
+    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'User' },
+    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19', role: 'User' },
+    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15', role: 'User' },
+    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'User' },
+    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Inactive', lastLogin: '2024-07-18', role: 'User' },
+    { id: 'USR-ADM', name: 'Admin User', email: 'admin@example.com', password: 'password123', totalConsumptionLiters: 0, accountStatus: 'Active', lastLogin: '2024-07-21', role: 'Admin' },
 ];
 
 export const loginLogs: LoginLog[] = [
@@ -67,4 +68,20 @@ export const feedbackLogs: Feedback[] = [
     { id: 'FB-002', userId: 'USR-002', userName: 'Bob Williams', timestamp: '2024-07-21T15:30:00Z', feedback: 'I wish there was a way to see my consumption in real-time.', rating: 4, read: false },
     { id: 'FB-003', userId: 'USR-005', userName: 'Ethan Davis', timestamp: '2024-07-22T09:12:00Z', feedback: 'The app is a bit slow to load on my phone.', rating: 3, read: true },
     { id: 'FB-004', userId: 'USR-004', userName: 'Diana Miller', timestamp: '2024-07-22T11:45:00Z', feedback: 'Excellent service and the delivery tracking is very accurate.', rating: 5, read: false },
+];
+
+
+export const paymentHistory: Payment[] = [
+    { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
+    { id: 'INV-07-2024', date: '2024-07-15', description: 'July 2024 Invoice', amount: 150.0, status: 'Paid' },
+    { id: 'INV-06-2024', date: '2024-06-15', description: 'June 2024 Invoice', amount: 145.0, status: 'Paid' },
+    { id: 'INV-05-2024', date: '2024-05-15', description: 'May 2024 Invoice', amount: 0.0, status: 'Paid' },
+    { id: 'INV-04-2024', date: '2024-04-15', description: 'April 2024 Invoice', amount: 152.0, status: 'Paid' },
+    { id: 'INV-03-2024', date: '2024-03-15', description: 'March 2024 Invoice', amount: 148.0, status: 'Paid' },
+    { id: 'INV-02-2024', date: '2024-02-15', description: 'February 2024 Invoice', amount: 155.0, status: 'Paid' },
+    { id: 'INV-01-2024', date: '2024-01-15', description: 'January 2024 Invoice', amount: 160.0, status: 'Paid' },
+    { id: 'INV-12-2023', date: '2023-12-15', description: 'December 2023 Invoice', amount: 158.0, status: 'Paid' },
+    { id: 'INV-11-2023', date: '2023-11-15', description: 'November 2023 Invoice', amount: 154.0, status: 'Paid' },
+    { id: 'INV-10-2023', date: '2023-10-15', description: 'October 2023 Invoice', amount: 150.0, status: 'Paid' },
+    { id: 'INV-09-2023', date: '2023-09-15', description: 'September 2023 Invoice', amount: 147.0, status: 'Paid' },
 ];

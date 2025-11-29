@@ -50,6 +50,7 @@ export interface AppUser {
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
+    role?: 'Admin' | 'User';
 }
 
 export interface LoginLog {
@@ -69,4 +70,12 @@ export interface Feedback {
   feedback: string;
   rating: number;
   read: boolean;
+}
+
+export interface Payment {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  status: 'Paid' | 'Upcoming' | 'Overdue';
 }

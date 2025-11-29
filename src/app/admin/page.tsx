@@ -6,8 +6,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn, MessageSquare, Star } from 'lucide-react';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, paymentHistory } from '@/lib/data';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn, MessageSquare, Star, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -194,7 +194,7 @@ export default function AdminPage() {
     return (
         <div className="flex flex-col h-full gap-4">
             <Tabs defaultValue="users" onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <TabsList className="grid w-full max-w-md grid-cols-2 p-0 bg-transparent gap-2">
+                <TabsList className="grid w-full max-w-lg grid-cols-3 p-0 bg-transparent gap-2">
                     <TabsTrigger 
                         value="users"
                         className={cn(
@@ -212,6 +212,15 @@ export default function AdminPage() {
                         )}
                     >
                         <LogIn className="mr-2 h-4 w-4" />Login Logs
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="transactions"
+                        className={cn(
+                            "data-[state=active]:shadow-none transition-all duration-200",
+                            activeTab === 'transactions' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
+                        )}
+                    >
+                        <Receipt className="mr-2 h-4 w-4" />Transactions
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="users" className="flex-1 mt-4">
@@ -341,6 +350,53 @@ export default function AdminPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="transactions" className="flex-1 mt-4">
+                    <Card className="h-full">
+                        <CardHeader>
+                            <CardTitle>Transaction History</CardTitle>
+                            <CardDescription>View a history of all transactions.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead>Invoice ID</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {paymentHistory.map((payment) => (
+                                    <TableRow key={payment.id}>
+                                        <TableCell className="font-medium">{payment.id}</TableCell>
+                                        <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                        <TableCell>{payment.description}</TableCell>
+                                        <TableCell>
+                                        <Badge
+                                            variant={
+                                            payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')
+                                            }
+                                            className={
+                                            payment.status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                                            : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
+                                            }
+                                        >
+                                            {payment.status}
+                                        </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono">
+                                        ₱{payment.amount.toFixed(2)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                                 </TableBody>
                             </Table>
                         </CardContent>
