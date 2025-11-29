@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -51,9 +52,11 @@ type AnyPlan = {
 
 interface CustomPlanDetails {
     litersPerMonth: number;
-    deliveriesPerWeek: number;
+    deliveryDays: string[];
     waterStation: string;
 }
+
+const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -64,6 +67,7 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
+  const [selectedDays, setSelectedDays] = React.useState<string[]>([]);
 
   
   const form = useForm<OnboardingFormValues>({
@@ -100,6 +104,7 @@ export default function OnboardingPage() {
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
+    setSelectedDays([]);
     setIsPlanDialogOpen(true);
   };
   
@@ -107,13 +112,12 @@ export default function OnboardingPage() {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const liters = form.querySelector<HTMLInputElement>('input[name="litersPerMonth"]')?.value;
-    const deliveries = form.querySelector<HTMLInputElement>('input[name="deliveriesPerWeek"]')?.value;
     const station = form.querySelector<HTMLSelectElement>('select[name="waterStation"]')?.value;
     
-    if (liters && deliveries && station) {
+    if (liters && selectedDays.length > 0 && station) {
         setCustomPlanDetails({
             litersPerMonth: parseInt(liters),
-            deliveriesPerWeek: parseInt(deliveries),
+            deliveryDays: selectedDays,
             waterStation: station
         });
         
@@ -125,7 +129,7 @@ export default function OnboardingPage() {
         toast({
             variant: "destructive",
             title: "Incomplete Information",
-            description: "Please fill out all fields for your custom plan.",
+            description: "Please fill out all fields for your custom plan, including at least one delivery day.",
         })
     }
   };
@@ -140,6 +144,12 @@ export default function OnboardingPage() {
       if (liters <= 0) return 0;
       return Math.floor(liters / 60);
   }
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
   
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
@@ -166,8 +176,20 @@ export default function OnboardingPage() {
                             )}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="deliveriesPerWeek">Deliveries/Week</Label>
-                            <Input id="deliveriesPerWeek" name="deliveriesPerWeek" type="number" placeholder="e.g., 2" />
+                            <Label>Delivery Days</Label>
+                            <div className="flex flex-wrap gap-2">
+                                {daysOfWeek.map(day => (
+                                    <Button
+                                        key={day}
+                                        type="button"
+                                        variant={selectedDays.includes(day) ? 'default' : 'outline'}
+                                        onClick={() => toggleDay(day)}
+                                        className="flex-1"
+                                    >
+                                        {day}
+                                    </Button>
+                                ))}
+                            </div>
                         </div>
                          <div className="grid gap-2">
                             <Label htmlFor="waterStation">Water Station</Label>
@@ -303,7 +325,7 @@ export default function OnboardingPage() {
                                 {customPlanDetails ? (
                                      <div className="text-sm text-muted-foreground">
                                         <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month</p>
-                                        <p>{customPlanDetails.deliveriesPerWeek} Deliveries/Week</p>
+                                        <p>{customPlanDetails.deliveryDays.length} Deliveries/Week ({customPlanDetails.deliveryDays.join(', ')})</p>
                                         <p>Station: {customPlanDetails.waterStation}</p>
                                     </div>
                                 ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as any).details?.map((d: any) => (
@@ -327,3 +349,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
