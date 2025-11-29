@@ -19,6 +19,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Users, Briefcase, Building, Layers, Factory, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 const onboardingSchema = z.object({
   fullName: z.string().min(1, { message: 'Required' }),
@@ -173,9 +174,9 @@ export default function OnboardingPage() {
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold text-red-500">Full Name</FormLabel>
+                      <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input {...field} className="border-0 border-b rounded-none px-0 focus-visible:ring-0" />
+                        <Input placeholder="e.g. Juan dela Cruz" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -186,9 +187,9 @@ export default function OnboardingPage() {
                   name="businessName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold text-red-500">Business Name</FormLabel>
+                      <FormLabel>Business Name</FormLabel>
                       <FormControl>
-                        <Input {...field} className="border-0 border-b rounded-none px-0 focus-visible:ring-0" />
+                        <Input placeholder="e.g. River Business Inc." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -199,9 +200,9 @@ export default function OnboardingPage() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold text-red-500">Address</FormLabel>
+                      <FormLabel>Address</FormLabel>
                       <FormControl>
-                        <Input {...field} className="border-0 border-b rounded-none px-0 focus-visible:ring-0" />
+                        <Input placeholder="e.g. 123 Main St, Anytown" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -212,9 +213,9 @@ export default function OnboardingPage() {
                   name="contactNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-bold text-red-500">Contact Number</FormLabel>
+                      <FormLabel>Contact Number</FormLabel>
                       <FormControl>
-                        <Input type="tel" {...field} className="border-0 border-b rounded-none px-0 focus-visible:ring-0" />
+                        <Input type="tel" placeholder="e.g. 09123456789" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
