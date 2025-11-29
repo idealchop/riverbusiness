@@ -38,6 +38,7 @@ import {
   Home,
   User,
   Check,
+  Building2
 } from 'lucide-react';
 import {
   AreaChart,
@@ -49,7 +50,7 @@ import {
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { clientTypes, familyPlans } from '@/lib/plans';
+import { clientTypes, familyPlans, smePlans } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
 const paymentHistory = [
@@ -83,6 +84,9 @@ const icons: { [key: string]: React.ElementType } = {
 };
 
 type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
+type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
+type AnyPlan = FamilyPlan | SmePlan;
+
 
 export default function PaymentsPage() {
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
@@ -92,30 +96,26 @@ export default function PaymentsPage() {
   
   const [step, setStep] = React.useState<'selectClient' | 'selectPlan' | 'payment'>('selectClient');
   const [selectedClientType, setSelectedClientType] = React.useState<(typeof clientTypes)[0] | null>(null);
-  const [selectedPlan, setSelectedPlan] = React.useState<FamilyPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = React.useState(false);
 
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
-    if (clientType.name === 'Family') {
+    if (clientType.name === 'Family' || clientType.name === 'SME') {
       setStep('selectPlan');
     } else {
-      // For other client types, we can assume a simplified plan or go straight to payment
-      // For this example, let's just create a dummy plan and go to payment
       setSelectedPlan({ 
         name: clientType.name, 
         price: clientType.price,
         liters: 'N/A',
         refillFrequency: 'N/A',
-        persons: 'N/A',
-        gallons: 'N/A',
         recommended: false
       });
       setStep('payment');
     }
   };
   
-  const handlePlanSelect = (plan: FamilyPlan) => {
+  const handlePlanSelect = (plan: AnyPlan) => {
     setSelectedPlan(plan);
     setStep('payment');
   };
@@ -124,7 +124,7 @@ export default function PaymentsPage() {
     if (step === 'selectPlan') {
       setStep('selectClient');
     } else if (step === 'payment') {
-      if (selectedClientType?.name === 'Family') {
+      if (selectedClientType?.name === 'Family' || selectedClientType?.name === 'SME') {
         setStep('selectPlan');
       } else {
         setStep('selectClient');
@@ -147,6 +147,8 @@ export default function PaymentsPage() {
     const Icon = icons[typeName];
     return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
   }
+  
+  const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : [];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -280,20 +282,23 @@ export default function PaymentsPage() {
                                     <p className="text-sm text-muted-foreground">{selectedClientType.description}</p>
                                   </CardContent>
                               </Card>
-                              <div className="w-2/3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {(familyPlans as FamilyPlan[]).map(plan => (
-                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-1' )}>
+                              <div className="w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {(currentPlans as AnyPlan[]).map(plan => {
+                                    const isSmePlan = 'employees' in plan;
+                                    const isFamilyPlan = 'persons' in plan;
+                                    return (
+                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", (plan as SmePlan).details && 'md:col-span-2' )}>
                                         {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
-                                            {plan.details ? (
+                                            {(plan as {details?: any[]}).details ? (
                                                 <p className="text-2xl font-bold">Custom</p>
                                             ) : (
                                                 <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
                                             )}
                                         </CardHeader>
                                         <CardContent className="space-y-4 flex-grow flex flex-col">
-                                            {plan.details ? (
+                                            {(plan as SmePlan).details ? (
                                                 <div className="space-y-2 text-sm">
                                                    <div className="space-y-1">
                                                       <p className="text-xs text-muted-foreground">Liters Included</p>
@@ -304,7 +309,7 @@ export default function PaymentsPage() {
                                                       <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
                                                   </div>
                                                   <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4">
-                                                      {plan.details.map(detail => <li key={detail}>{detail}</li>)}
+                                                      {(plan as SmePlan).details!.map(detail => <li key={detail}>{detail}</li>)}
                                                   </ul>
                                                 </div>
                                             ) : (
@@ -321,13 +326,17 @@ export default function PaymentsPage() {
                                             )}
                                             <div className="flex-grow"></div>
                                             <Separator />
-                                            <div className="text-xs text-muted-foreground flex items-center gap-4">
-                                              <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span>
-                                              {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>}
+                                             <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                {isFamilyPlan && <span className="flex items-center gap-1"><User className="w-3 h-3"/> {(plan as FamilyPlan).persons}</span>}
+                                                {isSmePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {(plan as SmePlan).employees} Employees</span>}
+                                                
+                                                {isFamilyPlan && !(plan as FamilyPlan).details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{(plan as FamilyPlan).gallons} Gallons/week</span>}
+                                                {isSmePlan && !(plan as SmePlan).details && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {(plan as SmePlan).stations} Station</span>}
                                             </div>
                                         </CardContent>
                                     </Card>
-                                ))}
+                                    )
+                                })}
                               </div>
                             </div>
                           </>
@@ -340,7 +349,7 @@ export default function PaymentsPage() {
                                   Complete Your Payment
                                 </DialogTitle>
                                <DialogDescription>
-                                   {selectedPlan.details ? (
+                                   {'details' in selectedPlan ? (
                                       <>You've selected the <span className="font-bold">{selectedPlan?.name}</span>. Billed at ₱{selectedPlan.price.toFixed(2)} per liter.</>
                                    ) : (
                                       <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.</>

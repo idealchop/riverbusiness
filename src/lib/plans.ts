@@ -40,3 +40,47 @@ export const familyPlans = [
         ]
     }
 ]
+
+export const smePlans = [
+    {
+        name: 'Micro',
+        price: 1500,
+        liters: '500',
+        refillFrequency: '1-2/week',
+        employees: '5 - 10',
+        stations: '1',
+        recommended: false,
+    },
+    {
+        name: 'Starter',
+        price: 3000,
+        liters: '1,000',
+        refillFrequency: '2-3/week',
+        employees: '10 - 20',
+        stations: '1',
+        recommended: false,
+    },
+    {
+        name: 'Professional',
+        price: 6000,
+        liters: '2,000',
+        refillFrequency: '3-4/week',
+        employees: '20 - 40',
+        stations: '1',
+        recommended: true,
+    },
+    {
+        name: 'Customize Your Plan',
+        price: 3.00,
+        liters: 'Custom',
+        refillFrequency: 'Custom',
+        employees: 'Custom',
+        stations: 'Custom',
+        recommended: false,
+        details: [
+            'Priced at ₱3.00 per liter',
+            'Perfect for unique consumption needs',
+            'All standard benefits included'
+        ]
+    }
+]
