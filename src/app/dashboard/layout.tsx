@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from '@/components/app-sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,9 @@ export default function DashboardLayout({
 
   const [userName, setUserName] = useState('Juan dela Cruz');
   const [tempUserName, setTempUserName] = useState(userName);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSaveUsername = () => {
     setUserName(tempUserName);
@@ -191,13 +194,28 @@ export default function DashboardLayout({
                             <Button className="mt-4" onClick={handleSaveUsername}>Save</Button>
                         </TabsContent>
                         <TabsContent value="password" className="py-4">
-                            <div className="space-y-2">
-                            <Label htmlFor="current-password">Current Password</Label>
-                            <Input id="current-password" type="password" />
-                            <Label htmlFor="new-password">New Password</Label>
-                            <Input id="new-password" type="password" />
-                            <Label htmlFor="confirm-password">Confirm New Password</Label>
-                            <Input id="confirm-password" type="password" />
+                            <div className="space-y-4">
+                                <div className="space-y-2 relative">
+                                    <Label htmlFor="current-password">Current Password</Label>
+                                    <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
+                                    <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                                <div className="space-y-2 relative">
+                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
+                                    <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowNewPassword(!showNewPassword)}>
+                                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                                <div className="space-y-2 relative">
+                                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                    <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
+                                     <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                             </div>
                             <Button className="mt-4">Change Password</Button>
                         </TabsContent>

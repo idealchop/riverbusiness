@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy } from 'lucide-react';
+import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -53,6 +53,8 @@ export default function AdminPage() {
     const [createdUserInfo, setCreatedUserInfo] = useState<{ id: string, name: string, password: string} | null>(null);
     const [isUserInfoOpen, setIsUserInfoOpen] = useState(false);
     const [resetPasswordInfo, setResetPasswordInfo] = useState<{ name: string, password: string} | null>(null);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showResetPassword, setShowResetPassword] = useState(false);
 
 
     const getStatusBadgeVariant = (status: 'Active' | 'Inactive' | 'Suspended'): 'default' | 'secondary' | 'destructive' => {
@@ -94,6 +96,7 @@ export default function AdminPage() {
         };
         setAppUsers([...appUsers, userToAdd]);
         setCreatedUserInfo({ id: userToAdd.id, name: userToAdd.name, password: userToAdd.password });
+        setShowNewPassword(false);
         setIsAddUserOpen(false);
         setIsUserInfoOpen(true);
     };
@@ -144,6 +147,7 @@ export default function AdminPage() {
         setAppUsers(appUsers.map(u => (u.id === user.id ? updatedUser : u)));
         setSelectedUser(updatedUser as AppUser & { permissions: Permission[] });
         setResetPasswordInfo({ name: user.name, password: newPassword });
+        setShowResetPassword(false);
         setIsResetPasswordOpen(true);
     };
 
@@ -339,8 +343,11 @@ export default function AdminPage() {
                             </div>
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right">Password</Label>
-                                <div className="col-span-3 flex items-center gap-2">
-                                    <Input value={createdUserInfo.password} readOnly type="password" />
+                                <div className="col-span-3 flex items-center gap-2 relative">
+                                    <Input value={createdUserInfo.password} readOnly type={showNewPassword ? 'text' : 'password'} />
+                                    <Button size="icon" variant="ghost" className="absolute right-10" onClick={() => setShowNewPassword(!showNewPassword)}>
+                                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
                                      <Button size="icon" variant="ghost" onClick={() => copyToClipboard(createdUserInfo.password)}><ClipboardCopy className="h-4 w-4" /></Button>
                                 </div>
                             </div>
@@ -366,8 +373,11 @@ export default function AdminPage() {
                         <div className="grid gap-4 py-4">
                              <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right">New Password</Label>
-                                <div className="col-span-3 flex items-center gap-2">
-                                    <Input value={resetPasswordInfo.password} readOnly type="password" />
+                                <div className="col-span-3 flex items-center gap-2 relative">
+                                    <Input value={resetPasswordInfo.password} readOnly type={showResetPassword ? 'text' : 'password'} />
+                                    <Button size="icon" variant="ghost" className="absolute right-10" onClick={() => setShowResetPassword(!showResetPassword)}>
+                                        {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
                                      <Button size="icon" variant="ghost" onClick={() => copyToClipboard(resetPasswordInfo.password)}><ClipboardCopy className="h-4 w-4" /></Button>
                                 </div>
                             </div>
