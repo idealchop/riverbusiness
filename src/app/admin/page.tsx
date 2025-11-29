@@ -193,172 +193,161 @@ export default function AdminPage() {
 
     return (
         <div className="flex flex-col h-full gap-4">
-            <div className="flex items-start gap-4">
-                <Tabs defaultValue="users" onValueChange={setActiveTab} className="flex flex-col flex-1">
-                    <TabsList className="grid w-full max-w-md grid-cols-2 p-0 bg-transparent gap-2">
-                        <TabsTrigger 
-                            value="users"
-                            className={cn(
-                                "data-[state=active]:shadow-none transition-all duration-200",
-                                activeTab === 'users' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
-                            )}
-                        >
-                            <Users className="mr-2 h-4 w-4" />User Management
-                        </TabsTrigger>
-                        <TabsTrigger 
-                            value="logs"
-                            className={cn(
-                                "data-[state=active]:shadow-none transition-all duration-200",
-                                activeTab === 'logs' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
-                            )}
-                        >
-                            <LogIn className="mr-2 h-4 w-4" />Login Logs
-                        </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="users" className="flex-1 mt-4">
-                        <Card className="h-full flex flex-col">
-                            <CardHeader>
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <CardTitle>User Management</CardTitle>
-                                        <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsFeedbackOpen(true)}>
-                                            <MessageSquare className="mr-2 h-4 w-4" />
-                                            View Feedback
-                                        </Button>
-                                        <Button onClick={openAddUserDialog} className="bg-primary/90 hover:bg-primary">
-                                            <UserPlus className="mr-2 h-4 w-4" />
-                                            Add User
-                                        </Button>
-                                    </div>
+            <Tabs defaultValue="users" onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <TabsList className="grid w-full max-w-md grid-cols-2 p-0 bg-transparent gap-2">
+                    <TabsTrigger 
+                        value="users"
+                        className={cn(
+                            "data-[state=active]:shadow-none transition-all duration-200",
+                            activeTab === 'users' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
+                        )}
+                    >
+                        <Users className="mr-2 h-4 w-4" />User Management
+                    </TabsTrigger>
+                    <TabsTrigger 
+                        value="logs"
+                        className={cn(
+                            "data-[state=active]:shadow-none transition-all duration-200",
+                            activeTab === 'logs' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'
+                        )}
+                    >
+                        <LogIn className="mr-2 h-4 w-4" />Login Logs
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="users" className="flex-1 mt-4">
+                    <Card className="h-full flex flex-col">
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>User Management</CardTitle>
+                                    <CardDescription>Monitor and manage all {appUsers.length} application users.</CardDescription>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>User ID</TableHead>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Last Login</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
+                                <div className="flex gap-2">
+                                    <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsFeedbackOpen(true)}>
+                                        <MessageSquare className="mr-2 h-4 w-4" />
+                                        View Feedback
+                                    </Button>
+                                    <Button onClick={openAddUserDialog} className="bg-primary/90 hover:bg-primary">
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Add User
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>User ID</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Last Login</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {appUsers.map((user) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell className="font-medium">{user.id}</TableCell>
+                                            <TableCell>{user.name}</TableCell>
+                                            <TableCell>
+                                                <Badge 
+                                                    variant={getStatusBadgeVariant(user.accountStatus)}
+                                                    className={
+                                                        user.accountStatus === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                                                        : user.accountStatus === 'Inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
+                                                        : ''
+                                                    }
+                                                >
+                                                    {user.accountStatus}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{new Date(user.lastLogin).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                            <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                                    <UserCog className="mr-2 h-4 w-4" />
+                                                    Edit User
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openPermissionsDialog(user)}>
+                                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                                    Assign Permissions
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openResetPasswordDialog(user)}>
+                                                    <KeyRound className="mr-2 h-4 w-4" />
+                                                    Reset Password
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem>
+                                                    <View className="mr-2 h-4 w-4" />
+                                                    View as User
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem className="text-red-600" onClick={() => openDeleteDialog(user)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete User
+                                                </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {appUsers.map((user) => (
-                                            <TableRow key={user.id}>
-                                                <TableCell className="font-medium">{user.id}</TableCell>
-                                                <TableCell>{user.name}</TableCell>
-                                                <TableCell>
-                                                    <Badge 
-                                                        variant={getStatusBadgeVariant(user.accountStatus)}
-                                                        className={
-                                                            user.accountStatus === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                                            : user.accountStatus === 'Inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
-                                                            : ''
-                                                        }
-                                                    >
-                                                        {user.accountStatus}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>{new Date(user.lastLogin).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                                <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                                                        <UserCog className="mr-2 h-4 w-4" />
-                                                        Edit User
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openPermissionsDialog(user)}>
-                                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                                        Assign Permissions
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openResetPasswordDialog(user)}>
-                                                        <KeyRound className="mr-2 h-4 w-4" />
-                                                        Reset Password
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem>
-                                                        <View className="mr-2 h-4 w-4" />
-                                                        View as User
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-red-600" onClick={() => openDeleteDialog(user)}>
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete User
-                                                    </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="logs" className="flex-1 mt-4">
-                        <Card className="h-full">
-                            <CardHeader>
-                                <CardTitle>Login Logs</CardTitle>
-                                <CardDescription>View a history of user login attempts.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>User</TableHead>
-                                            <TableHead>IP Address</TableHead>
-                                            <TableHead>Timestamp</TableHead>
-                                            <TableHead>Status</TableHead>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="logs" className="flex-1 mt-4">
+                    <Card className="h-full">
+                        <CardHeader>
+                            <CardTitle>Login Logs</CardTitle>
+                            <CardDescription>View a history of user login attempts.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>User</TableHead>
+                                        <TableHead>IP Address</TableHead>
+                                        <TableHead>Timestamp</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loginLogs.map((log) => (
+                                        <TableRow key={log.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{log.userName}</div>
+                                                <div className="text-sm text-muted-foreground">{log.userId}</div>
+                                            </TableCell>
+                                            <TableCell>{log.ipAddress}</TableCell>
+                                            <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant={getLoginStatusBadgeVariant(log.status)}
+                                                    className={
+                                                        log.status === 'Success' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                                                        : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
+                                                    }
+                                                >
+                                                    {log.status}
+                                                </Badge>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loginLogs.map((log) => (
-                                            <TableRow key={log.id}>
-                                                <TableCell>
-                                                    <div className="font-medium">{log.userName}</div>
-                                                    <div className="text-sm text-muted-foreground">{log.userId}</div>
-                                                </TableCell>
-                                                <TableCell>{log.ipAddress}</TableCell>
-                                                <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        variant={getLoginStatusBadgeVariant(log.status)}
-                                                        className={
-                                                            log.status === 'Success' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                                            : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
-                                                        }
-                                                    >
-                                                        {log.status}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
-                <Card className="w-full max-w-[200px]">
-                    <CardHeader>
-                        <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{appUsers.length}</div>
-                    </CardContent>
-                </Card>
-            </div>
              <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                 <DialogContent>
                     <DialogHeader>
