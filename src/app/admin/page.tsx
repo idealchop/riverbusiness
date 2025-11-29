@@ -57,7 +57,7 @@ export default function AdminPage() {
                     </a>
                 </CardFooter>
             </Card>
-            <Card className="bg-yellow-400 text-white">
+            <Card className="bg-primary text-primary-foreground">
                 <CardHeader>
                     <CardTitle>Warning Card</CardTitle>
                 </CardHeader>
@@ -67,7 +67,7 @@ export default function AdminPage() {
                     </a>
                 </CardFooter>
             </Card>
-            <Card className="bg-green-500 text-white">
+            <Card className="bg-primary text-primary-foreground">
                 <CardHeader>
                     <CardTitle>Success Card</CardTitle>
                 </CardHeader>
@@ -77,7 +77,7 @@ export default function AdminPage() {
                     </a>
                 </CardFooter>
             </Card>
-            <Card className="bg-red-500 text-white">
+            <Card className="bg-primary text-primary-foreground">
                 <CardHeader>
                     <CardTitle>Danger Card</CardTitle>
                 </CardHeader>
