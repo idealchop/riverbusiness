@@ -15,7 +15,7 @@ import { Logo } from '@/components/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email.' }),
+  smartId: z.string().min(1, { message: 'Smart ID is required.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
   remember: z.boolean().optional(),
 });
@@ -36,7 +36,7 @@ export default function LoginPage() {
     console.log(data);
     // For demonstration, we'll assume a new user and redirect to onboarding
     // In a real app, you'd check if the user is new here.
-    if (data.email.includes('new')) {
+    if (data.smartId.includes('new')) {
         router.push('/onboarding');
     } else {
         router.push('/dashboard');
@@ -59,14 +59,14 @@ export default function LoginPage() {
           </div>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="smartId">Smart ID</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                {...register('email')}
+                id="smartId"
+                type="text"
+                placeholder="Enter your Smart ID"
+                {...register('smartId')}
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              {errors.smartId && <p className="text-sm text-destructive">{errors.smartId.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
