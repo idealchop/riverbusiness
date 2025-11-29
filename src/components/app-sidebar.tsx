@@ -17,17 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { 
-    label: 'Water Management', 
-    icon: Droplet,
-    subItems: [
-      { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
-      { href: '/dashboard/quality', label: 'Quality', icon: CheckSquare },
-      { href: '/dashboard/predict', label: 'Predictive Analytics', icon: TrendingUp },
-    ]
-  },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
-  { href: '/dashboard/support', label: 'Support', icon: HelpCircle },
 ];
 
 export function AppSidebar() {
