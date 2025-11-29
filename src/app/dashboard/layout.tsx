@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -42,6 +42,13 @@ export default function DashboardLayout({
 }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
   const recentDeliveries = deliveries.slice(0, 4);
+
+  const [userName, setUserName] = useState('Juan dela Cruz');
+  const [tempUserName, setTempUserName] = useState(userName);
+
+  const handleSaveUsername = () => {
+    setUserName(tempUserName);
+  };
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -139,7 +146,7 @@ export default function DashboardLayout({
                 <DropdownMenuContent align="end">
                 <Dialog>
                     <DialogTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>My Account</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTempUserName(userName); }}>My Account</DropdownMenuItem>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
@@ -166,7 +173,7 @@ export default function DashboardLayout({
                                 </div>
                             )}
                             <div>
-                                <h4 className="font-semibold text-lg">Juan dela Cruz</h4>
+                                <h4 className="font-semibold text-lg">{userName}</h4>
                                 <p className="text-sm text-muted-foreground">juandelacruz@email.com</p>
                             </div>
                         </div>
@@ -178,9 +185,10 @@ export default function DashboardLayout({
                         </TabsList>
                         <TabsContent value="username" className="py-4">
                             <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>                          <Input id="username" defaultValue="Juan dela Cruz" />
+                            <Label htmlFor="username">Username</Label>
+                            <Input id="username" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} />
                             </div>
-                            <Button className="mt-4">Save</Button>
+                            <Button className="mt-4" onClick={handleSaveUsername}>Save</Button>
                         </TabsContent>
                         <TabsContent value="password" className="py-4">
                             <div className="space-y-2">
@@ -209,7 +217,7 @@ export default function DashboardLayout({
             </DropdownMenu>
             </header>
             <main className="flex-1 overflow-auto p-4 sm:p-6">
-            {children}
+            {React.cloneElement(children as React.ReactElement, { userName })}
             </main>
         </div>
       </SidebarInset>

@@ -16,9 +16,15 @@ import { Input } from '@/components/ui/input';
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
 
-export default function DashboardPage() {
+export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
     const [greeting, setGreeting] = useState('');
-    const [userName, setUserName] = useState('Juan dela Cruz');
+    const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
+
+    useEffect(() => {
+        if (initialUserName) {
+            setUserName(initialUserName);
+        }
+    }, [initialUserName]);
 
     useEffect(() => {
         const hour = new Date().getHours();
