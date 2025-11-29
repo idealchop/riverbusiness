@@ -11,11 +11,11 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { LayoutDashboard, CreditCard } from 'lucide-react';
+import { Home, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
 ];
 
@@ -25,8 +25,8 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-          <Logo className="h-8 w-8 text-primary" />
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg justify-center">
+          <Logo className="h-8 w-8 text-primary group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10" />
           <span className="font-headline group-data-[collapsible=icon]:opacity-0">River Business</span>
         </Link>
       </SidebarHeader>
