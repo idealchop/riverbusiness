@@ -46,11 +46,11 @@ export const waterStations: WaterStation[] = [
 ];
 
 export const appUsers: AppUser[] = [
-    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'Member' },
-    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19', role: 'Member' },
-    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15', role: 'Member' },
-    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'Admin' },
-    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Inactive', lastLogin: '2024-07-18', role: 'Member' },
+    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
+    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
+    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', password: 'password123', totalConsumptionLiters: 1500, accountStatus: 'Inactive', lastLogin: '2024-07-18' },
 ];
 
 export const loginLogs: LoginLog[] = [
@@ -63,8 +63,8 @@ export const loginLogs: LoginLog[] = [
 ];
 
 export const feedbackLogs: Feedback[] = [
-    { id: 'FB-001', userId: 'USR-001', userName: 'Alice Johnson', timestamp: '2024-07-21T14:00:00Z', feedback: 'The new dashboard is great! Very easy to navigate.', rating: 5 },
-    { id: 'FB-002', userId: 'USR-002', userName: 'Bob Williams', timestamp: '2024-07-21T15:30:00Z', feedback: 'I wish there was a way to see my consumption in real-time.', rating: 4 },
-    { id: 'FB-003', userId: 'USR-005', userName: 'Ethan Davis', timestamp: '2024-07-22T09:12:00Z', feedback: 'The app is a bit slow to load on my phone.', rating: 3 },
-    { id: 'FB-004', userId: 'USR-004', userName: 'Diana Miller', timestamp: '2024-07-22T11:45:00Z', feedback: 'Excellent service and the delivery tracking is very accurate.', rating: 5 },
+    { id: 'FB-001', userId: 'USR-001', userName: 'Alice Johnson', timestamp: '2024-07-21T14:00:00Z', feedback: 'The new dashboard is great! Very easy to navigate.', rating: 5, read: false },
+    { id: 'FB-002', userId: 'USR-002', userName: 'Bob Williams', timestamp: '2024-07-21T15:30:00Z', feedback: 'I wish there was a way to see my consumption in real-time.', rating: 4, read: false },
+    { id: 'FB-003', userId: 'USR-005', userName: 'Ethan Davis', timestamp: '2024-07-22T09:12:00Z', feedback: 'The app is a bit slow to load on my phone.', rating: 3, read: true },
+    { id: 'FB-004', userId: 'USR-004', userName: 'Diana Miller', timestamp: '2024-07-22T11:45:00Z', feedback: 'Excellent service and the delivery tracking is very accurate.', rating: 5, read: false },
 ];

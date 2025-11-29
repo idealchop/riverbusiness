@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { appUsers as initialAppUsers, loginLogs, feedbackLogs } from '@/lib/data';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs } from '@/lib/data';
 import { MoreHorizontal, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, ClipboardCopy, Eye, EyeOff, Users, LogIn, MessageSquare, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AppUser, Permission } from '@/lib/types';
+import { AppUser, Permission, Feedback } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -60,6 +60,14 @@ export default function AdminPage() {
     const [resetPasswordInfo, setResetPasswordInfo] = useState<{ name: string, password: string} | null>(null);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showResetPassword, setShowResetPassword] = useState(false);
+
+    const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
+
+    const toggleFeedbackRead = (feedbackId: string) => {
+        setFeedbackLogs(feedbackLogs.map(log => 
+            log.id === feedbackId ? { ...log, read: !log.read } : log
+        ));
+    };
 
 
     const getStatusBadgeVariant = (status: 'Active' | 'Inactive'): 'default' | 'secondary' => {
@@ -247,7 +255,7 @@ export default function AdminPage() {
                                                     className={
                                                         user.accountStatus === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
                                                         : user.accountStatus === 'Inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
-                                                        : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
+                                                        : ''
                                                     }
                                                 >
                                                     {user.accountStatus}
@@ -531,7 +539,7 @@ export default function AdminPage() {
                     <DialogHeader>
                         <DialogTitle>User Feedback</DialogTitle>
                         <DialogDescription>
-                            Here's what your users are saying.
+                            Here's what your users are saying. Click a row to mark it as read.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="mt-4">
@@ -546,10 +554,14 @@ export default function AdminPage() {
                             </TableHeader>
                             <TableBody>
                                 {feedbackLogs.map((log) => (
-                                    <TableRow key={log.id}>
+                                    <TableRow 
+                                        key={log.id} 
+                                        onClick={() => toggleFeedbackRead(log.id)}
+                                        className={cn("cursor-pointer", log.read && "bg-muted/50 text-muted-foreground")}
+                                    >
                                         <TableCell>
                                             <div className="font-medium">{log.userName}</div>
-                                            <div className="text-sm text-muted-foreground">{log.userId}</div>
+                                            <div className="text-sm">{log.userId}</div>
                                         </TableCell>
                                         <TableCell className="max-w-xs truncate">{log.feedback}</TableCell>
                                         <TableCell>{renderStars(log.rating)}</TableCell>

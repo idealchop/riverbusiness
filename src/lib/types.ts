@@ -50,7 +50,6 @@ export interface AppUser {
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
-    role?: 'Admin' | 'Member';
 }
 
 export interface LoginLog {
@@ -69,4 +68,5 @@ export interface Feedback {
   timestamp: string;
   feedback: string;
   rating: number;
+  read: boolean;
 }
