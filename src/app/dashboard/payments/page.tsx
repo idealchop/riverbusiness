@@ -280,9 +280,9 @@ export default function PaymentsPage() {
                               </Card>
                               <div className="w-full md:w-3/4">
                                 {selectedClientType.name === 'Family' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {familyPlans.map(plan => (
-                                        <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-3' )}>
+                                        <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-2' )}>
                                             {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                             <CardHeader>
                                                 <CardTitle>{plan.name}</CardTitle>

@@ -247,8 +247,8 @@ export default function OnboardingPage() {
                 <>
                   <DialogHeader>
                     <DialogTitle className="flex items-center">
-                        <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
-                        Choose a Plan
+                       <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
+                      Choose a Plan
                     </DialogTitle>
                     <DialogDescription>Select the best plan from the options below.</DialogDescription>
                   </DialogHeader>
@@ -262,9 +262,9 @@ export default function OnboardingPage() {
                     </Card>
                     <div className="w-full md:w-3/4">
                       {selectedClientType.name === 'Family' && (
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {familyPlans.map(plan => (
-                              <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-3' )}>
+                              <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-2' )}>
                                   {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                   <CardHeader>
                                       <CardTitle>{plan.name}</CardTitle>
