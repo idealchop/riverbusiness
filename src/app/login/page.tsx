@@ -17,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 const loginSchema = z.object({
   smartId: z.string().min(1, { message: 'Smart ID is required.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
-  remember: z.boolean().optional(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -72,10 +71,6 @@ export default function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" {...register('password')} />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="remember" {...register('remember')} />
-              <Label htmlFor="remember">Remember for 30 days</Label>
             </div>
             <Button type="submit" className="w-full">
               Sign in
