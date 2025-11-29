@@ -12,16 +12,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
+import { clientTypes } from '@/lib/plans';
 import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Users, Briefcase, Building, Layers, Factory, Check } from 'lucide-react';
+import { Users, Briefcase, Building, Layers, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 
 
 const onboardingSchema = z.object({
@@ -64,6 +63,7 @@ export default function OnboardingPage() {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
+  const [customLiters, setCustomLiters] = React.useState<number>(0);
 
   
   const form = useForm<OnboardingFormValues>({
@@ -96,6 +96,7 @@ export default function OnboardingPage() {
   }
 
   const handleClientTypeSelect = (clientTypeName: string) => {
+    setCustomLiters(0);
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
@@ -128,9 +129,21 @@ export default function OnboardingPage() {
         })
     }
   };
+
+  const handleLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomLiters(value ? parseInt(value) : 0);
+  }
+
+  const calculatePeopleAccommodated = (liters: number) => {
+      // Assuming 2 liters per person per day for a 30-day month (60 liters/person/month)
+      if (liters <= 0) return 0;
+      return Math.floor(liters / 60);
+  }
   
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
+    const peopleAccommodated = calculatePeopleAccommodated(customLiters);
 
     return (
         <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
@@ -145,7 +158,12 @@ export default function OnboardingPage() {
                     <div className="py-4 space-y-4">
                          <div className="grid gap-2">
                             <Label htmlFor="litersPerMonth">Liters/Month</Label>
-                            <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" />
+                            <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" onChange={handleLitersChange} />
+                            {peopleAccommodated > 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                    Can accommodate approximately <span className="font-bold text-primary">{peopleAccommodated}</span> person(s).
+                                </p>
+                            )}
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="deliveriesPerWeek">Deliveries/Week</Label>
