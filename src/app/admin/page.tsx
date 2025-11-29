@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -46,7 +47,7 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold">Dashboard</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-blue-500 text-white">
+            <Card className="bg-primary text-primary-foreground">
                 <CardHeader>
                     <CardTitle>Primary Card</CardTitle>
                 </CardHeader>
@@ -98,8 +99,8 @@ export default function AdminPage() {
                         <AreaChart data={areaChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                              <defs>
                                 <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
                             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -111,7 +112,7 @@ export default function AdminPage() {
                                     borderRadius: 'var(--radius)',
                                 }}
                             />
-                            <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#colorArea)" />
+                            <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorArea)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </CardContent>
@@ -132,7 +133,7 @@ export default function AdminPage() {
                                     borderRadius: 'var(--radius)',
                                 }}
                             />
-                            <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </CardContent>
