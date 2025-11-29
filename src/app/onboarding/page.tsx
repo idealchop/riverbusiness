@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
+import { clientTypes } from '@/lib/plans';
 import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
@@ -41,12 +41,14 @@ const icons: { [key: string]: React.ElementType } = {
     Enterprise: Factory,
 };
 
-type FamilyPlan = (typeof familyPlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
-type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
-type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
-type CorporatePlan = (typeof corporatePlans)[0] & { details?: string[], employees?: string, stations?: string, refills?:string, liters?:string };
-type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: { label: string; value: string; }[], imageId?: string, description?: string };
-type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
+type AnyPlan = {
+    name: string;
+    price: number;
+    recommended?: boolean;
+    details?: any;
+    description?: string;
+    imageId?: string;
+}
 
 interface CustomPlanDetails {
     litersPerMonth: number;
@@ -62,7 +64,6 @@ export default function OnboardingPage() {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
-  const [dialogView, setDialogView] = React.useState<'list' | 'customize'>('list');
 
   
   const form = useForm<OnboardingFormValues>({
@@ -98,25 +99,9 @@ export default function OnboardingPage() {
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
-    if (clientTypeName === 'Enterprise') {
-      setDialogView('list');
-    } else {
-      setDialogView('customize');
-    }
     setIsPlanDialogOpen(true);
   };
   
-  const handlePlanSelect = (plan: AnyPlan) => {
-    if (plan.name.toLowerCase().includes('custom')) {
-        setSelectedPlan(plan);
-        setDialogView('customize');
-    } else {
-        setSelectedPlan(plan);
-        setCustomPlanDetails(null);
-        setIsPlanDialogOpen(false);
-    }
-  };
-
   const handleSaveCustomization = (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -130,10 +115,10 @@ export default function OnboardingPage() {
             deliveriesPerWeek: parseInt(deliveries),
             waterStation: station
         });
-        if (!selectedPlan || selectedClientType !== 'Enterprise') {
-            let planName = `Custom ${selectedClientType} Plan`;
-            setSelectedPlan({name: planName, price: 0});
-        }
+        
+        let planName = `Custom ${selectedClientType} Plan`;
+        setSelectedPlan({name: planName, price: 0});
+        
         setIsPlanDialogOpen(false);
     } else {
         toast({
@@ -145,106 +130,45 @@ export default function OnboardingPage() {
   };
   
   const renderPlanDialog = () => {
-    let plans: AnyPlan[] = [];
-    let isEnterprise = false;
     let title = `Customize Your ${selectedClientType} Plan`
 
-    if (selectedClientType === 'Family') {
-        plans = familyPlans;
-        title = 'Customize Family Plan'
-    } else if (selectedClientType === 'SME') {
-        plans = smePlans;
-        title = 'Customize SME Plan'
-    } else if (selectedClientType === 'Commercial') {
-        plans = commercialPlans;
-        title = 'Customize Commercial Plan'
-    } else if (selectedClientType === 'Corporate') {
-        plans = corporatePlans;
-        title = 'Customize Corporate Plan'
-    } else if (selectedClientType === 'Enterprise') {
-        plans = enterprisePlans;
-        isEnterprise = true;
-        title = `Choose Your Enterprise Plan`
-    }
-    
-
     return (
-        <Dialog open={isPlanDialogOpen} onOpenChange={(isOpen) => {
-            setIsPlanDialogOpen(isOpen);
-            if (!isOpen) {
-                setDialogView('list');
-            }
-        }}>
-            <DialogContent className={isEnterprise ? "sm:max-w-4xl" : "sm:max-w-md"}>
+        <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
-                      {dialogView === 'list' 
-                        ? 'Select the best plan that fits your needs.'
-                        : 'Please provide the details for your water plan.'
-                      }
+                        Please provide the details for your water plan.
                     </DialogDescription>
                 </DialogHeader>
-                {dialogView === 'list' && isEnterprise ? (
-                    <div className={cn("grid gap-6 py-4", isEnterprise ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
-                        {plans.map((plan) => (
-                            <Card key={plan.name} className={cn(
-                                "flex flex-col cursor-pointer hover:border-primary transition-all",
-                                plan.recommended && "border-primary ring-1 ring-primary",
-                                selectedPlan?.name === plan.name && "border-primary ring-2 ring-primary"
-                            )} onClick={() => handlePlanSelect(plan)}>
-                                <CardHeader>
-                                    <CardTitle>{plan.name}</CardTitle>
-                                    {plan.recommended && <Badge className="w-fit">Recommended</Badge>}
-                                </CardHeader>
-                                <CardContent className="flex-grow space-y-4">
-                                   {'details' in plan && Array.isArray(plan.details) ? (
-                                        <ul className="space-y-2 text-sm text-muted-foreground">
-                                            {(plan as EnterprisePlan).details?.map(detail => (
-                                                <li key={detail.label} className="flex justify-between">
-                                                    <span>{detail.label}</span>
-                                                    <span className="font-semibold text-foreground">{detail.value}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground">{plan.description}</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        ))}
+                <form onSubmit={handleSaveCustomization}>
+                    <div className="py-4 space-y-4">
+                         <div className="grid gap-2">
+                            <Label htmlFor="litersPerMonth">Liters/Month</Label>
+                            <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="deliveriesPerWeek">Deliveries/Week</Label>
+                            <Input id="deliveriesPerWeek" name="deliveriesPerWeek" type="number" placeholder="e.g., 2" />
+                        </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="waterStation">Water Station</Label>
+                            <Select name="waterStation">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a water station" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {waterStations.map(station => (
+                                        <SelectItem key={station.id} value={station.name}>{station.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                ) : (
-                    <form onSubmit={handleSaveCustomization}>
-                        <div className="py-4 space-y-4">
-                             <div className="grid gap-2">
-                                <Label htmlFor="litersPerMonth">Liters/Month</Label>
-                                <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="deliveriesPerWeek">Deliveries/Week</Label>
-                                <Input id="deliveriesPerWeek" name="deliveriesPerWeek" type="number" placeholder="e.g., 2" />
-                            </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="waterStation">Water Station</Label>
-                                <Select name="waterStation">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a water station" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {waterStations.map(station => (
-                                            <SelectItem key={station.id} value={station.name}>{station.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            {selectedClientType === 'Enterprise' && dialogView !== 'list' && <Button variant="ghost" onClick={() => setDialogView('list')}>Back</Button>}
-                            <Button type="submit">Save Customization</Button>
-                        </div>
-                    </form>
-                )}
+                    <div className="flex justify-end gap-2">
+                        <Button type="submit">Save Customization</Button>
+                    </div>
+                </form>
             </DialogContent>
         </Dialog>
     );
@@ -330,19 +254,22 @@ export default function OnboardingPage() {
                             <div key={client.name}
                                  onClick={() => handleClientTypeSelect(client.name)}
                                  className={cn(
-                                     "border rounded-lg p-4 text-center cursor-pointer transition-all flex flex-col justify-center",
-                                     isEnterprise ? "" : "aspect-square",
+                                     "border rounded-lg p-4 text-center cursor-pointer transition-all flex flex-col justify-center items-center aspect-square",
                                      selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
                                  )}>
                                 {image && (
-                                    <Image
-                                        src={image.imageUrl}
-                                        alt={client.name}
-                                        width={80}
-                                        height={80}
-                                        className="rounded-full mx-auto mb-2 object-cover h-20 w-20"
-                                        data-ai-hint={image.imageHint}
-                                    />
+                                    <div className="relative w-20 h-20 mb-2">
+                                        <Image
+                                            src={image.imageUrl}
+                                            alt={client.name}
+                                            fill
+                                            className={cn(
+                                                "mx-auto object-contain",
+                                                client.name === 'Family' ? 'rounded-md' : 'rounded-full'
+                                            )}
+                                            data-ai-hint={image.imageHint}
+                                        />
+                                    </div>
                                 )}
                                 <p className="font-semibold">{client.name}</p>
                                 <p className="text-xs text-muted-foreground">{client.description}</p>
@@ -364,7 +291,7 @@ export default function OnboardingPage() {
                                         <p>{customPlanDetails.deliveriesPerWeek} Deliveries/Week</p>
                                         <p>Station: {customPlanDetails.waterStation}</p>
                                     </div>
-                                ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as EnterprisePlan).details?.map(d => (
+                                ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as any).details?.map((d: any) => (
                                     <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
                                 ))
                                 }
@@ -381,7 +308,7 @@ export default function OnboardingPage() {
           </Form>
         </CardContent>
       </Card>
-      {renderPlanDialog()}
+      {selectedClientType && renderPlanDialog()}
     </div>
   );
 }

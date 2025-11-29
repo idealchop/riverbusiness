@@ -27,8 +27,8 @@
     {
       "id": "plan-family",
       "description": "A happy family.",
-      "imageUrl": "https://images.unsplash.com/photo-1542037104857-ffbb0b9155fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxoYXBweSUyMGZhbWlseXxlbnwwfHx8fDE3NjQyMjE4MzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "happy family"
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FSmartRefill_Individual.png?alt=media&token=090d07c4-848a-4cd6-aab6-f7a5909ea839",
+      "imageHint": "water plan"
     },
     {
       "id": "plan-sme",
