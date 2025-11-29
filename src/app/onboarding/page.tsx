@@ -334,7 +334,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background py-12">
-      <Card className="w-full max-w-4xl mx-4">
+      <Card className="w-full max-w-2xl mx-4">
         <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-2 font-semibold text-2xl mb-4">
                 <Logo className="h-10 w-10 text-primary" />
@@ -372,5 +372,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
