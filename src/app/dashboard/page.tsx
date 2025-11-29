@@ -31,14 +31,8 @@ export default function DashboardPage() {
     }, []);
 
 
-    const deliveredPurchases = deliveries.filter(d => d.status === 'Delivered');
-    const totalGallonsPurchased = deliveredPurchases.reduce((total, record) => total + record.volumeGallons, 0);
-    const totalLitersPurchased = gallonToLiter(totalGallonsPurchased);
-    
-    const totalGallonsConsumed = consumptionData.reduce((total, record) => total + record.consumptionGallons, 0);
-    const totalLitersConsumed = gallonToLiter(totalGallonsConsumed);
-    
-    const remainingLiters = totalLitersPurchased - totalLitersConsumed;
+    const totalLitersPurchased = 1000;
+    const remainingLiters = 1000;
     
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
     const deliveryChartData = deliveries.filter(d=>d.status === 'Delivered').slice(0,7).map(d => ({ date: d.date, value: gallonToLiter(d.volumeGallons) })).reverse();
