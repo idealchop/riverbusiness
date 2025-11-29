@@ -194,7 +194,7 @@ export default function OnboardingPage() {
               </div>
 
               <div className="space-y-2 pt-4">
-                <Label>Water Plan</Label>
+                <Label className="font-bold">Water Plan</Label>
                 <p className="text-sm text-muted-foreground">Choose the client type to see the recommended plans.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 py-4">
                     {clientTypes.map(client => {
@@ -215,6 +215,22 @@ export default function OnboardingPage() {
                         );
                     })}
                 </div>
+                 {selectedPlan && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Selected Plan</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="font-bold">{selectedPlan.name}</p>
+                                    {'price' in selectedPlan && typeof selectedPlan.price === 'number' && selectedPlan.price > 0 && <p className="text-muted-foreground">₱{selectedPlan.price}/month</p>}
+                                </div>
+                                <Button variant="outline" onClick={() => handleClientTypeSelect(selectedClientType!)}>Change Plan</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                 )}
               </div>
               
               <Button type="submit" className="w-full mt-6">
@@ -231,20 +247,12 @@ export default function OnboardingPage() {
                 <>
                   <DialogHeader>
                     <DialogTitle className="flex items-center">
-                       <Button variant="ghost" size="icon" onClick={() => setIsPlanDialogOpen(false)} className="mr-2"><X className="h-4 w-4" /></Button>
-                      Choose a Plan
+                       <Button variant="ghost" size="icon" onClick={() => setIsPlanDialogOpen(false)} className="mr-2 -ml-2 h-8 w-8"><X className="h-4 w-4" /></Button>
+                      Choose a Plan for {selectedClientType.name}
                     </DialogTitle>
                     <DialogDescription>Select the best plan from the options below.</DialogDescription>
                   </DialogHeader>
-                  <div className="flex flex-col md:flex-row gap-4 py-4">
-                    <Card className="w-full md:w-1/4">
-                        <CardContent className="p-4 flex flex-col items-center text-center">
-                          {selectedClientType.imageId && getImageForPlan(selectedClientType.imageId) && <Image src={getImageForPlan(selectedClientType.imageId)!.imageUrl} alt={selectedClientType.name} width={100} height={100} className="rounded-lg object-cover mb-4" />}
-                          <h3 className="text-lg font-bold">{selectedClientType.name}</h3>
-                          <p className="text-sm text-muted-foreground">{selectedClientType.description}</p>
-                        </CardContent>
-                    </Card>
-                    <div className="w-full md:w-3/4">
+                  <div className="py-4">
                       {selectedClientType.name === 'Family' && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {familyPlans.map(plan => (
@@ -277,7 +285,7 @@ export default function OnboardingPage() {
                                       )}
                                       <div className="flex-grow"></div>
                                       <Separator />
-                                      <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                      <div className="text-xs text-muted-foreground flex items-center justify-between pt-4">
                                          <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span>
                                          {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>}
                                       </div>
@@ -309,7 +317,7 @@ export default function OnboardingPage() {
                                                   </div>
                                                   <div className="flex-grow"></div>
                                                   <Separator />
-                                                  <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                  <div className="text-xs text-muted-foreground flex items-center justify-between pt-4">
                                                       {isSmePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
                                                       {isSmePlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>}
                                                   </div>
@@ -331,6 +339,8 @@ export default function OnboardingPage() {
                                               <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
                                                   {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
                                               </ul>
+                                              <div className="flex-grow" />
+                                              <Button className="w-full mt-4" onClick={() => handlePlanSelect(plan)}>Select Plan</Button>
                                           </CardContent>
                                       </Card>
                                   )
@@ -360,7 +370,7 @@ export default function OnboardingPage() {
                                                   </div>
                                                   <div className="flex-grow"></div>
                                                   <Separator />
-                                                  <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                  <div className="text-xs text-muted-foreground flex items-center justify-between pt-4">
                                                       {isCommercialPlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
                                                       {isCommercialPlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>}
                                                   </div>
@@ -382,6 +392,8 @@ export default function OnboardingPage() {
                                               <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
                                                   {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
                                               </ul>
+                                              <div className="flex-grow" />
+                                               <Button className="w-full mt-4" onClick={() => handlePlanSelect(plan)}>Select Plan</Button>
                                           </CardContent>
                                       </Card>
                                   )
@@ -410,7 +422,7 @@ export default function OnboardingPage() {
                                               </div>
                                               <div className="flex-grow"></div>
                                               <Separator />
-                                              <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                              <div className="text-xs text-muted-foreground flex items-center justify-between pt-4">
                                                   {isCorporatePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
                                                   {isCorporatePlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Stations</span>}
                                               </div>
@@ -441,14 +453,13 @@ export default function OnboardingPage() {
                         </div>
                       )}
                     </div>
-                  </div>
                 </>
               )}
               {step === 'payment' && selectedPlan && (
                  <>
                    <DialogHeader>
                       <DialogTitle className="flex items-center">
-                       <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
+                       <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2 -ml-2 h-8 w-8"><X className="h-4 w-4" /></Button>
                         Complete Your Payment
                       </DialogTitle>
                      <DialogDescription>
@@ -463,7 +474,7 @@ export default function OnboardingPage() {
                          )}
                      </DialogDescription>
                    </DialogHeader>
-                   <Tabs defaultValue="qr" className="w-full">
+                   <Tabs defaultValue="qr" className="w-full pt-4">
                        <TabsList className="grid w-full grid-cols-2">
                            <TabsTrigger value="qr"><QrCode className="mr-2" /> QR Code</TabsTrigger>
                            <TabsTrigger value="bank"><CreditCard className="mr-2"/> Bank/Card</TabsTrigger>
