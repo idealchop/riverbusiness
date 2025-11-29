@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +23,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -32,7 +34,13 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     console.log(data);
-    // Handle login logic here
+    // For demonstration, we'll assume a new user and redirect to onboarding
+    // In a real app, you'd check if the user is new here.
+    if (data.email.includes('new')) {
+        router.push('/onboarding');
+    } else {
+        router.push('/dashboard');
+    }
   };
 
   return (
