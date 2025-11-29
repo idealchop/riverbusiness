@@ -105,7 +105,6 @@ export default function OnboardingPage() {
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
     setSelectedPlan(null); // Reset plan when client type changes
-    handleNext();
   };
 
   const handlePlanSelect = (plan: AnyPlan) => {
@@ -137,58 +136,34 @@ export default function OnboardingPage() {
           <Form {...form}>
             <form className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-bold">Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Juan dela Cruz" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="businessName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-bold">Business Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="River Business Inc." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-bold">Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="123 Main St, Anytown" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="font-bold">Contact Number</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="09123456789" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormItem>
+                    <FormLabel className="font-bold">Full Name</FormLabel>
+                    <FormControl>
+                    <Input placeholder="Juan dela Cruz" {...form.register("fullName")} />
+                    </FormControl>
+                    <FormMessage>{form.formState.errors.fullName?.message}</FormMessage>
+                </FormItem>
+                <FormItem>
+                    <FormLabel className="font-bold">Business Name</FormLabel>
+                    <FormControl>
+                    <Input placeholder="River Business Inc." {...form.register("businessName")} />
+                    </FormControl>
+                    <FormMessage>{form.formState.errors.businessName?.message}</FormMessage>
+                </FormItem>
+                <FormItem>
+                    <FormLabel className="font-bold">Address</FormLabel>
+                    <FormControl>
+                    <Input placeholder="123 Main St, Anytown" {...form.register("address")} />
+                    </FormControl>
+                    <FormMessage>{form.formState.errors.address?.message}</FormMessage>
+                </FormItem>
+                <FormItem>
+                    <FormLabel className="font-bold">Contact Number</FormLabel>
+                    <FormControl>
+                    <Input type="tel" placeholder="09123456789" {...form.register("contactNumber")} />
+                    </FormControl>
+                    <FormMessage>{form.formState.errors.contactNumber?.message}</FormMessage>
+                </FormItem>
               </div>
             </form>
           </Form>
@@ -424,3 +399,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
