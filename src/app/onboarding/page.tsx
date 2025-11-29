@@ -254,7 +254,7 @@ export default function OnboardingPage() {
                             <div key={client.name}
                                  onClick={() => handleClientTypeSelect(client.name)}
                                  className={cn(
-                                     "border rounded-lg p-0 cursor-pointer transition-all flex flex-col aspect-square overflow-hidden relative",
+                                     "border rounded-lg p-0 cursor-pointer transition-all flex flex-col h-48 overflow-hidden relative",
                                      selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
                                  )}>
                                 {image && (
