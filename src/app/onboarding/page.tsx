@@ -113,12 +113,14 @@ export default function OnboardingPage() {
   }
 
   const handleDialogClose = () => {
-    resetFlow();
-    toast({
-        title: 'Onboarding Complete!',
-        description: 'Your information has been saved. You can manage your plan in the payments dashboard.',
-    });
-    router.push('/dashboard');
+    if (isInvoiceDialogOpen) {
+        resetFlow();
+        toast({
+            title: 'Onboarding Complete!',
+            description: 'Your information has been saved. You can manage your plan in the payments dashboard.',
+        });
+        router.push('/dashboard');
+    }
   }
 
   const getImageForPlan = (imageId: string) => {
@@ -239,7 +241,7 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
       
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleDialogClose(); }}>
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleDialogClose(); else setIsInvoiceDialogOpen(true); }}>
           <DialogContent className="sm:max-w-4xl">
               {step === 'selectPlan' && selectedClientType && (
                 <>
@@ -507,7 +509,7 @@ export default function OnboardingPage() {
               )}
                <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="secondary" onClick={handleDialogClose}>
+                  <Button type="button" variant="secondary">
                     Finish
                   </Button>
                 </DialogClose>
