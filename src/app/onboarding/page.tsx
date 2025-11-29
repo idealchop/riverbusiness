@@ -67,27 +67,20 @@ export default function OnboardingPage() {
 
   const onSubmit = (data: OnboardingFormValues) => {
     console.log('Onboarding data:', data);
-    // The plan selection now triggers the dialog directly.
-    // The form submission can be considered complete at this stage
-    // and the rest is handled by the dialog flow.
-    // We just need a client type to have been selected.
     if (selectedClientType) {
         setIsInvoiceDialogOpen(true);
+        setStep('selectPlan');
     } else {
         toast({
             variant: "destructive",
             title: 'No Water Plan Selected',
-            description: 'Please select a water plan to proceed.',
+            description: 'Please select a client type to proceed.',
         });
     }
   };
 
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
-    // You can choose to open the dialog immediately or wait for form submission
-    // Opening it immediately after selection is more interactive.
-    setIsInvoiceDialogOpen(true);
-    setStep('selectPlan');
   };
 
   const handlePlanSelect = (plan: AnyPlan) => {
@@ -101,7 +94,7 @@ export default function OnboardingPage() {
       setSelectedPlan(null);
     } else if (step === 'selectPlan') {
         setIsInvoiceDialogOpen(false);
-        setSelectedClientType(null);
+        // Do not reset client type, so user can re-open dialog without re-selecting
     }
   };
 
@@ -112,15 +105,13 @@ export default function OnboardingPage() {
     setIsInvoiceDialogOpen(false);
   }
 
-  const handleDialogClose = () => {
-    if (isInvoiceDialogOpen) {
-        resetFlow();
-        toast({
-            title: 'Onboarding Complete!',
-            description: 'Your information has been saved. You can manage your plan in the payments dashboard.',
-        });
-        router.push('/dashboard');
-    }
+  const completeOnboardingAndRedirect = () => {
+    // This is the final step
+    toast({
+        title: 'Onboarding Complete!',
+        description: 'Your information has been saved. You can manage your plan in the payments dashboard.',
+    });
+    router.push('/dashboard');
   }
 
   const getImageForPlan = (imageId: string) => {
@@ -241,7 +232,7 @@ export default function OnboardingPage() {
         </CardContent>
       </Card>
       
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleDialogClose(); else setIsInvoiceDialogOpen(true); }}>
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
           <DialogContent className="sm:max-w-4xl">
               {step === 'selectPlan' && selectedClientType && (
                 <>
@@ -513,11 +504,9 @@ export default function OnboardingPage() {
                  </>
               )}
                <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="secondary">
-                    Finish
-                  </Button>
-                </DialogClose>
+                <Button type="button" variant="secondary" onClick={completeOnboardingAndRedirect}>
+                  Finish
+                </Button>
               </DialogFooter>
           </DialogContent>
       </Dialog>
