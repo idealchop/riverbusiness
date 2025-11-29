@@ -17,9 +17,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
-  { href: '/dashboard/quality', label: 'Quality', icon: CheckSquare },
-  { href: '/dashboard/predict', label: 'Predictions', icon: TrendingUp },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
 ];
 
