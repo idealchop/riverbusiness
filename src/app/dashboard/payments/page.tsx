@@ -28,6 +28,15 @@ import {
   Download,
   Receipt,
   X,
+  Users,
+  Building,
+  Briefcase,
+  Layers,
+  Factory,
+  RefreshCw,
+  Droplet,
+  Home,
+  User,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -39,6 +48,7 @@ import {
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { clientTypes, familyPlans } from '@/lib/plans';
 
 const paymentHistory = [
     { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
@@ -62,14 +72,13 @@ const chartData = paymentHistory.filter(p => p.status === 'Paid').map(p => ({
     amount: p.amount
 })).reverse();
 
-const plans = [
-    { name: 'Family', price: 50, description: 'For families and personal home use', imageId: 'plan-family' },
-    { name: 'SME', price: 100, description: 'For small teams, kiosks, and home offices', imageId: 'plan-sme' },
-    { name: 'Commercial', price: 150, description: 'For growing offices and warehouses', imageId: 'plan-commercial' },
-    { name: 'Corporate', price: 250, description: 'For multi-site companies and BPOs', imageId: 'plan-corporate' },
-    { name: 'Enterprise', price: 500, description: 'Customize and pay based on consumption', imageId: 'plan-enterprise' },
-];
-
+const icons: { [key: string]: React.ElementType } = {
+  Family: Users,
+  SME: Briefcase,
+  Commercial: Building,
+  Corporate: Layers,
+  Enterprise: Factory,
+};
 
 export default function PaymentsPage() {
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
@@ -77,16 +86,62 @@ export default function PaymentsPage() {
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
   const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
   
-  const [selectedPlan, setSelectedPlan] = useState<(typeof plans)[0] | null>(null);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [step, setStep] = useState<'selectClient' | 'selectPlan' | 'payment'>('selectClient');
+  const [selectedClientType, setSelectedClientType] = useState<(typeof clientTypes)[0] | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<(typeof familyPlans)[0] | null>(null);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
 
-  const handlePlanSelection = (plan: (typeof plans)[0]) => {
-    setSelectedPlan(plan);
-    setShowPaymentDialog(true);
+  const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
+    setSelectedClientType(clientType);
+    if (clientType.name === 'Family') {
+      setStep('selectPlan');
+    } else {
+      // For other client types, we can assume a simplified plan or go straight to payment
+      // For this example, let's just create a dummy plan and go to payment
+      setSelectedPlan({ 
+        name: clientType.name, 
+        price: clientType.price,
+        liters: 'N/A',
+        refillFrequency: 'N/A',
+        persons: 'N/A',
+        gallons: 'N/A',
+        recommended: false
+      });
+      setStep('payment');
+    }
   };
   
+  const handlePlanSelect = (plan: (typeof familyPlans)[0]) => {
+    setSelectedPlan(plan);
+    setStep('payment');
+  };
+
+  const handleBack = () => {
+    if (step === 'selectPlan') {
+      setStep('selectClient');
+    } else if (step === 'payment') {
+      if (selectedClientType?.name === 'Family') {
+        setStep('selectPlan');
+      } else {
+        setStep('selectClient');
+      }
+    }
+  };
+
+  const resetFlow = () => {
+    setStep('selectClient');
+    setSelectedClientType(null);
+    setSelectedPlan(null);
+    setIsInvoiceDialogOpen(false);
+  }
+
   const getImageForPlan = (imageId: string) => {
     return PlaceHolderImages.find(p => p.id === imageId);
+  }
+  
+  const getIconForClientType = (typeName: string) => {
+    const Icon = icons[typeName];
+    return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
   }
 
   return (
@@ -176,34 +231,128 @@ export default function PaymentsPage() {
               </TableBody>
             </Table>
              <div className="flex justify-end mt-4">
-                <Dialog>
+                <Dialog open={isInvoiceDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) resetFlow(); else setIsInvoiceDialogOpen(true); }}>
                     <DialogTrigger asChild>
-                        <Button className="bg-primary/90 hover:bg-primary">Invoice</Button>
+                        <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsInvoiceDialogOpen(true)}>Invoice</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-5xl">
-                        <DialogHeader>
-                            <DialogTitle>Choose a Plan</DialogTitle>
-                            <DialogDescription>Select a water consumption plan that fits your needs.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 py-4">
-                            {plans.map(plan => {
-                                const image = getImageForPlan(plan.imageId);
-                                return (
-                                    <Card key={plan.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handlePlanSelection(plan)}>
-                                        <CardContent className="p-0">
-                                            {image && <Image src={image.imageUrl} alt={plan.name} width={400} height={200} className="rounded-t-lg w-full h-32 object-cover" data-ai-hint={image.imageHint} />}
-                                        </CardContent>
+                    <DialogContent className="sm:max-w-4xl">
+                        {step === 'selectClient' && (
+                            <>
+                                <DialogHeader>
+                                    <DialogTitle>1. Select Client Type</DialogTitle>
+                                    <DialogDescription>Choose the client type to see the recommended plans.</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 py-4">
+                                    {clientTypes.map(client => {
+                                        const image = getImageForPlan(client.imageId);
+                                        return (
+                                            <Card key={client.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow text-center" onClick={() => handleClientTypeSelect(client)}>
+                                                <CardContent className="p-6 flex flex-col items-center justify-center">
+                                                    {image ? <Image src={image.imageUrl} alt={client.name} width={80} height={80} className="rounded-full mb-4 w-20 h-20 object-cover" data-ai-hint={image.imageHint} /> : getIconForClientType(client.name)
+                                                    }
+                                                    <h3 className="font-semibold">{client.name}</h3>
+                                                    <p className="text-xs text-muted-foreground">{client.description}</p>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+                        {step === 'selectPlan' && selectedClientType && (
+                          <>
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center">
+                                 <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
+                                2. Choose a Plan
+                              </DialogTitle>
+                              <DialogDescription>Select the best plan for your client from the options below.</DialogDescription>
+                            </DialogHeader>
+                            <div className="flex gap-4 py-4">
+                              <Card className="w-1/3">
+                                  <CardContent className="p-4 flex flex-col items-center text-center">
+                                    {selectedClientType.imageId && <Image src={getImageForPlan(selectedClientType.imageId)?.imageUrl || ''} alt={selectedClientType.name} width={100} height={100} className="rounded-lg object-cover mb-4" />}
+                                    <h3 className="text-lg font-bold">{selectedClientType.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{selectedClientType.description}</p>
+                                  </CardContent>
+                              </Card>
+                              <div className="w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {familyPlans.map(plan => (
+                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative">
+                                        {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
-                                            <CardDescription>{plan.description}</CardDescription>
+                                            <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
                                         </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div className="space-y-1">
+                                                <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                            </div>
+                                            <Separator />
+                                            <div className="text-xs text-muted-foreground flex items-center gap-4">
+                                              <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span>
+                                              <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>
+                                            </div>
+                                        </CardContent>
                                     </Card>
-                                );
-                            })}
-                        </div>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {step === 'payment' && selectedPlan && (
+                           <>
+                             <DialogHeader>
+                                <DialogTitle className="flex items-center">
+                                 <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
+                                  Complete Your Payment
+                                </DialogTitle>
+                               <DialogDescription>
+                                   You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. 
+                                   Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.
+                               </DialogDescription>
+                             </DialogHeader>
+                             <Tabs defaultValue="qr" className="w-full">
+                                 <TabsList className="grid w-full grid-cols-2">
+                                     <TabsTrigger value="qr"><QrCode className="mr-2" /> QR Code</TabsTrigger>
+                                     <TabsTrigger value="bank"><CreditCard className="mr-2"/> Bank/Card</TabsTrigger>
+                                 </TabsList>
+                                 <TabsContent value="qr">
+                                     <div className="flex flex-col items-center gap-4 py-4">
+                                         <p className="text-sm text-muted-foreground text-center">Scan the QR code with your mobile banking or e-wallet app.</p>
+                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                             {gcashQr && <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />}
+                                             {paymayaQr && <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />}
+                                             {bankQr && <Image src={bankQr.imageUrl} alt="Bank QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />}
+                                         </div>
+                                     </div>
+                                 </TabsContent>
+                                 <TabsContent value="bank">
+                                      <div className="space-y-4 py-4">
+                                         <div className="text-center">
+                                             <p className="font-semibold">Bank Transfer</p>
+                                             <p className="text-sm text-muted-foreground">BDO Unibank: 123-456-7890</p>
+                                             <p className="text-sm text-muted-foreground">Account Name: River Business Inc.</p>
+                                         </div>
+                                          <Separator />
+                                          <div className="text-center">
+                                             <p className="font-semibold">Credit/Debit Card</p>
+                                             <p className="text-sm text-muted-foreground">Card payments are processed securely.</p>
+                                             <Button className="mt-2">Pay with Card</Button>
+                                         </div>
+                                      </div>
+                                 </TabsContent>
+                             </Tabs>
+                           </>
+                        )}
                         <DialogFooter>
                           <DialogClose asChild>
-                            <Button type="button" variant="secondary">
+                            <Button type="button" variant="secondary" onClick={resetFlow}>
                               Close
                             </Button>
                           </DialogClose>
@@ -236,53 +385,6 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
       </div>
-
-       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Complete Your Payment</DialogTitle>
-                    <DialogDescription>
-                        You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. 
-                        Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.
-                    </DialogDescription>
-                </DialogHeader>
-                <Tabs defaultValue="qr" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="qr"><QrCode className="mr-2" /> QR Code</TabsTrigger>
-                        <TabsTrigger value="bank"><CreditCard className="mr-2"/> Bank/Card</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="qr">
-                        <div className="flex flex-col items-center gap-4 py-4">
-                            <p className="text-sm text-muted-foreground text-center">Scan the QR code with your mobile banking or e-wallet app.</p>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {gcashQr && <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />}
-                                {paymayaQr && <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />}
-                                {bankQr && <Image src={bankQr.imageUrl} alt="Bank QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />}
-                            </div>
-                        </div>
-                    </TabsContent>
-                    <TabsContent value="bank">
-                         <div className="space-y-4 py-4">
-                            <div className="text-center">
-                                <p className="font-semibold">Bank Transfer</p>
-                                <p className="text-sm text-muted-foreground">BDO Unibank: 123-456-7890</p>
-                                <p className="text-sm text-muted-foreground">Account Name: River Business Inc.</p>
-                            </div>
-                             <Separator />
-                             <div className="text-center">
-                                <p className="font-semibold">Credit/Debit Card</p>
-                                <p className="text-sm text-muted-foreground">Card payments are processed securely.</p>
-                                <Button className="mt-2">Pay with Card</Button>
-                            </div>
-                         </div>
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }
-
-    
-
-    
