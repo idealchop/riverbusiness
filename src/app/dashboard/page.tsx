@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useEffect, useState } from 'react';
@@ -45,7 +46,10 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 const purchased = customPlanDetails.litersPerMonth;
                 setTotalLitersPurchased(purchased);
 
-                const consumed = consumptionData.slice(-30).reduce((acc, curr) => acc + gallonToLiter(curr.consumptionGallons), 0);
+                const consumed = deliveries
+                    .filter(d => d.status === 'Delivered')
+                    .reduce((acc, curr) => acc + gallonToLiter(curr.volumeGallons), 0);
+                    
                 setRemainingLiters(Math.max(0, purchased - consumed));
             }
         }
@@ -196,4 +200,5 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
-}
+
+    
