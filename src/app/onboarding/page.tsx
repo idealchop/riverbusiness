@@ -177,7 +177,7 @@ export default function OnboardingPage() {
                         </div>
                         <div className="grid gap-2">
                             <Label>Delivery Days</Label>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex gap-2">
                                 {daysOfWeek.map(day => (
                                     <Button
                                         key={day}
