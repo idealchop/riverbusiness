@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -37,6 +37,7 @@ import {
   Droplet,
   Home,
   User,
+  Check,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -49,6 +50,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { clientTypes, familyPlans } from '@/lib/plans';
+import { cn } from '@/lib/utils';
 
 const paymentHistory = [
     { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
@@ -80,16 +82,18 @@ const icons: { [key: string]: React.ElementType } = {
   Enterprise: Factory,
 };
 
+type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
+
 export default function PaymentsPage() {
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
   const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
   
-  const [step, setStep] = useState<'selectClient' | 'selectPlan' | 'payment'>('selectClient');
-  const [selectedClientType, setSelectedClientType] = useState<(typeof clientTypes)[0] | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<(typeof familyPlans)[0] | null>(null);
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [step, setStep] = React.useState<'selectClient' | 'selectPlan' | 'payment'>('selectClient');
+  const [selectedClientType, setSelectedClientType] = React.useState<(typeof clientTypes)[0] | null>(null);
+  const [selectedPlan, setSelectedPlan] = React.useState<FamilyPlan | null>(null);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = React.useState(false);
 
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
@@ -111,7 +115,7 @@ export default function PaymentsPage() {
     }
   };
   
-  const handlePlanSelect = (plan: (typeof familyPlans)[0]) => {
+  const handlePlanSelect = (plan: FamilyPlan) => {
     setSelectedPlan(plan);
     setStep('payment');
   };
@@ -271,32 +275,55 @@ export default function PaymentsPage() {
                             <div className="flex gap-4 py-4">
                               <Card className="w-1/3">
                                   <CardContent className="p-4 flex flex-col items-center text-center">
-                                    {selectedClientType.imageId && <Image src={getImageForPlan(selectedClientType.imageId)?.imageUrl || ''} alt={selectedClientType.name} width={100} height={100} className="rounded-lg object-cover mb-4" />}
+                                    {selectedClientType.imageId && getImageForPlan(selectedClientType.imageId) && <Image src={getImageForPlan(selectedClientType.imageId)!.imageUrl} alt={selectedClientType.name} width={100} height={100} className="rounded-lg object-cover mb-4" />}
                                     <h3 className="text-lg font-bold">{selectedClientType.name}</h3>
                                     <p className="text-sm text-muted-foreground">{selectedClientType.description}</p>
                                   </CardContent>
                               </Card>
-                              <div className="w-2/3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {familyPlans.map(plan => (
-                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative">
+                              <div className="w-2/3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {(familyPlans as FamilyPlan[]).map(plan => (
+                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-1' )}>
                                         {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
                                         <CardHeader>
                                             <CardTitle>{plan.name}</CardTitle>
-                                            <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                                            {plan.details ? (
+                                                <p className="text-2xl font-bold">Custom</p>
+                                            ) : (
+                                                <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                                            )}
                                         </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="space-y-1">
-                                                <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                            </div>
+                                        <CardContent className="space-y-4 flex-grow flex flex-col">
+                                            {plan.details ? (
+                                                <div className="space-y-2 text-sm">
+                                                   <div className="space-y-1">
+                                                      <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                      <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters}</p>
+                                                  </div>
+                                                  <div className="space-y-1">
+                                                      <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                      <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                                  </div>
+                                                  <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4">
+                                                      {plan.details.map(detail => <li key={detail}>{detail}</li>)}
+                                                  </ul>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                        <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                        <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                                    </div>
+                                                </>
+                                            )}
+                                            <div className="flex-grow"></div>
                                             <Separator />
                                             <div className="text-xs text-muted-foreground flex items-center gap-4">
                                               <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span>
-                                              <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>
+                                              {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -313,8 +340,11 @@ export default function PaymentsPage() {
                                   Complete Your Payment
                                 </DialogTitle>
                                <DialogDescription>
-                                   You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. 
-                                   Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.
+                                   {selectedPlan.details ? (
+                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span>. Billed at ₱{selectedPlan.price.toFixed(2)} per liter.</>
+                                   ) : (
+                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan?.price.toFixed(2)} using your preferred method.</>
+                                   )}
                                </DialogDescription>
                              </DialogHeader>
                              <Tabs defaultValue="qr" className="w-full">
@@ -388,3 +418,5 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+    

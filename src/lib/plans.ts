@@ -24,5 +24,19 @@ export const familyPlans = [
         persons: '3-5',
         gallons: '~5',
         recommended: true,
+    },
+    {
+        name: 'Customize Your Plan',
+        price: 2.50,
+        liters: 'Custom',
+        refillFrequency: 'Custom',
+        persons: '1-5+',
+        gallons: 'Custom',
+        recommended: false,
+        details: [
+            'Priced at ₱2.50 per liter',
+            'Perfect for unique consumption needs',
+            'All standard benefits included'
+        ]
     }
 ]
