@@ -177,14 +177,13 @@ export default function OnboardingPage() {
                         </div>
                         <div className="grid gap-2">
                             <Label>Delivery Days</Label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {daysOfWeek.map(day => (
                                     <Button
                                         key={day}
                                         type="button"
                                         variant={selectedDays.includes(day) ? 'default' : 'outline'}
                                         onClick={() => toggleDay(day)}
-                                        className="flex-1"
                                     >
                                         {day}
                                     </Button>
