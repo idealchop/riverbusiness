@@ -76,7 +76,13 @@ export default function OnboardingPage() {
   });
 
   const onSubmit = (data: OnboardingFormValues) => {
-    console.log(data, selectedClientType, selectedPlan, customPlanDetails);
+    const onboardingData = {
+        formData: data,
+        clientType: selectedClientType,
+        plan: selectedPlan,
+        customPlanDetails: customPlanDetails
+    };
+    localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
     toast({
         title: 'Onboarding Complete!',
         description: 'Your information has been saved.',
@@ -124,13 +130,8 @@ export default function OnboardingPage() {
             deliveriesPerWeek: parseInt(deliveries),
             waterStation: station
         });
-        if (!selectedPlan) {
+        if (!selectedPlan || selectedClientType !== 'Enterprise') {
             let planName = `Custom ${selectedClientType} Plan`;
-            if (selectedClientType === 'Family') planName = familyPlans[0].name;
-            if (selectedClientType === 'SME') planName = smePlans[0].name;
-            if (selectedClientType === 'Commercial') planName = commercialPlans[0].name;
-            if (selectedClientType === 'Corporate') planName = corporatePlans[0].name;
-
             setSelectedPlan({name: planName, price: 0});
         }
         setIsPlanDialogOpen(false);
@@ -239,7 +240,7 @@ export default function OnboardingPage() {
                             </div>
                         </div>
                         <div className="flex justify-end gap-2">
-                            {selectedClientType === 'Enterprise' && <Button variant="ghost" onClick={() => setDialogView('list')}>Back</Button>}
+                            {selectedClientType === 'Enterprise' && dialogView !== 'list' && <Button variant="ghost" onClick={() => setDialogView('list')}>Back</Button>}
                             <Button type="submit">Save Customization</Button>
                         </div>
                     </form>

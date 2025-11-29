@@ -19,6 +19,8 @@ const gallonToLiter = (gallons: number) => gallons * 3.78541;
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
     const [greeting, setGreeting] = useState('');
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
+    const [totalLitersPurchased, setTotalLitersPurchased] = useState(1000);
+    const [remainingLiters, setRemainingLiters] = useState(800);
 
     useEffect(() => {
         if (initialUserName) {
@@ -35,12 +37,21 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         } else {
             setGreeting('Good evening');
         }
+
+        const onboardingData = localStorage.getItem('onboardingData');
+        if (onboardingData) {
+            const { customPlanDetails } = JSON.parse(onboardingData);
+            if (customPlanDetails && customPlanDetails.litersPerMonth) {
+                const purchased = customPlanDetails.litersPerMonth;
+                setTotalLitersPurchased(purchased);
+
+                const consumed = consumptionData.slice(-30).reduce((acc, curr) => acc + gallonToLiter(curr.consumptionGallons), 0);
+                setRemainingLiters(Math.max(0, purchased - consumed));
+            }
+        }
     }, []);
 
 
-    const totalLitersPurchased = 1000;
-    const remainingLiters = 800;
-    
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
     const deliveryChartData = deliveries.filter(d=>d.status === 'Delivered').slice(0,7).map(d => ({ date: d.date, value: gallonToLiter(d.volumeGallons) })).reverse();
 
@@ -79,7 +90,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                         <Waves className="h-6 w-6 text-primary" />
                         Total Liters Purchased
                     </CardTitle>
-                    <CardDescription>Total water purchased from all deliveries.</CardDescription>
+                    <CardDescription>Total water purchased for the month based on your plan.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div>
@@ -136,7 +147,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 </CardHeader>
                 <CardContent className="flex-grow flex flex-col items-start justify-between">
                     <div>
-                        <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-3xl text-muted-foreground">/{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> <span className="text-xl">Liters</span></p>
+                        <p className="text-5xl font-bold tracking-tight">{remainingLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })}<span className="text-3xl text-muted-foreground">/{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span> <span className="text-xl">Liters</span></p>
                     </div>
                     <div className="h-48 w-full mt-4">
                         <ResponsiveContainer width="100%" height="100%">
