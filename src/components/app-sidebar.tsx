@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { LayoutDashboard, CreditCard, Droplet, Users } from 'lucide-react';
+import { LayoutDashboard, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
@@ -41,7 +41,7 @@ export function AppSidebar() {
                   tooltip={item.label}
                 >
                   <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
+                  <span className="group-data-[collapsible=icon]:opacity-0">{item.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
