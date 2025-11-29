@@ -37,6 +37,7 @@ export default function AdminPage() {
     const [isEditUserOpen, setIsEditUserOpen] = useState(false);
     const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
     const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+    const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser & { permissions: Permission[] } | null>(null);
     
     const [newUser, setNewUser] = useState({ 
@@ -51,6 +52,7 @@ export default function AdminPage() {
     
     const [createdUserInfo, setCreatedUserInfo] = useState<{ id: string, name: string, password: string} | null>(null);
     const [isUserInfoOpen, setIsUserInfoOpen] = useState(false);
+    const [resetPasswordInfo, setResetPasswordInfo] = useState<{ name: string, password: string} | null>(null);
 
 
     const getStatusBadgeVariant = (status: 'Active' | 'Inactive' | 'Suspended'): 'default' | 'secondary' | 'destructive' => {
@@ -135,6 +137,17 @@ export default function AdminPage() {
         setIsPermissionsOpen(true);
     }
 
+    const openResetPasswordDialog = (user: AppUser) => {
+        const newPassword = generatePassword();
+        const updatedUser = { ...user, password: newPassword };
+
+        setAppUsers(appUsers.map(u => (u.id === user.id ? updatedUser : u)));
+        setSelectedUser(updatedUser as AppUser & { permissions: Permission[] });
+        setResetPasswordInfo({ name: user.name, password: newPassword });
+        setIsResetPasswordOpen(true);
+    };
+
+
     const handlePermissionChange = (permissionId: Permission, checked: boolean) => {
         if (selectedUser) {
             const newPermissions = checked
@@ -218,7 +231,7 @@ export default function AdminPage() {
                                                     <ShieldCheck className="mr-2 h-4 w-4" />
                                                     Assign Permissions
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => openResetPasswordDialog(user)}>
                                                     <KeyRound className="mr-2 h-4 w-4" />
                                                     Reset Password
                                                 </DropdownMenuItem>
@@ -340,6 +353,34 @@ export default function AdminPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Password Reset</DialogTitle>
+                        <DialogDescription>
+                            A new password has been generated for <span className="font-bold">{resetPasswordInfo?.name}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {resetPasswordInfo && (
+                        <div className="grid gap-4 py-4">
+                             <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">New Password</Label>
+                                <div className="col-span-3 flex items-center gap-2">
+                                    <Input value={resetPasswordInfo.password} readOnly type="password" />
+                                     <Button size="icon" variant="ghost" onClick={() => copyToClipboard(resetPasswordInfo.password)}><ClipboardCopy className="h-4 w-4" /></Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button onClick={() => { setIsResetPasswordOpen(false); setSelectedUser(null); }}>Done</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
 
             <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
                 <DialogContent>
