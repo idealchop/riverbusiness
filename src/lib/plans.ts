@@ -1,3 +1,4 @@
+
 export const clientTypes = [
     { name: 'Family', price: 50, description: 'For families and personal home use', imageId: 'plan-family' },
     { name: 'SME', price: 100, description: 'For small teams, kiosks, and home offices', imageId: 'plan-sme' },
@@ -9,33 +10,29 @@ export const clientTypes = [
 export const familyPlans = [
     {
         name: 'Starter',
-        price: 599,
+        price: 0,
         liters: '250',
         refillFrequency: '1/week',
         persons: '1-3',
-        gallons: '~3',
         recommended: false,
     },
     {
         name: 'Family',
-        price: 999,
+        price: 0,
         liters: '400',
         refillFrequency: '1-2/week',
         persons: '3-5',
-        gallons: '~5',
         recommended: true,
     },
     {
         name: 'Customize Your Plan',
-        price: 2.50,
+        price: 0,
         liters: 'Custom',
         refillFrequency: 'Custom',
         persons: '1-5+',
-        gallons: 'Custom',
         recommended: false,
         details: [
-            'Priced at ₱2.50 per liter',
-            'Perfect for unique consumption needs',
+            'Tailored for unique consumption needs',
             'All standard benefits included'
         ]
     }
@@ -44,7 +41,7 @@ export const familyPlans = [
 export const smePlans = [
     {
         name: 'Micro',
-        price: 1500,
+        price: 0,
         liters: '500',
         refillFrequency: '1-2/week',
         employees: '5 - 10',
@@ -53,7 +50,7 @@ export const smePlans = [
     },
     {
         name: 'Starter',
-        price: 3000,
+        price: 0,
         liters: '1,000',
         refillFrequency: '2-3/week',
         employees: '10 - 20',
@@ -62,7 +59,7 @@ export const smePlans = [
     },
     {
         name: 'Professional',
-        price: 6000,
+        price: 0,
         liters: '2,000',
         refillFrequency: '3-4/week',
         employees: '20 - 40',
@@ -71,15 +68,14 @@ export const smePlans = [
     },
     {
         name: 'Customize Your Plan',
-        price: 3.00,
+        price: 0,
         liters: 'Custom',
         refillFrequency: 'Custom',
         employees: 'Custom',
         stations: 'Custom',
         recommended: false,
         details: [
-            'Priced at ₱3.00 per liter',
-            'Perfect for unique consumption needs',
+            'Tailored for unique consumption needs',
             'All standard benefits included'
         ]
     }
@@ -88,7 +84,7 @@ export const smePlans = [
 export const commercialPlans = [
     {
         name: 'Growth',
-        price: 9000,
+        price: 0,
         liters: '3,000',
         refillFrequency: '4-5/week',
         employees: '40 - 70',
@@ -97,7 +93,7 @@ export const commercialPlans = [
     },
     {
         name: 'Pro',
-        price: 12000,
+        price: 0,
         liters: '4,000',
         refillFrequency: '5-6/week',
         employees: '70 - 100',
@@ -106,7 +102,7 @@ export const commercialPlans = [
     },
     {
         name: 'Business',
-        price: 18000,
+        price: 0,
         liters: '6,000',
         refillFrequency: 'Daily',
         employees: '100 - 150',
@@ -115,15 +111,14 @@ export const commercialPlans = [
     },
     {
         name: 'Customize Your Plan',
-        price: 3.00,
+        price: 0,
         liters: 'Custom',
         refillFrequency: 'Custom',
         employees: 'Custom',
         stations: 'Custom',
         recommended: false,
         details: [
-            'Priced at ₱3.00 per liter',
-            'Perfect for unique consumption needs',
+            'Tailored for unique consumption needs',
             'All standard benefits included'
         ]
     }
@@ -132,7 +127,7 @@ export const commercialPlans = [
 export const corporatePlans = [
     {
         name: 'Enterprise Basic',
-        price: 30000,
+        price: 0,
         liters: '10,000',
         refillFrequency: '1-2/day',
         employees: '150 - 250',
@@ -141,7 +136,7 @@ export const corporatePlans = [
     },
     {
         name: 'Enterprise Plus',
-        price: 50000,
+        price: 0,
         liters: '16,600',
         refillFrequency: '2-3/day',
         employees: '250 - 350',
@@ -150,7 +145,7 @@ export const corporatePlans = [
     },
     {
         name: 'Enterprise Elite',
-        price: 75000,
+        price: 0,
         liters: '25,000',
         refillFrequency: '3+/day',
         employees: '350 - 500',
@@ -159,7 +154,7 @@ export const corporatePlans = [
     },
     {
         name: 'Enterprise Pro',
-        price: 100000,
+        price: 0,
         liters: '33,000+',
         refillFrequency: 'Continuous',
         employees: '500+',
@@ -176,10 +171,9 @@ export const enterprisePlans = [
         recommended: false,
         imageId: 'plan-enterprise-customized',
         details: [
-            'Tailored pricing based on high-volume needs',
+            'Tailored for high-volume needs',
             'Dedicated account manager and support',
-            'Advanced analytics and reporting',
-            'Contact us for a personalized quote'
+            'Advanced analytics and reporting'
         ]
     },
     {
@@ -191,8 +185,7 @@ export const enterprisePlans = [
         details: [
             'Pay only for what you consume',
             'Ideal for fluctuating water needs',
-            'Flexible and transparent billing',
-            'Contact us for a personalized quote'
+            'Flexible and transparent billing'
         ]
     }
 ];

@@ -133,17 +133,13 @@ export default function OnboardingPage() {
                                 {plan.recommended && <Badge className="w-fit">Recommended</Badge>}
                             </CardHeader>
                             <CardContent className="flex-grow space-y-4">
-                               <p className="text-3xl font-bold">
-                                    {plan.price > 0 ? `₱${plan.price.toLocaleString()}`: 'Custom'}
-                                    {plan.price > 0 && <span className="text-sm font-normal text-muted-foreground">/month</span>}
-                                </p>
                                 <ul className="space-y-2 text-sm text-muted-foreground">
                                     {plan.details?.map(detail => <li key={detail} className="flex items-center gap-2"><Check className="h-4 w-4 text-primary"/>{detail}</li>)}
-                                    {'liters' in plan && <li><span className="font-semibold text-foreground">{plan.liters}</span> Liters/month</li>}
-                                    {'refillFrequency' in plan && <li><span className="font-semibold text-foreground">{plan.refillFrequency}</span> Refills</li>}
-                                    {'persons' in plan && <li>For <span className="font-semibold text-foreground">{plan.persons}</span> persons</li>}
-                                    {'employees' in plan && <li>For <span className="font-semibold text-foreground">{plan.employees}</span> employees</li>}
-                                    {'stations' in plan && <li>Up to <span className="font-semibold text-foreground">{plan.stations}</span> stations</li>}
+                                    {'liters' in plan && plan.liters && <li><span className="font-semibold text-foreground">{plan.liters}</span> Liters/Month</li>}
+                                    {'refillFrequency' in plan && plan.refillFrequency && <li><span className="font-semibold text-foreground">{plan.refillFrequency}</span> Refills</li>}
+                                    {'persons' in plan && plan.persons && <li>For <span className="font-semibold text-foreground">{plan.persons}</span> People</li>}
+                                    {'employees' in plan && plan.employees && <li>For <span className="font-semibold text-foreground">{plan.employees}</span> People</li>}
+                                    {'stations' in plan && plan.stations && <li><span className="font-semibold text-foreground">{plan.stations}</span> Water Station</li>}
                                 </ul>
                             </CardContent>
                         </Card>
