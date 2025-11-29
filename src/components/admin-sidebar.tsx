@@ -11,11 +11,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Shield, Users, LogIn } from 'lucide-react';
+import { Shield, Users, LogIn, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/admin', label: 'User Management', icon: Users },
+  { href: '/admin/transactions', label: 'Monitoring Transaction', icon: Monitor },
   // In a real app, you would have more admin pages.
   // For now, the user management page has a tabs for login logs.
 ];
@@ -37,7 +38,7 @@ export function AdminSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
+                  isActive={pathname.startsWith(item.href) && (item.href !== '/admin' || pathname === '/admin')}
                   className={cn("justify-start")}
                   tooltip={item.label}
                 >
