@@ -37,7 +37,17 @@ export interface AppUser {
     id: string;
     name: string;
     email: string;
+    role: 'Admin' | 'Member';
     totalConsumptionLiters: number;
     accountStatus: 'Active' | 'Inactive' | 'Suspended';
     lastLogin: string;
+}
+
+export interface LoginLog {
+  id: string;
+  userId: string;
+  userName: string;
+  timestamp: string;
+  ipAddress: string;
+  status: 'Success' | 'Failure';
 }

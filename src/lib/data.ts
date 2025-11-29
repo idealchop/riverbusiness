@@ -1,4 +1,4 @@
-import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
+import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, LoginLog } from '@/lib/types';
 
 export const consumptionData: ConsumptionRecord[] = [
   { date: '2024-07-01', consumptionGallons: 150 },
@@ -46,9 +46,18 @@ export const waterStations: WaterStation[] = [
 ];
 
 export const appUsers: AppUser[] = [
-    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
-    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
-    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
-    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', totalConsumptionLiters: 1500, accountStatus: 'Suspended', lastLogin: '2024-07-18' },
+    { id: 'USR-001', name: 'Alice Johnson', email: 'alice@example.com', role: 'Admin', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-002', name: 'Bob Williams', email: 'bob@example.com', role: 'Member', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19' },
+    { id: 'USR-003', name: 'Charlie Brown', email: 'charlie@example.com', role: 'Member', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15' },
+    { id: 'USR-004', name: 'Diana Miller', email: 'diana@example.com', role: 'Member', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20' },
+    { id: 'USR-005', name: 'Ethan Davis', email: 'ethan@example.com', role: 'Member', totalConsumptionLiters: 1500, accountStatus: 'Suspended', lastLogin: '2024-07-18' },
 ];
+
+export const loginLogs: LoginLog[] = [
+  { id: 'LOG-001', userId: 'USR-001', userName: 'Alice Johnson', timestamp: '2024-07-20T10:30:00Z', ipAddress: '192.168.1.101', status: 'Success' },
+  { id: 'LOG-002', userId: 'USR-002', userName: 'Bob Williams', timestamp: '2024-07-20T10:32:15Z', ipAddress: '10.0.0.5', status: 'Success' },
+  { id: 'LOG-003', userId: 'USR-006', userName: 'Frank White', timestamp: '2024-07-20T10:33:05Z', ipAddress: '172.16.0.20', status: 'Failure' },
+  { id: 'LOG-004', userId: 'USR-004', userName: 'Diana Miller', timestamp: '2024-07-20T10:35:40Z', ipAddress: '203.0.113.55', status: 'Success' },
+  { id: 'LOG-005', userId: 'USR-005', userName: 'Ethan Davis', timestamp: '2024-07-20T10:36:10Z', ipAddress: '198.51.100.8', status: 'Success' },
+  { id: 'LOG-006', userId: 'USR-003', userName: 'Charlie Brown', timestamp: '2024-06-15T18:05:12Z', ipAddress: '192.0.2.14', status: 'Success' },
+]
