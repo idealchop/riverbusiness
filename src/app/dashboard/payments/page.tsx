@@ -38,7 +38,8 @@ import {
   Home,
   User,
   Check,
-  Building2
+  Building2,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -49,9 +50,16 @@ import {
   Tooltip,
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
+import { appUsers } from '@/lib/data';
+
 
 const paymentHistory = [
     { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
@@ -97,53 +105,8 @@ export default function PaymentsPage() {
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
   const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
   
-  const [step, setStep] = React.useState<'selectClient' | 'selectPlan' | 'payment'>('selectClient');
-  const [selectedClientType, setSelectedClientType] = React.useState<(typeof clientTypes)[0] | null>(null);
-  const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = React.useState(false);
-
-  const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
-    setSelectedClientType(clientType);
-    setStep('selectPlan');
-  };
-  
-  const handlePlanSelect = (plan: AnyPlan) => {
-    setSelectedPlan(plan);
-    setStep('payment');
-  };
-
-  const handleBack = () => {
-    if (step === 'selectPlan') {
-      setStep('selectClient');
-      setSelectedPlan(null);
-    } else if (step === 'payment') {
-      setSelectedPlan(null);
-      setStep('selectPlan');
-    }
-  };
-
-  const resetFlow = () => {
-    setStep('selectClient');
-    setSelectedClientType(null);
-    setSelectedPlan(null);
-    setIsInvoiceDialogOpen(false);
-  }
-
-  const getImageForPlan = (imageId: string) => {
-    return PlaceHolderImages.find(p => p.id === imageId);
-  }
-  
-  const getIconForClientType = (typeName: string) => {
-    const Icon = icons[typeName];
-    return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
-  }
-  
-  const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : selectedClientType?.name === 'Commercial' ? commercialPlans: [];
-  const regularSmePlans = smePlans.filter(p => !p.details);
-  const customSmePlan = smePlans.find(p => p.details);
-
-  const regularCommercialPlans = commercialPlans.filter(p => !p.details);
-  const customCommercialPlan = commercialPlans.find(p => p.details);
+  const [date, setDate] = React.useState<DateRange | undefined>()
 
 
   return (
@@ -233,309 +196,78 @@ export default function PaymentsPage() {
               </TableBody>
             </Table>
              <div className="flex justify-end mt-4">
-                <Dialog open={isInvoiceDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) resetFlow(); else setIsInvoiceDialogOpen(true); }}>
+                <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button className="bg-primary/90 hover:bg-primary" onClick={() => setIsInvoiceDialogOpen(true)}>Create Invoice</Button>
+                        <Button className="bg-primary/90 hover:bg-primary">Create Invoice</Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-4xl">
-                        {step === 'selectClient' && (
-                            <>
-                                <DialogHeader>
-                                    <DialogTitle>1. Select Client Type</DialogTitle>
-                                    <DialogDescription>Choose the client type to see the recommended plans.</DialogDescription>
-                                </DialogHeader>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 py-4">
-                                    {clientTypes.map(client => {
-                                        const image = getImageForPlan(client.imageId);
-                                        return (
-                                            <Card key={client.name} className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow text-center" onClick={() => handleClientTypeSelect(client)}>
-                                                <CardContent className="p-6 flex flex-col items-center justify-center">
-                                                    {image ? <Image src={image.imageUrl} alt={client.name} width={80} height={80} className="rounded-full mb-4 w-20 h-20 object-cover" data-ai-hint={image.imageHint} /> : getIconForClientType(client.name)
-                                                    }
-                                                    <h3 className="font-semibold">{client.name}</h3>
-                                                    <p className="text-xs text-muted-foreground">{client.description}</p>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                        {step === 'selectPlan' && selectedClientType && (
-                          <>
-                            <DialogHeader>
-                              <DialogTitle className="flex items-center">
-                                 <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
-                                2. Choose a Plan
-                              </DialogTitle>
-                              <DialogDescription>Select the best plan for your client from the options below.</DialogDescription>
-                            </DialogHeader>
-                            <div className="flex flex-col md:flex-row gap-4 py-4">
-                              <Card className="w-full md:w-1/4">
-                                  <CardContent className="p-4 flex flex-col items-center text-center">
-                                    {selectedClientType.imageId && getImageForPlan(selectedClientType.imageId) && <Image src={getImageForPlan(selectedClientType.imageId)!.imageUrl} alt={selectedClientType.name} width={100} height={100} className="rounded-lg object-cover mb-4" />}
-                                    <h3 className="text-lg font-bold">{selectedClientType.name}</h3>
-                                    <p className="text-sm text-muted-foreground">{selectedClientType.description}</p>
-                                  </CardContent>
-                              </Card>
-                              <div className="w-full md:w-3/4">
-                                {selectedClientType.name === 'Family' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {familyPlans.map(plan => (
-                                        <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className={cn("cursor-pointer hover:border-primary relative flex flex-col", plan.details && 'md:col-span-2' )}>
-                                            {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                            <CardHeader>
-                                                <CardTitle>{plan.name}</CardTitle>
-                                                {plan.details ? (
-                                                    <p className="text-2xl font-bold">Custom</p>
-                                                ) : (
-                                                    <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                                                )}
-                                            </CardHeader>
-                                            <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                {plan.details ? (
-                                                    <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
-                                                        {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
-                                                    </ul>
-                                                ) : (
-                                                    <>
-                                                        <div className="space-y-1">
-                                                            <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                            <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                            <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                                        </div>
-                                                    </>
-                                                )}
-                                                <div className="flex-grow"></div>
-                                                <Separator />
-                                                <div className="text-xs text-muted-foreground flex items-center justify-between">
-                                                   <span className="flex items-center gap-1"><User className="w-3 h-3"/> {plan.persons}</span>
-                                                   {!plan.details && <span className="flex items-center gap-1"><Home className="w-3 h-3"/> ~{plan.gallons} Gallons/week</span>}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                    </div>
-                                )}
-                                {selectedClientType.name === 'SME' && (
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {regularSmePlans.map(plan => {
-                                                const isSmePlan = 'employees' in plan;
-                                                return (
-                                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                                        {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                                        <CardHeader>
-                                                            <CardTitle>{plan.name}</CardTitle>
-                                                            <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                                                        </CardHeader>
-                                                        <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                            <div className="space-y-1">
-                                                                <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                                <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                                <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                                            </div>
-                                                            <div className="flex-grow"></div>
-                                                            <Separator />
-                                                            <div className="text-xs text-muted-foreground flex items-center justify-between">
-                                                                {isSmePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
-                                                                {isSmePlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>}
-                                                            </div>
-                                                        </CardContent>
-                                                    </Card>
-                                                )
-                                            })}
-                                        </div>
-                                        {customSmePlan && (() => {
-                                            const plan = customSmePlan;
-                                            return (
-                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
-                                                     {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                                    <CardHeader>
-                                                        <CardTitle>{plan.name}</CardTitle>
-                                                         <p className="text-2xl font-bold">Custom</p>
-                                                    </CardHeader>
-                                                     <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                        <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
-                                                            {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
-                                                        </ul>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        })()}
-                                    </div>
-                                )}
-                                {selectedClientType.name === 'Commercial' && (
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            {regularCommercialPlans.map(plan => {
-                                                const isCommercialPlan = 'employees' in plan;
-                                                return (
-                                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                                        {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                                        <CardHeader>
-                                                            <CardTitle>{plan.name}</CardTitle>
-                                                            <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                                                        </CardHeader>
-                                                        <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                            <div className="space-y-1">
-                                                                <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                                <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                                <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                                            </div>
-                                                            <div className="flex-grow"></div>
-                                                            <Separator />
-                                                            <div className="text-xs text-muted-foreground flex items-center justify-between">
-                                                                {isCommercialPlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
-                                                                {isCommercialPlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>}
-                                                            </div>
-                                                        </CardContent>
-                                                    </Card>
-                                                )
-                                            })}
-                                        </div>
-                                        {customCommercialPlan && (() => {
-                                            const plan = customCommercialPlan;
-                                            return (
-                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col mt-4">
-                                                     {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                                    <CardHeader>
-                                                        <CardTitle>{plan.name}</CardTitle>
-                                                         <p className="text-2xl font-bold">Custom</p>
-                                                    </CardHeader>
-                                                     <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                        <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
-                                                            {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
-                                                        </ul>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        })()}
-                                    </div>
-                                )}
-                                {selectedClientType.name === 'Corporate' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {corporatePlans.map(plan => {
-                                            const isCorporatePlan = 'employees' in plan;
-                                            return (
-                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                                    {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
-                                                    <CardHeader>
-                                                        <CardTitle>{plan.name}</CardTitle>
-                                                        <p className="text-2xl font-bold">₱{plan.price.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                        <div className="space-y-1">
-                                                            <p className="text-xs text-muted-foreground">Liters Included</p>
-                                                            <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
-                                                            <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
-                                                        </div>
-                                                        <div className="flex-grow"></div>
-                                                        <Separator />
-                                                        <div className="text-xs text-muted-foreground flex items-center justify-between">
-                                                            {isCorporatePlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
-                                                            {isCorporatePlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Stations</span>}
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                                {selectedClientType.name === 'Enterprise' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {enterprisePlans.map(plan => {
-                                            const image = plan.imageId ? getImageForPlan(plan.imageId) : null;
-                                            return (
-                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
-                                                    {image && <Image src={image.imageUrl} alt={plan.name} width={300} height={150} className="rounded-t-lg object-cover w-full h-32" data-ai-hint={image.imageHint} />}
-                                                    <CardHeader>
-                                                        <CardTitle>{plan.name}</CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-4 flex-grow flex flex-col">
-                                                        <p className="text-sm text-muted-foreground">{plan.description}</p>
-                                                        <div className="flex-grow"></div>
-                                                        <Button className="w-full mt-4">Select Plan</Button>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                              </div>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Invoice to Smart Refill</DialogTitle>
+                            <DialogDescription>
+                                Select a customer and date range to generate an invoice for their recurring billed amount.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="customer">Select a Customer</Label>
+                                <Select>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a customer..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {appUsers.map(user => (
+                                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                          </>
-                        )}
-                        {step === 'payment' && selectedPlan && (
-                           <>
-                             <DialogHeader>
-                                <DialogTitle className="flex items-center">
-                                 <Button variant="ghost" size="icon" onClick={handleBack} className="mr-2"><X className="h-4 w-4" /></Button>
-                                  Complete Your Payment
-                                </DialogTitle>
-                               <DialogDescription>
-                                   {'details' in selectedPlan ? (
-                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Please contact us for a personalized quote.</>
-                                   ) : 'employees' in selectedPlan && typeof selectedPlan.price === 'number' ? (
-                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} using your preferred method.</>
-                                   ) : 'persons' in selectedPlan && typeof selectedPlan.price === 'number' ? (
-                                      <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Pay ₱{selectedPlan.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} using your preferred method.</>
-                                   ) : (
-                                    <>You've selected the <span className="font-bold">{selectedPlan?.name}</span> plan. Please contact us for a personalized quote.</>
-                                   )}
-                               </DialogDescription>
-                             </DialogHeader>
-                             <Tabs defaultValue="qr" className="w-full">
-                                 <TabsList className="grid w-full grid-cols-2">
-                                     <TabsTrigger value="qr"><QrCode className="mr-2" /> QR Code</TabsTrigger>
-                                     <TabsTrigger value="bank"><CreditCard className="mr-2"/> Bank/Card</TabsTrigger>
-                                 </TabsList>
-                                 <TabsContent value="qr">
-                                     <div className="flex flex-col items-center gap-4 py-4">
-                                         <p className="text-sm text-muted-foreground text-center">Scan the QR code with your mobile banking or e-wallet app.</p>
-                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                             {gcashQr && <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />}
-                                             {paymayaQr && <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />}
-                                             {bankQr && <Image src={bankQr.imageUrl} alt="Bank QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />}
-                                         </div>
-                                     </div>
-                                 </TabsContent>
-                                 <TabsContent value="bank">
-                                      <div className="space-y-4 py-4">
-                                         <div className="text-center">
-                                             <p className="font-semibold">Bank Transfer</p>
-                                             <p className="text-sm text-muted-foreground">BDO Unibank: 123-456-7890</p>
-                                             <p className="text-sm text-muted-foreground">Account Name: River Business Inc.</p>
-                                         </div>
-                                          <Separator />
-                                          <div className="text-center">
-                                             <p className="font-semibold">Credit/Debit Card</p>
-                                             <p className="text-sm text-muted-foreground">Card payments are processed securely.</p>
-                                             <Button className="mt-2">Pay with Card</Button>
-                                         </div>
-                                      </div>
-                                 </TabsContent>
-                             </Tabs>
-                           </>
-                        )}
-                         <DialogFooter>
-                          <DialogClose asChild>
-                            <Button type="button" variant="secondary" onClick={resetFlow}>
-                              Close
-                            </Button>
-                          </DialogClose>
+                            <div className="grid gap-2">
+                                <Label htmlFor="date-range">Select Date Range</Label>
+                                <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                    >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (
+                                        date.to ? (
+                                        <>
+                                            {format(date.from, "LLL dd, y")} -{" "}
+                                            {format(date.to, "LLL dd, y")}
+                                        </>
+                                        ) : (
+                                        format(date.from, "LLL dd, y")
+                                        )
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={date?.from}
+                                    selected={date}
+                                    onSelect={setDate}
+                                    numberOfMonths={2}
+                                    />
+                                </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
+                        <DialogFooter className="grid grid-cols-2 gap-2">
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline">
+                                Cancel
+                                </Button>
+                            </DialogClose>
+                            <Button type="button">Send Invoice to Smart Refill</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
