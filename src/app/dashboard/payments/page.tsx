@@ -50,7 +50,7 @@ import {
 } from 'recharts';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { clientTypes, familyPlans, smePlans } from '@/lib/plans';
+import { clientTypes, familyPlans, smePlans, commercialPlans } from '@/lib/plans';
 import { cn } from '@/lib/utils';
 
 const paymentHistory = [
@@ -85,7 +85,8 @@ const icons: { [key: string]: React.ElementType } = {
 
 type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
 type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
-type AnyPlan = FamilyPlan | SmePlan;
+type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string };
+type AnyPlan = FamilyPlan | SmePlan | CommercialPlan;
 
 
 export default function PaymentsPage() {
@@ -101,7 +102,7 @@ export default function PaymentsPage() {
 
   const handleClientTypeSelect = (clientType: (typeof clientTypes)[0]) => {
     setSelectedClientType(clientType);
-    if (clientType.name === 'Family' || clientType.name === 'SME') {
+    if (clientType.name === 'Family' || clientType.name === 'SME' || clientType.name === 'Commercial') {
       setStep('selectPlan');
     } else {
       setSelectedPlan({ 
@@ -126,7 +127,7 @@ export default function PaymentsPage() {
       setSelectedPlan(null);
     } else if (step === 'payment') {
       setSelectedPlan(null);
-      if (selectedClientType?.name === 'Family' || selectedClientType?.name === 'SME') {
+      if (selectedClientType?.name === 'Family' || selectedClientType?.name === 'SME' || selectedClientType?.name === 'Commercial') {
         setStep('selectPlan');
       } else {
         setStep('selectClient');
@@ -150,9 +151,12 @@ export default function PaymentsPage() {
     return Icon ? <Icon className="w-8 h-8 mb-2 text-primary" /> : null;
   }
   
-  const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : [];
+  const currentPlans = selectedClientType?.name === 'Family' ? familyPlans : selectedClientType?.name === 'SME' ? smePlans : selectedClientType?.name === 'Commercial' ? commercialPlans: [];
   const regularSmePlans = smePlans.filter(p => !p.details);
   const customSmePlan = smePlans.find(p => p.details);
+
+  const regularCommercialPlans = commercialPlans.filter(p => !p.details);
+  const customCommercialPlan = commercialPlans.find(p => p.details);
 
 
   return (
@@ -363,6 +367,57 @@ export default function PaymentsPage() {
                                         </div>
                                         {customSmePlan && (() => {
                                             const plan = customSmePlan;
+                                            return (
+                                                <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                     {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
+                                                    <CardHeader>
+                                                        <CardTitle>{plan.name}</CardTitle>
+                                                         <p className="text-2xl font-bold">Custom</p>
+                                                    </CardHeader>
+                                                     <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                        <ul className="space-y-1 text-muted-foreground list-disc pl-5 mt-4 text-sm">
+                                                            {plan.details!.map(detail => <li key={detail}>{detail}</li>)}
+                                                        </ul>
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        })()}
+                                    </div>
+                                )}
+                                {selectedClientType.name === 'Commercial' && (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {regularCommercialPlans.map(plan => {
+                                                const isCommercialPlan = 'employees' in plan;
+                                                return (
+                                                    <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
+                                                        {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
+                                                        <CardHeader>
+                                                            <CardTitle>{plan.name}</CardTitle>
+                                                            <p className="text-2xl font-bold">₱{plan.price}<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-4 flex-grow flex flex-col">
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs text-muted-foreground">Liters Included</p>
+                                                                <p className="font-semibold flex items-center gap-2"><Droplet className="w-4 h-4"/>{plan.liters} L</p>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs text-muted-foreground">Avg. Refill Frequency</p>
+                                                                <p className="font-semibold flex items-center gap-2"><RefreshCw className="w-4 h-4"/>{plan.refillFrequency}</p>
+                                                            </div>
+                                                            <div className="flex-grow"></div>
+                                                            <Separator />
+                                                            <div className="text-xs text-muted-foreground flex items-center justify-between">
+                                                                {isCommercialPlan && <span className="flex items-center gap-1"><Users className="w-3 h-3"/> {plan.employees} Employees</span>}
+                                                                {isCommercialPlan && <span className="flex items-center gap-1"><Building2 className="w-3 h-3"/> {plan.stations} Station</span>}
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })}
+                                        </div>
+                                        {customCommercialPlan && (() => {
+                                            const plan = customCommercialPlan;
                                             return (
                                                 <Card key={plan.name} onClick={() => handlePlanSelect(plan)} className="cursor-pointer hover:border-primary relative flex flex-col">
                                                      {plan.recommended && <Badge className="absolute -top-2 -right-2">Recommended</Badge>}
