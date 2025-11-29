@@ -42,23 +42,29 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">{greeting}, {userName}!</h1>
-             <Dialog>
-                <DialogTrigger asChild>
-                    <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
-                        <LifeBuoy className="h-4 w-4 mr-2" />
-                        <span>Support</span>
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[800px] h-[550px]">
-                    <DialogHeader>
-                    <DialogTitle>Support</DialogTitle>
-                    <DialogDescription>
-                        Get help with your account and services.
-                    </DialogDescription>
-                    </DialogHeader>
-                    <SupportPage />
-                </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2">
+                <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <span>Feedback</span>
+                </Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
+                            <LifeBuoy className="h-4 w-4 mr-2" />
+                            <span>Support</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[800px] h-[550px]">
+                        <DialogHeader>
+                        <DialogTitle>Support</DialogTitle>
+                        <DialogDescription>
+                            Get help with your account and services.
+                        </DialogDescription>
+                        </DialogHeader>
+                        <SupportPage />
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             <Card className="flex flex-col overflow-hidden">
@@ -166,12 +172,6 @@ export default function DashboardPage() {
                     </div>
                 </CardContent>
             </Card>
-        </div>
-        <div className="flex justify-end gap-2">
-            <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                <span>Feedback</span>
-            </Button>
         </div>
     </div>
     );
