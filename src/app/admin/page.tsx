@@ -161,8 +161,8 @@ export default function AdminPage() {
     const handleAttachPermit = (stationId: string) => {
         setStationToUpdate(stationId);
         // This is a mock of a file picker. In a real app, this would open a file dialog.
-        // We'll simulate the successful "upload" by providing a sample PDF URL.
-        const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2Fdocuments%2FSample%20Permit.pdf?alt=media&token=143f2908-0aa3-4903-b8a7-7b247b97537b';
+        // We'll simulate the successful "upload" by providing a sample image URL.
+        const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/permit-sample.jpg?alt=media&token=c8b2512a-3636-4c44-884c-354336c9d2f6';
 
         const updatedStations = waterStations.map(station =>
             station.id === stationId ? { ...station, permitUrl: samplePermitUrl } : station
