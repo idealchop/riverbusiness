@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { deliveries, consumptionData } from '@/lib/data';
+import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Feedback } from '@/lib/types';
+import type { Feedback, AppUser } from '@/lib/types';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -30,6 +30,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [feedbackRating, setFeedbackRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const { toast } = useToast();
+    const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
 
     useEffect(() => {
         if (initialUserName) {
@@ -58,13 +59,15 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         }
         
         setTotalLitersPurchased(totalPurchased);
-
-        const consumedLiters = deliveries
-            .filter(d => d.status === 'Delivered')
-            .reduce((total, delivery) => total + gallonToLiter(delivery.volumeGallons), 0);
-
-        setRemainingLiters(Math.max(0, totalPurchased - consumedLiters));
         
+        // Assuming the logged-in user is 'Alice Johnson' with ID 'USR-001'
+        // In a real app, you'd get this from your auth context
+        const user = initialAppUsers.find(u => u.id === 'USR-001');
+        if (user) {
+            setCurrentUser(user);
+            setRemainingLiters(Math.max(0, totalPurchased - user.totalConsumptionLiters));
+        }
+
     }, []);
 
     const handleFeedbackSubmit = () => {
@@ -79,7 +82,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
         const newFeedback: Feedback = {
             id: `FB-${Date.now()}`,
-            userId: 'USR-001', // This would be dynamic in a real app
+            userId: currentUser?.id || 'USR-001', // This would be dynamic in a real app
             userName: userName,
             timestamp: new Date().toISOString(),
             feedback: feedbackMessage,
@@ -257,3 +260,5 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     </div>
     );
 }
+
+      

@@ -9,7 +9,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries, waterStations as initialWaterStations } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -48,6 +48,11 @@ interface InvoiceRequest {
   status: 'Pending' | 'Sent';
 }
 
+const deductSchema = z.object({
+    amount: z.coerce.number().positive('Deduction amount must be positive'),
+});
+type DeductFormValues = z.infer<typeof deductSchema>;
+
 
 export default function AdminPage() {
     const [appUsers, setAppUsers] = useState(initialAppUsers);
@@ -65,6 +70,7 @@ export default function AdminPage() {
     const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
     const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
+    const [isDeductDialogOpen, setIsDeductDialogOpen] = useState(false);
 
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
@@ -122,6 +128,13 @@ export default function AdminPage() {
         },
     });
 
+    const deductForm = useForm<DeductFormValues>({
+        resolver: zodResolver(deductSchema),
+        defaultValues: {
+            amount: 0,
+        },
+    });
+
     const handleCreateUser = (values: NewUserFormValues) => {
         const newUser: AppUser = {
             id: `USR-${String(appUsers.length + 1).padStart(3, '0')}`,
@@ -148,6 +161,24 @@ export default function AdminPage() {
             title: "Password Reset",
             description: `New password for ${selectedUser?.name} is: ${newPassword}`,
         });
+    };
+
+    const handleDeductConsumption = (values: DeductFormValues) => {
+        if (!selectedUser) return;
+
+        setAppUsers(appUsers.map(user => 
+            user.id === selectedUser.id 
+            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + values.amount } 
+            : user
+        ));
+        
+        toast({
+            title: 'Consumption Deducted',
+            description: `${values.amount.toLocaleString()} liters deducted from ${selectedUser.name}'s balance.`
+        });
+        
+        setIsDeductDialogOpen(false);
+        deductForm.reset();
     };
 
     const handleToggleFeedbackRead = (feedbackId: string) => {
@@ -318,6 +349,38 @@ export default function AdminPage() {
                         </TableBody>
                     </Table>
                 </div>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeductDialogOpen} onOpenChange={setIsDeductDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Deduct Consumption</DialogTitle>
+                    <DialogDescription>
+                        Manually deduct water consumption for {selectedUser?.name}.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...deductForm}>
+                    <form onSubmit={deductForm.handleSubmit(handleDeductConsumption)} className="space-y-4">
+                        <FormField
+                            control={deductForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Liters to Deduct</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 100" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">Deduct</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
 
@@ -496,6 +559,10 @@ export default function AdminPage() {
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
                                                             <UserCog className="mr-2 h-4 w-4" />
                                                             View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsDeductDialogOpen(true); }}>
+                                                            <MinusCircle className="mr-2 h-4 w-4" />
+                                                            Deduct Consumption
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem>
                                                             <ShieldCheck className="mr-2 h-4 w-4" />
@@ -717,3 +784,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+      
