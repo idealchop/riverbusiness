@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
+import { format } from 'date-fns';
+
+
+interface OnboardingData {
+    formData: {
+        fullName: string;
+        clientId: string;
+        email: string;
+        businessName: string;
+        address: string;
+        contactNumber: string;
+    };
+    clientType: string;
+    plan: {
+        name: string;
+        price: number;
+        imageId: string;
+    };
+    customPlanDetails: {
+        litersPerMonth: number;
+        bonusLiters: number;
+        deliveryFrequency: string;
+        deliveryDay: string;
+        deliveryTime: string;
+    };
+}
 
 export default function DashboardLayout({
   children,
@@ -38,27 +64,18 @@ export default function DashboardLayout({
   const recentDeliveries = deliveries.slice(0, 4);
 
   const [userName, setUserName] = useState('Juan dela Cruz');
-  const [tempUserName, setTempUserName] = useState(userName);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [accountType, setAccountType] = useState<string | null>(null);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
 
   useEffect(() => {
-    const onboardingDataString = localStorage.getItem('onboardingData');
-    if (onboardingDataString) {
-      const onboardingData = JSON.parse(onboardingDataString);
-      if (onboardingData.plan && onboardingData.plan.name) {
-        setAccountType(onboardingData.plan.name);
-      } else if (onboardingData.clientType) {
-        setAccountType(`${onboardingData.clientType} Plan`);
+    const storedOnboardingData = localStorage.getItem('onboardingData');
+    if (storedOnboardingData) {
+      const data = JSON.parse(storedOnboardingData);
+      setOnboardingData(data);
+      if (data.formData && data.formData.fullName) {
+        setUserName(data.formData.fullName);
       }
     }
   }, []);
-
-  const handleSaveUsername = () => {
-    setUserName(tempUserName);
-  };
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -72,6 +89,8 @@ export default function DashboardLayout({
         return 'outline';
     }
   }
+  
+  const planImage = onboardingData?.plan?.imageId ? PlaceHolderImages.find(p => p.id === onboardingData.plan.imageId) : null;
 
   return (
       <div className="flex flex-col h-full">
@@ -94,20 +113,14 @@ export default function DashboardLayout({
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Contact Support</DialogTitle>
-                    <DialogDescription>
-                    Get immediate help from our AI assistant or reach out to us through any of the channels below.
-                    </DialogDescription>
-                </DialogHeader>
+                <div className="space-y-2 text-center">
+                    <h2 className="text-3xl font-bold">Hello, {userName}!</h2>
+                    <p className="text-muted-foreground">
+                        Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
+                    </p>
+                </div>
                 <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
                     <div className="space-y-8">
-                        <div>
-                            <h2 className="text-3xl font-bold">Hello, {userName}!</h2>
-                            <p className="text-muted-foreground mt-2">
-                                Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
-                            </p>
-                        </div>
                       <div className="space-y-4">
                         <div className="flex items-center gap-4 rounded-md border p-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -206,85 +219,118 @@ export default function DashboardLayout({
                 )}
                 <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{accountType || 'Account'}</p>
+                  <p className="text-xs text-muted-foreground">{onboardingData?.plan?.name || 'Account'}</p>
                 </div>
               </div>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>My Account</DialogTitle>
                 <DialogDescription>
-                  Manage your account settings.
+                  Manage your plan, account details, and invoices.
                 </DialogDescription>
               </DialogHeader>
-              <div className="flex items-center space-x-4 py-4">
-                {userAvatar && (
-                  <div className="relative">
-                    <Image
-                      src={userAvatar.imageUrl}
-                      width={80}
-                      height={80}
-                      alt={userAvatar.description}
-                      data-ai-hint={userAvatar.imageHint}
-                      className="rounded-full"
-                    />
-                    <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8">
-                      <Camera className="h-4 w-4" />
-                      <Input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                    </Button>
-                  </div>
-                )}
-                <div>
-                  <h4 className="font-semibold text-lg">{userName}</h4>
-                  <p className="text-sm text-muted-foreground">{accountType || 'Account'}</p>
-                </div>
-              </div>
-              <Tabs defaultValue="username">
+              <Tabs defaultValue="plans">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="username"><User className="mr-2" />Username</TabsTrigger>
-                  <TabsTrigger value="password"><KeyRound className="mr-2" />Password</TabsTrigger>
-                  <TabsTrigger value="clientid"><Info className="mr-2" />Client ID</TabsTrigger>
+                  <TabsTrigger value="plans"><Home className="mr-2" />Plans</TabsTrigger>
+                  <TabsTrigger value="accounts"><User className="mr-2" />Accounts</TabsTrigger>
+                  <TabsTrigger value="invoices"><Receipt className="mr-2" />Invoices</TabsTrigger>
                 </TabsList>
-                <TabsContent value="username" className="py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input id="username" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} />
-                  </div>
-                  <Button className="mt-4" onClick={handleSaveUsername}>Save</Button>
-                </TabsContent>
-                <TabsContent value="password" className="py-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2 relative">
-                      <Label htmlFor="current-password">Current Password</Label>
-                      <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
-                      <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+
+                <TabsContent value="plans" className="py-4">
+                  {onboardingData?.plan && onboardingData.customPlanDetails ? (
+                    <div className="border rounded-lg p-4 bg-accent/50 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                                {planImage && (
+                                <Image
+                                    src={planImage.imageUrl}
+                                    alt={onboardingData.plan.name}
+                                    width={150}
+                                    height={150}
+                                    className="rounded-lg object-cover"
+                                    data-ai-hint={planImage.imageHint}
+                                />
+                            )}
+                            <div className="flex-1">
+                                <p className="font-bold text-xl">{onboardingData.plan.name}</p>
+                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                    <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
+                                    <p><strong>Bonus Liters:</strong> {onboardingData.customPlanDetails.bonusLiters.toLocaleString()}</p>
+                                    <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
+                                    <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="space-y-2 relative">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
-                      <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowNewPassword(!showNewPassword)}>
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    <div className="space-y-2 relative">
-                      <Label htmlFor="confirm-password">Confirm New Password</Label>
-                      <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
-                      <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <Button className="mt-4">Change Password</Button>
+                  ) : <p>No plan information available. Please complete onboarding.</p>}
                 </TabsContent>
-                <TabsContent value="clientid" className="py-4">
-                  <div className="space-y-2">
-                    <Label>Client ID</Label>
-                    <Input readOnly value="CL-12345-67890" />
-                    <p className="text-sm text-muted-foreground">This is your unique client identifier.</p>
-                  </div>
+
+                <TabsContent value="accounts" className="py-4">
+                    {onboardingData?.formData ? (
+                        <div className="space-y-4">
+                            <h4 className="font-semibold mb-2">Your Details</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                                <div>
+                                    <Label className="text-muted-foreground">Full Name</Label>
+                                    <p className="font-medium">{onboardingData.formData.fullName}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Client ID</Label>
+                                    <p className="font-medium">{onboardingData.formData.clientId}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Email Address</Label>
+                                    <p className="font-medium">{onboardingData.formData.email}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Business Name</Label>
+                                    <p className="font-medium">{onboardingData.formData.businessName}</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Label className="text-muted-foreground">Address</Label>
+                                    <p className="font-medium">{onboardingData.formData.address}</p>
+                                </div>
+                                <div>
+                                    <Label className="text-muted-foreground">Contact Number</Label>
+                                    <p className="font-medium">{onboardingData.formData.contactNumber}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : <p>No account information available. Please complete onboarding.</p>}
                 </TabsContent>
+                
+                <TabsContent value="invoices" className="py-4">
+                    {onboardingData?.plan ? (
+                        <div className="space-y-4">
+                             <h4 className="font-semibold mb-2">Current Billing</h4>
+                            <div className="border rounded-lg p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-muted-foreground">Next Invoice Date</p>
+                                    <p className="font-bold text-lg">{format(new Date().setDate(new Date().getDate() + 15), 'MMMM dd, yyyy')}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground text-right">Amount Due</p>
+                                    <p className="font-bold text-lg text-right">₱{onboardingData.plan.price.toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Invoice Details</CardTitle>
+                                    <CardDescription>Ref: INV-{new Date().getFullYear()}{new Date().getMonth() + 1}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between"><span>Plan Subscription</span> <span>₱{onboardingData.plan.price.toLocaleString()}</span></div>
+                                        <div className="flex justify-between"><span>VAT (12%)</span> <span>₱{(onboardingData.plan.price * 0.12).toLocaleString()}</span></div>
+                                        <Separator/>
+                                        <div className="flex justify-between font-bold"><span>Total</span> <span>₱{(onboardingData.plan.price * 1.12).toLocaleString()}</span></div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    ) : <p>No invoice information available. Please complete onboarding.</p>}
+                </TabsContent>
+
               </Tabs>
               <div className="flex justify-end pt-4">
                   <Button variant="outline">Logout</Button>
