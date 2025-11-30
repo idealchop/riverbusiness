@@ -92,7 +92,7 @@ export default function AdminPage() {
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
-    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
+    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen]_ = useState(false);
     const [adjustmentType, setAdjustmentType] = useState<'add' | 'deduct'>('deduct');
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
@@ -308,7 +308,7 @@ export default function AdminPage() {
         };
 
         const deliveriesRef = collection(firestore, 'users', userForHistory.id, 'deliveries');
-        addDocumentNonBlocking(deliveriesRef, newDelivery)
+        addDocumentNonBlocking(deliveriesRef)
           .then((docRef) => {
             if(docRef) {
               updateDocumentNonBlocking(docRef, {id: docRef.id});
@@ -692,7 +692,7 @@ export default function AdminPage() {
         </Dialog>
 
 
-        <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen}>
+        <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen_}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{adjustmentType === 'deduct' ? 'Deduct' : 'Add'} Consumption</DialogTitle>
@@ -899,11 +899,11 @@ export default function AdminPage() {
                                                             <Building className="mr-2 h-4 w-4" />
                                                             Assign Station
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen_(true); }}>
                                                             <PlusCircle className="mr-2 h-4 w-4" />
                                                             Add Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen_(true); }}>
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>
