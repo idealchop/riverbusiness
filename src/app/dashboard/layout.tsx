@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -105,6 +105,7 @@ export default function DashboardLayout({
   const [switchUrgency, setSwitchUrgency] = React.useState('');
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
+  const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -570,10 +571,16 @@ export default function DashboardLayout({
                                             <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
                                             <TableCell className="text-center">
                                                 <div className='flex gap-2 justify-center'>
-                                                {(payment.status === 'Upcoming' || payment.status === 'Overdue' || payment.status === 'Pending Review') && (
+                                                {(payment.status === 'Upcoming' || payment.status === 'Overdue') && (
                                                     <Button size="sm" onClick={() => { setSelectedInvoice(payment); setIsPaymentDialogOpen(true); }}>
                                                         <CreditCard className="mr-2 h-4 w-4" />
                                                         Pay Now
+                                                    </Button>
+                                                )}
+                                                {payment.status === 'Pending Review' && (
+                                                     <Button variant="secondary" size="sm" onClick={() => setIsVerificationDialogOpen(true)}>
+                                                        <Hourglass className="mr-2 h-4 w-4" />
+                                                        Processing
                                                     </Button>
                                                 )}
                                                 {payment.status === 'Paid' && payment.proofOfPaymentUrl && (
@@ -796,6 +803,46 @@ export default function DashboardLayout({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isVerificationDialogOpen} onOpenChange={setIsVerificationDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Payment Verification Status</DialogTitle>
+                        <DialogDescription>
+                            Your payment is being processed by our team.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-8">
+                        <ul className="relative flex justify-between">
+                            <li className="relative flex flex-col items-center w-1/3">
+                                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-primary -translate-y-1/2" />
+                                <div className="relative h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                                    <Check className="h-4 w-4 text-primary-foreground" />
+                                </div>
+                                <p className="text-xs text-center mt-2">Payment Submitted</p>
+                            </li>
+                             <li className="relative flex flex-col items-center w-1/3">
+                                <div className={cn("relative h-6 w-6 rounded-full flex items-center justify-center", "bg-primary")}>
+                                    <Hourglass className="h-4 w-4 text-primary-foreground animate-spin" />
+                                </div>
+                                <p className="text-xs text-center mt-2 font-semibold">Pending Verification</p>
+                            </li>
+                             <li className="relative flex flex-col items-center w-1/3">
+                                <div className="absolute top-1/2 right-0 w-full h-0.5 bg-border -translate-y-1/2" />
+                                 <div className={cn("relative h-6 w-6 rounded-full flex items-center justify-center", "bg-border")}>
+                                     <Check className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <p className="text-xs text-center text-muted-foreground mt-2">Payment Confirmed</p>
+                            </li>
+                        </ul>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Close</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
@@ -811,3 +858,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
