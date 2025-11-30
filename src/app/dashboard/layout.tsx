@@ -100,6 +100,9 @@ export default function DashboardLayout({
                 </DialogHeader>
                 <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
                     <div className="space-y-4">
+                      <div className="text-sm text-foreground pt-4 font-bold">
+                        Our team will reach out to you as soon as possible. Thank you!
+                      </div>
                       <div className="flex items-center gap-4 rounded-md border p-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                           <Phone className="h-6 w-6" />
@@ -117,10 +120,6 @@ export default function DashboardLayout({
                           <p className="font-semibold">Email Support</p>
                           <a href="mailto:jayvee@riverph.com" className="text-sm text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
                         </div>
-                      </div>
-                      <Separator className="my-4" />
-                      <div className="text-sm text-foreground pt-4 font-bold">
-                        Our team will reach out to you as soon as possible. Thank you!
                       </div>
                     </div>
                     <div className="flex flex-col h-full">
