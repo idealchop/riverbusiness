@@ -605,6 +605,12 @@ export default function DashboardLayout({
               {React.cloneElement(children as React.ReactElement, { userName })}
             </div>
           </main>
+          <footer className="p-4 text-center text-xs text-muted-foreground border-t">
+              v1.0.0 - Smart Refill is a trademark and product name of{' '}
+              <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  River
+              </a>.
+          </footer>
       </div>
   );
 }
