@@ -26,7 +26,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Logo } from '@/components/icons';
 import Link from 'next/link';
 
 export default function DashboardLayout({
@@ -85,9 +84,9 @@ export default function DashboardLayout({
             <Button
               variant="outline"
               size="icon"
-              className="overflow-hidden rounded-full"
+              className="rounded-full"
             >
-              <LifeBuoy className="h-5 w-5" />
+              <LifeBuoy className="h-4 w-4" />
             </Button>
           </Link>
           <Popover>
@@ -95,9 +94,9 @@ export default function DashboardLayout({
               <Button
                   variant="outline"
                   size="icon"
-                  className="relative overflow-hidden rounded-full"
+                  className="relative rounded-full"
               >
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-4 w-4" />
               </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-96">
@@ -151,7 +150,7 @@ export default function DashboardLayout({
                     height={40}
                     alt={userAvatar.description}
                     data-ai-hint={userAvatar.imageHint}
-                    className={cn("rounded-full overflow-hidden")}
+                    className="rounded-full"
                   />
                 )}
                 <div className="hidden sm:flex flex-col items-start">
