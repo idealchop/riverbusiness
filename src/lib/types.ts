@@ -78,6 +78,7 @@ export interface AppUser {
     plan?: any;
     clientType?: string | null;
     customPlanDetails?: any;
+    contractUrl?: string;
 }
 
 export interface LoginLog {

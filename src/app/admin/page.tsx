@@ -101,6 +101,8 @@ export default function AdminPage() {
     const [isAssignStationOpen, setIsAssignStationOpen] = useState(false);
     const [stationToAssign, setStationToAssign] = useState<string | undefined>();
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = useState(false);
+    const [isUploadContractOpen, setIsUploadContractOpen] = useState(false);
+    const [userForContract, setUserForContract] = useState<AppUser | null>(null);
     
     const deliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !userForHistory) return null;
@@ -294,6 +296,27 @@ export default function AdminPage() {
             setDeliveryToUpdate(null);
         } catch (error) {
              toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof. Please try again.' });
+        }
+    };
+
+    const handleUploadContract = async (file: File) => {
+        if (!userForContract || !firestore) return;
+        const storage = getStorage();
+        const filePath = `users/${userForContract.id}/contracts/${file.name}`;
+        const storageRef = ref(storage, filePath);
+    
+        try {
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+    
+            const userRef = doc(firestore, 'users', userForContract.id);
+            updateDocumentNonBlocking(userRef, { contractUrl: downloadURL });
+            
+            toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
+            setIsUploadContractOpen(false);
+            setUserForContract(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract. Please try again.' });
         }
     };
 
@@ -741,6 +764,25 @@ export default function AdminPage() {
             </DialogContent>
         </Dialog>
 
+        <Dialog open={isUploadContractOpen} onOpenChange={setIsUploadContractOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Upload Contract</DialogTitle>
+                    <DialogDescription>Attach a contract for {userForContract?.name}.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input type="file" onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                            handleUploadContract(e.target.files[0]);
+                        }
+                    }}/>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => { setIsUploadContractOpen(false); setUserForContract(null); }}>Cancel</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="cursor-pointer hover:bg-muted" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -895,6 +937,10 @@ export default function AdminPage() {
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
                                                             <UserCog className="mr-2 h-4 w-4" />
                                                             View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setUserForContract(user); setIsUploadContractOpen(true); }}>
+                                                            <Upload className="mr-2 h-4 w-4" />
+                                                            Upload Contract
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsAssignStationOpen(true); }}>
                                                             <Building className="mr-2 h-4 w-4" />
