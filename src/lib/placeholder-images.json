@@ -7,22 +7,28 @@
       "imageHint": "person portrait"
     },
     {
-      "id": "gcash-qr",
+      "id": "maya-qr",
+      "description": "Maya QR Code",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_Maya.png?alt=media&token=1fd59b11-8b0c-4a6a-bcf8-4a6f38bdb9c4",
+      "imageHint": "qr code payment"
+    },
+    {
+      "id": "card-payment-qr",
+      "description": "Card Payment Coming Soon",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_cardpayments.png?alt=media&token=78ffcb13-8647-42f2-b3b4-95512d468b62",
+      "imageHint": "card payment"
+    },
+    {
+      "id": "gcash-qr-payment",
       "description": "GCash QR Code",
-      "imageUrl": "https://images.unsplash.com/photo-1550482768-88b710a445fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cXIlMjBjb2RlfGVufDB8fHx8MTc2NDIyMjk2Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "qr code"
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_gcash.png?alt=media&token=3dbf2d18-cd4a-4ab1-a0e2-3b9952c42412",
+      "imageHint": "qr code payment"
     },
     {
-      "id": "bank-qr",
+      "id": "bank-qr-payment",
       "description": "Bank QR Code",
-      "imageUrl": "https://images.unsplash.com/photo-1550482768-88b710a445fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cXIlMjBjb2RlfGVufDB8fHx8MTc2NDIyMjk2Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "qr code"
-    },
-    {
-      "id": "paymaya-qr",
-      "description": "PayMaya QR Code",
-      "imageUrl": "https://images.unsplash.com/photo-1662383729882-e03ce8e00887?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxxciUyMGNvZGV8ZW58MHx8fHwxNzY0MjIyOTYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "qr code"
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_unionbank.png?alt=media&token=e5428cad-1392-456e-a2fb-24026e848015",
+      "imageHint": "qr code payment"
     },
     {
       "id": "plan-family",

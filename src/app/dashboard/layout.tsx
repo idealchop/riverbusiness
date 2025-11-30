@@ -71,9 +71,11 @@ export default function DashboardLayout({
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>(initialPaymentHistory);
   
-  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
-  const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
-  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
+  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
+  const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr-payment');
+  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr');
+  const cardPayment = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
+
   const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
   const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
 
@@ -347,72 +349,110 @@ export default function DashboardLayout({
                         <Card>
                             <CardHeader>
                                 <CardTitle>Invoice Summary</CardTitle>
-                                <CardDescription>Your estimated recurring bill based on your current plan.</CardDescription>
+                                <CardDescription>Your estimated recurring bill and payment options.</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex justify-between items-baseline">
                                     <p className="text-muted-foreground">Estimated Monthly Bill</p>
                                     <p className="text-2xl font-bold">₱{onboardingData.plan.price.toLocaleString()}</p>
                                 </div>
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button className="w-full">View Invoice History</Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-3xl">
-                                        <DialogHeader>
-                                            <DialogTitle>Invoice History</DialogTitle>
-                                            <DialogDescription>A record of all your past and upcoming invoices.</DialogDescription>
-                                        </DialogHeader>
-                                        <div className="py-4 max-h-[60vh] overflow-y-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Invoice ID</TableHead>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead>Status</TableHead>
-                                                        <TableHead className="text-right">Amount</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {paymentHistory.map((payment) => (
-                                                        <TableRow key={payment.id}>
-                                                            <TableCell className="font-medium">{payment.id}</TableCell>
-                                                            <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                                            <TableCell>
-                                                                <Badge
-                                                                    variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                                    className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                                                >{payment.status}</Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                {payment.status === 'Upcoming' ? (
-                                                                  <Button size="sm" onClick={() => { setSelectedInvoiceForProof(payment); setIsProofUploadDialogOpen(true); }}>
-                                                                    <Upload className="mr-2 h-4 w-4" />
-                                                                    Upload Proof
-                                                                  </Button>
-                                                                ) : payment.proofOfPaymentUrl ? (
-                                                                  <Button variant="outline" size="sm" asChild>
-                                                                      <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
-                                                                        <Check className="mr-2 h-4 w-4" />
-                                                                        View Proof
-                                                                      </a>
-                                                                  </Button>
-                                                                ) : (
-                                                                  <Button variant="outline" size="sm" disabled>
-                                                                    <Download className="mr-2 h-4 w-4" />
-                                                                    Download
-                                                                  </Button>
-                                                                )}
-                                                            </TableCell>
+                                <div className="flex gap-2">
+                                     <Dialog>
+                                        <DialogTrigger asChild>
+                                             <Button className="flex-1">
+                                                <CreditCard className="mr-2 h-4 w-4" />
+                                                Pay Now
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Scan to Pay</DialogTitle>
+                                                <DialogDescription>
+                                                    Use your preferred payment method.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                             <Tabs defaultValue="gcash" className="w-full">
+                                                <TabsList className="grid w-full grid-cols-4">
+                                                    <TabsTrigger value="gcash">GCash</TabsTrigger>
+                                                    <TabsTrigger value="maya">Maya</TabsTrigger>
+                                                    <TabsTrigger value="bank">Bank</TabsTrigger>
+                                                    <TabsTrigger value="card">Card</TabsTrigger>
+                                                </TabsList>
+                                                <TabsContent value="gcash" className="mt-4 flex justify-center">
+                                                    {gcashQr && <Image src={gcashQr.imageUrl} alt="GCash QR" width={250} height={250} data-ai-hint={gcashQr.imageHint} />}
+                                                </TabsContent>
+                                                <TabsContent value="maya" className="mt-4 flex justify-center">
+                                                    {paymayaQr && <Image src={paymayaQr.imageUrl} alt="Maya QR" width={250} height={250} data-ai-hint={paymayaQr.imageHint} />}
+                                                </TabsContent>
+                                                <TabsContent value="bank" className="mt-4 flex justify-center">
+                                                    {bankQr && <Image src={bankQr.imageUrl} alt="Bank QR" width={250} height={250} data-ai-hint={bankQr.imageHint} />}
+                                                </TabsContent>
+                                                 <TabsContent value="card" className="mt-4 flex justify-center">
+                                                    {cardPayment && <Image src={cardPayment.imageUrl} alt="Card Payment Coming Soon" width={250} height={250} data-ai-hint={cardPayment.imageHint} />}
+                                                </TabsContent>
+                                            </Tabs>
+                                        </DialogContent>
+                                    </Dialog>
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" className="flex-1">View History</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-3xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Invoice History</DialogTitle>
+                                                <DialogDescription>A record of all your past and upcoming invoices.</DialogDescription>
+                                            </DialogHeader>
+                                            <div className="py-4 max-h-[60vh] overflow-y-auto">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Invoice ID</TableHead>
+                                                            <TableHead>Date</TableHead>
+                                                            <TableHead>Status</TableHead>
+                                                            <TableHead className="text-right">Amount</TableHead>
+                                                            <TableHead className="text-right">Actions</TableHead>
                                                         </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {paymentHistory.map((payment) => (
+                                                            <TableRow key={payment.id}>
+                                                                <TableCell className="font-medium">{payment.id}</TableCell>
+                                                                <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                                                <TableCell>
+                                                                    <Badge
+                                                                        variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                                        className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                                    >{payment.status}</Badge>
+                                                                </TableCell>
+                                                                <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
+                                                                <TableCell className="text-right">
+                                                                    {payment.status === 'Upcoming' ? (
+                                                                    <Button size="sm" onClick={() => { setSelectedInvoiceForProof(payment); setIsProofUploadDialogOpen(true); }}>
+                                                                        <Upload className="mr-2 h-4 w-4" />
+                                                                        Upload Proof
+                                                                    </Button>
+                                                                    ) : payment.proofOfPaymentUrl ? (
+                                                                    <Button variant="outline" size="sm" asChild>
+                                                                        <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                                                                            <Check className="mr-2 h-4 w-4" />
+                                                                            View Proof
+                                                                        </a>
+                                                                    </Button>
+                                                                    ) : (
+                                                                    <Button variant="outline" size="sm" disabled>
+                                                                        <Download className="mr-2 h-4 w-4" />
+                                                                        Download
+                                                                    </Button>
+                                                                    )}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
                             </CardContent>
                         </Card>
                     ) : <p>No invoice information available. Please complete onboarding.</p>}
@@ -450,5 +490,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
