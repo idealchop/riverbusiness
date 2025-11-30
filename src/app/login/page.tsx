@@ -117,12 +117,14 @@ export default function LoginPage() {
                     />
                     {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                   </div>
-                  <div className="grid gap-2 relative">
+                  <div className="grid gap-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
-                    <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                    <div className="relative">
+                      <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
+                      <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
                     {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
                   </div>
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
