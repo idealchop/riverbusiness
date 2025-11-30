@@ -126,6 +126,17 @@ export default function AdminPage() {
             description: `User ${newUser.name} has been created successfully.`,
         });
     };
+    
+    const handleResetPassword = (userId: string) => {
+        const newPassword = Math.random().toString(36).slice(-8);
+        setAppUsers(appUsers.map(user => 
+            user.id === userId ? { ...user, password: newPassword } : user
+        ));
+        toast({
+            title: "Password Reset",
+            description: `New password for ${selectedUser?.name} is: ${newPassword}`,
+        });
+    };
 
     const adminUser = appUsers.find(user => user.role === 'Admin');
 
@@ -190,8 +201,7 @@ export default function AdminPage() {
                          </div>
                          <Separator className="my-4" />
                          <div className="flex flex-col space-y-2">
-                             <Button variant="outline"><UserCog className="mr-2 h-4 w-4" /> Edit User</Button>
-                             <Button variant="outline"><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
+                             <Button variant="outline" onClick={() => handleResetPassword(selectedUser.id)}><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
                              <Button variant="destructive" className="mt-4"><Trash2 className="mr-2 h-4 w-4" /> Delete User</Button>
                          </div>
                     </div>
@@ -473,6 +483,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-
-    
