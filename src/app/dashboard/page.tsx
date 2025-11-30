@@ -624,7 +624,7 @@ export default function DashboardPage() {
                                 <SelectItem value="monthly">This Month</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button onClick={() => setIsDeliveryHistoryOpen(true)} size="icon" className="sm:size-auto sm:px-4">
+                        <Button onClick={() => setIsDeliveryHistoryOpen(true)} variant="outline" className="w-full sm:w-auto">
                             <History className="h-4 w-4 sm:mr-2" />
                             <span className="hidden sm:inline">History</span>
                         </Button>
