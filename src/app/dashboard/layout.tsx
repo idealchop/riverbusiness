@@ -563,7 +563,7 @@ export default function DashboardLayout({
                                     <p className="font-bold text-xl">{onboardingData.plan.name}</p>
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                         <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
-                                        <p><strong>Bonus Liters:</strong> {onboardingData.customPlanDetails.bonusLiters.toLocaleString()}</p>
+                                        <p><strong>Bonus Liters:</strong> {(onboardingData.customPlanDetails.bonusLiters || 0).toLocaleString()}</p>
                                         <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
                                         <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
                                     </div>
@@ -886,4 +886,5 @@ export default function DashboardLayout({
 
 
     
+
 

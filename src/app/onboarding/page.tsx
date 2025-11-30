@@ -54,7 +54,7 @@ type AnyPlan = {
 
 interface CustomPlanDetails {
     litersPerMonth: number;
-    addOnLiters: number;
+    bonusLiters: number;
     deliveryFrequency: string;
     deliveryDay: string;
     deliveryTime: string;
@@ -150,7 +150,7 @@ export default function OnboardingPage() {
     if (customLiters > 0 && deliveryFrequency && selectedDay && deliveryTime) {
         setCustomPlanDetails({
             litersPerMonth: customLiters,
-            addOnLiters: addOnLiters,
+            bonusLiters: addOnLiters,
             deliveryFrequency: deliveryFrequency,
             deliveryDay: selectedDay,
             deliveryTime: deliveryTime,
@@ -484,7 +484,7 @@ export default function OnboardingPage() {
                                     <p className="font-bold text-xl">{selectedPlan.name}</p>
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                         <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()}</p>
-                                        <p><strong>Add-on Liters:</strong> {customPlanDetails.addOnLiters.toLocaleString()}</p>
+                                        <p><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</p>
                                         <p><strong>Gallons:</strong> {customPlanDetails.gallonQuantity}</p>
                                         <p><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</p>
                                         <p><strong>Subscription:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
