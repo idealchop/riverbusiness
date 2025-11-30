@@ -185,60 +185,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 </Dialog>
             </div>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <Card className="flex flex-col overflow-hidden">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Waves className="h-6 w-6 text-primary" />
-                        Total Liters Purchased
-                    </CardTitle>
-                    <CardDescription>Total water purchased for the month based on your plan.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow flex flex-col items-start justify-between">
-                    <div>
-                        <p className="text-5xl font-bold tracking-tight">{totalLitersPurchased.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xl">Liters</span></p>
-                    </div>
-                    <div className="h-48 w-full mt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={deliveryChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                            <defs>
-                                <linearGradient id="colorDelivery" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                            <Tooltip 
-                                cursor={false}
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--background))',
-                                    border: '1px solid hsl(var(--border))',
-                                    borderRadius: 'var(--radius)',
-                                }}
-                                labelStyle={{color: 'hsl(var(--foreground))'}}
-                                formatter={(value: number, name, props) => [`${value.toFixed(0)} Liters`, `Delivered on ${new Date(props.payload.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`]}
-                                labelFormatter={() => ''}
-                            />
-                            <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorDelivery)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                    </div>
-                    <div className="w-full flex justify-end mt-4">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button className="bg-primary/90 hover:bg-primary">
-                                    <Droplet className="h-4 w-4 mr-2" />
-                                    Water Station
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[625px]">
-                                <WaterStationsPage />
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                </CardContent>
-            </Card>
-        
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
             <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -276,7 +223,18 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="w-full flex justify-end mt-4">
+                    <div className="w-full flex justify-between mt-4">
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button className="bg-primary/90 hover:bg-primary">
+                                    <Droplet className="h-4 w-4 mr-2" />
+                                    Water Station
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[625px]">
+                                <WaterStationsPage />
+                            </DialogContent>
+                        </Dialog>
                         <Dialog>
                            <DialogTrigger asChild>
                                <Button className="bg-primary/90 hover:bg-primary">
