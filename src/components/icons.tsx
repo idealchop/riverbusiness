@@ -1,31 +1,14 @@
 import type { SVGProps } from "react";
+import Image from 'next/image';
 
-export function Logo(props: SVGProps<SVGSVGElement>) {
+export function Logo(props: SVGProps<SVGSVGElement> & { width?: number; height?: number }) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 256 256"
-      {...props}
-    >
-      <rect width="256" height="256" fill="none" />
-      <path
-        d="M89.3,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,160Z"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="16"
-      />
-      <path
-        d="M194.7,160l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,194.7,160Z"
-        opacity="0.2"
-        fill="currentColor"
-      />
-      <path
-        d="M89.3,224l-58-58a8,8,0,0,1,0-11.3l58-58a8,8,0,0,1,11.3,0l58,58a8,8,0,0,1,0,11.3l-58,58A8,8,0,0,1,89.3,224Z"
-        opacity="0.2"
-        fill="currentColor"
-      />
-    </svg>
+    <Image
+      src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c"
+      alt="River Business Logo"
+      width={props.width || 40}
+      height={props.height || 40}
+      className={props.className}
+    />
   );
 }
