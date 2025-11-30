@@ -138,7 +138,7 @@ export default function LoginPage() {
       </div>
       <div className="hidden bg-muted lg:block overflow-hidden">
         <Image
-          src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FSales_Mats_v3.png?alt=media&token=5e2fc62e-0082-4c37-9078-e1cf5e188635"
+          src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Overflow.png?alt=media&token=ad6cec25-c755-4de3-8276-430a013741b5"
           alt="River Business Marketing Material"
           width="1920"
           height="1080"
