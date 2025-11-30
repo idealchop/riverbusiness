@@ -49,9 +49,14 @@ export default function WaterStationsPage() {
                                 Permit ID: {station.id}-PERMIT
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="py-4 text-center">
-                            <p className="text-muted-foreground">Permit content would be displayed here.</p>
+                        <div className="py-4 text-center min-h-[400px]">
+                          {station.permitUrl && station.permitUrl !== '#' ? (
                             <iframe src={station.permitUrl} className="w-full h-96 mt-4 border rounded-md" title={`Permit for ${station.name}`} />
+                          ) : (
+                            <div className="w-full h-96 mt-4 border rounded-md bg-background flex items-center justify-center">
+                              {/* This area is intentionally blank unless a permit is attached */}
+                            </div>
+                          )}
                         </div>
                     </DialogContent>
                   </Dialog>
