@@ -50,7 +50,7 @@ export interface AppUser {
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
-    role?: 'Admin' | 'User';
+    role: 'Admin' | 'User';
 }
 
 export interface LoginLog {

@@ -25,6 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { AppUser } from '@/lib/types';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -52,11 +53,33 @@ export default function AdminPage() {
     const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState('');
+    const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
 
-    const filteredUsers = appUsers.filter(user => 
-        user.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleSearch = () => {
+        if (!searchTerm) return;
+
+        const foundUser = appUsers.find(user => 
+            user.id.toLowerCase() === searchTerm.toLowerCase()
+        );
+
+        if (foundUser) {
+            setSelectedUser(foundUser);
+            setIsUserDetailOpen(true);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "User not found",
+                description: `No user found with ID: ${searchTerm}`,
+            });
+        }
+    };
+
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
     
     useEffect(() => {
         const storedRequests = localStorage.getItem('invoiceRequests');
@@ -114,16 +137,63 @@ export default function AdminPage() {
         <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
             <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search by ID or name..."
+                  placeholder="Enter User ID..."
                   className="w-full appearance-none bg-background pl-8 shadow-none md:w-64 lg:w-96"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                 />
+                <Button onClick={handleSearch} size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                </Button>
             </div>
         </div>
+
+        <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>User Details</DialogTitle>
+                    <DialogDescription>
+                        Information for user ID: {selectedUser?.id}
+                    </DialogDescription>
+                </DialogHeader>
+                {selectedUser && (
+                     <div className="space-y-4 py-4">
+                        <div className="flex items-center space-x-4">
+                            <div>
+                                <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
+                                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                            </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4 text-sm">
+                             <div>
+                                 <p className="font-medium text-muted-foreground">Account Status</p>
+                                 <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
+                                     {selectedUser.accountStatus}
+                                 </Badge>
+                             </div>
+                             <div>
+                                 <p className="font-medium text-muted-foreground">Total Consumption</p>
+                                 <p>{selectedUser.totalConsumptionLiters.toLocaleString()} Liters</p>
+                             </div>
+                             <div>
+                                 <p className="font-medium text-muted-foreground">Role</p>
+                                 <p>{selectedUser.role}</p>
+                             </div>
+                             <div>
+                                 <p className="font-medium text-muted-foreground">Last Login</p>
+                                 <p>{new Date(selectedUser.lastLogin).toLocaleString()}</p>
+                             </div>
+                         </div>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button onClick={() => setIsUserDetailOpen(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
@@ -269,7 +339,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredUsers.map((user) => (
+                                    {appUsers.map((user) => (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.name}</TableCell>
@@ -311,7 +381,7 @@ export default function AdminPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    {filteredUsers.length === 0 && (
+                                    {appUsers.length === 0 && (
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center">No users found.</TableCell>
                                         </TableRow>
