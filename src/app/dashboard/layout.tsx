@@ -26,6 +26,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Logo } from '@/components/icons';
+import Link from 'next/link';
 
 export default function DashboardLayout({
   children,
@@ -61,6 +63,10 @@ export default function DashboardLayout({
   return (
       <div className="flex flex-col h-full">
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
+            <Logo className="h-9" />
+            <span className="font-bold">River Business</span>
+          </Link>
           <div className="flex-1" />
           <Popover>
               <PopoverTrigger asChild>
