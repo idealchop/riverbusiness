@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -80,15 +80,49 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
-          <Link href="/dashboard/support">
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full"
-            >
-              <LifeBuoy className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+              >
+                <LifeBuoy className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Contact Support</DialogTitle>
+                    <DialogDescription>
+                    Reach out to us through any of the channels below.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="flex items-center gap-4 rounded-md border p-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                      <Phone className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Phone Support</p>
+                      <a href="tel:1-800-555-1234" className="text-sm text-muted-foreground hover:text-primary">1-800-555-1234</a>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 rounded-md border p-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                      <Mail className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Email Support</p>
+                      <a href="mailto:support@riverbusiness.com" className="text-sm text-muted-foreground hover:text-primary">support@riverbusiness.com</a>
+                    </div>
+                  </div>
+                  <Separator className="my-4" />
+                  <div className="text-sm text-foreground pt-4 font-bold">
+                    Will reach out to you as soon as possible. Thank you!
+                  </div>
+                </div>
+              </DialogContent>
+          </Dialog>
           <Popover>
               <PopoverTrigger asChild>
               <Button
@@ -150,7 +184,7 @@ export default function DashboardLayout({
                     height={40}
                     alt={userAvatar.description}
                     data-ai-hint={userAvatar.imageHint}
-                    className="rounded-full"
+                    className={cn("rounded-full")}
                   />
                 )}
                 <div className="hidden sm:flex flex-col items-start">
