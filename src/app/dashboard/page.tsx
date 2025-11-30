@@ -421,7 +421,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Consumption Analytics</CardTitle>
