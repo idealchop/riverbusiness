@@ -257,7 +257,7 @@ export default function AdminPage() {
                                             <TableCell className="whitespace-nowrap">{user.name}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.email}</TableCell>
                                             <TableCell>
-                                                <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'} className={user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-red-500'}>
+                                                <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>
                                                     {user.accountStatus}
                                                 </Badge>
                                             </TableCell>
@@ -317,7 +317,7 @@ export default function AdminPage() {
                                         <TableCell className="whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</TableCell>
                                         <TableCell className="whitespace-nowrap">{log.ipAddress}</TableCell>
                                         <TableCell>
-                                        <Badge variant={log.status === 'Success' ? 'default' : 'destructive'} className={log.status === 'Success' ? 'bg-green-500' : 'bg-red-500'}>
+                                        <Badge variant={log.status === 'Success' ? 'default' : 'destructive'}>
                                             {log.status}
                                         </Badge>
                                         </TableCell>
