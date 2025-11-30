@@ -657,7 +657,7 @@ export default function DashboardLayout({
                                                     className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
                                                 >{payment.status}</Badge>
                                             </TableCell>
-                                            <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">₱{payment.amount.toFixed(2)}</TableCell>
                                             <TableCell className="text-center">
                                                 <div className='flex gap-2 justify-center'>
                                                 {(payment.status === 'Upcoming' || payment.status === 'Overdue') && (
