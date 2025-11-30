@@ -17,6 +17,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AppUser } from '@/lib/types';
 import { doc } from 'firebase/firestore';
+import { Card, CardContent } from '@/components/ui/card';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -92,59 +93,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full lg:grid h-screen lg:grid-cols-2 overflow-hidden">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center justify-center">
-            <Logo className="h-20 w-20 mb-4 mx-auto" />
-            <h1 className="text-3xl font-bold">Sign In</h1>
-            <p className="text-balance text-muted-foreground">
-              Welcome back! Please enter your details.
-            </p>
-          </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                {...register('email')}
-                disabled={isSubmitting}
+    <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-4xl shadow-2xl overflow-hidden rounded-2xl">
+          <div className="grid lg:grid-cols-2">
+            <div className="flex flex-col items-center justify-center p-6 sm:p-12">
+              <div className="mx-auto grid w-full max-w-sm gap-6">
+                <div className="grid gap-2 text-center justify-center">
+                  <Logo className="h-20 w-20 mb-4 mx-auto" />
+                  <h1 className="text-3xl font-bold">Sign In</h1>
+                  <p className="text-balance text-muted-foreground">
+                    Welcome back! Please enter your details.
+                  </p>
+                </div>
+                <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      {...register('email')}
+                      disabled={isSubmitting}
+                    />
+                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                  </div>
+                  <div className="grid gap-2 relative">
+                    <Label htmlFor="password">Password</Label>
+                    <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
+                    <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => setShowPassword(!showPassword)} type="button">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? 'Signing In...' : 'Sign in'}
+                  </Button>
+                </form>
+                <div className="mt-4 text-center text-sm">
+                  <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
+                  <p className="text-xs text-muted-foreground">By Smart Refill</p>
+                </div>
+                <div className="mt-4 text-center text-xs text-muted-foreground">
+                  <p>For questions or inquiries, contact us at:</p>
+                  <a href="mailto:business@smartrefill.io" className="font-semibold text-primary hover:underline">business@smartrefill.io</a>
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:block relative">
+              <Image
+                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Overflow.png?alt=media&token=ad6cec25-c755-4de3-8276-430a013741b5"
+                alt="River Business Marketing Material"
+                fill
+                className="object-cover dark:brightness-[0.2] dark:grayscale"
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
-            <div className="grid gap-2 relative">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
-              <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing In...' : 'Sign in'}
-            </Button>
-          </form>
-          <div className="mt-4 text-center text-sm">
-            <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
-            <p className="text-xs text-muted-foreground">By Smart Refill</p>
           </div>
-          <div className="mt-4 text-center text-xs text-muted-foreground">
-            <p>For questions or inquiries, contact us at:</p>
-            <a href="mailto:business@smartrefill.io" className="font-semibold text-primary hover:underline">business@smartrefill.io</a>
-          </div>
-        </div>
-      </div>
-      <div className="hidden bg-muted lg:block overflow-hidden">
-        <Image
-          src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Overflow.png?alt=media&token=ad6cec25-c755-4de3-8276-430a013741b5"
-          alt="River Business Marketing Material"
-          width="1920"
-          height="1080"
-          className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-        />
-      </div>
-    </div>
+      </Card>
+    </main>
   );
 }
