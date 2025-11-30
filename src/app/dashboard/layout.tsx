@@ -127,6 +127,7 @@ export default function DashboardLayout({
                         </div>
                       </div>
                        <div className="mt-4 text-center text-sm">
+                        <p className="font-semibold">In case of urgent need, just contact us.</p>
                         <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
                         <p className="text-xs text-muted-foreground">By Smart Refill</p>
                       </div>
