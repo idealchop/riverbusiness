@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory, waterStations } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -100,6 +100,9 @@ export default function DashboardLayout({
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedStation, setSelectedStation] = useState('');
+  const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = useState(false);
+  const [switchReason, setSwitchReason] = useState('');
+  const [switchUrgency, setSwitchUrgency] = useState('');
 
   const recentDeliveries = deliveries.slice(0, 4);
 
@@ -238,6 +241,32 @@ export default function DashboardLayout({
         setSelectedStation('');
     };
 
+    const handleSwitchProviderSubmit = () => {
+        if (switchReason.trim() === '' || !switchUrgency) {
+            toast({
+                variant: 'destructive',
+                title: 'Incomplete Request',
+                description: 'Please provide a reason and select an urgency level.',
+            });
+            return;
+        }
+
+        console.log({
+            type: 'Switch Provider Request',
+            reason: switchReason,
+            urgency: switchUrgency,
+        });
+
+        toast({
+            title: 'Request Submitted',
+            description: 'Your request to switch providers has been sent to the admin team.',
+        });
+
+        setIsSwitchProviderDialogOpen(false);
+        setSwitchReason('');
+        setSwitchUrgency('');
+    };
+
   const planImage = onboardingData?.plan?.imageId ? PlaceHolderImages.find(p => p.id === onboardingData.plan.imageId) : null;
 
   const paymentOptions: PaymentOption[] = [
@@ -307,11 +336,17 @@ export default function DashboardLayout({
                             </div>
                         </div>
                       </div>
-                       <div className="mt-auto pt-4 text-center text-sm">
-                         <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Submit Feedback
-                         </Button>
+                       <div className="mt-auto pt-4 text-center text-sm space-y-4">
+                         <div className="flex justify-center gap-2">
+                             <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Submit Feedback
+                             </Button>
+                             <Button variant="outline" onClick={() => setIsSwitchProviderDialogOpen(true)}>
+                                <FileUp className="h-4 w-4 mr-2" />
+                                Switch Provider
+                             </Button>
+                         </div>
                         <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
                         <p className="text-xs text-muted-foreground">By Smart Refill</p>
                       </div>
@@ -731,6 +766,51 @@ export default function DashboardLayout({
                         <Button onClick={handleFeedbackSubmit}>
                             <Send className="mr-2 h-4 w-4" />
                             Submit
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+          <Dialog open={isSwitchProviderDialogOpen} onOpenChange={setIsSwitchProviderDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Request to Switch Provider</DialogTitle>
+                        <DialogDescription>
+                           Please provide the details for your request. An admin will review it shortly.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div>
+                            <Label htmlFor="switch-urgency">Urgency</Label>
+                            <Select onValueChange={setSwitchUrgency} value={switchUrgency}>
+                                <SelectTrigger id="switch-urgency">
+                                    <SelectValue placeholder="Select urgency level..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="low">Low - Not urgent</SelectItem>
+                                    <SelectItem value="medium">Medium - Important</SelectItem>
+                                    <SelectItem value="high">High - Urgent</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="switch-reason">Reason for Switching</Label>
+                            <Textarea
+                                id="switch-reason"
+                                placeholder="Please describe why you want to switch providers..."
+                                value={switchReason}
+                                onChange={(e) => setSwitchReason(e.target.value)}
+                                rows={4}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleSwitchProviderSubmit}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Submit Request
                         </Button>
                     </DialogFooter>
                 </DialogContent>
