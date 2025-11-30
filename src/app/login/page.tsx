@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center">
             <div className="flex items-center justify-center gap-2 font-semibold text-2xl mb-4">
-              <Logo className="h-10 w-10" />
+              <Logo className="h-11 w-11" />
               <span className="font-headline">River Business</span>
             </div>
             <h1 className="text-3xl font-bold">Sign In</h1>
