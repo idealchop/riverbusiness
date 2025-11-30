@@ -9,7 +9,7 @@ export function Logo(props: SVGProps<SVGSVGElement> & { height?: number; classNa
       width={160}
       height={40}
       className={props.className}
-      style={{ width: 'auto' }}
+      style={{ width: 'auto', height: '100%' }}
     />
   );
 }

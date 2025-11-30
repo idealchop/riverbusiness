@@ -26,11 +26,11 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:hidden">
-          <Logo height={32} />
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:hidden h-8">
+          <Logo />
         </Link>
-         <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex">
-          <Logo height={32} />
+         <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex h-8">
+          <Logo />
         </Link>
       </SidebarHeader>
       <SidebarContent>
