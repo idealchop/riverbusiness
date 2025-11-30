@@ -1,6 +1,6 @@
 
 'use client';
-import React, from 'react';
+import React, { useMemo } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -202,7 +202,7 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-    const planImage = React.useMemo(() => {
+    const planImage = useMemo(() => {
       if (!user?.clientType) return null;
       const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
       if (!clientTypeDetails) return null;
@@ -555,10 +555,6 @@ export default function DashboardLayout({
                                                         </a>
                                                     </Button>
                                                 )}
-                                                <Button variant="outline" size="sm" onClick={() => toast({ title: 'Feature in development' })}>
-                                                    <Download className="mr-2 h-4 w-4" />
-                                                    PDF
-                                                </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -790,5 +786,6 @@ export default function DashboardLayout({
     
 
     
+
 
 
