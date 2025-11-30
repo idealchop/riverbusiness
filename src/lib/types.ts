@@ -78,4 +78,5 @@ export interface Payment {
   description: string;
   amount: number;
   status: 'Paid' | 'Upcoming' | 'Overdue';
+  proofOfPaymentUrl?: string;
 }

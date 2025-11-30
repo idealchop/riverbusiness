@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -74,6 +73,8 @@ export default function DashboardLayout({
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
+  const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
+  const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
 
   useEffect(() => {
     const storedOnboardingData = localStorage.getItem('onboardingData');
@@ -96,6 +97,18 @@ export default function DashboardLayout({
       }
     }
   }, []);
+
+  const handleProofUpload = (invoiceId: string) => {
+    // Simulate file upload and update state
+    const updatedHistory = paymentHistory.map(invoice => {
+        if (invoice.id === invoiceId) {
+            return { ...invoice, status: 'Paid' as 'Paid', proofOfPaymentUrl: 'https://example.com/proof.pdf' };
+        }
+        return invoice;
+    });
+    setPaymentHistory(updatedHistory);
+    setIsProofUploadDialogOpen(false);
+  };
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -374,50 +387,19 @@ export default function DashboardLayout({
                                                             <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
                                                             <TableCell className="text-right">
                                                                 {payment.status === 'Upcoming' ? (
-                                                                  <Dialog>
-                                                                    <DialogTrigger asChild>
-                                                                      <Button size="sm">
-                                                                        <CreditCard className="mr-2 h-4 w-4" />
-                                                                        Pay Now
-                                                                      </Button>
-                                                                    </DialogTrigger>
-                                                                    <DialogContent>
-                                                                      <DialogHeader>
-                                                                        <DialogTitle>Pay Invoice {payment.id}</DialogTitle>
-                                                                        <DialogDescription>
-                                                                          Scan a QR code to pay ₱{payment.amount.toFixed(2)}.
-                                                                        </DialogDescription>
-                                                                      </DialogHeader>
-                                                                      <div className="grid grid-cols-2 gap-4 py-4">
-                                                                          {gcashQr && (
-                                                                              <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                                                  <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />
-                                                                                  <p className="font-semibold">GCash</p>
-                                                                              </div>
-                                                                          )}
-                                                                           {bankQr && (
-                                                                              <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                                                  <Image src={bankQr.imageUrl} alt="BDO QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
-                                                                                  <p className="font-semibold">BDO</p>
-                                                                              </div>
-                                                                          )}
-                                                                          {bankQr && (
-                                                                              <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                                                  <Image src={bankQr.imageUrl} alt="BPI QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
-                                                                                  <p className="font-semibold">BPI</p>
-                                                                              </div>
-                                                                          )}
-                                                                           {paymayaQr && (
-                                                                              <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                                                  <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />
-                                                                                  <p className="font-semibold">PayMaya</p>
-                                                                              </div>
-                                                                          )}
-                                                                      </div>
-                                                                    </DialogContent>
-                                                                  </Dialog>
+                                                                  <Button size="sm" onClick={() => { setSelectedInvoiceForProof(payment); setIsProofUploadDialogOpen(true); }}>
+                                                                    <Upload className="mr-2 h-4 w-4" />
+                                                                    Upload Proof
+                                                                  </Button>
+                                                                ) : payment.proofOfPaymentUrl ? (
+                                                                  <Button variant="outline" size="sm" asChild>
+                                                                      <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                                                                        <Check className="mr-2 h-4 w-4" />
+                                                                        View Proof
+                                                                      </a>
+                                                                  </Button>
                                                                 ) : (
-                                                                  <Button variant="outline" size="sm">
+                                                                  <Button variant="outline" size="sm" disabled>
                                                                     <Download className="mr-2 h-4 w-4" />
                                                                     Download
                                                                   </Button>
@@ -441,6 +423,23 @@ export default function DashboardLayout({
               </div>
             </DialogContent>
           </Dialog>
+           <Dialog open={isProofUploadDialogOpen} onOpenChange={setIsProofUploadDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Upload Proof of Payment</DialogTitle>
+                        <DialogDescription>
+                            Please upload a screenshot or document for invoice {selectedInvoiceForProof?.id}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Input type="file" />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsProofUploadDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={() => selectedInvoiceForProof && handleProofUpload(selectedInvoiceForProof.id)}>Upload & Mark as Paid</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
@@ -450,5 +449,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
