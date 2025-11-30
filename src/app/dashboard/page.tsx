@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import type { Feedback, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { Switch } from '@/components/ui/switch';
 
 
 const gallonToLiter = (gallons: number) => gallons * 19;
@@ -194,16 +195,18 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Upcoming Deliveries
-                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Auto Refill
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-3xl font-bold">{upcomingDeliveries}</p>
-                    <p className="text-xs text-muted-foreground mt-1">On Discuss</p>
+                <CardContent className="flex flex-col justify-center h-full">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
+                        <Switch id="auto-refill" />
+                    </div>
+                     <p className="text-xs text-muted-foreground mt-2">
+                        System will auto-schedule if balance is low.
+                    </p>
                 </CardContent>
             </Card>
         </div>
