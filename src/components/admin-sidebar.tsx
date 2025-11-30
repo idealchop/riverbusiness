@@ -26,7 +26,7 @@ export function AdminSidebar() {
     <>
       <SidebarHeader>
         <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg justify-center">
-          <Logo className="h-9 w-9 group-data-[collapsible=icon]:h-11 group-data-[collapsible=icon]:w-11" />
+          <Logo className="h-10 w-10 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12" />
           <span className="font-headline font-bold group-data-[collapsible=icon]:opacity-0">Admin Panel</span>
         </Link>
       </SidebarHeader>
