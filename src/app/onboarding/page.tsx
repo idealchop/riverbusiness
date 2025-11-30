@@ -54,11 +54,13 @@ type AnyPlan = {
 interface CustomPlanDetails {
     litersPerMonth: number;
     bonusLiters: number;
-    deliveryDays: string[];
+    deliveryFrequency: string;
+    deliveryDay: string;
     waterStation: string;
 }
 
-const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const deliveryFrequencies = ['Daily', 'Weekly', 'Monthly'];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -70,7 +72,8 @@ export default function OnboardingPage() {
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
   const [bonusLiters, setBonusLiters] = React.useState<number>(0);
-  const [selectedDays, setSelectedDays] = React.useState<string[]>([]);
+  const [selectedDay, setSelectedDay] = React.useState<string>('');
+  const [deliveryFrequency, setDeliveryFrequency] = React.useState<string>('');
   const [amountPerMonth, setAmountPerMonth] = React.useState<number>(0);
 
   
@@ -112,18 +115,20 @@ export default function OnboardingPage() {
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
-    setSelectedDays([]);
+    setSelectedDay('');
+    setDeliveryFrequency('');
     setIsPlanDialogOpen(true);
   };
   
   const handleSaveCustomization = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (customLiters > 0 && selectedDays.length > 0) {
+    if (customLiters > 0 && deliveryFrequency && selectedDay) {
         setCustomPlanDetails({
             litersPerMonth: customLiters,
             bonusLiters: bonusLiters,
-            deliveryDays: selectedDays,
+            deliveryFrequency: deliveryFrequency,
+            deliveryDay: selectedDay,
             waterStation: ''
         });
         
@@ -135,7 +140,7 @@ export default function OnboardingPage() {
         toast({
             variant: "destructive",
             title: "Incomplete Information",
-            description: "Please specify liters per month and at least one delivery day.",
+            description: "Please fill all fields for your plan customization.",
         })
     }
   };
@@ -155,17 +160,9 @@ export default function OnboardingPage() {
     setAmountPerMonth(value);
   }
 
-
-  const toggleDay = (day: string) => {
-    setSelectedDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
-  };
   
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
-    const reorderedDaysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 
     return (
         <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
@@ -191,20 +188,30 @@ export default function OnboardingPage() {
                             <Input id="amountPerMonth" name="amountPerMonth" type="number" placeholder="e.g., 15000" onChange={handleAmountChange} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Delivery Days</Label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {reorderedDaysOfWeek.map(day => (
-                                    <Button
-                                        key={day}
-                                        type="button"
-                                        variant={selectedDays.includes(day) ? 'default' : 'outline'}
-                                        onClick={() => toggleDay(day)}
-                                        className="flex-1"
-                                    >
-                                        {day}
-                                    </Button>
-                                ))}
-                            </div>
+                            <Label>Delivery Schedule</Label>
+                            <Select onValueChange={setDeliveryFrequency}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select frequency..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {deliveryFrequencies.map(freq => (
+                                        <SelectItem key={freq} value={freq}>{freq}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                             <Label>Delivery Day</Label>
+                             <Select onValueChange={setSelectedDay}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a day..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {daysOfWeek.map(day => (
+                                        <SelectItem key={day} value={day}>{day}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -356,7 +363,7 @@ export default function OnboardingPage() {
                                 {customPlanDetails ? (
                                      <div className="text-sm text-muted-foreground">
                                         <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month (Est. ₱{selectedPlan.price.toLocaleString()}/month)</p>
-                                        <p>{customPlanDetails.deliveryDays.length > 0 ? `${customPlanDetails.deliveryDays.length} Deliveries/Week (${customPlanDetails.deliveryDays.join(', ')})` : 'No delivery days selected'}</p>
+                                        <p>{customPlanDetails.deliveryFrequency} delivery on {customPlanDetails.deliveryDay}</p>
                                     </div>
                                 ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as any).details?.map((d: any) => (
                                     <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
