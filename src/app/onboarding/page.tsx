@@ -53,11 +53,13 @@ type AnyPlan = {
 
 interface CustomPlanDetails {
     litersPerMonth: number;
-    bonusLiters: number;
+    addOnLiters: number;
     deliveryFrequency: string;
     deliveryDay: string;
     deliveryTime: string;
     waterStation: string;
+    dispenserQuantity: number;
+    dispenserPrice: number;
 }
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -73,11 +75,13 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
-  const [bonusLiters, setBonusLiters] = React.useState<number>(0);
+  const [addOnLiters, setAddOnLiters] = React.useState<number>(0);
   const [selectedDay, setSelectedDay] = React.useState<string>('');
   const [deliveryFrequency, setDeliveryFrequency] = React.useState<string>('');
   const [deliveryTime, setDeliveryTime] = React.useState<string>('');
   const [amountPerMonth, setAmountPerMonth] = React.useState<number>(0);
+  const [dispenserQuantity, setDispenserQuantity] = React.useState<number>(0);
+  const [dispenserPrice, setDispenserPrice] = React.useState<number>(0);
 
   
   const form = useForm<OnboardingFormValues>({
@@ -120,7 +124,7 @@ export default function OnboardingPage() {
 
   const handleClientTypeSelect = (clientTypeName: string) => {
     setCustomLiters(0);
-    setBonusLiters(0);
+    setAddOnLiters(0);
     setAmountPerMonth(0);
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
@@ -128,6 +132,8 @@ export default function OnboardingPage() {
     setSelectedDay('');
     setDeliveryFrequency('');
     setDeliveryTime('');
+    setDispenserQuantity(0);
+    setDispenserPrice(0);
     setIsPlanDialogOpen(true);
   };
   
@@ -137,16 +143,19 @@ export default function OnboardingPage() {
     if (customLiters > 0 && deliveryFrequency && selectedDay && deliveryTime) {
         setCustomPlanDetails({
             litersPerMonth: customLiters,
-            bonusLiters: bonusLiters,
+            addOnLiters: addOnLiters,
             deliveryFrequency: deliveryFrequency,
             deliveryDay: selectedDay,
             deliveryTime: deliveryTime,
-            waterStation: ''
+            waterStation: '',
+            dispenserQuantity: dispenserQuantity,
+            dispenserPrice: dispenserPrice,
         });
         
         const clientTypeDetails = clientTypes.find(c => c.name === selectedClientType);
         let planName = `Custom ${selectedClientType} Plan`;
-        setSelectedPlan({name: planName, price: amountPerMonth, imageId: clientTypeDetails?.imageId});
+        const totalAmount = amountPerMonth + dispenserPrice;
+        setSelectedPlan({name: planName, price: totalAmount, imageId: clientTypeDetails?.imageId});
         
         setIsPlanDialogOpen(false);
         setCurrentStep(3);
@@ -164,15 +173,25 @@ export default function OnboardingPage() {
     setCustomLiters(value);
   }
 
-  const handleBonusLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddOnLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value ? parseInt(e.target.value) : 0;
-    setBonusLiters(value);
+    setAddOnLiters(value);
   }
   
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value ? parseInt(e.target.value) : 0;
     setAmountPerMonth(value);
   }
+
+  const handleDispenserQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    setDispenserQuantity(value);
+  };
+  
+  const handleDispenserPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    setDispenserPrice(value);
+  };
 
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
@@ -193,12 +212,20 @@ export default function OnboardingPage() {
                             <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" onChange={handleLitersChange} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="bonusLiters">Bonus Liters/Month</Label>
-                            <Input id="bonusLiters" name="bonusLiters" type="number" placeholder="e.g., 500" onChange={handleBonusLitersChange} />
+                            <Label htmlFor="addOnLiters">Add-on Liters/Month</Label>
+                            <Input id="addOnLiters" name="addOnLiters" type="number" placeholder="e.g., 500" onChange={handleAddOnLitersChange} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="amountPerMonth">Amount/Month</Label>
+                            <Label htmlFor="amountPerMonth">Amount/Month (Water)</Label>
                             <Input id="amountPerMonth" name="amountPerMonth" type="number" placeholder="e.g., 15000" onChange={handleAmountChange} />
+                        </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="dispenserQuantity">Dispenser Quantity</Label>
+                            <Input id="dispenserQuantity" name="dispenserQuantity" type="number" placeholder="e.g., 2" onChange={handleDispenserQuantityChange} />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="dispenserPrice">Dispenser Price/Month</Label>
+                            <Input id="dispenserPrice" name="dispenserPrice" type="number" placeholder="e.g., 500" onChange={handleDispenserPriceChange} />
                         </div>
                         <div className="grid gap-2">
                             <Label>Delivery Frequency</Label>
@@ -407,7 +434,8 @@ export default function OnboardingPage() {
                                     <p className="font-bold text-xl">{selectedPlan.name}</p>
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                         <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()}</p>
-                                        <p><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</p>
+                                        <p><strong>Add-on Liters:</strong> {customPlanDetails.addOnLiters.toLocaleString()}</p>
+                                        <p><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</p>
                                         <p><strong>Est. Bill/Month:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
                                         <p><strong>Delivery:</strong> {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
                                     </div>
@@ -438,3 +466,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
