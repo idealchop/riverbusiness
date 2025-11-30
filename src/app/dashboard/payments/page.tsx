@@ -153,46 +153,7 @@ export default function PaymentsPage() {
   
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main Content */}
-      <div className="lg:col-span-2 flex flex-col gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Balance Paid</CardTitle>
-            <CardDescription>Total amount of payments received from your account.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-4">
-              <p className="text-4xl font-bold tracking-tight">
-                ₱{totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="h-64 mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                      <defs>
-                          <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                      </defs>
-                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₱${value}`} />
-                      <Tooltip 
-                        contentStyle={{
-                            backgroundColor: 'hsl(var(--background))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: 'var(--radius)',
-                        }}
-                        labelStyle={{color: 'hsl(var(--foreground))'}}
-                        formatter={(value: number) => [`₱${value.toFixed(2)}`, 'Amount']}
-                      />
-                      <Area type="monotone" dataKey="amount" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorAmount)" />
-                  </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Partner Transactions</CardTitle>
@@ -319,30 +280,10 @@ export default function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Right Sidebar */}
-      <div className="flex flex-col gap-6">
-        <Card className="bg-foreground text-background">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Available for Payout</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <p className="text-4xl font-bold">₱{upcomingPayment ? upcomingPayment.amount.toFixed(2) : '0.00'}</p>
-            <div className="text-sm text-background/70 flex items-center justify-between">
-                <p>**** **** **** 5678</p>
-                <CreditCard className="h-5 w-5" />
-            </div>
-             <p className="text-sm text-background/70">Juan dela Cruz</p>
-            <div className='flex items-center gap-2'>
-                <Button variant="secondary" className='w-full text-foreground'>Manage Account</Button>
-                <Button variant="default" className='w-full bg-primary/90 hover:bg-primary'>Request Payout</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
+
+    
 
     
