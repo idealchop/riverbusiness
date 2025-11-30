@@ -67,7 +67,6 @@ export default function DashboardLayout({
             <Logo className="h-6" />
             <div className="flex items-center">
                 <span className="font-bold">River</span>
-                <Badge variant="secondary" className="text-xs">Smart Refill</Badge>
             </div>
           </Link>
           <div className="flex-1" />
