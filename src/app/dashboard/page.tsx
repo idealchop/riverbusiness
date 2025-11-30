@@ -153,10 +153,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     <History className="h-4 w-4 mr-2" />
                     History
                 </Button>
-                <Button onClick={() => setIsDeliveryHistoryOpen(true)}>
-                    <Truck className="h-4 w-4 mr-2" />
-                    Delivery History
-                </Button>
             </div>
         </div>
 
@@ -291,8 +287,12 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
         <div className="grid gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Consumption Analytics</CardTitle>
+                     <Button onClick={() => setIsDeliveryHistoryOpen(true)}>
+                        <Truck className="h-4 w-4 mr-2" />
+                        Delivery History
+                    </Button>
                 </CardHeader>
                 <CardContent className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
@@ -348,5 +348,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
+
+    
+
 
     
