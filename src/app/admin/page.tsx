@@ -237,132 +237,138 @@ export default function AdminPage() {
                 </CardHeader>
                  <CardContent>
                     <TabsContent value="user-management">
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Last Login</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {appUsers.map((user) => (
-                                    <TableRow key={user.id}>
-                                        <TableCell>{user.id}</TableCell>
-                                        <TableCell>{user.name}</TableCell>
-                                        <TableCell>{user.email}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'} className={user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-red-500'}>
-                                                {user.accountStatus}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
-                                        <TableCell>{user.role}</TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <UserCog className="mr-2 h-4 w-4" />
-                                                        Edit User
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                                        Assign Permissions
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <KeyRound className="mr-2 h-4 w-4" />
-                                                        Reset Password
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-red-600">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete User
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
+                         <div className="overflow-x-auto">
+                            <Table className="min-w-full">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>ID</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Last Login</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {appUsers.map((user) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell className="whitespace-nowrap">{user.id}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{user.name}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{user.email}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'} className={user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-red-500'}>
+                                                    {user.accountStatus}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap">{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
+                                            <TableCell>{user.role}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem>
+                                                            <UserCog className="mr-2 h-4 w-4" />
+                                                            Edit User
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem>
+                                                            <ShieldCheck className="mr-2 h-4 w-4" />
+                                                            Assign Permissions
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem>
+                                                            <KeyRound className="mr-2 h-4 w-4" />
+                                                            Reset Password
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem className="text-red-600">
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete User
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                         </div>
                     </TabsContent>
                      <TabsContent value="login-logs">
-                        <Table>
+                        <div className="overflow-x-auto">
+                            <Table className="min-w-full">
+                                <TableHeader>
+                                    <TableRow>
+                                    <TableHead>Log ID</TableHead>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Timestamp</TableHead>
+                                    <TableHead>IP Address</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loginLogs.map((log) => (
+                                    <TableRow key={log.id}>
+                                        <TableCell className="whitespace-nowrap">{log.id}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{log.userName}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{log.ipAddress}</TableCell>
+                                        <TableCell>
+                                        <Badge variant={log.status === 'Success' ? 'default' : 'destructive'} className={log.status === 'Success' ? 'bg-green-500' : 'bg-red-500'}>
+                                            {log.status}
+                                        </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="transactions">
+                        <div className="overflow-x-auto">
+                            <Table className="min-w-full">
                             <TableHeader>
                                 <TableRow>
-                                <TableHead>Log ID</TableHead>
-                                <TableHead>User</TableHead>
-                                <TableHead>Timestamp</TableHead>
-                                <TableHead>IP Address</TableHead>
+                                <TableHead>Request ID</TableHead>
+                                <TableHead>User Name</TableHead>
+                                <TableHead>Date Range</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {loginLogs.map((log) => (
-                                <TableRow key={log.id}>
-                                    <TableCell>{log.id}</TableCell>
-                                    <TableCell>{log.userName}</TableCell>
-                                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
-                                    <TableCell>{log.ipAddress}</TableCell>
+                                {invoiceRequests.map((request) => (
+                                <TableRow key={request.id}>
+                                    <TableCell className="font-medium whitespace-nowrap">{request.id}</TableCell>
+                                    <TableCell className="whitespace-nowrap">{request.userName}</TableCell>
+                                    <TableCell className="whitespace-nowrap">{request.dateRange}</TableCell>
                                     <TableCell>
-                                    <Badge variant={log.status === 'Success' ? 'default' : 'destructive'} className={log.status === 'Success' ? 'bg-green-500' : 'bg-red-500'}>
-                                        {log.status}
+                                    <Badge
+                                        variant={request.status === 'Sent' ? 'default' : 'secondary'}
+                                        className={request.status === 'Sent' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
+                                    >
+                                        {request.status}
                                     </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="outline" size="sm">
+                                            <FileText className="mr-2 h-4 w-4" />
+                                            View Invoice
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                                 ))}
+                                {invoiceRequests.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center">No invoice requests yet.</TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
-                        </Table>
-                    </TabsContent>
-                    <TabsContent value="transactions">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Request ID</TableHead>
-                            <TableHead>User Name</TableHead>
-                            <TableHead>Date Range</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {invoiceRequests.map((request) => (
-                            <TableRow key={request.id}>
-                                <TableCell className="font-medium">{request.id}</TableCell>
-                                <TableCell>{request.userName}</TableCell>
-                                <TableCell>{request.dateRange}</TableCell>
-                                <TableCell>
-                                <Badge
-                                    variant={request.status === 'Sent' ? 'default' : 'secondary'}
-                                     className={request.status === 'Sent' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
-                                >
-                                    {request.status}
-                                </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="outline" size="sm">
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        View Invoice
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                            ))}
-                             {invoiceRequests.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center">No invoice requests yet.</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                        </Table>
+                            </Table>
+                        </div>
                     </TabsContent>
                 </CardContent>
             </Card>
