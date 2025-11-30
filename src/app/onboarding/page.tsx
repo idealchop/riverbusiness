@@ -17,10 +17,11 @@ import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Users, Briefcase, Building, Layers, Factory, ArrowLeft } from 'lucide-react';
+import { Users, Briefcase, Building, Layers, Factory, ArrowLeft, Droplet, Archive, Calendar, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
 
 const onboardingSchema = z.object({
@@ -198,7 +199,7 @@ export default function OnboardingPage() {
 
     return (
         <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
@@ -206,59 +207,80 @@ export default function OnboardingPage() {
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSaveCustomization}>
-                    <div className="py-4 space-y-4">
-                         <div className="grid gap-2">
-                            <Label htmlFor="litersPerMonth">Liters/Month</Label>
-                            <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" onChange={handleLitersChange} />
+                    <div className="py-4 space-y-6">
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2"><Droplet className="h-4 w-4" /> Water Plan</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="litersPerMonth">Liters/Month</Label>
+                                    <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" onChange={handleLitersChange} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="addOnLiters">Add-on Liters/Month</Label>
+                                    <Input id="addOnLiters" name="addOnLiters" type="number" placeholder="e.g., 500" onChange={handleAddOnLitersChange} />
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="amountPerMonth">Amount/Month (Water)</Label>
+                                <Input id="amountPerMonth" name="amountPerMonth" type="number" placeholder="e.g., 15000" onChange={handleAmountChange} />
+                            </div>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="addOnLiters">Add-on Liters/Month</Label>
-                            <Input id="addOnLiters" name="addOnLiters" type="number" placeholder="e.g., 500" onChange={handleAddOnLitersChange} />
+
+                        <Separator />
+
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-sm flex items-center gap-2"><Archive className="h-4 w-4" /> Dispenser Details</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="dispenserQuantity">Dispenser Quantity</Label>
+                                    <Input id="dispenserQuantity" name="dispenserQuantity" type="number" placeholder="e.g., 2" onChange={handleDispenserQuantityChange} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="dispenserPrice">Dispenser Price/Month</Label>
+                                    <Input id="dispenserPrice" name="dispenserPrice" type="number" placeholder="e.g., 500" onChange={handleDispenserPriceChange} />
+                                </div>
+                            </div>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="amountPerMonth">Amount/Month (Water)</Label>
-                            <Input id="amountPerMonth" name="amountPerMonth" type="number" placeholder="e.g., 15000" onChange={handleAmountChange} />
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="dispenserQuantity">Dispenser Quantity</Label>
-                            <Input id="dispenserQuantity" name="dispenserQuantity" type="number" placeholder="e.g., 2" onChange={handleDispenserQuantityChange} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="dispenserPrice">Dispenser Price/Month</Label>
-                            <Input id="dispenserPrice" name="dispenserPrice" type="number" placeholder="e.g., 500" onChange={handleDispenserPriceChange} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Delivery Frequency</Label>
-                            <Select onValueChange={setDeliveryFrequency}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select frequency..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {deliveryFrequencies.map(freq => (
-                                        <SelectItem key={freq} value={freq}>{freq}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                             <Label>Delivery Day</Label>
-                             <Select onValueChange={setSelectedDay}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a day..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {daysOfWeek.map(day => (
-                                        <SelectItem key={day} value={day}>{day}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="deliveryTime">Delivery Time</Label>
-                            <Input id="deliveryTime" name="deliveryTime" type="time" onChange={(e) => setDeliveryTime(e.target.value)} />
+
+                        <Separator />
+                        
+                        <div className="space-y-4">
+                             <h4 className="font-semibold text-sm flex items-center gap-2"><Calendar className="h-4 w-4" /> Delivery Schedule</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label>Frequency</Label>
+                                    <Select onValueChange={setDeliveryFrequency}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {deliveryFrequencies.map(freq => (
+                                                <SelectItem key={freq} value={freq}>{freq}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Day</Label>
+                                    <Select onValueChange={setSelectedDay}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {daysOfWeek.map(day => (
+                                                <SelectItem key={day} value={day}>{day}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="deliveryTime">Time</Label>
+                                <Input id="deliveryTime" name="deliveryTime" type="time" onChange={(e) => setDeliveryTime(e.target.value)} />
+                            </div>
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 pt-4 border-t">
                          <Button type="button" variant="outline" onClick={() => setIsPlanDialogOpen(false)}>Cancel</Button>
                         <Button type="submit">Save Customization</Button>
                     </div>
@@ -466,5 +488,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
