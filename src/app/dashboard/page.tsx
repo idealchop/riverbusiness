@@ -19,7 +19,7 @@ import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useUser as useAuthUser, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 
 
@@ -51,10 +51,14 @@ const tips = [
     { title: "⭐ Hydration Tip", description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!" }
 ];
 
-export default function DashboardPage({ user }: { user?: AppUser | null }) {
+export default function DashboardPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const { user: authUser } = useAuthUser();
     
+    const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+    const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
+
     const [greeting, setGreeting] = useState('');
     const [autoRefill, setAutoRefill] = useState(true);
     
@@ -64,7 +68,7 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
-    const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
+    const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
     const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
     const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
@@ -166,6 +170,10 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
             });
         }
     };
+    
+    if (isUserLoading || areDeliveriesLoading) {
+      return <div>Loading dashboard...</div>
+    }
 
     return (
     <div className="flex flex-col gap-8">
@@ -458,6 +466,4 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
         </div>
     </div>
     );
-
-    
-
+}

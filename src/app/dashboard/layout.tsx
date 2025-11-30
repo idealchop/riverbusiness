@@ -142,7 +142,7 @@ export default function DashboardLayout({
     const storageRef = ref(storage, filePath);
 
     try {
-        await uploadBytes(storageRef, paymentProofFile);
+        await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(storageRef);
 
         const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', invoiceId);
@@ -797,7 +797,7 @@ export default function DashboardLayout({
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
-              {React.cloneElement(children as React.ReactElement, { user })}
+              {children}
             </div>
           </main>
           <footer className="p-4 text-center text-xs text-muted-foreground border-t">
@@ -809,5 +809,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
