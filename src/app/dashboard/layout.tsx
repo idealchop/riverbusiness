@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, QrCode } from 'lucide-react';
+import { QrCode } from 'lucide-react';
 
 
 interface OnboardingData {
@@ -244,34 +244,6 @@ export default function DashboardLayout({
                   <TabsTrigger value="invoices"><Receipt className="mr-2" />Invoices</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="plans" className="py-4">
-                  {onboardingData?.plan && onboardingData.customPlanDetails ? (
-                    <div className="border rounded-lg p-4 bg-accent/50 space-y-4">
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
-                                {planImage && (
-                                <Image
-                                    src={planImage.imageUrl}
-                                    alt={onboardingData.plan.name}
-                                    width={150}
-                                    height={150}
-                                    className="rounded-lg object-cover"
-                                    data-ai-hint={planImage.imageHint}
-                                />
-                            )}
-                            <div className="flex-1">
-                                <p className="font-bold text-xl">{onboardingData.plan.name}</p>
-                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                    <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
-                                    <p><strong>Bonus Liters:</strong> {onboardingData.customPlanDetails.bonusLiters.toLocaleString()}</p>
-                                    <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
-                                    <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                  ) : <p>No plan information available. Please complete onboarding.</p>}
-                </TabsContent>
-
                 <TabsContent value="accounts" className="py-4">
                     {onboardingData?.formData ? (
                         <div className="space-y-4">
@@ -305,99 +277,107 @@ export default function DashboardLayout({
                         </div>
                     ) : <p>No account information available. Please complete onboarding.</p>}
                 </TabsContent>
+
+                <TabsContent value="plans" className="py-4">
+                  {onboardingData?.plan && onboardingData.customPlanDetails ? (
+                    <div className="border rounded-lg p-4 bg-accent/50 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                                {planImage && (
+                                <Image
+                                    src={planImage.imageUrl}
+                                    alt={onboardingData.plan.name}
+                                    width={150}
+                                    height={150}
+                                    className="rounded-lg object-cover"
+                                    data-ai-hint={planImage.imageHint}
+                                />
+                            )}
+                            <div className="flex-1">
+                                <p className="font-bold text-xl">{onboardingData.plan.name}</p>
+                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                    <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
+                                    <p><strong>Bonus Liters:</strong> {onboardingData.customPlanDetails.bonusLiters.toLocaleString()}</p>
+                                    <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
+                                    <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                  ) : <p>No plan information available. Please complete onboarding.</p>}
+                </TabsContent>
                 
                 <TabsContent value="invoices" className="py-4">
                     {onboardingData?.plan ? (
-                        <div className="space-y-4">
-                             <h4 className="font-semibold mb-2">Invoice History</h4>
-                             <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableCell>Invoice ID</TableCell>
-                                    <TableCell>Date</TableCell>
-                                    <TableCell>Status</TableCell>
-                                    <TableCell className="text-right">Amount</TableCell>
-                                    <TableCell className="text-right">Actions</TableCell>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {paymentHistory.map((payment) => (
-                                    <TableRow key={payment.id}>
-                                    <TableCell className="font-medium">{payment.id}</TableCell>
-                                    <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                        variant={
-                                            payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')
-                                        }
-                                        className={
-                                            payment.status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                            : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
-                                        }
-                                        >
-                                        {payment.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono">
-                                        ₱{payment.amount.toFixed(2)}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {payment.status === 'Upcoming' ? (
-                                        <Dialog>
-                                            <DialogTrigger asChild>
-                                            <Button size="sm">
-                                                <CreditCard className="mr-2 h-4 w-4" />
-                                                Pay Now
-                                            </Button>
-                                            </DialogTrigger>
-                                            <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Pay Invoice {payment.id}</DialogTitle>
-                                                <DialogDescription>
-                                                Scan a QR code to pay ₱{payment.amount.toFixed(2)}.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="grid grid-cols-2 gap-4 py-4">
-                                                {gcashQr && (
-                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                        <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />
-                                                        <p className="font-semibold">GCash</p>
-                                                    </div>
-                                                )}
-                                                {bankQr && (
-                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                        <Image src={bankQr.imageUrl} alt="BDO QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
-                                                        <p className="font-semibold">BDO</p>
-                                                    </div>
-                                                )}
-                                                {bankQr && (
-                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                        <Image src={bankQr.imageUrl} alt="BPI QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
-                                                        <p className="font-semibold">BPI</p>
-                                                    </div>
-                                                )}
-                                                {paymayaQr && (
-                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                                        <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />
-                                                        <p className="font-semibold">PayMaya</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                        ) : (
-                                        <Button variant="outline" size="sm" disabled>
-                                            <Check className="mr-2 h-4 w-4" />
-                                            Paid
-                                        </Button>
-                                        )}
-                                    </TableCell>
-                                    </TableRow>
-                                ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Invoice Summary</CardTitle>
+                                <CardDescription>Your estimated recurring bill based on your current plan.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex justify-between items-baseline">
+                                    <p className="text-muted-foreground">Estimated Monthly Bill</p>
+                                    <p className="text-2xl font-bold">₱{onboardingData.plan.price.toLocaleString()}</p>
+                                </div>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button className="w-full">View Invoice History</Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-3xl">
+                                        <DialogHeader>
+                                            <DialogTitle>Invoice History</DialogTitle>
+                                            <DialogDescription>A record of all your past and upcoming invoices.</DialogDescription>
+                                        </DialogHeader>
+                                        <div className="py-4 max-h-[60vh] overflow-y-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableCell>Invoice ID</TableCell>
+                                                        <TableCell>Date</TableCell>
+                                                        <TableCell>Status</TableCell>
+                                                        <TableCell className="text-right">Amount</TableCell>
+                                                        <TableCell className="text-right">Actions</TableCell>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {paymentHistory.map((payment) => (
+                                                        <TableRow key={payment.id}>
+                                                            <TableCell className="font-medium">{payment.id}</TableCell>
+                                                            <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                                            <TableCell>
+                                                                <Badge
+                                                                    variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                                    className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                                >{payment.status}</Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                {payment.status === 'Upcoming' ? (
+                                                                    <Dialog>
+                                                                        <DialogTrigger asChild><Button size="sm"><CreditCard className="mr-2 h-4 w-4" />Pay Now</Button></DialogTrigger>
+                                                                        <DialogContent>
+                                                                            <DialogHeader>
+                                                                                <DialogTitle>Pay Invoice {payment.id}</DialogTitle>
+                                                                                <DialogDescription>Scan a QR code to pay ₱{payment.amount.toFixed(2)}.</DialogDescription>
+                                                                            </DialogHeader>
+                                                                            <div className="grid grid-cols-2 gap-4 py-4">
+                                                                                {gcashQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} /><p className="font-semibold">GCash</p></div>)}
+                                                                                {bankQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={bankQr.imageUrl} alt="BDO QR" width={150} height={150} data-ai-hint={bankQr.imageHint} /><p className="font-semibold">BDO</p></div>)}
+                                                                                {bankQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={bankQr.imageUrl} alt="BPI QR" width={150} height={150} data-ai-hint={bankQr.imageHint} /><p className="font-semibold">BPI</p></div>)}
+                                                                                {paymayaQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} /><p className="font-semibold">PayMaya</p></div>)}
+                                                                            </div>
+                                                                        </DialogContent>
+                                                                    </Dialog>
+                                                                ) : (<Button variant="outline" size="sm" disabled><Check className="mr-2 h-4 w-4" />Paid</Button>)}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardContent>
+                        </Card>
                     ) : <p>No invoice information available. Please complete onboarding.</p>}
                 </TabsContent>
 
