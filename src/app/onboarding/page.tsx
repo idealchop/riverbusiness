@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
-import { AppUser } from '@/lib/types';
+import { AppUser, ImagePlaceholder } from '@/lib/types';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -73,6 +73,7 @@ export default function OnboardingPage() {
   const [gallonPrice, setGallonPrice] = React.useState<number>(0);
   const [dispenserQuantity, setDispenserQuantity] = React.useState<number>(0);
   const [dispenserPrice, setDispenserPrice] = React.useState<number>(0);
+  const [selectedPlanImage, setSelectedPlanImage] = React.useState<ImagePlaceholder | null>(null);
 
   
   const form = useForm<OnboardingFormValues>({
@@ -117,6 +118,15 @@ export default function OnboardingPage() {
 
   const handleClientTypeSelect = (clientTypeName: string) => {
     setSelectedClientType(clientTypeName);
+
+    const client = clientTypes.find(c => c.name === clientTypeName);
+    if (client) {
+        const image = PlaceHolderImages.find(p => p.id === client.imageId);
+        setSelectedPlanImage(image || null);
+    } else {
+        setSelectedPlanImage(null);
+    }
+
     // Resetting states
     setCustomLiters(0);
     setBonusLiters(0);
@@ -281,9 +291,14 @@ export default function OnboardingPage() {
                         </div>
                         
                         <div className="mt-4 border rounded-lg p-4 bg-accent/50 space-y-4">
+                            {selectedPlanImage && (
+                                <div className="relative h-40 w-full rounded-lg overflow-hidden mb-4">
+                                    <Image src={selectedPlanImage.imageUrl} alt={selectedClientType || 'Plan Image'} layout="fill" objectFit="cover" data-ai-hint={selectedPlanImage.imageHint} />
+                                </div>
+                            )}
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <div className="flex-1">
-                                    <p className="font-bold text-xl">{selectedPlan.name}</p>
+                                    <p className="font-bold text-xl">{selectedPlan.name} ({selectedClientType})</p>
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                         <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()}</p>
                                         <p><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</p>
