@@ -2,6 +2,8 @@
 'use client'
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send } from 'lucide-react';
@@ -16,11 +18,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import type { Feedback, AppUser } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
 
 
 const gallonToLiter = (gallons: number) => gallons * 19;
 
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
+    const pathname = usePathname();
     const [greeting, setGreeting] = useState('');
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
     const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
@@ -110,6 +114,24 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
     return (
     <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-4 border-b pb-4">
+            <Link href="/dashboard">
+                <Badge
+                variant={pathname === '/dashboard' ? 'default' : 'secondary'}
+                className="text-base px-4 py-2 cursor-pointer"
+                >
+                Dashboard
+                </Badge>
+            </Link>
+            <Link href="/dashboard/payments">
+                <Badge
+                variant={pathname === '/dashboard/payments' ? 'default' : 'secondary'}
+                className="text-base px-4 py-2 cursor-pointer"
+                >
+                Payments
+                </Badge>
+            </Link>
+        </div>
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">{greeting}, {userName}!</h1>
             <div className="flex items-center gap-2">
