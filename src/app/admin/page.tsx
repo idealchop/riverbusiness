@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -56,6 +55,13 @@ const adjustConsumptionSchema = z.object({
 });
 type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
+const newDeliverySchema = z.object({
+    date: z.date({ required_error: 'Date is required.'}),
+    referenceId: z.string().min(1, 'Reference ID is required.'),
+    volumeGallons: z.coerce.number().min(1, 'Volume is required.'),
+    proofUrl: z.string().optional(),
+})
+type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
 export default function AdminPage() {
     const [appUsers, setAppUsers] = useState<AppUser[]>([]);
@@ -80,6 +86,7 @@ export default function AdminPage() {
     const [isStationProfileOpen, setIsStationProfileOpen] = useState(false);
     const [isAssignStationOpen, setIsAssignStationOpen] = useState(false);
     const [stationToAssign, setStationToAssign] = useState<string | undefined>();
+    const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = useState(false);
     
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
@@ -158,6 +165,14 @@ export default function AdminPage() {
         resolver: zodResolver(newStationSchema),
         defaultValues: { name: stationToUpdate?.name || '', location: stationToUpdate?.location || '' },
         resetOptions: { keepDefaultValues: true },
+    });
+
+    const deliveryForm = useForm<NewDeliveryFormValues>({
+        resolver: zodResolver(newDeliverySchema),
+        defaultValues: {
+            referenceId: '',
+            volumeGallons: 0,
+        },
     });
 
     useEffect(() => {
@@ -329,6 +344,31 @@ export default function AdminPage() {
         });
         
         setDeliveryToUpdate(null);
+    };
+
+    const handleCreateDelivery = (values: NewDeliveryFormValues) => {
+        if (!userForHistory) return;
+
+        const newDelivery: Delivery = {
+            id: values.referenceId,
+            userId: userForHistory.id,
+            date: values.date.toISOString(),
+            volumeGallons: values.volumeGallons,
+            status: 'Delivered', // Manually added deliveries are considered delivered
+            proofOfDeliveryUrl: values.proofUrl,
+        };
+
+        const updatedDeliveries = [...deliveries, newDelivery];
+        setDeliveries(updatedDeliveries);
+        localStorage.setItem('deliveries', JSON.stringify(updatedDeliveries));
+
+        toast({
+            title: "Delivery Created",
+            description: `Manual delivery ${newDelivery.id} has been added for ${userForHistory.name}.`
+        });
+
+        deliveryForm.reset();
+        setIsCreateDeliveryOpen(false);
     };
 
 
@@ -517,6 +557,10 @@ export default function AdminPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Download CSV
                     </Button>
+                    <Button onClick={() => setIsCreateDeliveryOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Delivery
+                    </Button>
                 </div>
                  <div className="py-4 max-h-[60vh] overflow-y-auto">
                     <Table>
@@ -571,6 +615,105 @@ export default function AdminPage() {
                         </TableBody>
                     </Table>
                 </div>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create Manual Delivery</DialogTitle>
+                    <DialogDescription>Manually add a delivery record for {userForHistory?.name}.</DialogDescription>
+                </DialogHeader>
+                <Form {...deliveryForm}>
+                    <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
+                        <FormField
+                            control={deliveryForm.control}
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Delivery Date</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full text-left font-normal",
+                                                        !field.value && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {field.value ? (
+                                                        format(field.value, "PPP")
+                                                    ) : (
+                                                        <span>Pick a date</span>
+                                                    )}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={deliveryForm.control}
+                            name="referenceId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Reference ID</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., MAN-001" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={deliveryForm.control}
+                            name="volumeGallons"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Volume (Gallons)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 5000" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={deliveryForm.control}
+                            name="proofUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Proof of Delivery (Optional URL)</FormLabel>
+                                    <FormControl>
+                                       <Input placeholder="https://example.com/proof.jpg" {...field} />
+                                    </FormControl>
+                                     <div className="flex items-center space-x-2 mt-2">
+                                        <Label htmlFor="upload-proof-file">Or upload file:</Label>
+                                        <Input id="upload-proof-file" type="file" className="text-sm" />
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">Create Delivery</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
 
@@ -1021,5 +1164,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
