@@ -95,7 +95,7 @@ export default function DashboardLayout({
               <Button
                   variant="outline"
                   size="icon"
-                  className="overflow-hidden rounded-full"
+                  className="relative overflow-hidden rounded-full"
               >
                   <Bell className="h-5 w-5" />
               </Button>
@@ -154,7 +154,7 @@ export default function DashboardLayout({
                     className={cn("rounded-full overflow-hidden")}
                   />
                 )}
-                <div className="hidden sm:block">
+                <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{userName}</p>
                   <p className="text-xs text-muted-foreground">{accountType ? `${accountType} Plan` : 'Account'}</p>
                 </div>
