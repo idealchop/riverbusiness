@@ -608,14 +608,12 @@ export default function DashboardLayout({
           <footer className="p-4 text-center text-xs text-muted-foreground border-t">
               v1.0.0 - Smart Refill is a trademark and product name of{' '}
               <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                  River
+                  River Philippines
               </a>.
           </footer>
       </div>
   );
 }
-
-
 
     
 
