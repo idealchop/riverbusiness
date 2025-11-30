@@ -1,0 +1,202 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict, path-based user-ownership model.
+ * All data directly related to a user is stored in subcollections under their
+ * unique user ID (`/users/{userId}/...`). This ensures that users can only ever
+ * access their own information, providing strong security guarantees.
+ *
+ * Data Structure: The database is organized around a main `/users` collection, which
+ * houses documents for each user. Each user document contains several subcollections
+ * for their profile, consumption data, deliveries, and other personal records. A separate
+ * top-level collection, `/complianceReports`, holds data that is intended for broader,
+ * read-only access by authenticated users.
+ *
+ * Key Security Decisions:
+ * - User data is private by default. Access to any path under `/users/{userId}`
+ *   is restricted to the authenticated user whose UID matches `{userId}`.
+ * - User enumeration is disallowed. Rules prevent listing the documents in the
+ *   top-level `/users` collection to protect user privacy.
+ * - Public-facing data (`complianceReports`) is read-only for any authenticated user.
+ *   Writes to this collection are currently disabled, as an ownership model has not
+ *   been defined for these documents. This is a secure default that prevents
+ *   unauthorized modification.
+ *
+ * Denormalization for Authorization: The data structure is designed to be
+ * authorization-friendly. By nesting user data under a path containing their UID,
+ * we avoid slow and costly `get()` calls in our rules. Ownership is determined
+ * directly from the document path. Additionally, documents within these user-specific
+ * subcollections contain a `userId` field, which is validated against the path to
+ * ensure relational integrity.
+ *
+ * Structural Segregation: The design separates private user data (e.g.,
+ * `waterConsumption`) from semi-public data (`complianceReports`) by placing them
+ * in different top-level collections. This segregation allows for simple,
+ * performant, and secure rules for each collection based on its distinct
+ * security posture.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    /**
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the core function for enforcing the user-ownership model.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the user is the owner of an existing document.
+     * Used for update and delete operations to prevent modifying non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+    
+    /**
+     * Ensures the internal `userId` field matches the user's auth UID on create.
+     */
+    function isLinkedToOwnerOnCreate() {
+      return request.resource.data.userId == request.auth.uid;
+    }
+
+    /**
+     * Ensures the internal `userId` field is immutable on update.
+     */
+    function ownerLinkIsImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    /**
+     * This is a placeholder collection to nest all user-specific data.
+     * Direct access to this path is blocked to prevent user enumeration.
+     * @description Disallows any direct operations on user root documents to prevent listing all users.
+     * @path /users/{userId}
+     * @allow (none) - All operations are denied.
+     * @deny A user trying to list all documents in the `/users` collection.
+     * @principle Prevents user enumeration, a critical privacy protection.
+     */
+    match /users/{userId} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description A user can manage their own profile document.
+     * @path /users/{userId}/userProfile/{profileId}
+     * @allow A logged-in user (auth.uid: 'user123') creating their own profile at `/users/user123/userProfile/my-profile`. (create)
+     * @deny A logged-in user (auth.uid: 'user456') trying to read a profile at `/users/user123/userProfile/my-profile`. (get)
+     * @principle Restricts access to a user's own data tree and validates relational integrity.
+     */
+    match /users/{userId}/userProfile/{profileId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user can manage their own water consumption records.
+     * @path /users/{userId}/waterConsumption/{waterConsumptionId}
+     * @allow A logged-in user (auth.uid: 'user123') creating a consumption record at `/users/user123/waterConsumption/record-abc`. (create)
+     * @deny An anonymous user trying to list consumption records at `/users/user123/waterConsumption`. (list)
+     * @principle Enforces document ownership and validates the `userId` foreign key.
+     */
+    match /users/{userId}/waterConsumption/{waterConsumptionId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isLinkedToOwnerOnCreate();
+      allow update: if isExistingOwner(userId) && ownerLinkIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user can manage their own water delivery records.
+     * @path /users/{userId}/waterDeliveries/{waterDeliveryId}
+     * @allow A logged-in user (auth.uid: 'user123') deleting their own delivery record at `/users/user123/waterDeliveries/delivery-abc`. (delete)
+     * @deny A logged-in user (auth.uid: 'user456') trying to update a delivery record at `/users/user123/waterDeliveries/delivery-abc`. (update)
+     * @principle Enforces document ownership and validates the `userId` foreign key.
+     */
+    match /users/{userId}/waterDeliveries/{waterDeliveryId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isLinkedToOwnerOnCreate();
+      allow update: if isExistingOwner(userId) && ownerLinkIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user can manage their own sanitation visit records.
+     * @path /users/{userId}/sanitationVisits/{sanitationVisitId}
+     * @allow A logged-in user (auth.uid: 'user123') reading their sanitation visit at `/users/user123/sanitationVisits/visit-abc`. (get)
+     * @deny A logged-in user (auth.uid: 'user456') trying to create a sanitation visit at `/users/user123/sanitationVisits/visit-abc`. (create)
+     * @principle Enforces document ownership and validates the `userId` foreign key.
+     */
+    match /users/{userId}/sanitationVisits/{sanitationVisitId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isLinkedToOwnerOnCreate();
+      allow update: if isExistingOwner(userId) && ownerLinkIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user can read their own AI-generated consumption predictions. Writing is likely a backend-only process and is disallowed for clients.
+     * @path /users/{userId}/consumptionPredictions/{consumptionPredictionId}
+     * @allow A logged-in user (auth.uid: 'user123') listing their predictions at `/users/user123/consumptionPredictions`. (list)
+     * @deny Any user trying to create, update, or delete a prediction, as this is a server-driven process. (create, update, delete)
+     * @principle Restricts access to a user's own data tree, providing read-only access for client applications.
+     */
+    match /users/{userId}/consumptionPredictions/{consumptionPredictionId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description A user can manage their own customer service requests.
+     * @path /users/{userId}/customerServiceRequests/{customerServiceRequestId}
+     * @allow A logged-in user (auth.uid: 'user123') creating a new service request at `/users/user123/customerServiceRequests/request-abc`. (create)
+     * @deny An anonymous user trying to read a service request at `/users/user123/customerServiceRequests/request-abc`. (get)
+     * @principle Enforces document ownership and validates the `userId` foreign key.
+     */
+    match /users/{userId}/customerServiceRequests/{customerServiceRequestId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isLinkedToOwnerOnCreate();
+      allow update: if isExistingOwner(userId) && ownerLinkIsImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Compliance reports are public-readable for any authenticated user, but cannot be modified by clients.
+     * @path /complianceReports/{complianceReportId}
+     * @allow Any authenticated user can read or list compliance reports. (get, list)
+     * @deny Any user, authenticated or not, attempting to create, update, or delete a report. (create, update, delete)
+     * @principle Provides public read access for signed-in users while securing write operations.
+     */
+    match /complianceReports/{complianceReportId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      // CRITICAL: Cannot implement owner-only writes. The 'ComplianceReport' entity is missing an 'ownerId' or 'authorId' field.
+      allow create: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow update: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation once the schema is updated with an ownership field.
+    }
+  }
+}
