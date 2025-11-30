@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import type { Delivery, WaterStation, ComplianceReport, SanitationVisit, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import Image from 'next/image';
