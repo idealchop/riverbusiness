@@ -20,8 +20,8 @@ const gallonToLiter = (gallons: number) => gallons * 3.78541;
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
     const [greeting, setGreeting] = useState('');
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
-    const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
-    const [remainingLiters, setRemainingLiters] = useState(0);
+    const [totalLitersPurchased, setTotalLitersPurchased] = useState(5000);
+    const [remainingLiters, setRemainingLiters] = useState(5000);
 
     useEffect(() => {
         if (initialUserName) {
@@ -39,26 +39,15 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             setGreeting('Good evening');
         }
 
-        const onboardingData = localStorage.getItem('onboardingData');
-        if (onboardingData) {
-            const { customPlanDetails } = JSON.parse(onboardingData);
-            if (customPlanDetails && customPlanDetails.litersPerMonth) {
-                const purchased = customPlanDetails.litersPerMonth;
-                setTotalLitersPurchased(purchased);
+        const totalPurchased = 5000;
+        setTotalLitersPurchased(totalPurchased);
 
-                const consumed = deliveries
-                    .filter(d => d.status === 'Delivered')
-                    .reduce((acc, curr) => acc + gallonToLiter(curr.volumeGallons), 0);
-                    
-                setRemainingLiters(Math.max(0, purchased - consumed));
-            } else {
-                setTotalLitersPurchased(800);
-                setRemainingLiters(800);
-            }
-        } else {
-             setTotalLitersPurchased(800);
-             setRemainingLiters(800);
-        }
+        const consumedLiters = deliveries
+            .filter(d => d.status === 'Delivered')
+            .reduce((total, delivery) => total + gallonToLiter(delivery.volumeGallons), 0);
+
+        setRemainingLiters(Math.max(0, totalPurchased - consumedLiters));
+        
     }, []);
 
 
@@ -210,5 +199,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     
 
 
+
+    
 
     
