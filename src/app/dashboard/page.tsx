@@ -123,40 +123,55 @@ export default function DashboardPage() {
     }, [user]);
 
     const consumptionChartData = React.useMemo(() => {
-        if (!deliveries) return [];
-        
+      // If there's no delivery data, show sample data.
+      if (!deliveries || deliveries.length === 0) {
         if (analyticsFilter === 'weekly') {
-            const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
-            return last7Days.map(date => {
-                const deliveriesOnDay = deliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-                const totalGallons = deliveriesOnDay.reduce((sum, d) => sum + d.volumeGallons, 0);
-                return {
-                    name: format(date, 'EEE').charAt(0),
-                    value: gallonToLiter(totalGallons)
-                };
-            });
+          const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
+          return last7Days.map(date => ({
+              name: format(date, 'EEE').charAt(0),
+              value: Math.floor(Math.random() * (200 - 50 + 1) + 50) // Random value between 50 and 200
+          }));
         } else { // monthly
-            const now = new Date();
-            const firstDay = startOfMonth(now);
-            const lastDay = endOfMonth(now);
-            const weeksInMonth = getWeekOfMonth(lastDay);
-
-            const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
+            return Array.from({ length: 4 }, (_, i) => ({
                 name: `Week ${i + 1}`,
-                value: 0
+                value: Math.floor(Math.random() * (1000 - 300 + 1) + 300) // Random value between 300 and 1000
             }));
-
-            deliveries.forEach(d => {
-                const deliveryDate = new Date(d.date);
-                if (deliveryDate >= firstDay && deliveryDate <= lastDay) {
-                    const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
-                    if(weeklyData[weekOfMonth]) {
-                        weeklyData[weekOfMonth].value += gallonToLiter(d.volumeGallons);
-                    }
-                }
-            });
-            return weeklyData;
         }
+      }
+
+      // If there IS delivery data, process it.
+      if (analyticsFilter === 'weekly') {
+          const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
+          return last7Days.map(date => {
+              const deliveriesOnDay = deliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
+              const totalGallons = deliveriesOnDay.reduce((sum, d) => sum + d.volumeGallons, 0);
+              return {
+                  name: format(date, 'EEE').charAt(0),
+                  value: gallonToLiter(totalGallons)
+              };
+          });
+      } else { // monthly
+          const now = new Date();
+          const firstDay = startOfMonth(now);
+          const lastDay = endOfMonth(now);
+          const weeksInMonth = getWeekOfMonth(lastDay);
+
+          const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
+              name: `Week ${i + 1}`,
+              value: 0
+          }));
+
+          deliveries.forEach(d => {
+              const deliveryDate = new Date(d.date);
+              if (deliveryDate >= firstDay && deliveryDate <= lastDay) {
+                  const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
+                  if(weeklyData[weekOfMonth]) {
+                      weeklyData[weekOfMonth].value += gallonToLiter(d.volumeGallons);
+                  }
+              }
+          });
+          return weeklyData;
+      }
     }, [deliveries, analyticsFilter]);
     
     const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
@@ -725,3 +740,5 @@ export default function DashboardPage() {
     </div>
     );
 }
+
+    
