@@ -46,7 +46,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center py-12">
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center justify-center">
-            <Logo className="h-12 w-12 mb-4" />
+            <Logo className="h-20 w-20 mb-4 mx-auto" />
             <h1 className="text-3xl font-bold">Sign In</h1>
             <p className="text-balance text-muted-foreground">
               Welcome back! Please enter your details.
