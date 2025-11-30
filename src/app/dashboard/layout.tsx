@@ -62,6 +62,15 @@ interface OnboardingData {
     contractUrl?: string;
 }
 
+type PaymentOption = {
+    name: string;
+    qr?: ImagePlaceholder | null;
+    details?: {
+        accountName: string;
+        accountNumber: string;
+    }
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -76,14 +85,13 @@ export default function DashboardLayout({
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
-  const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr-payment');
-  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr');
-  const cardPayment = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
+  const bpiQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
+  const mayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
 
   const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
-  const [selectedPaymentQr, setSelectedPaymentQr] = useState<ImagePlaceholder | null>(null);
+  const [selectedPaymentOption, setSelectedPaymentOption] = useState<PaymentOption | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -232,12 +240,23 @@ export default function DashboardLayout({
 
   const planImage = onboardingData?.plan?.imageId ? PlaceHolderImages.find(p => p.id === onboardingData.plan.imageId) : null;
 
-  const paymentOptions = [
-      { name: 'GCash', qr: gcashQr },
-      { name: 'Maya', qr: paymayaQr },
-      { name: 'Bank', qr: bankQr },
-      { name: 'Card', qr: cardPayment },
-  ]
+  const paymentOptions: PaymentOption[] = [
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
+      { name: 'Maya', qr: mayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+      { name: 'Bank', qr: bpiQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
+      { name: 'Card' },
+  ];
+
+  const handlePaymentOptionClick = (option: PaymentOption) => {
+    if (option.name === 'Card') {
+        toast({
+            title: "Coming Soon!",
+            description: "Card payment option is currently under development."
+        });
+    } else {
+        setSelectedPaymentOption(option);
+    }
+  };
 
   return (
       <div className="flex flex-col h-full">
@@ -483,7 +502,7 @@ export default function DashboardLayout({
                                     <p className="text-2xl font-bold">₱{onboardingData.plan.price.toLocaleString()}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                     <Dialog onOpenChange={() => setSelectedPaymentQr(null)}>
+                                     <Dialog onOpenChange={() => setSelectedPaymentOption(null)}>
                                         <DialogTrigger asChild>
                                              <Button className="flex-1">
                                                 <CreditCard className="mr-2 h-4 w-4" />
@@ -492,26 +511,32 @@ export default function DashboardLayout({
                                         </DialogTrigger>
                                         <DialogContent>
                                             <DialogHeader>
-                                                {selectedPaymentQr ? (
-                                                     <Button variant="ghost" className="absolute top-3 left-3 h-8 w-8 p-0" onClick={() => setSelectedPaymentQr(null)}>
+                                                {selectedPaymentOption ? (
+                                                     <Button variant="ghost" className="absolute top-3 left-3 h-8 w-8 p-0" onClick={() => setSelectedPaymentOption(null)}>
                                                         <ArrowLeft className="h-4 w-4" />
                                                     </Button>
                                                 ): null}
-                                                <DialogTitle className={cn(selectedPaymentQr ? 'text-center' : '')}>
-                                                  {selectedPaymentQr ? `Scan to Pay with ${selectedPaymentQr.id.split('-')[0]}` : 'Select Payment Method'}
+                                                <DialogTitle className={cn(selectedPaymentOption ? 'text-center' : '')}>
+                                                  {selectedPaymentOption ? `Scan to Pay with ${selectedPaymentOption.name}` : 'Select Payment Method'}
                                                 </DialogTitle>
-                                                <DialogDescription className={cn(selectedPaymentQr ? 'text-center' : '')}>
-                                                    {selectedPaymentQr ? 'Use your preferred payment app to scan.' : 'Choose your preferred payment method below.'}
+                                                <DialogDescription className={cn(selectedPaymentOption ? 'text-center' : '')}>
+                                                    {selectedPaymentOption ? 'Use your preferred payment app to scan.' : 'Choose your preferred payment method below.'}
                                                 </DialogDescription>
                                             </DialogHeader>
-                                            {selectedPaymentQr ? (
-                                                <div className="flex justify-center py-4">
-                                                    <Image src={selectedPaymentQr.imageUrl} alt={selectedPaymentQr.description} width={250} height={250} data-ai-hint={selectedPaymentQr.imageHint} />
+                                            {selectedPaymentOption?.qr ? (
+                                                <div className="flex flex-col items-center justify-center py-4 gap-4">
+                                                    <Image src={selectedPaymentOption.qr.imageUrl} alt={selectedPaymentOption.qr.description} width={250} height={250} data-ai-hint={selectedPaymentOption.qr.imageHint} />
+                                                     {selectedPaymentOption.details && (
+                                                        <div className="text-center text-sm">
+                                                            <p><strong>Account Name:</strong> {selectedPaymentOption.details.accountName}</p>
+                                                            <p><strong>Account Number:</strong> {selectedPaymentOption.details.accountNumber}</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ) : (
                                                  <div className="grid grid-cols-2 gap-4 py-4">
-                                                    {paymentOptions.map(option => option.qr && (
-                                                        <Card key={option.name} className="flex flex-col items-center justify-center p-4 hover:bg-accent cursor-pointer" onClick={() => setSelectedPaymentQr(option.qr)}>
+                                                    {paymentOptions.map(option => (
+                                                        <Card key={option.name} className="flex flex-col items-center justify-center p-4 hover:bg-accent cursor-pointer" onClick={() => handlePaymentOptionClick(option)}>
                                                             <p className="font-semibold">{option.name}</p>
                                                         </Card>
                                                     ))}
@@ -726,9 +751,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
-
-    
-
-    

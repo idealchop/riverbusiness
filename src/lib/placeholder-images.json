@@ -7,9 +7,9 @@
       "imageHint": "person portrait"
     },
     {
-      "id": "maya-qr",
+      "id": "maya-qr-payment",
       "description": "Maya QR Code",
-      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_Maya.png?alt=media&token=1fd59b11-8b0c-4a6a-bcf8-4a6f38bdb9c4",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_maya.png?alt=media&token=a3ca4e56-c797-4d9a-8dcd-4b78a0a96965",
       "imageHint": "qr code payment"
     },
     {
@@ -21,13 +21,13 @@
     {
       "id": "gcash-qr-payment",
       "description": "GCash QR Code",
-      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_gcash.png?alt=media&token=3dbf2d18-cd4a-4ab1-a0e2-3b9952c42412",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2FRiver_gcash.png?alt=media&token=13c80b31-8f08-4857-a066-5a666d546d81",
       "imageHint": "qr code payment"
     },
     {
-      "id": "bank-qr-payment",
-      "description": "Bank QR Code",
-      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_unionbank.png?alt=media&token=e5428cad-1392-456e-a2fb-24026e848015",
+      "id": "bpi-qr-payment",
+      "description": "BPI QR Code",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_BPI.png?alt=media&token=6ac4fd16-2014-40fe-b7cf-1fdf3e94a61e",
       "imageHint": "qr code payment"
     },
     {
