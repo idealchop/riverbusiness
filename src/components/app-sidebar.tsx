@@ -11,38 +11,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Home, CreditCard, Droplet, Target, BarChart, FileCheck2, User, HelpCircle, Truck, TrendingUp, CheckSquare, Settings, Monitor } from 'lucide-react';
+import { Home, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
-  {
-    label: 'Monitoring',
-    icon: Monitor,
-    subItems: [
-      { href: '/dashboard/consumption', label: 'Consumption', icon: Droplet },
-      { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
-    ],
-  },
-  {
-    label: 'Quality & Compliance',
-    icon: CheckSquare,
-    subItems: [
-      { href: '/dashboard/quality', label: 'Compliance Reports', icon: FileCheck2 },
-      { href: '/dashboard/sanitation', label: 'Sanitation Visits', icon: TrendingUp },
-    ],
-  },
-  {
-    label: 'Tools',
-    icon: Settings,
-    subItems: [
-        { href: '/dashboard/predictions', label: 'Predictive Usage', icon: BarChart },
-        { href: '/dashboard/goals', label: 'Consumption Goals', icon: Target },
-    ],
-  },
-  { href: '/dashboard/support', label: 'Support', icon: HelpCircle },
 ];
 
 export function AppSidebar() {
@@ -59,43 +33,6 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarMenu>
           {menuItems.map((item) => (
-             'subItems' in item && item.subItems ? (
-              <Accordion type="single" collapsible key={item.label} className="w-full">
-                <AccordionItem value="item-1" className="border-none">
-                  <AccordionTrigger className="w-full justify-start hover:no-underline [&[data-state=open]>svg]:-rotate-90">
-                     <SidebarMenuButton
-                        isActive={item.subItems.some(sub => pathname.startsWith(sub.href))}
-                        className={cn("w-full justify-start")}
-                        asChild
-                      >
-                        <div>
-                          <item.icon className="h-5 w-5" />
-                          <span className="group-data-[collapsible=icon]:opacity-0">{item.label}</span>
-                        </div>
-                      </SidebarMenuButton>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-0 pl-7 group-data-[collapsible=icon]:hidden">
-                     <SidebarMenu className="gap-0">
-                      {item.subItems.map(subItem => (
-                        <SidebarMenuItem key={subItem.href}>
-                           <Link href={subItem.href}>
-                              <SidebarMenuButton
-                                isActive={pathname.startsWith(subItem.href)}
-                                className={cn("justify-start w-full")}
-                                tooltip={subItem.label}
-                                size="sm"
-                              >
-                                <subItem.icon className="h-4 w-4" />
-                                <span>{subItem.label}</span>
-                              </SidebarMenuButton>
-                           </Link>
-                        </SidebarMenuItem>
-                      ))}
-                     </SidebarMenu>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            ) : (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
@@ -108,7 +45,6 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-            )
           ))}
         </SidebarMenu>
       </SidebarContent>
