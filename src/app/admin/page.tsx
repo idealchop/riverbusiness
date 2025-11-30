@@ -924,7 +924,7 @@ export default function AdminPage() {
                             <Table className="min-w-full">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>User ID</TableHead>
+                                        <TableHead>Client ID</TableHead>
                                         <TableHead>Business Name</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Assigned Station</TableHead>
@@ -1183,3 +1183,4 @@ export default function AdminPage() {
     
 
     
+
