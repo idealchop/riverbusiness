@@ -562,15 +562,12 @@ export default function DashboardPage() {
                         <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1">
+                <CardContent className="flex-1 flex flex-col justify-center">
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
-                </CardContent>
-                <CardFooter>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setIsDeliveryHistoryOpen(true)}>
-                        <History className="mr-2 h-4 w-4"/>
+                    <Button variant="link" size="sm" className="h-auto p-0 mt-2 self-start" onClick={() => setIsDeliveryHistoryOpen(true)}>
                         View History
                     </Button>
-                </CardFooter>
+                </CardContent>
             </Card>
             <Card className="flex flex-col">
                 <CardHeader>
