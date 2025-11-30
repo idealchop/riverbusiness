@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
-import { format } from 'date-fns';
+import { format, differenceInMonths, addMonths } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +37,8 @@ import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDo
 import { doc, collection } from 'firebase/firestore';
 import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { clientTypes } from '@/lib/plans';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type Notification = {
     id: string;
@@ -66,7 +68,7 @@ export default function DashboardLayout({
   const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
 
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
-  const { data: paymentHistory } = useCollection<Payment>(paymentsQuery);
+  const { data: paymentHistoryFromDb } = useCollection<Payment>(paymentsQuery);
   
   const [editableFormData, setEditableFormData] = useState<Partial<AppUser>>({});
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -166,6 +168,43 @@ export default function DashboardLayout({
         setSwitchReason('');
         setSwitchUrgency('');
     };
+
+    const planImage = useMemo(() => {
+      if (!user?.clientType) return null;
+      const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
+      if (!clientTypeDetails) return null;
+      return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
+    }, [user]);
+
+    const generatedInvoices = useMemo(() => {
+      if (!user?.createdAt || !user.plan) return [];
+      
+      const invoices: Payment[] = [];
+      const now = new Date();
+      // Firestore serverTimestamp is an object, not a Date, so we check for 'toDate' method
+      const startDate = typeof user.createdAt.toDate === 'function' ? user.createdAt.toDate() : new Date();
+      const months = differenceInMonths(now, startDate);
+  
+      for (let i = 0; i <= months; i++) {
+        const invoiceDate = addMonths(startDate, i);
+        invoices.push({
+          id: `INV-${format(invoiceDate, 'yyyyMM')}`,
+          date: invoiceDate.toISOString(),
+          description: `${user.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
+          amount: user.plan.price,
+          status: 'Upcoming', // Default status, can be updated from DB
+        });
+      }
+
+      // Merge with DB payments
+      const mergedInvoices = invoices.map(inv => {
+        const dbInvoice = paymentHistoryFromDb?.find(p => p.id === inv.id);
+        return dbInvoice ? { ...inv, ...dbInvoice } : inv;
+      });
+
+      return mergedInvoices.reverse();
+    }, [user, paymentHistoryFromDb]);
+
 
   if (isUserLoading || isUserDocLoading) {
     return <div>Loading...</div>
@@ -379,6 +418,11 @@ export default function DashboardLayout({
                               <CardDescription>Details of your subscription with River Business.</CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-4">
+                              {planImage && (
+                                <div className="relative h-40 w-full rounded-lg overflow-hidden">
+                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} layout="fill" objectFit="cover" />
+                                </div>
+                              )}
                               <div className="flex justify-between items-baseline">
                                   <h3 className="text-xl font-bold">{user.plan.name}</h3>
                                   <p className="text-2xl font-bold">
@@ -402,11 +446,11 @@ export default function DashboardLayout({
                                   </div>
                                   <div>
                                       <p className="font-medium text-muted-foreground">Preferred Delivery Day</p>
-                                      <p>{user.customPlanDetails?.deliveryDay || 'N/A'}</p>
+                                      <p>{user.customPlanDetails?.deliveryDay || 'N-A'}</p>
                                   </div>
                                   <div>
                                       <p className="font-medium text-muted-foreground">Preferred Delivery Time</p>
-                                      <p>{user.customPlanDetails?.deliveryTime || 'N/A'}</p>
+                                      <p>{user.customPlanDetails?.deliveryTime || 'N-A'}</p>
                                   </div>
                                   <Separator className="col-span-2 my-2"/>
                                    <div>
@@ -451,10 +495,10 @@ export default function DashboardLayout({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {paymentHistory?.map((payment) => (
+                                    {generatedInvoices.map((payment) => (
                                         <TableRow key={payment.id}>
                                             <TableCell className="font-medium">{payment.id}</TableCell>
-                                            <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                            <TableCell>{format(new Date(payment.date), 'PP')}</TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}

@@ -59,6 +59,7 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<any | null>(null);
+  const [selectedClientType, setSelectedClientType] = React.useState<string | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
   const [bonusLiters, setBonusLiters] = React.useState<number>(0);
@@ -93,6 +94,7 @@ export default function OnboardingPage() {
         createdAt: serverTimestamp(),
         plan: selectedPlan,
         customPlanDetails: customPlanDetails,
+        clientType: selectedClientType,
         onboardingComplete: true,
         totalConsumptionLiters: 0,
     };
@@ -112,6 +114,7 @@ export default function OnboardingPage() {
   }
 
   const handleClientTypeSelect = (clientTypeName: string) => {
+    setSelectedClientType(clientTypeName);
     // Resetting states
     setCustomLiters(0);
     setBonusLiters(0);

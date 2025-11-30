@@ -1,5 +1,5 @@
 
-import {FieldValue} from 'firebase/firestore';
+import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
   date: string;
@@ -71,9 +71,10 @@ export interface AppUser {
     permissions?: Permission[];
     role: 'Admin' | 'User';
     assignedWaterStationId?: string;
-    createdAt: FieldValue;
+    createdAt: Timestamp | FieldValue;
     onboardingComplete?: boolean;
     plan?: any;
+    clientType?: string | null;
     customPlanDetails?: any;
 }
 
