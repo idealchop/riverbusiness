@@ -330,7 +330,7 @@ export default function DashboardPage() {
                         <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
                     </div>
                      <p className="text-xs text-muted-foreground">
-                        System will auto-schedule if balance is low.
+                        System will auto-schedule based on set schedule delivery
                     </p>
                     <div className="border-t pt-3 space-y-2">
                          <div>
