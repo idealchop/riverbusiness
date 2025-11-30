@@ -25,9 +25,9 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-           <Logo className="h-8 hidden group-data-[collapsible=icon]:block" />
-           <span className="group-data-[collapsible=icon]:hidden">River Business</span>
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg group-data-[collapsible=icon]:justify-center">
+           <Logo className="h-9 hidden group-data-[collapsible=icon]:block" />
+           <span className="font-bold group-data-[collapsible=icon]:hidden">River Business</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -37,7 +37,7 @@ export function AppSidebar() {
               <Link href={item.href}>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
-                  className={cn("justify-start")}
+                  className={cn("justify-start h-10")}
                   tooltip={item.label}
                 >
                   <item.icon className="h-5 w-5" />
