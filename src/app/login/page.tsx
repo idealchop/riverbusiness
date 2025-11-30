@@ -86,16 +86,13 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="hidden bg-muted lg:block">
-        {loginImage && (
-            <Image
-            src={loginImage.imageUrl}
-            alt={loginImage.description}
-            width="1920"
-            height="1080"
-            data-ai-hint={loginImage.imageHint}
-            className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
-        )}
+        <Image
+          src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FSales_Mats_v3.png?alt=media&token=5e2fc62e-0082-4c37-9078-e1cf5e188635"
+          alt="River Business Marketing Material"
+          width="1920"
+          height="1080"
+          className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+        />
       </div>
     </div>
   );
