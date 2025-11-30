@@ -97,10 +97,11 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
     
     const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
     const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
-    const fromLastMonthLiters = 250; // Placeholder
+    const fromLastMonthLiters = 0; // Placeholder for now
     const totalLitersPurchased = monthlyPlanLiters + bonusLiters + fromLastMonthLiters;
     const consumedLiters = user?.totalConsumptionLiters || 0;
     const remainingLiters = Math.max(0, totalLitersPurchased - consumedLiters);
+    const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
 
     const getStatusInfo = (status: Delivery['status'] | undefined) => {
         if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
@@ -269,16 +270,13 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
-                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
                      <div className="flex items-center text-xs text-red-600 mt-1">
                         <ArrowDown className="h-3 w-3 mr-1" />
-                        <span>2% from last month</span>
+                        <span>-</span>
                     </div>
                 </CardContent>
             </Card>
@@ -286,16 +284,13 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Remaining Liters
-                         <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
                      <div className="flex items-center text-xs text-muted-foreground mt-1">
                         <ArrowDown className="h-3 w-3 mr-1" />
-                        <span>10% from last month</span>
+                        <span>-</span>
                     </div>
                 </CardContent>
             </Card>
@@ -316,11 +311,11 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
                     <div className="border-t pt-3 space-y-2">
                          <div>
                             <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>
-                            <p className="font-semibold text-sm">August 15, 2024</p>
+                            <p className="font-semibold text-sm">Next {nextRefillDay}</p>
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
-                            <p className="font-semibold text-sm">5,000 Liters</p>
+                            <p className="font-semibold text-sm">{user?.customPlanDetails?.litersPerMonth.toLocaleString() || '0'} Liters</p>
                         </div>
                     </div>
                 </CardContent>
