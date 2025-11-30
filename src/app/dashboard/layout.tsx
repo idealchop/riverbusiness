@@ -312,16 +312,6 @@ export default function DashboardLayout({
           <Dialog>
             <DialogTrigger asChild>
               <div className="flex items-center gap-3 cursor-pointer">
-                {userAvatar && (
-                  <Image
-                    src={userAvatar.imageUrl}
-                    width={40}
-                    height={40}
-                    alt={userAvatar.description}
-                    data-ai-hint={userAvatar.imageHint}
-                    className={cn("rounded-full")}
-                  />
-                )}
                 <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{userName}</p>
                   <p className="text-xs text-muted-foreground">{onboardingData?.plan?.name || 'No Plan Selected'}</p>
@@ -620,6 +610,8 @@ export default function DashboardLayout({
 }
 
 
+
+    
 
     
 
