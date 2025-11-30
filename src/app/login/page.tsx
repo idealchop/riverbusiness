@@ -138,13 +138,18 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-            <div className="hidden lg:block relative">
-              <Image
-                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FLP_image_v3.png?alt=media&token=b2f8fa47-22ef-4e9f-a713-324f97655779"
-                alt="River Business Marketing Material"
-                fill
-                className="object-contain dark:brightness-[0.2] dark:grayscale"
-              />
+            <div className="hidden lg:flex flex-col items-center justify-center p-6">
+              <div className="relative w-full h-80">
+                  <Image
+                    src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FLP_image_v3.png?alt=media&token=b2f8fa47-22ef-4e9f-a713-324f97655779"
+                    alt="River Business Marketing Material"
+                    fill
+                    className="object-contain dark:brightness-[0.2] dark:grayscale"
+                  />
+              </div>
+              <p className="mt-4 text-center text-lg font-semibold text-foreground">
+                Automate Water Refill To Drive Business Growth
+              </p>
             </div>
           </div>
       </Card>
