@@ -416,7 +416,7 @@ export default function AdminPage() {
                                     <TableRow key={log.id}>
                                         <TableCell className="whitespace-nowrap">{log.id}</TableCell>
                                         <TableCell className="whitespace-nowrap">{log.userName}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{format(new Date(log.timestamp), 'PPpp')}</TableCell>
                                         <TableCell className="whitespace-nowrap">{log.ipAddress}</TableCell>
                                         <TableCell>
                                         <Badge variant={log.status === 'Success' ? 'default' : 'destructive'}>
@@ -526,3 +526,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
