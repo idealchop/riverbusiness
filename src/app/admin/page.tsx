@@ -43,6 +43,13 @@ const newUserSchema = z.object({
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
 
+const newStationSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    location: z.string().min(1, 'Location is required'),
+});
+
+type NewStationFormValues = z.infer<typeof newStationSchema>;
+
 interface InvoiceRequest {
   id: string;
   userName: string;
@@ -79,7 +86,10 @@ export default function AdminPage() {
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
-
+    const [isCreateStationOpen, setIsCreateStationOpen] = useState(false);
+    const [isAssignStationOpen, setIsAssignStationOpen] = useState(false);
+    const [stationToAssign, setStationToAssign] = useState<string | undefined>();
+    
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
         setSelectedUser(event.detail);
@@ -164,6 +174,14 @@ export default function AdminPage() {
             role: 'User',
         },
     });
+    
+    const stationForm = useForm<NewStationFormValues>({
+        resolver: zodResolver(newStationSchema),
+        defaultValues: {
+            name: '',
+            location: '',
+        },
+    });
 
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
@@ -190,6 +208,42 @@ export default function AdminPage() {
             description: `User ${newUser.name} has been created successfully.`,
         });
     };
+
+    const handleCreateStation = (values: NewStationFormValues) => {
+        const newStation: WaterStation = {
+            id: `WS-${String(waterStations.length + 1).padStart(3, '0')}`,
+            ...values,
+            permitUrl: '#',
+        };
+        const updatedStations = [...waterStations, newStation];
+        setWaterStations(updatedStations);
+        localStorage.setItem('waterStations', JSON.stringify(updatedStations));
+        stationForm.reset();
+        setIsCreateStationOpen(false);
+        toast({
+            title: 'Water Station Created',
+            description: `Station ${newStation.name} has been created.`,
+        });
+    };
+
+    const handleAssignStation = () => {
+        if (!selectedUser || !stationToAssign) return;
+
+        const updatedUsers = appUsers.map(user => 
+            user.id === selectedUser.id ? { ...user, assignedWaterStationId: stationToAssign } : user
+        );
+        setAppUsers(updatedUsers);
+        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+
+        toast({
+            title: 'Station Assigned',
+            description: `Station assigned to ${selectedUser.name}.`,
+        });
+
+        setIsAssignStationOpen(false);
+        setStationToAssign(undefined);
+    };
+
     
     const handleResetPassword = (userId: string) => {
         const newPassword = Math.random().toString(36).slice(-8);
@@ -411,6 +465,10 @@ export default function AdminPage() {
                                  <p className="font-medium text-muted-foreground">Last Login</p>
                                  <p>{format(new Date(selectedUser.lastLogin), 'PP')}</p>
                              </div>
+                             <div>
+                                <p className="font-medium text-muted-foreground">Assigned Station</p>
+                                <p>{waterStations.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</p>
+                            </div>
                          </div>
                          <Separator className="my-4" />
                          <div className="flex flex-col space-y-2">
@@ -741,8 +799,7 @@ export default function AdminPage() {
                                         <TableHead>ID</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Last Login</TableHead>
-                                        <TableHead>Role</TableHead>
+                                        <TableHead>Assigned Station</TableHead>
                                         <TableHead>Delivery Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -761,8 +818,7 @@ export default function AdminPage() {
                                                     {user.accountStatus}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap">{format(new Date(user.lastLogin), 'PP')}</TableCell>
-                                            <TableCell>{user.role}</TableCell>
+                                            <TableCell>{waterStations.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
                                                     <Badge variant={statusInfo.variant} className={cn(
@@ -788,6 +844,10 @@ export default function AdminPage() {
                                                             <UserCog className="mr-2 h-4 w-4" />
                                                             View Details
                                                         </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsAssignStationOpen(true); }}>
+                                                            <Building className="mr-2 h-4 w-4" />
+                                                            Assign Station
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
                                                             <PlusCircle className="mr-2 h-4 w-4" />
                                                             Add Consumption
@@ -795,10 +855,6 @@ export default function AdminPage() {
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem>
-                                                            <ShieldCheck className="mr-2 h-4 w-4" />
-                                                            Assign Permissions
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); handleResetPassword(user.id); }}>
                                                             <KeyRound className="mr-2 h-4 w-4" />
@@ -874,6 +930,48 @@ export default function AdminPage() {
                         </div>
                     </TabsContent>
                     <TabsContent value="water-stations">
+                        <div className="flex justify-end mb-4">
+                            <Dialog open={isCreateStationOpen} onOpenChange={setIsCreateStationOpen}>
+                                <DialogTrigger asChild>
+                                    <Button><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create New Water Station</DialogTitle>
+                                    </DialogHeader>
+                                    <Form {...stationForm}>
+                                        <form onSubmit={stationForm.handleSubmit(handleCreateStation)} className="space-y-4">
+                                             <FormField
+                                                control={stationForm.control}
+                                                name="name"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Station Name</FormLabel>
+                                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={stationForm.control}
+                                                name="location"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Location</FormLabel>
+                                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <DialogFooter>
+                                                <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+                                                <Button type="submit">Create</Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </Form>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                         <div className="overflow-x-auto">
                            <Table>
                                 <TableHeader>
@@ -899,39 +997,19 @@ export default function AdminPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Dialog onOpenChange={(open) => !open && setStationToUpdate(null)}>
-                                                    <DialogTrigger asChild>
-                                                        <Button variant="outline" size="sm" onClick={() => setStationToUpdate(station)}>
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                         <DropdownMenuItem onClick={() => setStationToUpdate(station)}>
                                                             <Paperclip className="mr-2 h-4 w-4"/>
                                                             Attach Permit
-                                                        </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-md">
-                                                        <DialogHeader>
-                                                            <DialogTitle>Attach Permit for {station.name}</DialogTitle>
-                                                            <DialogDescription>
-                                                                Upload the permit document for this water station.
-                                                            </DialogDescription>
-                                                        </DialogHeader>
-                                                        <div className="grid gap-4 py-4">
-                                                            <div className="grid w-full max-w-sm items-center gap-1.5">
-                                                                <Label htmlFor="permit-file">Permit File</Label>
-                                                                <Input id="permit-file" type="file" />
-                                                            </div>
-                                                        </div>
-                                                        <DialogFooter>
-                                                            <DialogClose asChild>
-                                                                <Button type="button" variant="secondary">Cancel</Button>
-                                                            </DialogClose>
-                                                          
-                                                            <Button type="button" onClick={handleAttachPermit}>
-                                                                <Upload className="mr-2 h-4 w-4" />
-                                                                Attach
-                                                            </Button>
-                                                            
-                                                        </DialogFooter>
-                                                    </DialogContent>
-                                                </Dialog>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                 </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -942,6 +1020,57 @@ export default function AdminPage() {
                 </CardContent>
             </Card>
         </Tabs>
+        <Dialog open={isAssignStationOpen} onOpenChange={setIsAssignStationOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Assign Water Station</DialogTitle>
+                    <DialogDescription>Assign a water station to {selectedUser?.name}.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Select onValueChange={setStationToAssign} defaultValue={selectedUser?.assignedWaterStationId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a station..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {waterStations.map(station => (
+                                <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+                    <Button onClick={handleAssignStation}>Assign</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+         <Dialog open={!!stationToUpdate} onOpenChange={(open) => !open && setStationToUpdate(null)}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Attach Permit for {stationToUpdate?.name}</DialogTitle>
+                    <DialogDescription>
+                        Upload the permit document for this water station.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid w-full max-w-sm items-center gap-1.5">
+                        <Label htmlFor="permit-file">Permit File</Label>
+                        <Input id="permit-file" type="file" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Cancel</Button>
+                    </DialogClose>
+                  
+                    <Button type="button" onClick={handleAttachPermit}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Attach
+                    </Button>
+                    
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

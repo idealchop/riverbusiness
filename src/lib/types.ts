@@ -51,6 +51,7 @@ export interface AppUser {
     lastLogin: string;
     permissions?: Permission[];
     role: 'Admin' | 'User';
+    assignedWaterStationId?: string;
 }
 
 export interface LoginLog {

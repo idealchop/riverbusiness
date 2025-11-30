@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { deliveries as initialDeliveries, paymentHistory as initialPaymentHistory, waterStations as initialWaterStations, complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits } from '@/lib/data';
+import { deliveries as initialDeliveries, paymentHistory as initialPaymentHistory, waterStations as initialWaterStations, complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits, appUsers as initialAppUsers } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -32,7 +32,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -96,6 +96,7 @@ export default function DashboardLayout({
   const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
   const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
   const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
+  const [appUsers, setAppUsers] = useState<AppUser[]>(initialAppUsers);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bpiQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
@@ -122,11 +123,13 @@ export default function DashboardLayout({
     const storedComplianceReports = localStorage.getItem('complianceReports');
     const storedSanitationVisits = localStorage.getItem('sanitationVisits');
     const storedWaterStations = localStorage.getItem('waterStations');
+    const storedAppUsers = localStorage.getItem('appUsers');
     
     setDeliveries(storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries);
     setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
     setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
     setWaterStations(storedWaterStations ? JSON.parse(storedWaterStations) : initialWaterStations);
+    setAppUsers(storedAppUsers ? JSON.parse(storedAppUsers) : initialAppUsers);
   }, []);
 
   useEffect(() => {
@@ -291,7 +294,8 @@ export default function DashboardLayout({
 
   
     const handleFeedbackSubmit = () => {
-        const station = waterStations[0]; // Assume first station
+        const currentUser = appUsers.find(u => u.id === 'USR-001');
+        const station = waterStations.find(ws => ws.id === currentUser?.assignedWaterStationId) || waterStations[0];
         if (feedbackMessage.trim() === '' || feedbackRating === 0) {
             toast({
                 variant: 'destructive',
@@ -303,7 +307,7 @@ export default function DashboardLayout({
 
         const newFeedback: Feedback = {
             id: `FB-${Date.now()}`,
-            userId: 'USR-001', // This should be dynamic based on logged in user
+            userId: currentUser?.id || 'USR-001',
             userName: userName,
             timestamp: new Date().toISOString(),
             feedback: `[${station.name}] ${feedbackMessage}`,
@@ -370,8 +374,10 @@ export default function DashboardLayout({
         setSelectedPaymentOption(option);
     }
   };
+  
+  const currentUser = appUsers.find(u => u.id === 'USR-001');
+  const assignedWaterStation = waterStations.find(ws => ws.id === currentUser?.assignedWaterStationId) || waterStations[0];
 
-  const assignedWaterStation = waterStations[0];
 
   return (
       <div className="flex flex-col h-full">
@@ -922,6 +928,7 @@ export default function DashboardLayout({
 
 
     
+
 
 
 

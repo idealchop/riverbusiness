@@ -46,7 +46,7 @@ export const waterStations: WaterStation[] = [
 ];
 
 export const appUsers: AppUser[] = [
-    { id: 'USR-001', name: 'Alice Johnson', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'User' },
+    { id: 'USR-001', name: 'Alice Johnson', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'User', assignedWaterStationId: 'WS-001' },
     { id: 'USR-002', name: 'Bob Williams', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19', role: 'User' },
     { id: 'USR-003', name: 'Charlie Brown', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15', role: 'User' },
     { id: 'USR-004', name: 'Diana Miller', password: 'password123', totalConsumptionLiters: 55000, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'User' },
