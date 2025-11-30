@@ -124,7 +124,7 @@ export default function OnboardingPage() {
             litersPerMonth: customLiters,
             bonusLiters: bonusLiters,
             deliveryDays: selectedDays,
-            waterStation: '' // Removed from UI
+            waterStation: ''
         });
         
         let planName = `Custom ${selectedClientType} Plan`;
@@ -142,21 +142,19 @@ export default function OnboardingPage() {
 
   const handleLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value ? parseInt(e.target.value) : 0;
-    const pricePerLiter = 3; // Example price
     setCustomLiters(value);
-    setAmountPerMonth(value * pricePerLiter);
   }
 
   const handleBonusLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value ? parseInt(e.target.value) : 0;
     setBonusLiters(value);
   }
-
-  const calculatePeopleAccommodated = (liters: number) => {
-      // Assuming 2 liters per person per day for a 30-day month (60 liters/person/month)
-      if (liters <= 0) return 0;
-      return Math.floor(liters / 60);
+  
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    setAmountPerMonth(value);
   }
+
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev => 
@@ -166,7 +164,6 @@ export default function OnboardingPage() {
   
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
-    const peopleAccommodated = calculatePeopleAccommodated(customLiters);
     const reorderedDaysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 
@@ -184,19 +181,14 @@ export default function OnboardingPage() {
                          <div className="grid gap-2">
                             <Label htmlFor="litersPerMonth">Liters/Month</Label>
                             <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" onChange={handleLitersChange} />
-                            {peopleAccommodated > 0 && (
-                                <p className="text-sm text-muted-foreground">
-                                    Can accommodate approximately <span className="font-bold text-primary">{peopleAccommodated}</span> person(s).
-                                </p>
-                            )}
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="bonusLiters">Bonus Liters/Month</Label>
                             <Input id="bonusLiters" name="bonusLiters" type="number" placeholder="e.g., 500" onChange={handleBonusLitersChange} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Amount/Month</Label>
-                            <Input readOnly value={`₱${amountPerMonth.toLocaleString()}`} />
+                            <Label htmlFor="amountPerMonth">Amount/Month</Label>
+                            <Input id="amountPerMonth" name="amountPerMonth" type="number" placeholder="e.g., 15000" onChange={handleAmountChange} />
                         </div>
                         <div className="grid gap-2">
                             <Label>Delivery Days</Label>
@@ -387,5 +379,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
