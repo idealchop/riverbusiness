@@ -59,7 +59,8 @@ export type Permission =
   | 'access_admin_panel';
 
 export interface AppUser {
-    id: string;
+    id: string; // This is the Firebase Auth UID
+    clientId?: string; // This is the manually entered client ID
     name: string;
     email: string;
     businessName: string;
@@ -122,5 +123,3 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
-
-    

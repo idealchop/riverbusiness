@@ -7,6 +7,7 @@
       "description": "Represents a user of the River Business application.",
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the user (matches Auth UID)." },
+        "clientId": { "type": "string", "description": "Manually assigned client identifier." },
         "name": { "type": "string", "description": "User's full name." },
         "email": { "type": "string", "format": "email", "description": "User's email address." },
         "businessName": { "type": "string", "description": "User's business name." },
@@ -22,7 +23,7 @@
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
       },
-      "required": ["id", "name", "email", "businessName", "role", "createdAt"]
+      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId"]
     },
     "WaterStation": {
       "title": "WaterStation",

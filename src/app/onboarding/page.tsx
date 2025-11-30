@@ -27,6 +27,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const onboardingSchema = z.object({
+  clientId: z.string().min(1, { message: 'Required' }),
   name: z.string().min(1, { message: 'Required' }),
   businessName: z.string().min(1, { message: 'Required' }),
   address: z.string().min(1, { message: 'Required' }),
@@ -75,7 +76,7 @@ export default function OnboardingPage() {
   
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
-    defaultValues: { name: '', businessName: '', address: '', contactNumber: '' }
+    defaultValues: { clientId: '', name: '', businessName: '', address: '', contactNumber: '' }
   });
 
   const onSubmit = (data: OnboardingFormValues) => {
@@ -182,6 +183,13 @@ export default function OnboardingPage() {
                 <div className="space-y-4">
                     <h3 className="font-bold text-lg">Step 1: Your Details</h3>
                     <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+                        <FormField control={form.control} name="clientId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Client ID</FormLabel>
+                                <FormControl><Input placeholder="e.g. C-12345" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
                         <FormField control={form.control} name="name" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Full Name</FormLabel>
@@ -281,6 +289,7 @@ export default function OnboardingPage() {
                             <div className="border-t pt-4">
                                 <h4 className="font-semibold mb-2">Your Details</h4>
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                    <p><strong>Client ID:</strong> {form.getValues('clientId')}</p>
                                     <p><strong>Name:</strong> {form.getValues('name')}</p>
                                     <p><strong>Email:</strong> {authUser?.email}</p>
                                     <p><strong>Business:</strong> {form.getValues('businessName')}</p>

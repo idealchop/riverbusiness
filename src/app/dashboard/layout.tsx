@@ -436,12 +436,12 @@ export default function DashboardLayout({
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                                     <div className="space-y-1">
+                                        <Label htmlFor="clientId">Client ID</Label>
+                                        <Input id="clientId" name="clientId" value={editableFormData.clientId || ''} disabled />
+                                    </div>
+                                    <div className="space-y-1">
                                         <Label htmlFor="fullName">Full Name</Label>
                                         <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                    </div>
-                                     <div className="space-y-1">
-                                        <Label htmlFor="clientId">Client ID</Label>
-                                        <Input id="clientId" name="id" value={user?.id || ''} disabled />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="email">Email Address</Label>
@@ -869,7 +869,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
-
-    

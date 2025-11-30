@@ -313,13 +313,14 @@ export default function AdminPage() {
         const deliveriesRef = collection(firestore, 'users', userForHistory.id, 'deliveries');
         
         try {
-            const docRef = await addDocumentNonBlocking(deliveriesRef, {
+            const newDelivery = {
                 userId: userForHistory.id,
                 date: values.date.toISOString(),
                 volumeGallons: values.volumeGallons,
                 status: 'Delivered',
                 proofOfDeliveryUrl: proofUrl,
-            });
+            };
+            const docRef = await addDocumentNonBlocking(deliveriesRef, newDelivery);
             if(docRef) {
                 // Now update the document with its own ID.
                 const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', docRef.id);
@@ -420,7 +421,7 @@ export default function AdminPage() {
                 <DialogHeader>
                     <DialogTitle>User Details</DialogTitle>
                     <DialogDescription>
-                        Information for user ID: {selectedUser?.id}
+                        Information for user ID: {selectedUser?.clientId}
                     </DialogDescription>
                 </DialogHeader>
                 {selectedUser && (
@@ -868,7 +869,7 @@ export default function AdminPage() {
                                         const latestDelivery = getLatestDelivery(user.id);
                                         return (
                                         <TableRow key={user.id}>
-                                            <TableCell className="whitespace-nowrap">{user.id}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                             <TableCell>
                                                 <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>
@@ -1108,5 +1109,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
