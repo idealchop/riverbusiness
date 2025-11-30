@@ -40,6 +40,7 @@ import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Notification = {
     id: string;
@@ -639,56 +640,58 @@ export default function DashboardLayout({
                             </Button>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Invoice ID</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                        <TableHead className="text-center">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {generatedInvoices.map((payment) => (
-                                        <TableRow key={payment.id}>
-                                            <TableCell className="font-medium">{payment.id}</TableCell>
-                                            <TableCell>{format(new Date(payment.date), 'PP')}</TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                    className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                                >{payment.status}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">₱{payment.amount.toFixed(2)}</TableCell>
-                                            <TableCell className="text-center">
-                                                <div className='flex gap-2 justify-center'>
-                                                {(payment.status === 'Upcoming' || payment.status === 'Overdue') && (
-                                                    <Button size="sm" onClick={() => { setSelectedInvoice(payment); setIsPaymentDialogOpen(true); }}>
-                                                        <CreditCard className="mr-2 h-4 w-4" />
-                                                        Pay Now
-                                                    </Button>
-                                                )}
-                                                {payment.status === 'Pending Review' && (
-                                                     <Button variant="secondary" size="sm" onClick={() => setIsVerificationDialogOpen(true)}>
-                                                        <Hourglass className="mr-2 h-4 w-4" />
-                                                        Processing
-                                                    </Button>
-                                                )}
-                                                {payment.status === 'Paid' && payment.proofOfPaymentUrl && (
-                                                    <Button variant="outline" size="sm" asChild>
-                                                        <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
-                                                            <Check className="mr-2 h-4 w-4" />
-                                                            View Proof
-                                                        </a>
-                                                    </Button>
-                                                )}
-                                                </div>
-                                            </TableCell>
+                            <ScrollArea className="w-full whitespace-nowrap">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Invoice ID</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                            <TableHead className="text-center">Actions</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {generatedInvoices.map((payment) => (
+                                            <TableRow key={payment.id}>
+                                                <TableCell className="font-medium">{payment.id}</TableCell>
+                                                <TableCell>{format(new Date(payment.date), 'PP')}</TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                        className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                    >{payment.status}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">₱{payment.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className='flex gap-2 justify-center'>
+                                                    {(payment.status === 'Upcoming' || payment.status === 'Overdue') && (
+                                                        <Button size="sm" onClick={() => { setSelectedInvoice(payment); setIsPaymentDialogOpen(true); }}>
+                                                            <CreditCard className="mr-2 h-4 w-4" />
+                                                            Pay Now
+                                                        </Button>
+                                                    )}
+                                                    {payment.status === 'Pending Review' && (
+                                                        <Button variant="secondary" size="sm" onClick={() => setIsVerificationDialogOpen(true)}>
+                                                            <Hourglass className="mr-2 h-4 w-4" />
+                                                            Processing
+                                                        </Button>
+                                                    )}
+                                                    {payment.status === 'Paid' && payment.proofOfPaymentUrl && (
+                                                        <Button variant="outline" size="sm" asChild>
+                                                            <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                                                                <Check className="mr-2 h-4 w-4" />
+                                                                View Proof
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
                         </CardContent>
                     </Card>
                 </TabsContent>
