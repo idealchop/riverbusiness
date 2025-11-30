@@ -32,6 +32,7 @@ import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import type { Payment, ImagePlaceholder } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface OnboardingData {
@@ -66,10 +67,12 @@ export default function DashboardLayout({
 }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
   const recentDeliveries = deliveries.slice(0, 4);
+  const { toast } = useToast();
 
   const [userName, setUserName] = useState('Juan dela Cruz');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>(initialPaymentHistory);
+  const [editableFormData, setEditableFormData] = useState<OnboardingData['formData'] | null>(null);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr-payment');
@@ -79,6 +82,9 @@ export default function DashboardLayout({
   const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
   const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
   const [selectedPaymentQr, setSelectedPaymentQr] = useState<ImagePlaceholder | null>(null);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 
   useEffect(() => {
@@ -86,6 +92,7 @@ export default function DashboardLayout({
     if (storedOnboardingData) {
       const data = JSON.parse(storedOnboardingData);
       setOnboardingData(data);
+      setEditableFormData(data.formData);
       if (data.formData && data.formData.fullName) {
         setUserName(data.formData.fullName);
       }
@@ -127,6 +134,35 @@ export default function DashboardLayout({
     setPaymentHistory(updatedHistory);
     setIsProofUploadDialogOpen(false);
   };
+
+  const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (editableFormData) {
+        setEditableFormData({
+            ...editableFormData,
+            [e.target.name]: e.target.value
+        });
+    }
+  };
+
+  const handleSaveChanges = () => {
+    if (onboardingData && editableFormData) {
+        const updatedData = { ...onboardingData, formData: editableFormData };
+        localStorage.setItem('onboardingData', JSON.stringify(updatedData));
+        setOnboardingData(updatedData);
+        setUserName(editableFormData.fullName);
+        toast({
+            title: "Account Updated",
+            description: "Your account information has been saved.",
+        });
+    }
+  };
+
+  const handlePasswordChange = () => {
+    toast({
+        title: "Password Changed",
+        description: "Your password has been updated successfully.",
+    });
+  }
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -296,34 +332,65 @@ export default function DashboardLayout({
                 </TabsList>
 
                 <TabsContent value="accounts" className="py-4">
-                    {onboardingData?.formData ? (
-                        <div className="space-y-4">
-                            <h4 className="font-semibold mb-2">Your Details</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                                <div>
-                                    <Label className="text-muted-foreground">Full Name</Label>
-                                    <p className="font-medium">{onboardingData.formData.fullName}</p>
+                    {editableFormData ? (
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="font-semibold mb-4">Your Details</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="fullName">Full Name</Label>
+                                        <Input id="fullName" name="fullName" value={editableFormData.fullName} onChange={handleAccountInfoChange} />
+                                    </div>
+                                     <div className="space-y-1">
+                                        <Label htmlFor="clientId">Client ID</Label>
+                                        <Input id="clientId" name="clientId" value={editableFormData.clientId} disabled />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="email">Email Address</Label>
+                                        <Input id="email" name="email" type="email" value={editableFormData.email} onChange={handleAccountInfoChange} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="businessName">Business Name</Label>
+                                        <Input id="businessName" name="businessName" value={editableFormData.businessName} onChange={handleAccountInfoChange} />
+                                    </div>
+                                    <div className="space-y-1 md:col-span-2">
+                                        <Label htmlFor="address">Address</Label>
+                                        <Input id="address" name="address" value={editableFormData.address} onChange={handleAccountInfoChange} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="contactNumber">Contact Number</Label>
+                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber} onChange={handleAccountInfoChange} />
+                                    </div>
                                 </div>
-                                <div>
-                                    <Label className="text-muted-foreground">Client ID</Label>
-                                    <p className="font-medium">{onboardingData.formData.clientId}</p>
+                                <Button className="mt-4" onClick={handleSaveChanges}>Save Changes</Button>
+                            </div>
+                            <Separator />
+                             <div>
+                                <h4 className="font-semibold mb-4">Update Password</h4>
+                                <div className="space-y-4">
+                                    <div className="space-y-1 relative">
+                                        <Label htmlFor="current-password">Current Password</Label>
+                                        <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
+                                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                     <div className="space-y-1 relative">
+                                        <Label htmlFor="new-password">New Password</Label>
+                                        <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
+                                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
+                                            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                     <div className="space-y-1 relative">
+                                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                        <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
+                                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <Label className="text-muted-foreground">Email Address</Label>
-                                    <p className="font-medium">{onboardingData.formData.email}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-muted-foreground">Business Name</Label>
-                                    <p className="font-medium">{onboardingData.formData.businessName}</p>
-                                </div>
-                                <div className="md:col-span-2">
-                                    <Label className="text-muted-foreground">Address</Label>
-                                    <p className="font-medium">{onboardingData.formData.address}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-muted-foreground">Contact Number</Label>
-                                    <p className="font-medium">{onboardingData.formData.contactNumber}</p>
-                                </div>
+                                <Button className="mt-4" onClick={handlePasswordChange}>Change Password</Button>
                             </div>
                         </div>
                     ) : <p>No account information available. Please complete onboarding.</p>}
@@ -513,4 +580,3 @@ export default function DashboardLayout({
   );
 }
 
-    
