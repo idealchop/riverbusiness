@@ -238,90 +238,94 @@ export default function OnboardingPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Juan dela Cruz" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="clientId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Client ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. SC2500000029" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="e.g. juan.delacruz@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="businessName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Business Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. River Business Inc." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. 123 Main St, Anytown" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contactNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Number</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="e.g. 09123456789" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-4">
+                <h3 className="font-bold text-lg">1. Your Details</h3>
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Juan dela Cruz" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="clientId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. SC2500000029" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="e.g. juan.delacruz@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="businessName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. River Business Inc." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. 123 Main St, Anytown" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contactNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Number</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder="e.g. 09123456789" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
+
               <div className="space-y-4">
-                  <h3 className="font-bold text-lg">Water Plan</h3>
-                  <p className="text-muted-foreground">Choose the client type to see the recommended plans.</p>
+                  <h3 className="font-bold text-lg">2. Choose Your Plan</h3>
+                  <p className="text-muted-foreground">Select a client type to customize your water plan.</p>
                   <div className="grid grid-cols-2 gap-4">
                       {clientTypes.map((client) => {
                           const image = getImageForPlan(client.imageId);
@@ -353,14 +357,14 @@ export default function OnboardingPage() {
               
                 {selectedPlan && (
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Selected Plan</h3>
-                        <div className="mt-4 border rounded-lg p-4 flex justify-between items-start">
+                        <h3 className="text-lg font-semibold">3. Confirm Your Plan</h3>
+                        <div className="mt-4 border rounded-lg p-4 flex justify-between items-start bg-accent/50">
                             <div>
                                 <p className="font-bold text-lg">{selectedPlan.name}</p>
                                 {customPlanDetails ? (
                                      <div className="text-sm text-muted-foreground">
                                         <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month (Est. ₱{selectedPlan.price.toLocaleString()}/month)</p>
-                                        <p>{customPlanDetails.deliveryDays.length} Deliveries/Week ({customPlanDetails.deliveryDays.join(', ')})</p>
+                                        <p>{customPlanDetails.deliveryDays.length > 0 ? `${customPlanDetails.deliveryDays.length} Deliveries/Week (${customPlanDetails.deliveryDays.join(', ')})` : 'No delivery days selected'}</p>
                                     </div>
                                 ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as any).details?.map((d: any) => (
                                     <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
@@ -383,3 +387,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
