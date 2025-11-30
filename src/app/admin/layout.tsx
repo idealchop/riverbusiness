@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import {
@@ -14,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { Feedback, AppUser } from '@/lib/types';
-import { loginLogs, feedbackLogs as initialFeedbackLogs, appUsers } from '@/lib/data';
+import { feedbackLogs as initialFeedbackLogs, appUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -126,10 +127,10 @@ export default function AdminLayout({
                               </p>
                           </div>
                           <Separator className="my-4" />
-                          <div className="space-y-4">
+                          <div className="space-y-3">
                               {invoiceRequests.filter(r => r.status === 'Pending').slice(0, 3).map(req => (
-                                <div key={req.id} className="grid grid-cols-[25px_1fr] items-start gap-3">
-                                  <FileClock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div key={req.id} className="grid grid-cols-[25px_1fr] items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50">
+                                  <FileClock className="h-5 w-5 text-blue-500 mt-0.5" />
                                   <div className="space-y-1">
                                     <p className="text-sm font-medium">New Invoice Request</p>
                                     <p className="text-sm text-muted-foreground">From {req.userName} for {req.dateRange}</p>
@@ -138,8 +139,8 @@ export default function AdminLayout({
                               ))}
                                {unreadFeedbackCount > 0 && pendingRequestsCount > 0 && <Separator />}
                               {feedbackLogs.filter(fb => !fb.read).slice(0, 3).map(fb => (
-                                <div key={fb.id} className="grid grid-cols-[25px_1fr] items-start gap-3">
-                                  <MessageSquare className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div key={fb.id} className="grid grid-cols-[25px_1fr] items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50">
+                                  <MessageSquare className="h-5 w-5 text-green-500 mt-0.5" />
                                   <div className="space-y-1">
                                     <p className="text-sm font-medium">New Feedback Received</p>
                                     <p className="text-sm text-muted-foreground truncate">From {fb.userName}: "{fb.feedback}"</p>
@@ -148,7 +149,7 @@ export default function AdminLayout({
                                 </div>
                               ))}
                               {totalNotifications === 0 && (
-                                <p className="text-sm text-muted-foreground text-center">No new notifications.</p>
+                                <p className="text-sm text-muted-foreground text-center py-4">No new notifications.</p>
                               )}
                           </div>
                       </PopoverContent>
