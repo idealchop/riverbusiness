@@ -143,9 +143,9 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             <div className="flex items-center gap-2">
                  <Dialog>
                     <DialogTrigger asChild>
-                        <Button variant="outline">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Compliance Reports
+                        <Button variant="outline" size="icon" className="sm:w-auto sm:px-4">
+                            <FileText className="h-4 w-4" />
+                            <span className="hidden sm:inline sm:ml-2">Compliance Reports</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-4xl">
@@ -546,5 +546,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
     
 
+
+    
 
     
