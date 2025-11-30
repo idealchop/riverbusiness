@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -42,6 +42,17 @@ export default function DashboardLayout({
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [accountType, setAccountType] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onboardingDataString = localStorage.getItem('onboardingData');
+    if (onboardingDataString) {
+      const onboardingData = JSON.parse(onboardingDataString);
+      if (onboardingData.clientType) {
+        setAccountType(onboardingData.clientType);
+      }
+    }
+  }, []);
 
   const handleSaveUsername = () => {
     setUserName(tempUserName);
@@ -70,6 +81,15 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
+          <Link href="/dashboard/support">
+            <Button
+              variant="outline"
+              size="icon"
+              className="overflow-hidden rounded-full"
+            >
+              <LifeBuoy className="h-5 w-5" />
+            </Button>
+          </Link>
           <Popover>
               <PopoverTrigger asChild>
               <Button
@@ -121,111 +141,106 @@ export default function DashboardLayout({
               </div>
               </PopoverContent>
           </Popover>
-          <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-              <Button
-                  variant="outline"
-                  size="icon"
-                  className="overflow-hidden rounded-full"
-              >
-                  {userAvatar && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <div className="flex items-center gap-3 cursor-pointer">
+                {userAvatar && (
                   <Image
+                    src={userAvatar.imageUrl}
+                    width={40}
+                    height={40}
+                    alt={userAvatar.description}
+                    data-ai-hint={userAvatar.imageHint}
+                    className="overflow-hidden rounded-full"
+                  />
+                )}
+                <div className="hidden sm:block">
+                  <p className="font-semibold text-sm">{userName}</p>
+                  <p className="text-xs text-muted-foreground">{accountType ? `${accountType} Plan` : 'Account'}</p>
+                </div>
+              </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>My Account</DialogTitle>
+                <DialogDescription>
+                  Manage your account settings.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex items-center space-x-4 py-4">
+                {userAvatar && (
+                  <div className="relative">
+                    <Image
                       src={userAvatar.imageUrl}
-                      width={40}
-                      height={40}
+                      width={80}
+                      height={80}
                       alt={userAvatar.description}
                       data-ai-hint={userAvatar.imageHint}
-                      className="overflow-hidden rounded-full"
-                  />
-                  )}
-              </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-              <Dialog>
-                  <DialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setTempUserName(userName); }}>My Account</DropdownMenuItem>
-                  </DialogTrigger>
-                  <DialogContent>
-                      <DialogHeader>
-                      <DialogTitle>My Account</DialogTitle>
-                      <DialogDescription>
-                          Manage your account settings.
-                      </DialogDescription>
-                      </DialogHeader>
-                      <div className="flex items-center space-x-4 py-4">
-                          {userAvatar && (
-                              <div className="relative">
-                                  <Image
-                                      src={userAvatar.imageUrl}
-                                      width={80}
-                                      height={80}
-                                      alt={userAvatar.description}
-                                      data-ai-hint={userAvatar.imageHint}
-                                      className="rounded-full"
-                                  />
-                                  <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8">
-                                      <Camera className="h-4 w-4" />
-                                      <Input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                  </Button>
-                              </div>
-                          )}
-                          <div>
-                              <h4 className="font-semibold text-lg">{userName}</h4>
-                          </div>
-                      </div>
-                      <Tabs defaultValue="username">
-                      <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="username"><User className="mr-2"/>Username</TabsTrigger>
-                          <TabsTrigger value="password"><KeyRound className="mr-2"/>Password</TabsTrigger>
-                          <TabsTrigger value="clientid"><Info className="mr-2"/>Client ID</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="username" className="py-4">
-                          <div className="space-y-2">
-                          <Label htmlFor="username">Username</Label>
-                          <Input id="username" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} />
-                          </div>
-                          <Button className="mt-4" onClick={handleSaveUsername}>Save</Button>
-                      </TabsContent>
-                      <TabsContent value="password" className="py-4">
-                          <div className="space-y-4">
-                              <div className="space-y-2 relative">
-                                  <Label htmlFor="current-password">Current Password</Label>
-                                  <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
-                                  <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
-                              </div>
-                              <div className="space-y-2 relative">
-                                  <Label htmlFor="new-password">New Password</Label>
-                                  <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
-                                  <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowNewPassword(!showNewPassword)}>
-                                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
-                              </div>
-                              <div className="space-y-2 relative">
-                                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                  <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
-                                   <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
-                              </div>
-                          </div>
-                          <Button className="mt-4">Change Password</Button>
-                      </TabsContent>
-                      <TabsContent value="clientid" className="py-4">
-                          <div className="space-y-2">
-                              <Label>Client ID</Label>
-                              <Input readOnly value="CL-12345-67890" />
-                              <p className="text-sm text-muted-foreground">This is your unique client identifier.</p>
-                          </div>
-                      </TabsContent>
-                      </Tabs>
-                  </DialogContent>
-                  </Dialog>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-          </DropdownMenu>
+                      className="rounded-full"
+                    />
+                    <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8">
+                      <Camera className="h-4 w-4" />
+                      <Input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    </Button>
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-semibold text-lg">{userName}</h4>
+                  <p className="text-sm text-muted-foreground">{accountType ? `${accountType} Plan` : 'Account'}</p>
+                </div>
+              </div>
+              <Tabs defaultValue="username">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="username"><User className="mr-2" />Username</TabsTrigger>
+                  <TabsTrigger value="password"><KeyRound className="mr-2" />Password</TabsTrigger>
+                  <TabsTrigger value="clientid"><Info className="mr-2" />Client ID</TabsTrigger>
+                </TabsList>
+                <TabsContent value="username" className="py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input id="username" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} />
+                  </div>
+                  <Button className="mt-4" onClick={handleSaveUsername}>Save</Button>
+                </TabsContent>
+                <TabsContent value="password" className="py-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
+                      <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
+                      <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowNewPassword(!showNewPassword)}>
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="space-y-2 relative">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
+                      <Button size="icon" variant="ghost" className="absolute right-1 top-6" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button className="mt-4">Change Password</Button>
+                </TabsContent>
+                <TabsContent value="clientid" className="py-4">
+                  <div className="space-y-2">
+                    <Label>Client ID</Label>
+                    <Input readOnly value="CL-12345-67890" />
+                    <p className="text-sm text-muted-foreground">This is your unique client identifier.</p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+              <div className="flex justify-end pt-4">
+                  <Button variant="outline">Logout</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container">
