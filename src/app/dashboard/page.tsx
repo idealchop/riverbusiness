@@ -3,16 +3,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { deliveries, consumptionData, feedbackLogs as initialFeedbackLogs } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Search, Star, Send } from 'lucide-react';
+import { deliveries, consumptionData } from '@/lib/data';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import SupportPage from './support/page';
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import Link from 'next/link';
+import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip } from 'recharts';
 import DeliveriesPage from './deliveries/page';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -281,7 +279,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     <div className="w-full flex justify-end mt-4">
                         <Dialog>
                            <DialogTrigger asChild>
-                               <Button className="bg-primary/90 hoverbg-primary">
+                               <Button className="bg-primary/90 hover:bg-primary">
                                    <History className="h-4 w-4 mr-2" />
                                    History
                                </Button>
@@ -301,5 +299,3 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     </div>
     );
 }
-
-    
