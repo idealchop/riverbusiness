@@ -30,7 +30,6 @@ import { Separator } from '@/components/ui/separator';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['Admin', 'User']),
 });
@@ -104,7 +103,6 @@ export default function AdminPage() {
         resolver: zodResolver(newUserSchema),
         defaultValues: {
             name: '',
-            email: '',
             password: '',
             role: 'User',
         },
@@ -176,7 +174,6 @@ export default function AdminPage() {
                         <div className="flex items-center space-x-4">
                             <div>
                                 <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
-                                <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                             </div>
                         </div>
                          <div className="grid grid-cols-2 gap-4 text-sm">
@@ -265,17 +262,6 @@ export default function AdminPage() {
                                     <FormItem>
                                         <FormLabel>Full Name</FormLabel>
                                         <FormControl><Input placeholder="Juan dela Cruz" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}

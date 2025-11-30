@@ -177,7 +177,6 @@ export default function DashboardLayout({
                             )}
                             <div>
                                 <h4 className="font-semibold text-lg">{userName}</h4>
-                                <p className="text-sm text-muted-foreground">juandelacruz@email.com</p>
                             </div>
                         </div>
                         <Tabs defaultValue="username">

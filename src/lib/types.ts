@@ -44,7 +44,6 @@ export type Permission =
 export interface AppUser {
     id: string;
     name: string;
-    email: string;
     password?: string;
     totalConsumptionLiters: number;
     accountStatus: 'Active' | 'Inactive';
