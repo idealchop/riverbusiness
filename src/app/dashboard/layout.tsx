@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -50,6 +50,49 @@ type Notification = {
     icon: React.ElementType;
     data: Delivery | Payment | ComplianceReport | SanitationVisit;
 };
+
+const includedFeatures = [
+    {
+        icon: LayoutGrid,
+        title: 'Smart Client Portal',
+        description: 'Monitor consumption, compliance, water providers, and payments in real time.',
+    },
+    {
+        icon: CalendarCheck,
+        title: 'Automated Scheduling & Delivery',
+        description: 'No manual ordering; Smart Refill handles refills automatically.',
+    },
+    {
+        icon: Repeat,
+        title: 'Roll-Over Liters',
+        description: 'Unused liters carry over to the next cycle.',
+    },
+    {
+        icon: Thermometer,
+        title: 'Free Dispensers, Gallons & Sanitary Items',
+        description: 'Included based on your plan.',
+    },
+    {
+        icon: Wrench,
+        title: 'Monthly Sanitation Visit',
+        description: 'Regular cleaning and compliance check for your dispensers.',
+    },
+    {
+        icon: HelpCircle,
+        title: 'Guaranteed Water Compliance',
+        description: 'All partner stations meet strict sanitation and quality standards.',
+    },
+    {
+        icon: Headset,
+        title: 'Customer Support',
+        description: 'Assistance available for any service or delivery concerns.',
+    },
+    {
+        icon: Rocket,
+        title: 'Custom & Scalable Plans',
+        description: 'Adjust liters, branches, and schedules as your business grows.',
+    },
+];
 
 export default function DashboardLayout({
   children,
@@ -531,8 +574,8 @@ export default function DashboardLayout({
                 </TabsContent>
 
                 <TabsContent value="plan" className="py-4">
-                  {user?.plan ? (
-                      <div className="space-y-6">
+                  <div className="space-y-6">
+                    {user?.plan ? (
                         <Card className="overflow-hidden">
                           <CardContent className="p-0">
                             <div className="flex flex-col md:flex-row">
@@ -555,21 +598,45 @@ export default function DashboardLayout({
                             </div>
                           </CardContent>
                         </Card>
+                    ) : (
+                        <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
+                    )}
 
-                        {user.contractUrl && (
-                          <div className="pt-2">
-                              <Button asChild className="w-full">
-                                  <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
-                                      <FileText className="mr-2 h-4 w-4" />
-                                      View Contract
-                                  </a>
-                              </Button>
-                          </div>
-                        )}
+                    {user?.contractUrl && (
+                      <div className="pt-2">
+                          <Button asChild className="w-full">
+                              <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  View Contract
+                              </a>
+                          </Button>
                       </div>
-                  ) : (
-                      <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
-                  )}
+                    )}
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Included in Every Plan</CardTitle>
+                            <CardDescription>Every subscription plan includes full access to our growing network of partner perks.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                {includedFeatures.map((feature, index) => {
+                                    const Icon = feature.icon;
+                                    return (
+                                        <div key={index} className="flex items-start gap-4">
+                                            <Icon className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                                            <div>
+                                                <h4 className="font-semibold">{feature.title}</h4>
+                                                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                  </div>
               </TabsContent>
 
                 <TabsContent value="invoices" className="py-4">
