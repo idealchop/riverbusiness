@@ -10,7 +10,7 @@ import { MoreHorizontal, Paperclip, Search, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 // Conversion rate
-const gallonToLiter = (gallons: number) => gallons * 3.78541;
+const gallonToLiter = (gallons: number) => gallons * 19;
 
 export default function DeliveriesPage() {
   const [deliveries, setDeliveries] = useState(allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})));
@@ -123,3 +123,5 @@ export default function DeliveriesPage() {
     </div>
   );
 }
+
+    

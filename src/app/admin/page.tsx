@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -182,7 +181,7 @@ export default function AdminPage() {
     };
 
     const handleDeductFromDelivery = (userId: string, gallons: number) => {
-        const litersToDeduct = gallons * 3.78541;
+        const litersToDeduct = gallons * 19;
         setAppUsers(users => users.map(user => 
             user.id === userId
             ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + litersToDeduct }
@@ -805,3 +804,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import type { Feedback, AppUser } from '@/lib/types';
 
 
-const gallonToLiter = (gallons: number) => gallons * 3.78541;
+const gallonToLiter = (gallons: number) => gallons * 19;
 
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
     const [greeting, setGreeting] = useState('');
@@ -262,3 +262,5 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 }
 
       
+
+    
