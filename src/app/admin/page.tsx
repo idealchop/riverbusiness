@@ -673,7 +673,7 @@ export default function AdminPage() {
         </Dialog>
 
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="cursor-pointer hover:bg-muted" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -690,15 +690,6 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{activeUsers}</div>
-                </CardContent>
-            </Card>
-             <Card className="cursor-pointer hover:bg-muted" onClick={() => setActiveTab('feedback')}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Unread Feedback</CardTitle>
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{unreadFeedback}</div>
                 </CardContent>
             </Card>
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
@@ -784,9 +775,8 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
              <Card>
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
                         <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
-                        <TabsTrigger value="feedback"><MessageSquare className="mr-2 h-4 w-4" />Feedback</TabsTrigger>
                         <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
                     </TabsList>
                 </CardHeader>
@@ -880,55 +870,6 @@ export default function AdminPage() {
                          </div>
                     </TabsContent>
                     
-                     <TabsContent value="feedback">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>User</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Rating</TableHead>
-                                        <TableHead>Feedback</TableHead>
-                                        <TableHead className="text-center">Read</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {feedbackLogs.map((fb) => (
-                                        <TableRow key={fb.id}>
-                                            <TableCell className="font-medium">{fb.userName}</TableCell>
-                                            <TableCell>{format(new Date(fb.timestamp), 'PPpp')}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-1">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star
-                                                            key={i}
-                                                            className={cn(
-                                                                'h-4 w-4',
-                                                                i < fb.rating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'
-                                                            )}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="max-w-sm whitespace-pre-wrap">{fb.feedback}</TableCell>
-                                            <TableCell className="text-center">
-                                                <Checkbox
-                                                    checked={fb.read}
-                                                    onCheckedChange={() => handleToggleFeedbackRead(fb.id)}
-                                                    aria-label="Mark as read"
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {feedbackLogs.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center">No feedback yet.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </TabsContent>
                     <TabsContent value="water-stations">
                         <div className="flex justify-end mb-4">
                             <Dialog open={isCreateStationOpen} onOpenChange={setIsCreateStationOpen}>
@@ -1075,5 +1016,7 @@ export default function AdminPage() {
   );
 }
 
+
+    
 
     
