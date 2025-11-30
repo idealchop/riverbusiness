@@ -18,6 +18,31 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
+  {
+    label: 'Monitoring',
+    icon: Monitor,
+    subItems: [
+      { href: '/dashboard/consumption', label: 'Consumption', icon: Droplet },
+      { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
+    ],
+  },
+  {
+    label: 'Quality & Compliance',
+    icon: CheckSquare,
+    subItems: [
+      { href: '/dashboard/quality', label: 'Compliance Reports', icon: FileCheck2 },
+      { href: '/dashboard/sanitation', label: 'Sanitation Visits', icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'Tools',
+    icon: Settings,
+    subItems: [
+        { href: '/dashboard/predictions', label: 'Predictive Usage', icon: BarChart },
+        { href: '/dashboard/goals', label: 'Consumption Goals', icon: Target },
+    ],
+  },
+  { href: '/dashboard/support', label: 'Support', icon: HelpCircle },
 ];
 
 export function AppSidebar() {
@@ -26,12 +51,9 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:hidden">
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg justify-center">
           <Logo className="h-8" />
-          <span>River Business</span>
-        </Link>
-         <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex">
-          <Logo className="h-8" />
+          <span className="group-data-[collapsible=icon]:hidden">River Business</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
