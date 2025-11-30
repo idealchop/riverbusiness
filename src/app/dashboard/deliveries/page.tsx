@@ -1,20 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { deliveries as allDeliveries } from '@/lib/data';
+import { deliveries as initialDeliveries } from '@/lib/data';
 import { MoreHorizontal, Paperclip, Search, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import type { Delivery } from '@/lib/types';
 
 // Conversion rate
 const gallonToLiter = (gallons: number) => gallons * 19;
 
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState(allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})));
+  const [allDeliveries, setAllDeliveries] = useState<Delivery[]>(initialDeliveries);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const storedDeliveries = localStorage.getItem('deliveries');
+    const deliveriesData = storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries;
+    setAllDeliveries(deliveriesData);
+    setDeliveries(deliveriesData);
+  }, []);
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -30,7 +39,7 @@ export default function DeliveriesPage() {
   };
 
   const handleSearch = () => {
-    const filteredDeliveries = allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})).filter(delivery => {
+    const filteredDeliveries = allDeliveries.filter(delivery => {
       const searchLower = searchTerm.toLowerCase();
       return (
         delivery.id.toLowerCase().includes(searchLower) ||
@@ -45,7 +54,7 @@ export default function DeliveriesPage() {
     const term = e.target.value;
     setSearchTerm(term);
     if (term === '') {
-      setDeliveries(allDeliveries.map(d => ({...d, volumeLiters: gallonToLiter(d.volumeGallons)})));
+      setDeliveries(allDeliveries);
     }
   };
 
@@ -81,47 +90,48 @@ export default function DeliveriesPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {deliveries.map((delivery) => (
-            <TableRow key={delivery.id}>
-              <TableCell className="font-medium">{delivery.id}</TableCell>
-              <TableCell>{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-              <TableCell>{delivery.volumeLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
-              <TableCell>
-                <Badge variant={getStatusBadgeVariant(delivery.status)}
-                  className={
-                    delivery.status === 'Delivered' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                    : delivery.status === 'In Transit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                  }
-                >
-                  {delivery.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Truck className="mr-2 h-4 w-4" />
-                      Track Delivery
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Paperclip className="mr-2 h-4 w-4" />
-                      View/Add Attachments
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+          {deliveries.map((delivery) => {
+            const volumeLiters = gallonToLiter(delivery.volumeGallons);
+            return (
+              <TableRow key={delivery.id}>
+                <TableCell className="font-medium">{delivery.id}</TableCell>
+                <TableCell>{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                <TableCell>{volumeLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>
+                  <Badge variant={getStatusBadgeVariant(delivery.status)}
+                    className={
+                      delivery.status === 'Delivered' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                      : delivery.status === 'In Transit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                    }
+                  >
+                    {delivery.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Truck className="mr-2 h-4 w-4" />
+                        Track Delivery
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Paperclip className="mr-2 h-4 w-4" />
+                        View/Add Attachments
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
   );
 }
-
-    

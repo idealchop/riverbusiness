@@ -114,6 +114,13 @@ export default function AdminPage() {
             localStorage.setItem('waterStations', JSON.stringify(initialWaterStations));
         }
 
+        const storedDeliveries = localStorage.getItem('deliveries');
+        if (storedDeliveries) {
+            setDeliveries(JSON.parse(storedDeliveries));
+        } else {
+            localStorage.setItem('deliveries', JSON.stringify(initialDeliveries));
+        }
+
     }, []);
 
     useEffect(() => {
@@ -151,7 +158,9 @@ export default function AdminPage() {
             accountStatus: 'Active' as 'Active' | 'Inactive',
             lastLogin: new Date().toISOString(),
         };
-        setAppUsers([...appUsers, newUser]);
+        const updatedUsers = [...appUsers, newUser];
+        setAppUsers(updatedUsers);
+        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
         form.reset();
         setIsCreateUserOpen(false);
         toast({
@@ -162,9 +171,11 @@ export default function AdminPage() {
     
     const handleResetPassword = (userId: string) => {
         const newPassword = Math.random().toString(36).slice(-8);
-        setAppUsers(appUsers.map(user => 
+        const updatedUsers = appUsers.map(user => 
             user.id === userId ? { ...user, password: newPassword } : user
-        ));
+        );
+        setAppUsers(updatedUsers);
+        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
         toast({
             title: "Password Reset",
             description: `New password for ${selectedUser?.name} is: ${newPassword}`,
@@ -174,11 +185,13 @@ export default function AdminPage() {
     const handleDeductConsumption = (values: DeductFormValues) => {
         if (!selectedUser) return;
 
-        setAppUsers(appUsers.map(user => 
+        const updatedUsers = appUsers.map(user => 
             user.id === selectedUser.id 
             ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + values.amount } 
             : user
-        ));
+        );
+        setAppUsers(updatedUsers);
+        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
         
         toast({
             title: 'Consumption Deducted',
@@ -191,11 +204,14 @@ export default function AdminPage() {
 
     const handleDeductFromDelivery = (userId: string, gallons: number) => {
         const litersToDeduct = gallons * 3.785;
-        setAppUsers(users => users.map(user => 
+        const updatedUsers = appUsers.map(user => 
             user.id === userId
             ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + litersToDeduct }
             : user
-        ));
+        );
+        setAppUsers(updatedUsers);
+        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+
         toast({
             title: "Consumption Deducted",
             description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters deducted from user's balance based on delivery.`
@@ -212,7 +228,6 @@ export default function AdminPage() {
 
     const handleAttachPermit = () => {
         if (!stationToUpdate) return;
-        // This is a mock of a file upload. In a real app, this would handle the file object.
         const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/permit-sample.jpg?alt=media&token=c8b2512a-3636-4c44-884c-354336c9d2f6';
 
         const updatedStations = waterStations.map(station =>
@@ -231,19 +246,20 @@ export default function AdminPage() {
 
     const handleUploadProof = () => {
         if (!deliveryToUpdate) return;
-        // This is a mock. In a real app, you'd get the URL from a file upload service.
         const sampleProofUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/proof-of-delivery-sample.jpg?alt=media&token=29994c64-7f21-4f10-9110-3889146522c7';
         
-        setDeliveries(deliveries.map(d => 
+        const updatedDeliveries = deliveries.map(d => 
             d.id === deliveryToUpdate.id ? { ...d, proofOfDeliveryUrl: sampleProofUrl } : d
-        ));
+        );
+        setDeliveries(updatedDeliveries);
+        localStorage.setItem('deliveries', JSON.stringify(updatedDeliveries));
         
         toast({
             title: "Proof Uploaded",
             description: `Proof of delivery for ${deliveryToUpdate.id} has been attached.`,
         });
         
-        setDeliveryToUpdate(null); // This will close the dialog
+        setDeliveryToUpdate(null);
     };
 
 

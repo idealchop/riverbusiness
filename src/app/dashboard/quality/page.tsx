@@ -1,13 +1,27 @@
-import React from 'react';
+
+'use client';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { complianceReports, sanitationVisits } from '@/lib/data';
+import { complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits } from '@/lib/data';
 import { FileText, Eye } from 'lucide-react';
+import type { ComplianceReport, SanitationVisit } from '@/lib/types';
 
 export default function QualityPage() {
+  const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
+  const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
+
+  useEffect(() => {
+    const storedComplianceReports = localStorage.getItem('complianceReports');
+    setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
+
+    const storedSanitationVisits = localStorage.getItem('sanitationVisits');
+    setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
+  }, []);
+
   return (
     <Tabs defaultValue="compliance" className="flex flex-col gap-4">
       <TabsList className="grid w-full grid-cols-2 md:w-96">

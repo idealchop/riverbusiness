@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { deliveries, consumptionData, appUsers as initialAppUsers, complianceReports, sanitationVisits, waterStations } from '@/lib/data';
+import { deliveries as initialDeliveries, consumptionData, appUsers as initialAppUsers, complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits, waterStations as initialWaterStations } from '@/lib/data';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Feedback, AppUser, Delivery, WaterStation } from '@/lib/types';
+import type { Feedback, AppUser, Delivery, WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
@@ -73,10 +73,29 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [fromLastMonthLiters, setFromLastMonthLiters] = useState(250);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
 
+    const [deliveries, setDeliveries] = useState<Delivery[]>(initialDeliveries);
+    const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
+    const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
+    const [appUsers, setAppUsers] = useState<AppUser[]>(initialAppUsers);
+
+
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
         const tipIndex = dayOfYear % tips.length;
         setDailyTip(tips[tipIndex]);
+
+        const storedDeliveries = localStorage.getItem('deliveries');
+        setDeliveries(storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries);
+
+        const storedComplianceReports = localStorage.getItem('complianceReports');
+        setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
+
+        const storedSanitationVisits = localStorage.getItem('sanitationVisits');
+        setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
+
+        const storedUsers = localStorage.getItem('appUsers');
+        setAppUsers(storedUsers ? JSON.parse(storedUsers) : initialAppUsers);
+
     }, []);
 
     useEffect(() => {
@@ -109,7 +128,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 monthlyLiters = onboardingData.customPlanDetails.litersPerMonth || monthlyLiters;
                 bonus = onboardingData.customPlanDetails.bonusLiters || bonus;
                 estDeliveryLiters = onboardingData.customPlanDetails.litersPerMonth || estDeliveryLiters;
-                // You could add logic here to set nextRefillDate based on deliveryFrequency, etc.
             }
         }
         
@@ -117,19 +135,18 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         setBonusLiters(bonus);
         setTotalLitersPurchased(monthlyLiters + bonus + fromLastMonthLiters);
         
-        const user = initialAppUsers.find(u => u.id === 'USR-001');
+        const user = appUsers.find(u => u.id === 'USR-001');
         if (user) {
             setCurrentUser(user);
             setRemainingLiters(Math.max(0, (monthlyLiters + bonus + fromLastMonthLiters) - user.totalConsumptionLiters));
         }
 
-    }, [fromLastMonthLiters]);
+    }, [fromLastMonthLiters, appUsers]);
 
 
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), value: gallonToLiter(d.consumptionGallons) }));
     
     const consumedLiters = currentUser ? currentUser.totalConsumptionLiters : 0;
-    const upcomingDeliveries = deliveries.filter(d => d.status === 'Pending' || d.status === 'In Transit').length;
 
     const userDeliveries = currentUser ? deliveries.filter(d => d.userId === currentUser.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
 

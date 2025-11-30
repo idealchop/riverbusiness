@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { deliveries, paymentHistory as initialPaymentHistory, waterStations, complianceReports, sanitationVisits } from '@/lib/data';
+import { deliveries as initialDeliveries, paymentHistory as initialPaymentHistory, waterStations as initialWaterStations, complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -32,7 +32,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -92,6 +92,10 @@ export default function DashboardLayout({
   const [editableFormData, setEditableFormData] = useState<OnboardingData['formData'] | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [deliveries, setDeliveries] = useState<Delivery[]>(initialDeliveries);
+  const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
+  const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
+  const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bpiQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
@@ -112,6 +116,18 @@ export default function DashboardLayout({
   const [switchReason, setSwitchReason] = useState('');
   const [switchUrgency, setSwitchUrgency] = useState('');
   const [hasNewMessage, setHasNewMessage] = useState(false);
+
+  useEffect(() => {
+    const storedDeliveries = localStorage.getItem('deliveries');
+    const storedComplianceReports = localStorage.getItem('complianceReports');
+    const storedSanitationVisits = localStorage.getItem('sanitationVisits');
+    const storedWaterStations = localStorage.getItem('waterStations');
+    
+    setDeliveries(storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries);
+    setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
+    setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
+    setWaterStations(storedWaterStations ? JSON.parse(storedWaterStations) : initialWaterStations);
+  }, []);
 
   useEffect(() => {
     const allNotifications: Notification[] = [];
@@ -172,7 +188,7 @@ export default function DashboardLayout({
     allNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
     setNotifications(allNotifications);
-}, [paymentHistory]);
+}, [paymentHistory, deliveries, complianceReports, sanitationVisits]);
 
 
   useEffect(() => {
@@ -185,8 +201,11 @@ export default function DashboardLayout({
         setUserName(data.formData.fullName);
       }
       
+      const storedPaymentHistory = localStorage.getItem('paymentHistory');
+      const initialHistory = storedPaymentHistory ? JSON.parse(storedPaymentHistory) : [];
+
       setPaymentHistory(prevHistory => {
-        let currentHistory = [...prevHistory];
+        let currentHistory = [...initialHistory];
         
         const hasUpcomingInvoice = currentHistory.some(inv => inv.status === 'Upcoming');
 
@@ -197,7 +216,6 @@ export default function DashboardLayout({
             let shouldCreate = true;
             if (lastInvoice) {
                 const lastInvoiceDate = new Date(lastInvoice.date);
-                // Don't create if an invoice for the current month already exists (paid or otherwise)
                 if (lastInvoiceDate.getFullYear() === now.getFullYear() && lastInvoiceDate.getMonth() === now.getMonth()) {
                     shouldCreate = false;
                 }
@@ -214,7 +232,7 @@ export default function DashboardLayout({
                 currentHistory = [...currentHistory, newUpcomingInvoice];
             }
         }
-        
+        localStorage.setItem('paymentHistory', JSON.stringify(currentHistory));
         return currentHistory;
       });
     }
@@ -229,6 +247,7 @@ export default function DashboardLayout({
         return invoice;
     });
     setPaymentHistory(updatedHistory);
+    localStorage.setItem('paymentHistory', JSON.stringify(updatedHistory));
     setIsProofUploadDialogOpen(false);
   };
 
@@ -903,6 +922,7 @@ export default function DashboardLayout({
 
 
     
+
 
 
 
