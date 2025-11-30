@@ -17,7 +17,7 @@ import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Users, Briefcase, Building, Layers, Factory } from 'lucide-react';
+import { Users, Briefcase, Building, Layers, Factory, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -67,6 +67,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { toast } = useToast();
   
+  const [currentStep, setCurrentStep] = React.useState(1);
   const [selectedClientType, setSelectedClientType] = React.useState<string | null>(null);
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
@@ -106,6 +107,13 @@ export default function OnboardingPage() {
     router.push('/dashboard');
   };
 
+  const handleNextStep = async () => {
+    const isValid = await form.trigger(['fullName', 'clientId', 'email', 'businessName', 'address', 'contactNumber']);
+    if (isValid) {
+        setCurrentStep(2);
+    }
+  }
+
   const getImageForPlan = (imageId: string) => {
     return PlaceHolderImages.find(p => p.id === imageId);
   }
@@ -136,10 +144,12 @@ export default function OnboardingPage() {
             waterStation: ''
         });
         
+        const clientTypeDetails = clientTypes.find(c => c.name === selectedClientType);
         let planName = `Custom ${selectedClientType} Plan`;
-        setSelectedPlan({name: planName, price: amountPerMonth});
+        setSelectedPlan({name: planName, price: amountPerMonth, imageId: clientTypeDetails?.imageId});
         
         setIsPlanDialogOpen(false);
+        setCurrentStep(3);
     } else {
         toast({
             variant: "destructive",
@@ -164,7 +174,6 @@ export default function OnboardingPage() {
     setAmountPerMonth(value);
   }
 
-  
   const renderPlanDialog = () => {
     let title = `Customize Your ${selectedClientType} Plan`
 
@@ -232,6 +241,8 @@ export default function OnboardingPage() {
     );
   }
 
+  const selectedPlanImage = selectedPlan?.imageId ? getImageForPlan(selectedPlan.imageId) : null;
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background py-12 px-4">
       <Card className="w-full max-w-3xl">
@@ -245,142 +256,180 @@ export default function OnboardingPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="space-y-4">
-                <h3 className="font-bold text-lg">1. Your Details</h3>
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. Juan dela Cruz" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="clientId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Client ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. SC2500000029" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="e.g. juan.delacruz@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="businessName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. River Business Inc." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. 123 Main St, Anytown" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contactNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Number</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder="e.g. 09123456789" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-lg">Step 1: Your Details</h3>
+                    <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+                    <FormField
+                        control={form.control}
+                        name="fullName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. Juan dela Cruz" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="clientId"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Client ID</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. SC2500000029" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                            <Input type="email" placeholder="e.g. juan.delacruz@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="businessName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Business Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. River Business Inc." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="address"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Address</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. 123 Main St, Anytown" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="contactNumber"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Contact Number</FormLabel>
+                            <FormControl>
+                            <Input type="tel" placeholder="e.g. 09123456789" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    </div>
+                     <div className="flex justify-end pt-8">
+                        <Button type="button" onClick={handleNextStep}>Next</Button>
+                    </div>
                 </div>
-              </div>
+              )}
 
 
-              <div className="space-y-4">
-                  <h3 className="font-bold text-lg">2. Choose Your Plan</h3>
-                  <p className="text-muted-foreground">Select a client type to customize your water plan.</p>
-                  <div className="grid grid-cols-2 gap-4">
-                      {clientTypes.map((client) => {
-                          const image = getImageForPlan(client.imageId);
-                          return (
-                            <div key={client.name}
-                                 onClick={() => handleClientTypeSelect(client.name)}
-                                 className={cn(
-                                     "border rounded-lg p-0 cursor-pointer transition-all flex flex-col h-52 overflow-hidden relative",
-                                     selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
-                                 )}>
-                                {image && (
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => setCurrentStep(1)}><ArrowLeft className="h-4 w-4" /></Button>
+                        <h3 className="font-bold text-lg">Step 2: Choose Your Plan</h3>
+                    </div>
+                    <p className="text-muted-foreground">Select a client type to customize your water plan.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        {clientTypes.map((client) => {
+                            const image = getImageForPlan(client.imageId);
+                            return (
+                                <div key={client.name}
+                                    onClick={() => handleClientTypeSelect(client.name)}
+                                    className={cn(
+                                        "border rounded-lg p-0 cursor-pointer transition-all flex flex-col h-52 overflow-hidden relative",
+                                        selectedClientType === client.name ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
+                                    )}>
+                                    {image && (
+                                        <Image
+                                            src={image.imageUrl}
+                                            alt={client.name}
+                                            fill
+                                            className={cn("object-cover")}
+                                            data-ai-hint={image.imageHint}
+                                        />
+                                    )}
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                                        <p className="font-semibold text-white">{client.name}</p>
+                                        <p className="text-xs text-white/80">{client.description}</p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+              )}
+              
+                {currentStep === 3 && selectedPlan && customPlanDetails && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                             <Button variant="ghost" size="icon" onClick={() => setCurrentStep(2)}><ArrowLeft className="h-4 w-4" /></Button>
+                             <h3 className="text-lg font-semibold">Step 3: Confirm Your Plan</h3>
+                        </div>
+                        
+                        <div className="mt-4 border rounded-lg p-4 bg-accent/50 space-y-4">
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                                 {selectedPlanImage && (
                                     <Image
-                                        src={image.imageUrl}
-                                        alt={client.name}
-                                        fill
-                                        className={cn("object-cover")}
-                                        data-ai-hint={image.imageHint}
+                                        src={selectedPlanImage.imageUrl}
+                                        alt={selectedPlan.name}
+                                        width={150}
+                                        height={150}
+                                        className="rounded-lg object-cover"
+                                        data-ai-hint={selectedPlanImage.imageHint}
                                     />
                                 )}
-                                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                                    <p className="font-semibold text-white">{client.name}</p>
-                                    <p className="text-xs text-white/80">{client.description}</p>
+                                <div className="flex-1">
+                                    <p className="font-bold text-xl">{selectedPlan.name}</p>
+                                    <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                        <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()}</p>
+                                        <p><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</p>
+                                        <p><strong>Est. Bill/Month:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
+                                        <p><strong>Delivery:</strong> {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
+                                    </div>
                                 </div>
                             </div>
-                          )
-                      })}
-                  </div>
-              </div>
-              
-                {selectedPlan && customPlanDetails && (
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">3. Confirm Your Plan</h3>
-                        <div className="mt-4 border rounded-lg p-4 flex justify-between items-start bg-accent/50">
-                            <div>
-                                <p className="font-bold text-lg">{selectedPlan.name}</p>
-                                <div className="text-sm text-muted-foreground">
-                                    <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month (Est. ₱{selectedPlan.price.toLocaleString()}/month)</p>
-                                    <p>{customPlanDetails.deliveryFrequency} delivery on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
+                            <div className="border-t pt-4">
+                                <h4 className="font-semibold mb-2">Your Details</h4>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                    <p><strong>Name:</strong> {form.getValues('fullName')}</p>
+                                    <p><strong>Client ID:</strong> {form.getValues('clientId')}</p>
+                                    <p><strong>Email:</strong> {form.getValues('email')}</p>
+                                    <p><strong>Business:</strong> {form.getValues('businessName')}</p>
+                                    <p><strong>Address:</strong> {form.getValues('address')}</p>
+                                    <p><strong>Contact:</strong> {form.getValues('contactNumber')}</p>
                                 </div>
                             </div>
-                            <Button variant="outline" onClick={() => handleClientTypeSelect(selectedClientType!)}>Change Plan</Button>
+                        </div>
+                         <div className="flex justify-end pt-8">
+                            <Button type="submit" className="w-full">Complete Onboarding</Button>
                         </div>
                     </div>
                 )}
-
-              <div className="flex justify-end pt-8">
-                <Button type="submit" className="w-full" disabled={!selectedPlan}>Complete Onboarding</Button>
-              </div>
             </form>
           </Form>
         </CardContent>
@@ -389,5 +438,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
