@@ -318,7 +318,7 @@ export default function AdminPage() {
         </Dialog>
         
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
                     <DialogDescription>
@@ -329,21 +329,23 @@ export default function AdminPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
+                                <TableHead>Ref ID</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Volume</TableHead>
+                                <TableHead>Liters / Gallons</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Proof of Delivery</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {userDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
+                                const liters = delivery.volumeGallons * 3.785;
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{delivery.volumeGallons} gal</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeGallons}gal</TableCell>
                                     <TableCell>
                                          <Badge variant={statusInfo.variant} className={cn(
                                             statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
@@ -352,6 +354,15 @@ export default function AdminPage() {
                                         )}>
                                             {statusInfo.label}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {delivery.proofOfDeliveryUrl ? (
+                                            <Button variant="link" size="sm" asChild>
+                                                <a href={delivery.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer">View</a>
+                                            </Button>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">Not available</span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {delivery.status === 'Delivered' && userForHistory && (
@@ -364,7 +375,7 @@ export default function AdminPage() {
                             )})}
                              {userDeliveries.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
+                                    <TableCell colSpan={6} className="text-center">No delivery history found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

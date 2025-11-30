@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { deliveries, consumptionData, appUsers as initialAppUsers, complianceReports, sanitationVisits } from '@/lib/data';
+import { deliveries, consumptionData, appUsers as initialAppUsers, complianceReports, sanitationVisits, waterStations } from '@/lib/data';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Feedback, AppUser, Delivery } from '@/lib/types';
+import type { Feedback, AppUser, Delivery, WaterStation } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const gallonToLiter = (gallons: number) => gallons * 19;
@@ -62,6 +63,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [feedbackMessage, setFeedbackMessage] = useState('');
     const [feedbackRating, setFeedbackRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
+    const [selectedStation, setSelectedStation] = useState<string>('');
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
@@ -115,11 +117,11 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     }, []);
 
     const handleFeedbackSubmit = () => {
-        if (feedbackMessage.trim() === '' || feedbackRating === 0) {
+        if (feedbackMessage.trim() === '' || feedbackRating === 0 || !selectedStation) {
             toast({
                 variant: 'destructive',
                 title: 'Incomplete Feedback',
-                description: 'Please provide a message and a rating.'
+                description: 'Please select a station, provide a rating, and write a message.'
             });
             return;
         }
@@ -129,7 +131,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             userId: currentUser?.id || 'USR-001',
             userName: userName,
             timestamp: new Date().toISOString(),
-            feedback: feedbackMessage,
+            feedback: `[${selectedStation}] ${feedbackMessage}`,
             rating: feedbackRating,
             read: false,
         };
@@ -146,6 +148,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         setFeedbackMessage('');
         setFeedbackRating(0);
         setHoverRating(0);
+        setSelectedStation('');
     };
 
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), value: gallonToLiter(d.consumptionGallons) }));
@@ -311,12 +314,27 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Submit Feedback</DialogTitle>
+                            <DialogTitle>Rate a Water Station</DialogTitle>
                             <DialogDescription>
-                                We value your opinion. Let us know how we can improve.
+                                We value your opinion. Let us know how we can improve our stations.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4">
+                             <div>
+                                <Label htmlFor="water-station" className="mb-2 block">Water Station</Label>
+                                <Select onValueChange={setSelectedStation} value={selectedStation}>
+                                    <SelectTrigger id="water-station">
+                                        <SelectValue placeholder="Select a station..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {waterStations.map((station) => (
+                                            <SelectItem key={station.id} value={station.name}>
+                                                {station.name} - <span className="text-muted-foreground">{station.location}</span>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div>
                                 <Label htmlFor="feedback-rating" className="mb-2 block">Rating</Label>
                                 <div className="flex items-center gap-1">
@@ -337,10 +355,10 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                                 </div>
                             </div>
                             <div>
-                                <Label htmlFor="feedback-message">Message</Label>
+                                <Label htmlFor="feedback-message">Recommendation / Message</Label>
                                 <Textarea
                                     id="feedback-message"
-                                    placeholder="Tell us about your experience..."
+                                    placeholder="Tell us about your experience with this station..."
                                     value={feedbackMessage}
                                     onChange={(e) => setFeedbackMessage(e.target.value)}
                                     rows={4}
@@ -362,7 +380,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
 
         <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userName}</DialogTitle>
                     <DialogDescription>
@@ -373,20 +391,22 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
+                                <TableHead>Ref ID</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Volume</TableHead>
+                                <TableHead>Liters / Gallons</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Proof of Delivery</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {userDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
+                                const liters = delivery.volumeGallons * 3.785;
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{delivery.volumeGallons} gal</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeGallons}gal</TableCell>
                                     <TableCell>
                                          <Badge variant={statusInfo.variant} className={cn(
                                             statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
@@ -396,11 +416,20 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                                             {statusInfo.label}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell>
+                                        {delivery.proofOfDeliveryUrl ? (
+                                            <Button variant="link" size="sm" asChild>
+                                                <a href={delivery.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer">View</a>
+                                            </Button>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs">Not available</span>
+                                        )}
+                                    </TableCell>
                                 </TableRow>
                             )})}
                              {userDeliveries.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center">No delivery history found.</TableCell>
+                                    <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

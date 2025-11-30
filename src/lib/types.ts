@@ -9,7 +9,7 @@ export interface Delivery {
   date: string;
   volumeGallons: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
-  attachment?: string;
+  proofOfDeliveryUrl?: string;
 }
 
 export interface ComplianceReport {
