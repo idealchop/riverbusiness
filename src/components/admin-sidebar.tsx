@@ -25,9 +25,11 @@ export function AdminSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg justify-center">
-          <Logo className="h-10 w-10 group-data-[collapsible=icon]:h-12 group-data-[collapsible=icon]:w-12" />
-          <span className="font-headline font-bold group-data-[collapsible=icon]:opacity-0">Admin Panel</span>
+        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:hidden">
+          <Logo height={32} />
+        </Link>
+        <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex">
+          <Logo height={40} />
         </Link>
       </SidebarHeader>
       <SidebarContent>

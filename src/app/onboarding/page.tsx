@@ -220,8 +220,7 @@ export default function OnboardingPage() {
       <Card className="w-full max-w-3xl">
         <CardHeader className="text-center">
              <div className="flex items-center justify-center gap-2 font-semibold text-2xl mb-4">
-              <Logo className="h-12 w-12" />
-              <span className="font-headline">River Business</span>
+              <Logo height={40} />
             </div>
             <CardTitle className="text-3xl font-bold">Welcome Onboard!</CardTitle>
             <CardDescription>Please fill out your information to get started.</CardDescription>
