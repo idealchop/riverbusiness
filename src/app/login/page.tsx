@@ -93,7 +93,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-4xl shadow-2xl overflow-hidden rounded-2xl">
+      <Card className="w-full max-w-5xl shadow-2xl overflow-hidden rounded-2xl">
           <div className="grid lg:grid-cols-2">
             <div className="flex flex-col items-center justify-center p-6 sm:p-12">
               <div className="mx-auto grid w-full max-w-sm gap-6">
@@ -140,7 +140,7 @@ export default function LoginPage() {
             </div>
             <div className="hidden lg:block relative">
               <Image
-                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FLP_image_v2.png?alt=media&token=746f19aa-ee43-4657-9503-262c52411dff"
+                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FLP_image_v3.png?alt=media&token=b2f8fa47-22ef-4e9f-a713-324f97655779"
                 alt="River Business Marketing Material"
                 fill
                 className="object-contain dark:brightness-[0.2] dark:grayscale"
