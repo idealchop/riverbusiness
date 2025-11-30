@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers, complianceReports, sanitationVisits, waterStations } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -25,6 +25,10 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { DateRange } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.785;
@@ -56,6 +60,7 @@ const tips = [
 ];
 
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
+    const { toast } = useToast();
     const [greeting, setGreeting] = useState('');
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
     const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
@@ -67,6 +72,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [monthlyPlanLiters, setMonthlyPlanLiters] = useState(0);
     const [bonusLiters, setBonusLiters] = useState(0);
     const [fromLastMonthLiters, setFromLastMonthLiters] = useState(250);
+    const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
 
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
@@ -142,6 +148,43 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         }
     };
     
+    const filteredDeliveries = userDeliveries.filter(delivery => {
+        if (!deliveryDateRange?.from) return true;
+        const fromDate = deliveryDateRange.from;
+        const toDate = deliveryDateRange.to || fromDate;
+        const deliveryDate = new Date(delivery.date);
+        return deliveryDate >= fromDate && deliveryDate <= toDate;
+    });
+
+    const handleDownloadDeliveries = () => {
+        const headers = ["ID", "Date", "Volume (Liters)", "Bottles", "Status", "Proof of Delivery URL"];
+        const csvRows = [headers.join(',')];
+
+        filteredDeliveries.forEach(delivery => {
+            const liters = delivery.volumeGallons * 3.785;
+            const bottles = Math.round(liters / 19);
+            const row = [
+                delivery.id,
+                format(new Date(delivery.date), 'PP'),
+                liters.toFixed(2),
+                bottles,
+                delivery.status,
+                delivery.proofOfDeliveryUrl || "N/A"
+            ].join(',');
+            csvRows.push(row);
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `delivery-history-${userName.replace(/\s/g, '_')}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({ title: "Download Started", description: "Delivery history is being downloaded." });
+    };
 
     return (
     <div className="flex flex-col gap-8">
@@ -286,6 +329,48 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                         A log of all past deliveries for this user.
                     </DialogDescription>
                 </DialogHeader>
+                <div className="flex items-center gap-2 py-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                                "w-[300px] justify-start text-left font-normal",
+                                !deliveryDateRange && "text-muted-foreground"
+                            )}
+                            >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {deliveryDateRange?.from ? (
+                                deliveryDateRange.to ? (
+                                <>
+                                    {format(deliveryDateRange.from, "LLL dd, y")} -{" "}
+                                    {format(deliveryDateRange.to, "LLL dd, y")}
+                                </>
+                                ) : (
+                                format(deliveryDateRange.from, "LLL dd, y")
+                                )
+                            ) : (
+                                <span>Pick a date range</span>
+                            )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={deliveryDateRange?.from}
+                            selected={deliveryDateRange}
+                            onSelect={setDeliveryDateRange}
+                            numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleDownloadDeliveries} disabled={filteredDeliveries.length === 0}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV
+                    </Button>
+                </div>
                  <div className="py-4 max-h-[60vh] overflow-y-auto">
                     <Table>
                         <TableHeader>
@@ -298,7 +383,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {userDeliveries.map(delivery => {
+                            {filteredDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
                                 const liters = delivery.volumeGallons * 3.785;
                                 const bottles = Math.round(liters / 19);

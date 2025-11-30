@@ -9,7 +9,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries as initialDeliveries, waterStations as initialWaterStations } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -32,6 +32,9 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -75,6 +78,7 @@ export default function AdminPage() {
     const [isDeductDialogOpen, setIsDeductDialogOpen] = useState(false);
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
+    const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
 
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
@@ -281,7 +285,49 @@ export default function AdminPage() {
         }
     };
     
-    const userDeliveries = userForHistory ? deliveries.filter(d => d.userId === userForHistory.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+    const userDeliveries = userForHistory 
+        ? deliveries
+            .filter(d => d.userId === userForHistory.id)
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) 
+        : [];
+    
+    const filteredDeliveries = userDeliveries.filter(delivery => {
+        if (!deliveryDateRange?.from) return true;
+        const fromDate = deliveryDateRange.from;
+        const toDate = deliveryDateRange.to || fromDate;
+        const deliveryDate = new Date(delivery.date);
+        return deliveryDate >= fromDate && deliveryDate <= toDate;
+    });
+
+    const handleDownloadDeliveries = () => {
+        const headers = ["ID", "Date", "Volume (Liters)", "Bottles", "Status", "Proof of Delivery URL"];
+        const csvRows = [headers.join(',')];
+
+        filteredDeliveries.forEach(delivery => {
+            const liters = delivery.volumeGallons * 3.785;
+            const bottles = Math.round(liters / 19);
+            const row = [
+                delivery.id,
+                format(new Date(delivery.date), 'PP'),
+                liters.toFixed(2),
+                bottles,
+                delivery.status,
+                delivery.proofOfDeliveryUrl || "N/A"
+            ].join(',');
+            csvRows.push(row);
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `delivery-history-${userForHistory?.name?.replace(/\s/g, '_')}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({ title: "Download Started", description: "Delivery history is being downloaded." });
+    };
 
     const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
 
@@ -347,6 +393,48 @@ export default function AdminPage() {
                         A log of all past deliveries for this user.
                     </DialogDescription>
                 </DialogHeader>
+                <div className="flex items-center gap-2 py-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            id="date"
+                            variant={"outline"}
+                            className={cn(
+                                "w-[300px] justify-start text-left font-normal",
+                                !deliveryDateRange && "text-muted-foreground"
+                            )}
+                            >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {deliveryDateRange?.from ? (
+                                deliveryDateRange.to ? (
+                                <>
+                                    {format(deliveryDateRange.from, "LLL dd, y")} -{" "}
+                                    {format(deliveryDateRange.to, "LLL dd, y")}
+                                </>
+                                ) : (
+                                format(deliveryDateRange.from, "LLL dd, y")
+                                )
+                            ) : (
+                                <span>Pick a date range</span>
+                            )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={deliveryDateRange?.from}
+                            selected={deliveryDateRange}
+                            onSelect={setDeliveryDateRange}
+                            numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleDownloadDeliveries} disabled={filteredDeliveries.length === 0}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV
+                    </Button>
+                </div>
                  <div className="py-4 max-h-[60vh] overflow-y-auto">
                     <Table>
                         <TableHeader>
@@ -360,7 +448,7 @@ export default function AdminPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {userDeliveries.map(delivery => {
+                            {filteredDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
                                 const liters = delivery.volumeGallons * 3.785;
                                 const bottles = Math.round(liters / 19);
@@ -397,9 +485,9 @@ export default function AdminPage() {
                                     </TableCell>
                                 </TableRow>
                             )})}
-                             {userDeliveries.length === 0 && (
+                             {filteredDeliveries.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center">No delivery history found.</TableCell>
+                                    <TableCell colSpan={6} className="text-center">No delivery history found for the selected date range.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
