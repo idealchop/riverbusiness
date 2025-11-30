@@ -276,9 +276,9 @@ export default function DashboardPage() {
             </div>
              <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline" onClick={() => setIsComplianceDialogOpen(true)}>
-                        <ShieldCheck className="mr-2 h-4 w-4" />
-                        Water Quality Compliance
+                    <Button variant="outline" size="icon" className="sm:size-auto sm:px-4" onClick={() => setIsComplianceDialogOpen(true)}>
+                        <ShieldCheck className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Water Quality Compliance</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl">
@@ -540,6 +540,7 @@ export default function DashboardPage() {
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Total Purchased
+                        <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
@@ -558,6 +559,7 @@ export default function DashboardPage() {
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
+                        <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
@@ -608,13 +610,13 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div>
                         <CardTitle>Consumption Analytics</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
                         <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as 'weekly' | 'monthly')}>
-                            <SelectTrigger className="w-[140px]">
+                            <SelectTrigger className="w-full sm:w-[140px]">
                                 <SelectValue placeholder="Filter..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -622,9 +624,9 @@ export default function DashboardPage() {
                                 <SelectItem value="monthly">This Month</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button onClick={() => setIsDeliveryHistoryOpen(true)}>
-                            <History className="h-4 w-4 mr-2" />
-                            History
+                        <Button onClick={() => setIsDeliveryHistoryOpen(true)} size="icon" className="sm:size-auto sm:px-4">
+                            <History className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">History</span>
                         </Button>
                     </div>
                 </CardHeader>
@@ -740,5 +742,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    

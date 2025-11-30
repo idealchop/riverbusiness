@@ -546,7 +546,7 @@ export default function DashboardLayout({
                                             <Input id="uid" value={authUser?.uid || ''} disabled />
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col sm:flex-row gap-2">
                                         <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
                                         <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
                                     </div>
@@ -947,5 +947,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
