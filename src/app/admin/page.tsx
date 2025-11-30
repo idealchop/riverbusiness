@@ -9,7 +9,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries, waterStations as initialWaterStations } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -30,6 +30,7 @@ import type { AppUser, Feedback, Delivery, WaterStation } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -63,8 +64,7 @@ export default function AdminPage() {
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
     const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const [stationToUpdate, setStationToUpdate] = useState<string | null>(null);
+    const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
 
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
@@ -158,14 +158,13 @@ export default function AdminPage() {
         localStorage.setItem('feedbackLogs', JSON.stringify(updatedFeedback));
     };
 
-    const handleAttachPermit = (stationId: string) => {
-        setStationToUpdate(stationId);
-        // This is a mock of a file picker. In a real app, this would open a file dialog.
-        // We'll simulate the successful "upload" by providing a sample image URL.
+    const handleAttachPermit = () => {
+        if (!stationToUpdate) return;
+        // This is a mock of a file upload. In a real app, this would handle the file object.
         const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/permit-sample.jpg?alt=media&token=c8b2512a-3636-4c44-884c-354336c9d2f6';
 
         const updatedStations = waterStations.map(station =>
-            station.id === stationId ? { ...station, permitUrl: samplePermitUrl } : station
+            station.id === stationToUpdate.id ? { ...station, permitUrl: samplePermitUrl } : station
         );
 
         setWaterStations(updatedStations);
@@ -173,8 +172,9 @@ export default function AdminPage() {
 
         toast({
             title: 'Permit Attached',
-            description: `A sample permit has been attached to station ${stationId}.`,
+            description: `A sample permit has been attached to station ${stationToUpdate.name}.`,
         });
+        setStationToUpdate(null);
     };
 
 
@@ -671,10 +671,39 @@ export default function AdminPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="outline" size="sm" onClick={() => handleAttachPermit(station.id)}>
-                                                    <Paperclip className="mr-2 h-4 w-4"/>
-                                                    Attach Permit
-                                                </Button>
+                                                <Dialog onOpenChange={(open) => !open && setStationToUpdate(null)}>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm" onClick={() => setStationToUpdate(station)}>
+                                                            <Paperclip className="mr-2 h-4 w-4"/>
+                                                            Attach Permit
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-md">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Attach Permit for {station.name}</DialogTitle>
+                                                            <DialogDescription>
+                                                                Upload the permit document for this water station.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid gap-4 py-4">
+                                                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                                                <Label htmlFor="permit-file">Permit File</Label>
+                                                                <Input id="permit-file" type="file" />
+                                                            </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <DialogClose asChild>
+                                                                <Button type="button" variant="secondary">Cancel</Button>
+                                                            </DialogClose>
+                                                            <DialogClose asChild>
+                                                                <Button type="button" onClick={handleAttachPermit}>
+                                                                    <Upload className="mr-2 h-4 w-4" />
+                                                                    Attach
+                                                                </Button>
+                                                            </DialogClose>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -688,5 +717,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
