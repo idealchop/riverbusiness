@@ -1,6 +1,6 @@
 import { chatbot } from '@/ai/flows/chatbot-flow';
 import { NextRequest, NextResponse } from 'next/server';
-import { streamToResponse } from '@vercel/ai';
+import { streamToResponse } from 'ai';
 
 export async function POST(
   req: NextRequest,
