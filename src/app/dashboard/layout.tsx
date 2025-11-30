@@ -105,8 +105,8 @@ export default function DashboardLayout({
                           <Phone className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="font-semibold">Phone Support</p>
-                          <a href="tel:1-800-555-1234" className="text-sm text-muted-foreground hover:text-primary">1-800-555-1234</a>
+                          <p className="font-semibold">Jayvee Victor Co</p>
+                          <a href="tel:09182719091" className="text-sm text-muted-foreground hover:text-primary">09182719091</a>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 rounded-md border p-4">
@@ -115,7 +115,7 @@ export default function DashboardLayout({
                         </div>
                         <div>
                           <p className="font-semibold">Email Support</p>
-                          <a href="mailto:support@riverbusiness.com" className="text-sm text-muted-foreground hover:text-primary">support@riverbusiness.com</a>
+                          <a href="mailto:jayvee@riverph.com" className="text-sm text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
                         </div>
                       </div>
                       <Separator className="my-4" />
