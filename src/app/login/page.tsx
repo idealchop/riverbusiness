@@ -17,7 +17,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
-  smartId: z.string().min(1, { message: 'Smart ID is required.' }),
+  email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
 
@@ -36,7 +36,11 @@ export default function LoginPage() {
 
   const onSubmit = (data: LoginFormValues) => {
     console.log(data);
-    router.push('/onboarding');
+    if (data.email === 'admin@river.com' && data.password === 'password') {
+      router.push('/admin');
+    } else {
+      router.push('/onboarding');
+    }
   };
 
   const loginImage = PlaceHolderImages.find(p => p.id === 'login-background');
@@ -54,14 +58,14 @@ export default function LoginPage() {
           </div>
           <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="smartId">Smart ID</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="smartId"
-                type="text"
-                placeholder="Enter your Smart ID"
-                {...register('smartId')}
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                {...register('email')}
               />
-              {errors.smartId && <p className="text-sm text-destructive">{errors.smartId.message}</p>}
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="grid gap-2 relative">
               <Label htmlFor="password">Password</Label>
