@@ -174,7 +174,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         <div className="flex items-center justify-between">
             <div>
                 <h1 className="text-3xl font-bold">Dashboard</h1>
-                <p className="text-muted-foreground">Plan, prioritize, and accomplish your tasks with ease.</p>
+                <p className="text-muted-foreground">{greeting}, {userName}. Here is an overview of your water consumption.</p>
             </div>
             <div className="flex items-center gap-2">
                  <Dialog>
