@@ -420,7 +420,7 @@ export default function DashboardLayout({
                           <CardContent className="space-y-4">
                               {planImage && (
                                 <div className="relative h-40 w-full rounded-lg overflow-hidden">
-                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} layout="fill" objectFit="cover" />
+                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} layout="fill" objectFit="cover" data-ai-hint={planImage.imageHint} />
                                 </div>
                               )}
                               <div className="flex justify-between items-baseline">
@@ -702,3 +702,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
