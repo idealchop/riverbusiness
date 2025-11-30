@@ -7,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, Search } from 'lucide-react';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs } from '@/lib/data';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, Search, MessageSquare, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,9 +25,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser } from '@/lib/types';
+import type { AppUser, Feedback } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -58,6 +59,7 @@ export default function AdminPage() {
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [activeTab, setActiveTab] = useState('user-management');
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
 
 
     const handleSearch = () => {
@@ -90,6 +92,13 @@ export default function AdminPage() {
         if (storedRequests) {
             setInvoiceRequests(JSON.parse(storedRequests));
         }
+
+        const storedFeedback = localStorage.getItem('feedbackLogs');
+        if (storedFeedback) {
+            setFeedbackLogs(JSON.parse(storedFeedback));
+        } else {
+            localStorage.setItem('feedbackLogs', JSON.stringify(initialFeedbackLogs));
+        }
     }, []);
 
     useEffect(() => {
@@ -113,7 +122,7 @@ export default function AdminPage() {
     });
 
     const handleCreateUser = (values: NewUserFormValues) => {
-        const newUser = {
+        const newUser: AppUser = {
             id: `USR-${String(appUsers.length + 1).padStart(3, '0')}`,
             ...values,
             totalConsumptionLiters: 0,
@@ -140,11 +149,20 @@ export default function AdminPage() {
         });
     };
 
+    const handleToggleFeedbackRead = (feedbackId: string) => {
+        const updatedFeedback = feedbackLogs.map(fb => 
+            fb.id === feedbackId ? { ...fb, read: !fb.read } : fb
+        );
+        setFeedbackLogs(updatedFeedback);
+        localStorage.setItem('feedbackLogs', JSON.stringify(updatedFeedback));
+    };
+
     const adminUser = appUsers.find(user => user.role === 'Admin');
 
     const totalUsers = appUsers.length;
     const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
     const pendingRequests = invoiceRequests.filter(r => r.status === 'Pending').length;
+    const unreadFeedback = feedbackLogs.filter(f => !f.read).length;
 
     const filteredUsers = appUsers.filter(user => {
         if (userFilter === 'all') return true;
@@ -225,7 +243,7 @@ export default function AdminPage() {
             </DialogContent>
         </Dialog>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -251,6 +269,15 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{pendingRequests}</div>
+                </CardContent>
+            </Card>
+            <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => setActiveTab('feedback')}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Unread Feedback</CardTitle>
+                    <MessageSquare className="h-4 w-4 text-primary-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{unreadFeedback}</div>
                 </CardContent>
             </Card>
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
@@ -336,10 +363,11 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
              <Card>
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
                         <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
                         <TabsTrigger value="login-logs"><LogIn className="mr-2 h-4 w-4"/>Login Logs</TabsTrigger>
                         <TabsTrigger value="transactions"><Handshake className="mr-2 h-4 w-4"/>Transactions</TabsTrigger>
+                        <TabsTrigger value="feedback"><MessageSquare className="mr-2 h-4 w-4" />Feedback</TabsTrigger>
                     </TabsList>
                 </CardHeader>
                  <CardContent>
@@ -476,6 +504,55 @@ export default function AdminPage() {
                                     </TableRow>
                                 )}
                             </TableBody>
+                            </Table>
+                        </div>
+                    </TabsContent>
+                     <TabsContent value="feedback">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>User</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Rating</TableHead>
+                                        <TableHead>Feedback</TableHead>
+                                        <TableHead className="text-center">Read</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {feedbackLogs.map((fb) => (
+                                        <TableRow key={fb.id}>
+                                            <TableCell className="font-medium">{fb.userName}</TableCell>
+                                            <TableCell>{format(new Date(fb.timestamp), 'PPpp')}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            className={cn(
+                                                                'h-4 w-4',
+                                                                i < fb.rating ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'
+                                                            )}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="max-w-sm whitespace-pre-wrap">{fb.feedback}</TableCell>
+                                            <TableCell className="text-center">
+                                                <Checkbox
+                                                    checked={fb.read}
+                                                    onCheckedChange={() => handleToggleFeedbackRead(fb.id)}
+                                                    aria-label="Mark as read"
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {feedbackLogs.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center">No feedback yet.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
                             </Table>
                         </div>
                     </TabsContent>

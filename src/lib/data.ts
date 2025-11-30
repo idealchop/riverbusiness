@@ -45,7 +45,7 @@ export const waterStations: WaterStation[] = [
     { id: 'WS-003', name: 'H2Oasis', location: '789 Pine Ln, Anytown', permitUrl: '#' },
 ];
 
-export const appUsers: (AppUser & { role?: 'Admin' | 'User' })[] = [
+export const appUsers: AppUser[] = [
     { id: 'USR-001', name: 'Alice Johnson', password: 'password123', totalConsumptionLiters: 12500, accountStatus: 'Active', lastLogin: '2024-07-20', role: 'User' },
     { id: 'USR-002', name: 'Bob Williams', password: 'password123', totalConsumptionLiters: 23000, accountStatus: 'Active', lastLogin: '2024-07-19', role: 'User' },
     { id: 'USR-003', name: 'Charlie Brown', password: 'password123', totalConsumptionLiters: 8000, accountStatus: 'Inactive', lastLogin: '2024-06-15', role: 'User' },
