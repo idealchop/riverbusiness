@@ -29,7 +29,7 @@ export function AdminSidebar() {
           <Logo height={32} />
         </Link>
         <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex">
-          <Logo height={40} />
+          <Logo height={32} />
         </Link>
       </SidebarHeader>
       <SidebarContent>
