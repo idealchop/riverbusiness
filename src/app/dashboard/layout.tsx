@@ -32,7 +32,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,15 +61,6 @@ interface OnboardingData {
         deliveryTime: string;
     };
     contractUrl?: string;
-}
-
-type PaymentOption = {
-    name: string;
-    qr?: ImagePlaceholder | null;
-    details?: {
-        accountName: string;
-        accountNumber: string;
-    }
 }
 
 export default function DashboardLayout({
@@ -273,7 +264,7 @@ export default function DashboardLayout({
   const paymentOptions: PaymentOption[] = [
       { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
       { name: 'Maya', qr: mayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
-      { name: 'Bank', qr: bpiQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
+      { name: 'Bank', qr: bpiQr, details: { bankName: 'Bank of the Philippine Islands', accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
       { name: 'Card' },
   ];
 
@@ -309,12 +300,12 @@ export default function DashboardLayout({
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
-                <div className="space-y-2 text-center">
-                    <h2 className="text-3xl font-bold">Hello, {userName}!</h2>
-                    <p className="text-muted-foreground">
+                <DialogHeader>
+                    <DialogTitle className="text-3xl font-bold">Hello, {userName}!</DialogTitle>
+                    <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
-                    </p>
-                </div>
+                    </DialogDescription>
+                </DialogHeader>
                 <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
                     <div className="space-y-8 flex flex-col">
                       <div className="space-y-4">
@@ -563,7 +554,8 @@ export default function DashboardLayout({
                                                 <div className="flex flex-col items-center justify-center py-4 gap-4">
                                                     <Image src={selectedPaymentOption.qr.imageUrl} alt={selectedPaymentOption.qr.description} width={250} height={250} data-ai-hint={selectedPaymentOption.qr.imageHint} />
                                                      {selectedPaymentOption.details && (
-                                                        <div className="text-center text-sm">
+                                                        <div className="text-center text-sm space-y-1">
+                                                            {selectedPaymentOption.details.bankName && <p><strong>Bank:</strong> {selectedPaymentOption.details.bankName}</p>}
                                                             <p><strong>Account Name:</strong> {selectedPaymentOption.details.accountName}</p>
                                                             <p><strong>Account Number:</strong> {selectedPaymentOption.details.accountNumber}</p>
                                                         </div>

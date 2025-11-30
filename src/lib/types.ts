@@ -87,3 +87,13 @@ export type ImagePlaceholder = {
   imageUrl: string;
   imageHint: string;
 };
+
+export type PaymentOption = {
+    name: string;
+    qr?: ImagePlaceholder | null;
+    details?: {
+        bankName?: string;
+        accountName: string;
+        accountNumber: string;
+    }
+}
