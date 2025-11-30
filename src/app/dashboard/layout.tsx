@@ -211,9 +211,9 @@ export default function DashboardLayout({
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                size="icon"
                 className="rounded-full"
               >
+                <span className="mr-2 hidden sm:inline">Need Support?</span>
                 <LifeBuoy className="h-4 w-4" />
               </Button>
             </DialogTrigger>
