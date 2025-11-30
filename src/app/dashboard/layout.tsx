@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +56,7 @@ interface OnboardingData {
         deliveryDay: string;
         deliveryTime: string;
     };
+    contractUrl?: string;
 }
 
 export default function DashboardLayout({
@@ -293,7 +294,7 @@ export default function DashboardLayout({
                 <TabsContent value="plans" className="py-4">
                   {onboardingData?.plan && onboardingData.customPlanDetails ? (
                     <div className="border rounded-lg p-4 bg-accent/50 space-y-4">
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                        <div className="flex flex-col sm:flex-row items-start gap-6">
                                 {planImage && (
                                 <Image
                                     src={planImage.imageUrl}
@@ -304,13 +305,22 @@ export default function DashboardLayout({
                                     data-ai-hint={planImage.imageHint}
                                 />
                             )}
-                            <div className="flex-1">
-                                <p className="font-bold text-xl">{onboardingData.plan.name}</p>
-                                <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                    <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
-                                    <p><strong>Bonus Liters:</strong> {onboardingData.customPlanDetails.bonusLiters.toLocaleString()}</p>
-                                    <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
-                                    <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
+                            <div className="flex-1 space-y-4">
+                                <div>
+                                    <p className="font-bold text-xl">{onboardingData.plan.name}</p>
+                                    <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                        <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
+                                        <p><strong>Bonus Liters:</strong> {onboardingData.customPlanDetails.bonusLiters.toLocaleString()}</p>
+                                        <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
+                                        <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
+                                    </div>
+                                </div>
+                                <div className="border-t pt-4">
+                                     <h4 className="font-semibold mb-2">Contract</h4>
+                                      <Button variant="outline" disabled={!onboardingData.contractUrl}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        {onboardingData.contractUrl ? 'View Contract' : 'Contract Not Available'}
+                                      </Button>
                                 </div>
                             </div>
                         </div>
@@ -407,9 +417,9 @@ export default function DashboardLayout({
                                                                     </DialogContent>
                                                                   </Dialog>
                                                                 ) : (
-                                                                  <Button variant="outline" size="sm" disabled>
-                                                                    <Check className="mr-2 h-4 w-4" />
-                                                                    Paid
+                                                                  <Button variant="outline" size="sm">
+                                                                    <Download className="mr-2 h-4 w-4" />
+                                                                    Download
                                                                   </Button>
                                                                 )}
                                                             </TableCell>
