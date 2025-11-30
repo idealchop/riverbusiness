@@ -25,19 +25,20 @@ export function AdminSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg group-data-[collapsible=icon]:justify-center">
+        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg">
+          <Logo className="h-9 block group-data-[collapsible=icon]:hidden" />
           <Logo className="h-9 hidden group-data-[collapsible=icon]:block" />
-          <span className="font-bold group-data-[collapsible=icon]:hidden">River Business</span>
+          <span className="font-bold hidden group-data-[collapsible=icon]:hidden">River Business</span>
         </Link>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
-                  className={cn("justify-start h-10")}
+                  className={cn("justify-start h-10 rounded-lg")}
                   tooltip={item.label}
                 >
                   <item.icon className="h-5 w-5" />
