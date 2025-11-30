@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -292,7 +291,7 @@ export default function AdminPage() {
 
     const totalUsers = appUsers.length;
     const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
-    const pendingRequests = invoiceRequests.filter(r => r.status === 'Pending').length;
+    const unreadFeedback = feedbackLogs.filter(fb => !fb.read).length;
 
     const filteredUsers = appUsers.filter(user => {
         if (userFilter === 'all') return true;
@@ -617,31 +616,31 @@ export default function AdminPage() {
 
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('all')}>
+            <Card className="cursor-pointer hover:bg-muted" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                    <Users2 className="h-4 w-4 text-primary-foreground" />
+                    <Users2 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{totalUsers}</div>
                 </CardContent>
             </Card>
-            <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('active')}>
+            <Card className="cursor-pointer hover:bg-muted" onClick={() => handleFilterClick('active')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                    <UserCheck className="h-4 w-4 text-primary-foreground" />
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{activeUsers}</div>
                 </CardContent>
             </Card>
-             <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => setActiveTab('transactions')}>
+             <Card className="cursor-pointer hover:bg-muted" onClick={() => setActiveTab('feedback')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-                    <FileClock className="h-4 w-4 text-primary-foreground" />
+                    <CardTitle className="text-sm font-medium">Unread Feedback</CardTitle>
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{pendingRequests}</div>
+                    <div className="text-2xl font-bold">{unreadFeedback}</div>
                 </CardContent>
             </Card>
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
@@ -727,10 +726,8 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
              <Card>
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-5">
+                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
                         <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
-                        <TabsTrigger value="login-logs"><LogIn className="mr-2 h-4 w-4"/>Login Logs</TabsTrigger>
-                        <TabsTrigger value="transactions"><Handshake className="mr-2 h-4 w-4"/>Transactions</TabsTrigger>
                         <TabsTrigger value="feedback"><MessageSquare className="mr-2 h-4 w-4" />Feedback</TabsTrigger>
                         <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
                     </TabsList>
@@ -826,78 +823,7 @@ export default function AdminPage() {
                             </Table>
                          </div>
                     </TabsContent>
-                     <TabsContent value="login-logs">
-                        <div className="overflow-x-auto">
-                            <Table className="min-w-full">
-                                <TableHeader>
-                                    <TableRow>
-                                    <TableHead>Log ID</TableHead>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Timestamp</TableHead>
-                                    <TableHead>IP Address</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loginLogs.map((log) => (
-                                    <TableRow key={log.id}>
-                                        <TableCell className="whitespace-nowrap">{log.id}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{log.userName}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{format(new Date(log.timestamp), 'PPpp')}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{log.ipAddress}</TableCell>
-                                        <TableCell>
-                                        <Badge variant={log.status === 'Success' ? 'default' : 'destructive'}>
-                                            {log.status}
-                                        </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </TabsContent>
-                    <TabsContent value="transactions">
-                        <div className="overflow-x-auto">
-                            <Table className="min-w-full">
-                            <TableHeader>
-                                <TableRow>
-                                <TableHead>Request ID</TableHead>
-                                <TableHead>User Name</TableHead>
-                                <TableHead>Date Range</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {invoiceRequests.map((request) => (
-                                <TableRow key={request.id}>
-                                    <TableCell className="font-medium whitespace-nowrap">{request.id}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{request.userName}</TableCell>
-                                    <TableCell className="whitespace-nowrap">{request.dateRange}</TableCell>
-                                    <TableCell>
-                                    <Badge
-                                        variant={request.status === 'Sent' ? 'default' : 'secondary'}
-                                    >
-                                        {request.status}
-                                    </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="outline" size="sm">
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            View Invoice
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                                ))}
-                                {invoiceRequests.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center">No invoice requests yet.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                            </Table>
-                        </div>
-                    </TabsContent>
+                    
                      <TabsContent value="feedback">
                         <div className="overflow-x-auto">
                             <Table>
@@ -1020,3 +946,5 @@ export default function AdminPage() {
   );
 }
 
+
+    
