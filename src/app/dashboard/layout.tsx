@@ -65,7 +65,7 @@ export default function DashboardLayout({
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
             <Logo className="h-6" />
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-center">
                 <span className="font-bold">River</span>
                 <Badge variant="secondary" className="text-xs">Smart Refill</Badge>
             </div>
