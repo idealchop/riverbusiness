@@ -127,7 +127,7 @@ export default function AdminLayout({
                           </div>
                           <Separator className="my-4" />
                           <div className="space-y-4">
-                              {pendingRequests.filter(r => r.status === 'Pending').slice(0, 3).map(req => (
+                              {invoiceRequests.filter(r => r.status === 'Pending').slice(0, 3).map(req => (
                                 <div key={req.id} className="grid grid-cols-[25px_1fr] items-start gap-3">
                                   <FileClock className="h-5 w-5 text-muted-foreground mt-0.5" />
                                   <div className="space-y-1">
