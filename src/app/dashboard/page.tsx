@@ -63,6 +63,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+    const [monthlyPlanLiters, setMonthlyPlanLiters] = useState(0);
+    const [bonusLiters, setBonusLiters] = useState(0);
 
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
@@ -88,6 +90,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
         const onboardingDataString = localStorage.getItem('onboardingData');
         let totalPurchased = 5000; // Fallback value
+        let monthlyLiters = 5000;
+        let bonus = 0;
         let nextRefillDate = new Date();
         nextRefillDate.setDate(nextRefillDate.getDate() + 15);
         let estDeliveryLiters = 5000;
@@ -95,18 +99,24 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         if (onboardingDataString) {
             const onboardingData = JSON.parse(onboardingDataString);
             if (onboardingData.customPlanDetails) {
-                totalPurchased = onboardingData.customPlanDetails.litersPerMonth || totalPurchased;
+                monthlyLiters = onboardingData.customPlanDetails.litersPerMonth || monthlyLiters;
+                bonus = onboardingData.customPlanDetails.bonusLiters || bonus;
+                totalPurchased = monthlyLiters + bonus;
                 estDeliveryLiters = onboardingData.customPlanDetails.litersPerMonth || estDeliveryLiters;
                 // You could add logic here to set nextRefillDate based on deliveryFrequency, etc.
             }
         }
         
         setTotalLitersPurchased(totalPurchased);
+        setMonthlyPlanLiters(monthlyLiters);
+        setBonusLiters(bonus);
         
         const user = initialAppUsers.find(u => u.id === 'USR-001');
         if (user) {
             setCurrentUser(user);
-            setRemainingLiters(Math.max(0, totalPurchased - user.totalConsumptionLiters));
+            // Assuming the totalPurchased includes everything for the current period.
+            // We'll add a static "from last month" for display purposes.
+            setRemainingLiters(Math.max(0, totalPurchased + 250 - user.totalConsumptionLiters));
         }
 
     }, []);
@@ -132,6 +142,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 return { variant: 'outline', icon: null, label: 'No Deliveries' };
         }
     };
+    
+    const fromLastMonthLiters = 250; // Static example value
 
     return (
     <div className="flex flex-col gap-8">
@@ -346,16 +358,20 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Total Purchased
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-3xl font-bold">{totalLitersPurchased.toLocaleString()}</p>
-                    <div className="flex items-center text-xs text-green-600 mt-1">
-                        <ArrowUp className="h-3 w-3 mr-1" />
-                        <span>5% from last month</span>
+                <CardContent className="space-y-3">
+                    <div>
+                        <p className="text-xs text-muted-foreground">Monthly Plan</p>
+                        <p className="text-lg font-bold">{monthlyPlanLiters.toLocaleString()} Liters</p>
+                    </div>
+                     <div>
+                        <p className="text-xs text-muted-foreground">Bonus Liters</p>
+                        <p className="text-lg font-bold">{bonusLiters.toLocaleString()} Liters</p>
+                    </div>
+                     <div>
+                        <p className="text-xs text-muted-foreground">From Last Month</p>
+                        <p className="text-lg font-bold">{fromLastMonthLiters.toLocaleString()} Liters</p>
                     </div>
                 </CardContent>
             </Card>
