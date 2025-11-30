@@ -181,6 +181,19 @@ export default function AdminPage() {
         deductForm.reset();
     };
 
+    const handleDeductFromDelivery = (userId: string, gallons: number) => {
+        const litersToDeduct = gallons * 3.78541;
+        setAppUsers(users => users.map(user => 
+            user.id === userId
+            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + litersToDeduct }
+            : user
+        ));
+        toast({
+            title: "Consumption Deducted",
+            description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters deducted from user's balance based on delivery.`
+        })
+    };
+
     const handleToggleFeedbackRead = (feedbackId: string) => {
         const updatedFeedback = feedbackLogs.map(fb => 
             fb.id === feedbackId ? { ...fb, read: !fb.read } : fb
@@ -305,7 +318,7 @@ export default function AdminPage() {
         </Dialog>
         
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
                     <DialogDescription>
@@ -320,6 +333,7 @@ export default function AdminPage() {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Volume</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -339,11 +353,18 @@ export default function AdminPage() {
                                             {statusInfo.label}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                        {delivery.status === 'Delivered' && userForHistory && (
+                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeGallons)}>
+                                                Deduct
+                                            </Button>
+                                        )}
+                                    </TableCell>
                                 </TableRow>
                             )})}
                              {userDeliveries.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center">No delivery history found.</TableCell>
+                                    <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -784,5 +805,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-      
