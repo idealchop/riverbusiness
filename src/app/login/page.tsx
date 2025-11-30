@@ -46,6 +46,8 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       if (user) {
+        toast({ title: "Login Successful", description: "Welcome back! Redirecting..." });
+
         // Special case for admin user
         if (data.email === 'admin@riverph.com') {
           const userDocRef = doc(firestore, "users", user.uid);
@@ -84,19 +86,19 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.message || 'An unknown error occurred.',
+        description: 'Please check your credentials and try again.',
       });
     }
   };
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center justify-center">
-            <Logo className="h-20 w-20 mb-4 mx-auto" />
-            <h1 className="text-3xl font-bold">Sign In</h1>
-            <p className="text-balance text-muted-foreground">
+    <div class="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div class="flex items-center justify-center py-12">
+        <div class="mx-auto grid w-[350px] gap-6">
+          <div class="grid gap-2 text-center justify-center">
+            <Logo class="h-20 w-20 mb-4 mx-auto" />
+            <h1 class="text-3xl font-bold">Sign In</h1>
+            <p class="text-balance text-muted-foreground">
               Welcome back! Please enter your details.
             </p>
           </div>

@@ -92,7 +92,7 @@ export default function AdminPage() {
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
-    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen]_ = useState(false);
+    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
     const [adjustmentType, setAdjustmentType] = useState<'add' | 'deduct'>('deduct');
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
@@ -178,11 +178,11 @@ export default function AdminPage() {
             const userDocRef = doc(firestore, "users", user.uid);
             setDocumentNonBlocking(userDocRef, newUserDoc, { merge: true });
 
-            toast({ title: 'User Created', description: `User ${values.name} has been created.` });
+            toast({ title: 'User Account Created', description: `An account for ${values.name} has been successfully created.` });
             form.reset();
             setIsCreateUserOpen(false);
         } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error creating user', description: error.message });
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to create user. Please try again.' });
         }
     };
 
@@ -192,11 +192,11 @@ export default function AdminPage() {
         if (stationToUpdate) {
             const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
             updateDocumentNonBlocking(stationRef, values);
-            toast({ title: 'Station Updated', description: `Station ${values.name} has been updated.` });
+            toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
         } else {
             const stationsRef = collection(firestore, 'waterStations');
             addDocumentNonBlocking(stationsRef, values);
-            toast({ title: 'Water Station Created', description: `Station ${values.name} has been created.` });
+            toast({ title: 'Water Station Created', description: `Station "${values.name}" has been created.` });
         }
         stationForm.reset();
         setStationToUpdate(null);
@@ -209,13 +209,13 @@ export default function AdminPage() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
 
-        toast({ title: 'Station Assigned', description: `Station assigned to ${selectedUser.name}.` });
+        toast({ title: 'Station Assigned', description: `A new water station has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
     };
 
     const handleResetPassword = (userId: string) => {
-        toast({ title: "Password Reset", description: `Password reset instructions sent to user.` });
+        toast({ title: "Password Reset Triggered", description: `A password reset link has been sent to the user's email.` });
     };
 
     const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
@@ -228,7 +228,7 @@ export default function AdminPage() {
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
         
         toast({
-            title: `Consumption ${adjustmentType === 'add' ? 'Added' : 'Deducted'}`,
+            title: `Consumption Adjusted`,
             description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
         });
         
@@ -249,7 +249,7 @@ export default function AdminPage() {
 
         toast({
             title: "Consumption Deducted",
-            description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters deducted from user's balance.`
+            description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters have been deducted from the user's balance.`
         })
     };
 
@@ -271,9 +271,9 @@ export default function AdminPage() {
             // Optimistically update local state for UI responsiveness
             setStationToUpdate(prev => prev ? { ...prev, permits: { ...prev.permits, [permitType]: downloadURL } } : null);
 
-            toast({ title: 'Permit Attached', description: `A permit has been attached to the station.` });
+            toast({ title: 'Permit Attached', description: `A new permit has been successfully attached to the station.` });
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload permit.' });
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the permit. Please try again.' });
         }
     };
 
@@ -290,10 +290,10 @@ export default function AdminPage() {
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
             updateDocumentNonBlocking(deliveryRef, { proofOfDeliveryUrl: downloadURL });
             
-            toast({ title: "Proof Uploaded", description: `Proof for delivery ${deliveryToUpdate.id} attached.` });
+            toast({ title: "Proof Uploaded", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
             setDeliveryToUpdate(null);
         } catch (error) {
-             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
+             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof. Please try again.' });
         }
     };
 
@@ -315,7 +315,7 @@ export default function AdminPage() {
             }
           });
 
-        toast({ title: "Delivery Created", description: `Manual delivery has been added for ${userForHistory.name}.` });
+        toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
         deliveryForm.reset();
         setIsCreateDeliveryOpen(false);
     };
@@ -376,7 +376,7 @@ export default function AdminPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast({ title: "Download Started", description: "Delivery history is being downloaded." });
+        toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
     const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
@@ -692,7 +692,7 @@ export default function AdminPage() {
         </Dialog>
 
 
-        <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen_}>
+        <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{adjustmentType === 'deduct' ? 'Deduct' : 'Add'} Consumption</DialogTitle>
@@ -899,11 +899,11 @@ export default function AdminPage() {
                                                             <Building className="mr-2 h-4 w-4" />
                                                             Assign Station
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen_(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
                                                             <PlusCircle className="mr-2 h-4 w-4" />
                                                             Add Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen_(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>

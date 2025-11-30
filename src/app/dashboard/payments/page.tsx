@@ -66,14 +66,14 @@ export default function PaymentsPage() {
     if (!selectedCustomerId || !date?.from || !date?.to) {
       toast({
         variant: "destructive",
-        title: "Incomplete Information",
-        description: "Please select a customer and a date range.",
+        title: "Invoice Creation Failed",
+        description: "Please select a customer and a date range to generate an invoice.",
       });
       return;
     }
     toast({
-      title: "Invoice Request Sent",
-      description: `Your request has been sent to the admin.`,
+      title: "Invoice Sent",
+      description: `An invoice has been successfully generated and sent.`,
     });
     
     setDate(undefined);

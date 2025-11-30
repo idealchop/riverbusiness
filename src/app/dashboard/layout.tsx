@@ -134,7 +134,7 @@ export default function DashboardLayout({
 
   const handleProofUpload = async (invoiceId: string) => {
     if (!authUser || !firestore || !paymentProofFile) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please select a file to upload.' });
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select a file to upload first.' });
         return;
     }
     const storage = getStorage();
@@ -151,12 +151,12 @@ export default function DashboardLayout({
             proofOfPaymentUrl: downloadURL 
         });
 
-        toast({ title: 'Upload Successful', description: 'Your proof of payment has been submitted for verification.' });
+        toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
         setIsPaymentDialogOpen(false);
         setSelectedInvoice(null);
         setPaymentProofFile(null);
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment.' });
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
     }
 };
 
@@ -172,8 +172,8 @@ export default function DashboardLayout({
         updateDocumentNonBlocking(userDocRef, editableFormData);
         setIsEditingDetails(false);
         toast({
-            title: "Account Updated",
-            description: "Your account information has been saved.",
+            title: "Changes Saved",
+            description: "Your account details have been successfully updated.",
         });
     }
   };
@@ -187,16 +187,16 @@ export default function DashboardLayout({
 
   const handlePasswordChange = () => {
     toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully.",
+        title: "Password Updated",
+        description: "Your password has been changed successfully.",
     });
     setIsPasswordDialogOpen(false);
   }
   
     const handleFeedbackSubmit = () => {
         toast({
-            title: 'Feedback Submitted!',
-            description: 'Thank you for your valuable input.',
+            title: 'Feedback Received',
+            description: 'Thank you for your valuable input. We appreciate it!',
         });
         setIsFeedbackDialogOpen(false);
         setFeedbackMessage('');
@@ -206,8 +206,8 @@ export default function DashboardLayout({
 
     const handleSwitchProviderSubmit = () => {
         toast({
-            title: 'Request Submitted',
-            description: 'Your request to switch providers has been sent to the admin team.',
+            title: 'Request Sent',
+            description: 'Your request to switch providers has been submitted to the admin team.',
         });
         setIsSwitchProviderDialogOpen(false);
         setSwitchReason('');
@@ -225,7 +225,7 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-    const planImage = React.useMemo(() => {
+    const planImage = useMemo(() => {
       if (!user?.clientType) return null;
       const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
       if (!clientTypeDetails) return null;

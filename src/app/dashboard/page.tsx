@@ -148,7 +148,7 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast({ title: "Download Started", description: "Delivery history is being downloaded." });
+        toast({ title: "Download Started", description: "Your delivery history CSV is downloading." });
     };
 
     return (
