@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -199,14 +199,24 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                         Auto Refill
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col justify-center h-full">
+                <CardContent className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                         <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
-                        <Switch id="auto-refill" />
+                        <Switch id="auto-refill" defaultChecked />
                     </div>
-                     <p className="text-xs text-muted-foreground mt-2">
+                     <p className="text-xs text-muted-foreground">
                         System will auto-schedule if balance is low.
                     </p>
+                    <div className="border-t pt-3 space-y-2">
+                         <div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3"/>Next Refill Schedule</p>
+                            <p className="font-semibold text-sm">August 15, 2024</p>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
+                            <p className="font-semibold text-sm">5,000 Liters</p>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -270,4 +280,5 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
-}
+
+    
