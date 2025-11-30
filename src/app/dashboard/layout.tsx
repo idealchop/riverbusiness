@@ -471,8 +471,11 @@ export default function DashboardLayout({
           <Dialog>
             <DialogTrigger asChild>
               <div className="flex items-center gap-3 cursor-pointer">
-                <div className="hidden sm:flex flex-col items-start">
-                  <p className="font-semibold text-sm">{user?.businessName}</p>
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  <div className="hidden sm:flex flex-col items-start">
+                    <p className="font-semibold text-sm">{user?.businessName}</p>
+                  </div>
                 </div>
               </div>
             </DialogTrigger>
