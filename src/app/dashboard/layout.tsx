@@ -68,11 +68,6 @@ const includedFeatures = [
         description: 'All partner stations meet strict sanitation and quality standards.',
     },
     {
-        icon: Headset,
-        title: 'Customer Support',
-        description: 'Get help with your account, billing, or any other inquiries.',
-    },
-    {
         icon: Repeat,
         title: 'Switch Water Providers',
         description: 'Flexibility to switch between our network of trusted providers.',
