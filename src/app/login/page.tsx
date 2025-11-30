@@ -92,7 +92,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full lg:grid h-screen lg:grid-cols-2">
+    <div className="w-full lg:grid h-screen lg:grid-cols-2 overflow-hidden">
       <div className="flex items-center justify-center py-12">
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center justify-center">
@@ -117,7 +117,7 @@ export default function LoginPage() {
             <div className="grid gap-2 relative">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
-              <Button size="icon" variant="ghost" className="absolute right-1 top-7" onClick={() => setShowPassword(!showPassword)} type="button">
+              <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
