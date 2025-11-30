@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -25,11 +25,9 @@ import { format } from 'date-fns';
 
 const gallonToLiter = (gallons: number) => gallons * 19;
 
-const goals = [
-    { text: "Reduce daily usage by 10%", done: true },
-    { text: "Fix leaking faucet in kitchen", done: true },
-    { text: "Install low-flow showerhead", done: false },
-    { text: "Only run full loads of laundry", done: false },
+const perks = [
+    { brand: "Aqua Flask", offer: "Get 15% off on your next purchase of any Aqua Flask bottle.", icon: Droplet },
+    { brand: "Healthy Human", offer: "Enjoy a free cleaning kit with any stein or tumbler purchase.", icon: Droplets }
 ];
 
 const tips = [
@@ -333,23 +331,48 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 </CardContent>
             </Card>
             <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Goals</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ul className="space-y-3">
-                            {goals.map((goal, index) => (
-                                <li key={index} className="flex items-center gap-3 text-sm">
-                                    <div className={cn("h-6 w-6 rounded-full flex items-center justify-center", goal.done ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                                        {goal.done && <CheckCircle className="h-4 w-4" />}
-                                    </div>
-                                    <span className={cn(goal.done && "line-through text-muted-foreground")}>{goal.text}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </CardContent>
-                </Card>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Card className="cursor-pointer hover:border-primary">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Gift className="h-5 w-5 text-primary"/>
+                                    Perks with Us
+                                </CardTitle>
+                                <CardDescription>Exclusive discounts from our partner brands.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm font-medium text-center text-primary">View all perks</p>
+                            </CardContent>
+                        </Card>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Exclusive Partner Perks</DialogTitle>
+                            <DialogDescription>
+                                As a River Business client, you get access to these special offers.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            {perks.map((perk, index) => {
+                                const Icon = perk.icon;
+                                return (
+                                <Card key={index}>
+                                    <CardHeader className="flex flex-row items-center gap-4">
+                                        <div className="bg-accent p-3 rounded-full">
+                                            <Icon className="h-6 w-6 text-primary" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg">{perk.brand}</CardTitle>
+                                            <CardDescription>{perk.offer}</CardDescription>
+                                        </div>
+                                    </CardHeader>
+                                </Card>
+                            )})}
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -370,5 +393,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
+
+    
+
 
     
