@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment } from '@/lib/types';
+import type { Payment, ImagePlaceholder } from '@/lib/types';
 
 
 interface OnboardingData {
@@ -78,6 +78,8 @@ export default function DashboardLayout({
 
   const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
   const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
+  const [selectedPaymentQr, setSelectedPaymentQr] = useState<ImagePlaceholder | null>(null);
+
 
   useEffect(() => {
     const storedOnboardingData = localStorage.getItem('onboardingData');
@@ -89,15 +91,28 @@ export default function DashboardLayout({
       }
       
       // Update payment history with plan price
-      if (data.plan && data.plan.price) {
-        setPaymentHistory(prevHistory => {
-          return prevHistory.map(invoice => 
-            invoice.status === 'Upcoming' 
-              ? { ...invoice, amount: data.plan.price }
-              : invoice
+      setPaymentHistory(prevHistory => {
+          const updatedHistory = prevHistory.map(invoice => 
+              invoice.status === 'Upcoming' 
+                  ? { ...invoice, amount: data.plan.price || invoice.amount }
+                  : invoice
           );
-        });
-      }
+
+          const hasUpcomingInvoice = updatedHistory.some(inv => inv.status === 'Upcoming');
+
+          if (!hasUpcomingInvoice && data.plan && data.plan.price > 0) {
+              const newUpcomingInvoice: Payment = {
+                  id: `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}`,
+                  date: new Date().toISOString(),
+                  description: `Bill for ${format(new Date(), 'MMMM yyyy')}`,
+                  amount: data.plan.price,
+                  status: 'Upcoming',
+              };
+              return [...updatedHistory, newUpcomingInvoice];
+          }
+          
+          return updatedHistory;
+      });
     }
   }, []);
 
@@ -127,6 +142,13 @@ export default function DashboardLayout({
   }
   
   const planImage = onboardingData?.plan?.imageId ? PlaceHolderImages.find(p => p.id === onboardingData.plan.imageId) : null;
+
+  const paymentOptions = [
+      { name: 'GCash', qr: gcashQr },
+      { name: 'Maya', qr: paymayaQr },
+      { name: 'Bank', qr: bankQr },
+      { name: 'Card', qr: cardPayment },
+  ]
 
   return (
       <div className="flex flex-col h-full">
@@ -357,7 +379,7 @@ export default function DashboardLayout({
                                     <p className="text-2xl font-bold">₱{onboardingData.plan.price.toLocaleString()}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                     <Dialog>
+                                     <Dialog onOpenChange={() => setSelectedPaymentQr(null)}>
                                         <DialogTrigger asChild>
                                              <Button className="flex-1">
                                                 <CreditCard className="mr-2 h-4 w-4" />
@@ -366,31 +388,31 @@ export default function DashboardLayout({
                                         </DialogTrigger>
                                         <DialogContent>
                                             <DialogHeader>
-                                                <DialogTitle>Scan to Pay</DialogTitle>
-                                                <DialogDescription>
-                                                    Use your preferred payment method.
+                                                {selectedPaymentQr ? (
+                                                     <Button variant="ghost" className="absolute top-3 left-3 h-8 w-8 p-0" onClick={() => setSelectedPaymentQr(null)}>
+                                                        <ArrowLeft className="h-4 w-4" />
+                                                    </Button>
+                                                ): null}
+                                                <DialogTitle className={cn(selectedPaymentQr ? 'text-center' : '')}>
+                                                  {selectedPaymentQr ? `Scan to Pay with ${selectedPaymentQr.id.split('-')[0]}` : 'Select Payment Method'}
+                                                </DialogTitle>
+                                                <DialogDescription className={cn(selectedPaymentQr ? 'text-center' : '')}>
+                                                    {selectedPaymentQr ? 'Use your preferred payment app to scan.' : 'Choose your preferred payment method below.'}
                                                 </DialogDescription>
                                             </DialogHeader>
-                                             <Tabs defaultValue="gcash" className="w-full">
-                                                <TabsList className="grid w-full grid-cols-4">
-                                                    <TabsTrigger value="gcash">GCash</TabsTrigger>
-                                                    <TabsTrigger value="maya">Maya</TabsTrigger>
-                                                    <TabsTrigger value="bank">Bank</TabsTrigger>
-                                                    <TabsTrigger value="card">Card</TabsTrigger>
-                                                </TabsList>
-                                                <TabsContent value="gcash" className="mt-4 flex justify-center">
-                                                    {gcashQr && <Image src={gcashQr.imageUrl} alt="GCash QR" width={250} height={250} data-ai-hint={gcashQr.imageHint} />}
-                                                </TabsContent>
-                                                <TabsContent value="maya" className="mt-4 flex justify-center">
-                                                    {paymayaQr && <Image src={paymayaQr.imageUrl} alt="Maya QR" width={250} height={250} data-ai-hint={paymayaQr.imageHint} />}
-                                                </TabsContent>
-                                                <TabsContent value="bank" className="mt-4 flex justify-center">
-                                                    {bankQr && <Image src={bankQr.imageUrl} alt="Bank QR" width={250} height={250} data-ai-hint={bankQr.imageHint} />}
-                                                </TabsContent>
-                                                 <TabsContent value="card" className="mt-4 flex justify-center">
-                                                    {cardPayment && <Image src={cardPayment.imageUrl} alt="Card Payment Coming Soon" width={250} height={250} data-ai-hint={cardPayment.imageHint} />}
-                                                </TabsContent>
-                                            </Tabs>
+                                            {selectedPaymentQr ? (
+                                                <div className="flex justify-center py-4">
+                                                    <Image src={selectedPaymentQr.imageUrl} alt={selectedPaymentQr.description} width={250} height={250} data-ai-hint={selectedPaymentQr.imageHint} />
+                                                </div>
+                                            ) : (
+                                                 <div className="grid grid-cols-2 gap-4 py-4">
+                                                    {paymentOptions.map(option => option.qr && (
+                                                        <Card key={option.name} className="flex flex-col items-center justify-center p-4 hover:bg-accent cursor-pointer" onClick={() => setSelectedPaymentQr(option.qr)}>
+                                                            <p className="font-semibold">{option.name}</p>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </DialogContent>
                                     </Dialog>
                                     <Dialog>

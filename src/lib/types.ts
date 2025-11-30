@@ -80,3 +80,10 @@ export interface Payment {
   status: 'Paid' | 'Upcoming' | 'Overdue';
   proofOfPaymentUrl?: string;
 }
+
+export type ImagePlaceholder = {
+  id: string;
+  description: string;
+  imageUrl: string;
+  imageHint: string;
+};
