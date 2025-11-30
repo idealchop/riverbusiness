@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth } from 'date-fns';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
@@ -75,6 +75,7 @@ export default function DashboardPage() {
     const [isUpdateScheduleOpen, setIsUpdateScheduleOpen] = useState(false);
     const [newDeliveryDay, setNewDeliveryDay] = useState<string>('');
     const [newDeliveryTime, setNewDeliveryTime] = useState<string>('');
+    const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -104,17 +105,40 @@ export default function DashboardPage() {
 
     const consumptionChartData = React.useMemo(() => {
         if (!deliveries) return [];
-        const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
         
-        return last7Days.map(date => {
-            const deliveriesOnDay = deliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-            const totalGallons = deliveriesOnDay.reduce((sum, d) => sum + d.volumeGallons, 0);
-            return {
-                name: format(date, 'EEE').charAt(0),
-                value: gallonToLiter(totalGallons)
-            };
-        });
-    }, [deliveries]);
+        if (analyticsFilter === 'weekly') {
+            const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
+            return last7Days.map(date => {
+                const deliveriesOnDay = deliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
+                const totalGallons = deliveriesOnDay.reduce((sum, d) => sum + d.volumeGallons, 0);
+                return {
+                    name: format(date, 'EEE').charAt(0),
+                    value: gallonToLiter(totalGallons)
+                };
+            });
+        } else { // monthly
+            const now = new Date();
+            const firstDay = startOfMonth(now);
+            const lastDay = endOfMonth(now);
+            const weeksInMonth = getWeekOfMonth(lastDay);
+
+            const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
+                name: `Week ${i + 1}`,
+                value: 0
+            }));
+
+            deliveries.forEach(d => {
+                const deliveryDate = new Date(d.date);
+                if (deliveryDate >= firstDay && deliveryDate <= lastDay) {
+                    const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
+                    if(weeklyData[weekOfMonth]) {
+                        weeklyData[weekOfMonth].value += gallonToLiter(d.volumeGallons);
+                    }
+                }
+            });
+            return weeklyData;
+        }
+    }, [deliveries, analyticsFilter]);
     
     const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
     const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
@@ -346,7 +370,7 @@ export default function DashboardPage() {
 
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="flex flex-col overflow-hidden">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Total Purchased
@@ -364,7 +388,7 @@ export default function DashboardPage() {
                     <Progress value={100} className="h-2"/>
                 </div>
             </Card>
-            <Card className="flex flex-col overflow-hidden">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
@@ -378,7 +402,7 @@ export default function DashboardPage() {
                     </div>
                 </CardContent>
             </Card>
-            <Card className="flex flex-col overflow-hidden">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Remaining Liters
@@ -427,11 +451,24 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Consumption Analytics</CardTitle>
-                     <Button onClick={() => setIsDeliveryHistoryOpen(true)}>
-                        <Truck className="h-4 w-4 mr-2" />
-                        Delivery History
-                    </Button>
+                    <div>
+                        <CardTitle>Consumption Analytics</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as 'weekly' | 'monthly')}>
+                            <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Filter..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="weekly">This Week</SelectItem>
+                                <SelectItem value="monthly">This Month</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={() => setIsDeliveryHistoryOpen(true)}>
+                            <History className="h-4 w-4 mr-2" />
+                            History
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
@@ -544,5 +581,7 @@ export default function DashboardPage() {
         </div>
     </div>
     );
+
+    
 
     
