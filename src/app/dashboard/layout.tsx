@@ -142,7 +142,7 @@ export default function DashboardLayout({
     const storageRef = ref(storage, filePath);
 
     try {
-        await uploadBytes(storageRef, file);
+        await uploadBytes(storageRef, paymentProofFile);
         const downloadURL = await getDownloadURL(storageRef);
 
         const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', invoiceId);
@@ -535,9 +535,15 @@ export default function DashboardLayout({
 
                 <TabsContent value="invoices" className="py-4">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Invoice History</CardTitle>
-                            <CardDescription>A record of all your past and upcoming invoices.</CardDescription>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle>Invoice History</CardTitle>
+                                <CardDescription>A record of all your past and upcoming invoices.</CardDescription>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => toast({title: "Coming soon!"})}>
+                                <History className="mr-2 h-4 w-4" />
+                                History
+                            </Button>
                         </CardHeader>
                         <CardContent>
                             <Table>
@@ -578,10 +584,6 @@ export default function DashboardLayout({
                                                         </a>
                                                     </Button>
                                                 )}
-                                                <Button variant="outline" size="sm" onClick={() => toast({title: "Coming soon!"})}>
-                                                    <History className="mr-2 h-4 w-4" />
-                                                    History
-                                                </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
