@@ -511,67 +511,71 @@ export default function DashboardLayout({
                 </TabsList>
 
                 <TabsContent value="accounts" className="py-4">
-                    {editableFormData ? (
-                        <div className="space-y-6">
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                  <h4 className="font-semibold">Your Details</h4>
-                                   {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                    <div className="space-y-1">
-                                        <Label htmlFor="fullName">Full Name</Label>
-                                        <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="email">Login Email</Label>
-                                        <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                    </div>
-                                     <div className="space-y-1">
-                                        <Label htmlFor="businessEmail">Business Email</Label>
-                                        <Input id="businessEmail" name="businessEmail" type="email" value={editableFormData.businessEmail || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="businessName">Business Name</Label>
-                                        <Input id="businessName" name="businessName" value={editableFormData.businessName || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="address">Address</Label>
-                                        <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="contactNumber">Contact Number</Label>
-                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                    </div>
-                                </div>
-                                {isEditingDetails && (
-                                    <div className="flex justify-end gap-2 mt-4">
-                                        <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
-                                        <Button onClick={handleSaveChanges}>Save Changes</Button>
-                                    </div>
-                                )}
-                            </div>
-                            <Separator />
-                            <div>
-                                <h4 className="font-semibold mb-4">Security</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
-                                    <div className="space-y-1">
-                                        <Label htmlFor="clientId">Client ID</Label>
-                                        <Input id="clientId" value={editableFormData.clientId || ''} disabled />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="uid">User ID (UID)</Label>
-                                        <Input id="uid" value={authUser?.uid || ''} disabled />
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                                    <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : <p>No account information available.</p>}
-                </TabsContent>
+                  {editableFormData ? (
+                      <Card>
+                          <CardContent className="pt-6">
+                              <div className="space-y-6">
+                                  <div>
+                                      <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-semibold">Your Details</h4>
+                                        {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                                      </div>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                                          <div className="space-y-1">
+                                              <Label htmlFor="fullName">Full Name</Label>
+                                              <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="email">Login Email</Label>
+                                              <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="businessEmail">Business Email</Label>
+                                              <Input id="businessEmail" name="businessEmail" type="email" value={editableFormData.businessEmail || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="businessName">Business Name</Label>
+                                              <Input id="businessName" name="businessName" value={editableFormData.businessName || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="address">Address</Label>
+                                              <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="contactNumber">Contact Number</Label>
+                                              <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                          </div>
+                                      </div>
+                                      {isEditingDetails && (
+                                          <div className="flex justify-end gap-2 mt-4">
+                                              <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                                              <Button onClick={handleSaveChanges}>Save Changes</Button>
+                                          </div>
+                                      )}
+                                  </div>
+                                  <Separator />
+                                  <div>
+                                      <h4 className="font-semibold mb-4">Security</h4>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
+                                          <div className="space-y-1">
+                                              <Label htmlFor="clientId">Client ID</Label>
+                                              <Input id="clientId" value={editableFormData.clientId || ''} disabled />
+                                          </div>
+                                          <div className="space-y-1">
+                                              <Label htmlFor="uid">User ID (UID)</Label>
+                                              <Input id="uid" value={authUser?.uid || ''} disabled />
+                                          </div>
+                                      </div>
+                                      <div className="flex gap-2">
+                                          <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+                                          <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
+                                      </div>
+                                  </div>
+                              </div>
+                          </CardContent>
+                      </Card>
+                  ) : <p>No account information available.</p>}
+              </TabsContent>
 
                 <TabsContent value="plan" className="py-4">
                   <div className="space-y-6">
@@ -624,7 +628,7 @@ export default function DashboardLayout({
                                     const Icon = feature.icon;
                                     return (
                                         <div key={index} className="flex items-start gap-3">
-                                            <Icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                                            <Icon className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                                             <div>
                                                 <h4 className="text-sm font-medium">{feature.title}</h4>
                                                 <p className="text-xs text-muted-foreground">{feature.description}</p>
