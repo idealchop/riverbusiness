@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
