@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AppUser } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -186,6 +187,12 @@ export default function AdminPage() {
                                  <p className="font-medium text-muted-foreground">Last Login</p>
                                  <p>{new Date(selectedUser.lastLogin).toLocaleString('default', { month: 'long' })}</p>
                              </div>
+                         </div>
+                         <Separator className="my-4" />
+                         <div className="flex flex-col space-y-2">
+                             <Button variant="outline"><UserCog className="mr-2 h-4 w-4" /> Edit User</Button>
+                             <Button variant="outline"><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
+                             <Button variant="destructive" className="mt-4"><Trash2 className="mr-2 h-4 w-4" /> Delete User</Button>
                          </div>
                     </div>
                 )}
@@ -467,3 +474,5 @@ export default function AdminPage() {
   );
 }
 
+
+    
