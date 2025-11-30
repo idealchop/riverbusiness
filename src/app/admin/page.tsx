@@ -162,7 +162,6 @@ export default function AdminPage() {
     const totalUsers = appUsers.length;
     const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
     const pendingRequests = invoiceRequests.filter(r => r.status === 'Pending').length;
-    const unreadFeedback = feedbackLogs.filter(f => !f.read).length;
 
     const filteredUsers = appUsers.filter(user => {
         if (userFilter === 'all') return true;
@@ -243,7 +242,7 @@ export default function AdminPage() {
             </DialogContent>
         </Dialog>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -269,15 +268,6 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{pendingRequests}</div>
-                </CardContent>
-            </Card>
-            <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => setActiveTab('feedback')}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Unread Feedback</CardTitle>
-                    <MessageSquare className="h-4 w-4 text-primary-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{unreadFeedback}</div>
                 </CardContent>
             </Card>
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
