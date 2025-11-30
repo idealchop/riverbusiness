@@ -186,7 +186,7 @@ export default function AdminPage() {
     };
 
     const handleDeductFromDelivery = (userId: string, gallons: number) => {
-        const litersToDeduct = gallons * 19;
+        const litersToDeduct = gallons * 3.785;
         setAppUsers(users => users.map(user => 
             user.id === userId
             ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + litersToDeduct }
@@ -353,7 +353,7 @@ export default function AdminPage() {
                             <TableRow>
                                 <TableHead>Ref ID</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Liters / Gallons</TableHead>
+                                <TableHead>Volume</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Proof of Delivery</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -363,11 +363,12 @@ export default function AdminPage() {
                             {userDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
                                 const liters = delivery.volumeGallons * 3.785;
+                                const bottles = Math.round(liters / 19);
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeGallons}gal</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {bottles} bottles</TableCell>
                                     <TableCell>
                                          <Badge variant={statusInfo.variant} className={cn(
                                             statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
@@ -449,13 +450,13 @@ export default function AdminPage() {
                     <div className="rounded-md border bg-muted/50 p-3 text-sm my-4">
                         <h4 className="font-semibold flex items-center gap-2 mb-2"><Info className="h-4 w-4"/>Last Delivery Info</h4>
                         <p><strong>Date:</strong> {format(new Date(latestUserDelivery.date), 'PP')}</p>
-                        <p><strong>Volume:</strong> {latestUserDelivery.volumeGallons} gallons ({latestUserDelivery.volumeGallons * 19} liters)</p>
+                        <p><strong>Volume:</strong> {latestUserDelivery.volumeGallons} gallons ({(latestUserDelivery.volumeGallons * 3.785).toLocaleString(undefined, { maximumFractionDigits: 0 })} liters)</p>
                         <p><strong>Status:</strong> {latestUserDelivery.status}</p>
                          <Button
                             size="sm"
                             variant="link"
                             className="p-0 h-auto"
-                            onClick={() => deductForm.setValue('amount', latestUserDelivery.volumeGallons * 19)}
+                            onClick={() => deductForm.setValue('amount', latestUserDelivery.volumeGallons * 3.785)}
                         >
                             Use this amount
                         </Button>
@@ -885,6 +886,8 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
 

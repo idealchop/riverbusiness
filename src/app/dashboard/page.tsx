@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useEffect, useState } from 'react';
@@ -26,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-const gallonToLiter = (gallons: number) => gallons * 19;
+const gallonToLiter = (gallons: number) => gallons * 3.785;
 
 const perks = [
     { 
@@ -291,7 +292,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                             <TableRow>
                                 <TableHead>Ref ID</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Liters / Gallons</TableHead>
+                                <TableHead>Volume</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Proof of Delivery</TableHead>
                             </TableRow>
@@ -300,11 +301,12 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                             {userDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
                                 const liters = delivery.volumeGallons * 3.785;
+                                const bottles = Math.round(liters / 19);
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeGallons}gal</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {bottles} bottles</TableCell>
                                     <TableCell>
                                          <Badge variant={statusInfo.variant} className={cn(
                                             statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
@@ -559,3 +561,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     
 
 
+
+
+    
