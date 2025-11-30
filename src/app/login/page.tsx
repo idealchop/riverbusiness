@@ -141,8 +141,8 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-            <div className="hidden lg:flex flex-col items-center justify-center p-6 overflow-hidden">
-              <div className="relative w-full h-80">
+            <div className="hidden lg:flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800">
+              <div className="relative w-full h-full min-h-[400px]">
                   <Image
                     src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a"
                     alt="River Business Marketing Material"
