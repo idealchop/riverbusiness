@@ -209,24 +209,30 @@ export default function PaymentsPage() {
                             <DialogHeader>
                               <DialogTitle>Pay Invoice {payment.id}</DialogTitle>
                               <DialogDescription>
-                                Scan the QR code to pay ₱{payment.amount.toFixed(2)}.
+                                Scan a QR code to pay ₱{payment.amount.toFixed(2)}.
                               </DialogDescription>
                             </DialogHeader>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4 py-4">
                                 {gcashQr && (
-                                    <div className="flex flex-col items-center gap-2">
+                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
                                         <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />
                                         <p className="font-semibold">GCash</p>
                                     </div>
                                 )}
                                  {bankQr && (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Image src={bankQr.imageUrl} alt="Bank QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
-                                        <p className="font-semibold">Bank Transfer</p>
+                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
+                                        <Image src={bankQr.imageUrl} alt="BDO QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
+                                        <p className="font-semibold">BDO</p>
+                                    </div>
+                                )}
+                                {bankQr && (
+                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
+                                        <Image src={bankQr.imageUrl} alt="BPI QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
+                                        <p className="font-semibold">BPI</p>
                                     </div>
                                 )}
                                  {paymayaQr && (
-                                    <div className="flex flex-col items-center gap-2">
+                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
                                         <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />
                                         <p className="font-semibold">PayMaya</p>
                                     </div>
@@ -329,3 +335,5 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+    
