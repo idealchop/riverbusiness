@@ -315,7 +315,7 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
-                            <p className="font-semibold text-sm">{user?.customPlanDetails?.litersPerMonth.toLocaleString() || '0'} Liters</p>
+                            <p className="font-semibold text-sm">{user?.customPlanDetails?.litersPerMonth?.toLocaleString() || '0'} Liters</p>
                         </div>
                     </div>
                 </CardContent>
@@ -442,6 +442,5 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
         </div>
     </div>
     );
-}
 
     
