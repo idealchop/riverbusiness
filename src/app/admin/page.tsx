@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,8 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, loginLogs, paymentHistory } from '@/lib/data';
-import { ArrowRight, ChevronRight, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, MoreHorizontal, Users, DollarSign, Activity, AlertTriangle, Monitor, Receipt, LogIn, Handshake, Eye, EyeOff, FileText, Calendar as CalendarIcon, Send, Users2, UserCheck, FileClock } from 'lucide-react';
+import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,14 +20,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { DateRange } from 'react-day-picker';
-import { cn } from '@/lib/utils';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -55,6 +49,7 @@ export default function AdminPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
     const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
+    const { toast } = useToast();
     
     useEffect(() => {
         const storedRequests = localStorage.getItem('invoiceRequests');
@@ -95,6 +90,10 @@ export default function AdminPage() {
         setAppUsers([...appUsers, newUser]);
         form.reset();
         setIsCreateUserOpen(false);
+        toast({
+            title: 'User Created',
+            description: `User ${newUser.name} has been created successfully.`,
+        });
     };
 
     const adminUser = appUsers.find(user => user.role === 'Admin');
@@ -230,9 +229,9 @@ export default function AdminPage() {
              <Card>
                 <CardHeader>
                      <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
-                        <TabsTrigger value="user-management"><Users className="mr-2"/>User Management</TabsTrigger>
-                        <TabsTrigger value="login-logs"><LogIn className="mr-2"/>Login Logs</TabsTrigger>
-                        <TabsTrigger value="transactions"><Handshake className="mr-2"/>Transactions</TabsTrigger>
+                        <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
+                        <TabsTrigger value="login-logs"><LogIn className="mr-2 h-4 w-4"/>Login Logs</TabsTrigger>
+                        <TabsTrigger value="transactions"><Handshake className="mr-2 h-4 w-4"/>Transactions</TabsTrigger>
                     </TabsList>
                 </CardHeader>
                  <CardContent>
@@ -348,7 +347,6 @@ export default function AdminPage() {
                                     <TableCell>
                                     <Badge
                                         variant={request.status === 'Sent' ? 'default' : 'secondary'}
-                                        className={request.status === 'Sent' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
                                     >
                                         {request.status}
                                     </Badge>
