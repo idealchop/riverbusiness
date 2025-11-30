@@ -266,6 +266,12 @@ export default function DashboardPage() {
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Water Quality & Sanitation</DialogTitle>
+                        <DialogDescription>
+                            Compliance reports and sanitation visits for {waterStation?.name || 'your assigned station'}.
+                        </DialogDescription>
+                    </DialogHeader>
                      <Tabs defaultValue="compliance" className="flex flex-col gap-4 pt-4">
                         <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto">
                             <TabsTrigger value="compliance">Compliance Reports</TabsTrigger>
@@ -723,3 +729,4 @@ export default function DashboardPage() {
     
 
     
+
