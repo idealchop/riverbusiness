@@ -160,18 +160,6 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
-          <nav className="hidden md:flex items-center gap-4 text-sm font-medium">
-                <Link href="/dashboard/deliveries" className="text-muted-foreground transition-colors hover:text-foreground">
-                    Deliveries
-                </Link>
-                <Link href="/dashboard/quality" className="text-muted-foreground transition-colors hover:text-foreground">
-                    Quality
-                </Link>
-                <Link href="/dashboard/support" className="text-muted-foreground transition-colors hover:text-foreground">
-                    Support
-                </Link>
-            </nav>
-            <Separator orientation="vertical" className="h-6 hidden md:block" />
           <Dialog>
             <DialogTrigger asChild>
               <Button
