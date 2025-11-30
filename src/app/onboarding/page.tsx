@@ -17,7 +17,7 @@ import { waterStations } from '@/lib/data';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Users, Briefcase, Building, Layers, Factory, ArrowLeft, Droplet, Archive, Calendar, Clock } from 'lucide-react';
+import { Users, Briefcase, Building, Layers, Factory, ArrowLeft, Droplet, Archive, Calendar, Clock, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -59,6 +59,8 @@ interface CustomPlanDetails {
     deliveryDay: string;
     deliveryTime: string;
     waterStation: string;
+    gallonQuantity: number;
+    gallonPrice: number;
     dispenserQuantity: number;
     dispenserPrice: number;
 }
@@ -81,6 +83,8 @@ export default function OnboardingPage() {
   const [deliveryFrequency, setDeliveryFrequency] = React.useState<string>('');
   const [deliveryTime, setDeliveryTime] = React.useState<string>('');
   const [amountPerMonth, setAmountPerMonth] = React.useState<number>(0);
+  const [gallonQuantity, setGallonQuantity] = React.useState<number>(0);
+  const [gallonPrice, setGallonPrice] = React.useState<number>(0);
   const [dispenserQuantity, setDispenserQuantity] = React.useState<number>(0);
   const [dispenserPrice, setDispenserPrice] = React.useState<number>(0);
 
@@ -133,6 +137,8 @@ export default function OnboardingPage() {
     setSelectedDay('');
     setDeliveryFrequency('');
     setDeliveryTime('');
+    setGallonQuantity(0);
+    setGallonPrice(0);
     setDispenserQuantity(0);
     setDispenserPrice(0);
     setIsPlanDialogOpen(true);
@@ -149,13 +155,15 @@ export default function OnboardingPage() {
             deliveryDay: selectedDay,
             deliveryTime: deliveryTime,
             waterStation: '',
+            gallonQuantity: gallonQuantity,
+            gallonPrice: gallonPrice,
             dispenserQuantity: dispenserQuantity,
             dispenserPrice: dispenserPrice,
         });
         
         const clientTypeDetails = clientTypes.find(c => c.name === selectedClientType);
         let planName = `Custom ${selectedClientType} Plan`;
-        const totalAmount = amountPerMonth + dispenserPrice;
+        const totalAmount = amountPerMonth + gallonPrice + dispenserPrice;
         setSelectedPlan({name: planName, price: totalAmount, imageId: clientTypeDetails?.imageId});
         
         setIsPlanDialogOpen(false);
@@ -183,6 +191,16 @@ export default function OnboardingPage() {
     const value = e.target.value ? parseInt(e.target.value) : 0;
     setAmountPerMonth(value);
   }
+
+  const handleGallonQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    setGallonQuantity(value);
+  };
+
+  const handleGallonPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    setGallonPrice(value);
+  };
 
   const handleDispenserQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value ? parseInt(e.target.value) : 0;
@@ -229,8 +247,18 @@ export default function OnboardingPage() {
                         <Separator />
 
                         <div className="space-y-4">
-                            <h4 className="font-semibold text-sm flex items-center gap-2"><Archive className="h-4 w-4" /> Dispenser Details</h4>
+                            <h4 className="font-semibold text-sm flex items-center gap-2"><Package className="h-4 w-4" /> Equipment</h4>
                             <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="gallonQuantity">Gallon Quantity</Label>
+                                    <Input id="gallonQuantity" name="gallonQuantity" type="number" placeholder="e.g., 10" onChange={handleGallonQuantityChange} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="gallonPrice">Gallon Price/Month</Label>
+                                    <Input id="gallonPrice" name="gallonPrice" type="number" placeholder="e.g., 100" onChange={handleGallonPriceChange} />
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="dispenserQuantity">Dispenser Quantity</Label>
                                     <Input id="dispenserQuantity" name="dispenserQuantity" type="number" placeholder="e.g., 2" onChange={handleDispenserQuantityChange} />
@@ -457,6 +485,7 @@ export default function OnboardingPage() {
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                         <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()}</p>
                                         <p><strong>Add-on Liters:</strong> {customPlanDetails.addOnLiters.toLocaleString()}</p>
+                                        <p><strong>Gallons:</strong> {customPlanDetails.gallonQuantity}</p>
                                         <p><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</p>
                                         <p><strong>Est. Bill/Month:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
                                         <p><strong>Delivery:</strong> {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
@@ -488,3 +517,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
