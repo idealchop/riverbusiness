@@ -331,7 +331,6 @@ export default function AdminPage() {
                                     <TableRow>
                                         <TableHead>ID</TableHead>
                                         <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Last Login</TableHead>
                                         <TableHead>Role</TableHead>
@@ -343,7 +342,6 @@ export default function AdminPage() {
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.name}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{user.email}</TableCell>
                                             <TableCell>
                                                 <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>
                                                     {user.accountStatus}
@@ -383,7 +381,7 @@ export default function AdminPage() {
                                     ))}
                                     {appUsers.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center">No users found.</TableCell>
+                                            <TableCell colSpan={6} className="text-center">No users found.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -468,3 +466,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
