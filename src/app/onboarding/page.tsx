@@ -22,6 +22,8 @@ import { Separator } from '@/components/ui/separator';
 import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { AppUser } from '@/lib/types';
+import { clientTypes } from '@/lib/plans';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const onboardingSchema = z.object({
@@ -216,16 +218,38 @@ export default function OnboardingPage() {
                 <div className="space-y-4">
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" onClick={() => setCurrentStep(1)}><ArrowLeft className="h-4 w-4" /></Button>
-                        <h3 className="font-bold text-lg">Step 2: Customize Your Plan</h3>
+                        <h3 className="font-bold text-lg">Step 2: Select Your Client Type</h3>
                     </div>
                     <p className="text-muted-foreground">Click to customize your water plan.</p>
-                    <div
-                        onClick={() => handleClientTypeSelect('Custom')}
-                        className={cn(
-                            "border rounded-lg p-4 cursor-pointer transition-all flex flex-col h-52 overflow-hidden relative bg-slate-100 items-center justify-center",
-                            "hover:border-primary/50"
-                        )}>
-                        <h4 className="text-xl font-bold">Create Custom Plan</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {clientTypes.map((client) => {
+                            const image = PlaceHolderImages.find(p => p.id === client.imageId);
+                            return (
+                            <div
+                                key={client.name}
+                                onClick={() => handleClientTypeSelect(client.name)}
+                                className={cn(
+                                "border rounded-lg p-4 cursor-pointer transition-all flex flex-col h-52 overflow-hidden relative",
+                                "hover:border-primary/50"
+                                )}
+                            >
+                                {image && (
+                                <Image
+                                    src={image.imageUrl}
+                                    alt={client.name}
+                                    fill
+                                    className="object-cover transition-transform group-hover:scale-105"
+                                    data-ai-hint={image.imageHint}
+                                />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                                <div className="relative mt-auto z-10 text-white">
+                                <h4 className="text-lg font-bold">{client.name}</h4>
+                                <p className="text-xs text-white/80">{client.description}</p>
+                                </div>
+                            </div>
+                            );
+                        })}
                     </div>
                 </div>
               )}
