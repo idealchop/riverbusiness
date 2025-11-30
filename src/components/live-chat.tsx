@@ -22,7 +22,11 @@ interface Message {
   content: string;
 }
 
-export function LiveChat() {
+interface LiveChatProps {
+    setHasNewMessage: (hasNewMessage: boolean) => void;
+}
+
+export function LiveChat({ setHasNewMessage }: LiveChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
   ]);
@@ -53,6 +57,7 @@ export function LiveChat() {
             content: "Thanks for your message. An admin will be with you shortly."
         };
         setMessages((prev) => [...prev, adminResponse]);
+        setHasNewMessage(true);
     }, 1500)
   };
 

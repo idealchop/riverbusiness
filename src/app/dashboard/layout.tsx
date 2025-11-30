@@ -95,6 +95,7 @@ export default function DashboardLayout({
   const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = useState(false);
   const [switchReason, setSwitchReason] = useState('');
   const [switchUrgency, setSwitchUrgency] = useState('');
+  const [hasNewMessage, setHasNewMessage] = useState(false);
 
   const recentDeliveries = deliveries.slice(0, 4);
 
@@ -291,14 +292,15 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
-          <Dialog>
+          <Dialog onOpenChange={(open) => !open && setHasNewMessage(false)}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="rounded-full"
+                className="rounded-full relative"
               >
                 <span className="mr-2 hidden sm:inline">Need Support?</span>
                 <LifeBuoy className="h-4 w-4" />
+                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
@@ -346,7 +348,7 @@ export default function DashboardLayout({
                       </div>
                     </div>
                     <div className="flex flex-col h-full">
-                         <LiveChat />
+                         <LiveChat setHasNewMessage={setHasNewMessage} />
                     </div>
                 </div>
               </DialogContent>
