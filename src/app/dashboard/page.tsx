@@ -68,6 +68,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
+    const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
@@ -418,8 +419,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                                     </TableCell>
                                     <TableCell>
                                         {delivery.proofOfDeliveryUrl ? (
-                                            <Button variant="link" size="sm" asChild>
-                                                <a href={delivery.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer">View</a>
+                                            <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>
+                                                View
                                             </Button>
                                         ) : (
                                             <span className="text-muted-foreground text-xs">Not available</span>
@@ -435,6 +436,19 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                         </TableBody>
                     </Table>
                 </div>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={!!selectedProofUrl} onOpenChange={(open) => !open && setSelectedProofUrl(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Proof of Delivery</DialogTitle>
+                </DialogHeader>
+                {selectedProofUrl && (
+                    <div className="py-4 flex justify-center">
+                        <Image src={selectedProofUrl} alt="Proof of delivery" width={400} height={600} className="rounded-md object-contain" />
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
 

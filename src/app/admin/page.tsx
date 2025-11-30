@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries, waterStations as initialWaterStations } from '@/lib/data';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries as initialDeliveries, waterStations as initialWaterStations } from '@/lib/data';
 import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import Image from 'next/image';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -55,6 +56,7 @@ type DeductFormValues = z.infer<typeof deductSchema>;
 
 export default function AdminPage() {
     const [appUsers, setAppUsers] = useState(initialAppUsers);
+    const [deliveries, setDeliveries] = useState(initialDeliveries);
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
@@ -70,6 +72,8 @@ export default function AdminPage() {
     const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
     const [isDeductDialogOpen, setIsDeductDialogOpen] = useState(false);
+    const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+    const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
 
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
@@ -220,6 +224,23 @@ export default function AdminPage() {
         setStationToUpdate(null);
     };
 
+    const handleUploadProof = () => {
+        if (!deliveryToUpdate) return;
+        // This is a mock. In a real app, you'd get the URL from a file upload service.
+        const sampleProofUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/proof-of-delivery-sample.jpg?alt=media&token=29994c64-7f21-4f10-9110-3889146522c7';
+        
+        setDeliveries(deliveries.map(d => 
+            d.id === deliveryToUpdate.id ? { ...d, proofOfDeliveryUrl: sampleProofUrl } : d
+        ));
+        
+        toast({
+            title: "Proof Uploaded",
+            description: `Proof of delivery for ${deliveryToUpdate.id} has been attached.`,
+        });
+        
+        setDeliveryToUpdate(null); // This will close the dialog
+    };
+
 
     const adminUser = appUsers.find(user => user.role === 'Admin');
 
@@ -318,7 +339,7 @@ export default function AdminPage() {
         </Dialog>
         
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
                     <DialogDescription>
@@ -357,11 +378,12 @@ export default function AdminPage() {
                                     </TableCell>
                                     <TableCell>
                                         {delivery.proofOfDeliveryUrl ? (
-                                            <Button variant="link" size="sm" asChild>
-                                                <a href={delivery.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer">View</a>
-                                            </Button>
+                                             <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
                                         ) : (
-                                            <span className="text-muted-foreground text-xs">Not available</span>
+                                            <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)}>
+                                                <Upload className="mr-2 h-3 w-3"/>
+                                                Upload
+                                            </Button>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -383,6 +405,36 @@ export default function AdminPage() {
                 </div>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={!!selectedProofUrl} onOpenChange={(open) => !open && setSelectedProofUrl(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Proof of Delivery</DialogTitle>
+                </DialogHeader>
+                {selectedProofUrl && (
+                    <div className="py-4 flex justify-center">
+                        <Image src={selectedProofUrl} alt="Proof of delivery" width={400} height={600} className="rounded-md object-contain" />
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => !open && setDeliveryToUpdate(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Upload Proof of Delivery</DialogTitle>
+                    <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input type="file" />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeliveryToUpdate(null)}>Cancel</Button>
+                    <Button onClick={handleUploadProof}>Upload</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
         <Dialog open={isDeductDialogOpen} onOpenChange={setIsDeductDialogOpen}>
             <DialogContent>
@@ -832,7 +884,5 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
 
     
