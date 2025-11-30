@@ -185,14 +185,14 @@ export default function OnboardingPage() {
                         </div>
                         <div className="grid gap-2">
                             <Label>Delivery Days</Label>
-                            <div className="flex flex-wrap gap-2 justify-center">
+                            <div className="grid grid-cols-4 gap-2">
                                 {reorderedDaysOfWeek.map(day => (
                                     <Button
                                         key={day}
                                         type="button"
                                         variant={selectedDays.includes(day) ? 'default' : 'outline'}
                                         onClick={() => toggleDay(day)}
-                                        className={cn(day === 'Sun' ? 'flex-grow basis-full max-w-xs mx-auto' : 'flex-1')}
+                                        className="flex-1"
                                     >
                                         {day}
                                     </Button>
