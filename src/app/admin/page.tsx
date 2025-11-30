@@ -54,39 +54,26 @@ export default function AdminPage() {
     const [greeting, setGreeting] = useState('');
     const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
     const { toast } = useToast();
-    const [searchTerm, setSearchTerm] = useState('');
     const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [activeTab, setActiveTab] = useState('user-management');
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
 
+    useEffect(() => {
+      const handleUserSearch = (event: CustomEvent<AppUser>) => {
+        setSelectedUser(event.detail);
+        setIsUserDetailOpen(true);
+      };
+      
+      window.addEventListener('admin-user-search', handleUserSearch as EventListener);
+  
+      return () => {
+        window.removeEventListener('admin-user-search', handleUserSearch as EventListener);
+      };
+    }, []);
 
-    const handleSearch = () => {
-        if (!searchTerm) return;
 
-        const foundUser = appUsers.find(user => 
-            user.id.toLowerCase() === searchTerm.toLowerCase() || user.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        if (foundUser) {
-            setSelectedUser(foundUser);
-            setIsUserDetailOpen(true);
-        } else {
-            toast({
-                variant: "destructive",
-                title: "User not found",
-                description: `No user found with ID or name: ${searchTerm}`,
-            });
-        }
-    };
-
-    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            handleSearch();
-        }
-    };
-    
     useEffect(() => {
         const storedRequests = localStorage.getItem('invoiceRequests');
         if (storedRequests) {
@@ -179,19 +166,6 @@ export default function AdminPage() {
     <div className="flex flex-col gap-6 font-sans">
         <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
-            <div className="relative">
-                <Input
-                  type="search"
-                  placeholder="Enter User ID or Name..."
-                  className="w-full appearance-none bg-background pl-8 shadow-none md:w-64 lg:w-96"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                />
-                <Button onClick={handleSearch} size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                </Button>
-            </div>
         </div>
 
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
@@ -226,7 +200,7 @@ export default function AdminPage() {
                              </div>
                              <div>
                                  <p className="font-medium text-muted-foreground">Last Login</p>
-                                 <p>{format(new Date(selectedUser.lastLogin), 'MMMM')}</p>
+                                 <p>{format(new Date(selectedUser.lastLogin), 'PP')}</p>
                              </div>
                          </div>
                          <Separator className="my-4" />
@@ -384,7 +358,7 @@ export default function AdminPage() {
                                                     {user.accountStatus}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap">{format(new Date(user.lastLogin), 'MMMM')}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{format(new Date(user.lastLogin), 'PP')}</TableCell>
                                             <TableCell>{user.role}</TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -394,15 +368,15 @@ export default function AdminPage() {
                                                     </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
                                                             <UserCog className="mr-2 h-4 w-4" />
-                                                            Edit User
+                                                            View Details
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem>
                                                             <ShieldCheck className="mr-2 h-4 w-4" />
                                                             Assign Permissions
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); handleResetPassword(user.id); }}>
                                                             <KeyRound className="mr-2 h-4 w-4" />
                                                             Reset Password
                                                         </DropdownMenuItem>
