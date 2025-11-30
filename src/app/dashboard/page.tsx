@@ -20,8 +20,8 @@ const gallonToLiter = (gallons: number) => gallons * 3.78541;
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
     const [greeting, setGreeting] = useState('');
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
-    const [totalLitersPurchased, setTotalLitersPurchased] = useState(5000);
-    const [remainingLiters, setRemainingLiters] = useState(5000);
+    const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
+    const [remainingLiters, setRemainingLiters] = useState(0);
 
     useEffect(() => {
         if (initialUserName) {
@@ -39,7 +39,16 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             setGreeting('Good evening');
         }
 
-        const totalPurchased = 5000;
+        const onboardingDataString = localStorage.getItem('onboardingData');
+        let totalPurchased = 5000; // Fallback value
+
+        if (onboardingDataString) {
+            const onboardingData = JSON.parse(onboardingDataString);
+            if (onboardingData.customPlanDetails && onboardingData.customPlanDetails.litersPerMonth) {
+                totalPurchased = onboardingData.customPlanDetails.litersPerMonth;
+            }
+        }
+        
         setTotalLitersPurchased(totalPurchased);
 
         const consumedLiters = deliveries
@@ -199,6 +208,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     
 
 
+
+    
 
     
 
