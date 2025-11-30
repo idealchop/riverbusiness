@@ -533,82 +533,31 @@ export default function DashboardLayout({
                 <TabsContent value="plan" className="py-4">
                   {user?.plan ? (
                       <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{user.plan.name}</CardTitle>
-                                <CardDescription>₱{user.plan.price.toLocaleString()}/month</CardDescription>
-                            </CardHeader>
-                            {planImage && (
-                              <CardContent>
-                                <div className="relative h-40 w-full rounded-lg overflow-hidden">
+                        <Card className="overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className="flex flex-col md:flex-row">
+                              {planImage && (
+                                <div className="relative md:w-1/3 aspect-square md:aspect-auto">
                                   <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
                                 </div>
-                              </CardContent>
-                            )}
-                        </Card>
-                        
-                        <div className="grid md:grid-cols-2 gap-6">
-                          <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base flex items-center gap-2"><Droplets className="h-5 w-5" /> Plan Details</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Liters per Month</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Bonus Liters</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'}</span>
-                                </div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                             <CardHeader>
-                                <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-5 w-5" /> Delivery Schedule</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Frequency</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.deliveryFrequency || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Preferred Day</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.deliveryDay || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Preferred Time</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.deliveryTime || 'N/A'}</span>
-                                </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                        <Card>
-                             <CardHeader>
-                                <CardTitle className="text-base flex items-center gap-2"><Package className="h-5 w-5" /> Equipment Fees</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Gallon Quantity</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.gallonQuantity || '0'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Monthly Gallon Fee</span>
-                                    <span className="font-semibold">₱{user.customPlanDetails?.gallonPrice?.toLocaleString() || '0'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Dispenser Quantity</span>
-                                    <span className="font-semibold">{user.customPlanDetails?.dispenserQuantity || '0'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Monthly Dispenser Fee</span>
-                                    <span className="font-semibold">₱{user.customPlanDetails?.dispenserPrice?.toLocaleString() || '0'}</span>
-                                </div>
-                            </CardContent>
+                              )}
+                              <div className="flex-1 p-6">
+                                <CardTitle>{user.plan.name}</CardTitle>
+                                <CardDescription className="text-xl font-bold text-foreground">₱{user.plan.price.toLocaleString()}/month</CardDescription>
+                                <Separator className="my-4" />
+                                <h4 className="font-semibold mb-2">Inclusions:</h4>
+                                <ul className="space-y-2 text-sm text-muted-foreground">
+                                    <li className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'} Liters/Month (+{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'} bonus)</span></li>
+                                    <li className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.deliveryFrequency || 'N/A'} on {user.customPlanDetails?.deliveryDay}</span></li>
+                                    <li className="flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.gallonQuantity || '0'} Gallons, {user.customPlanDetails?.dispenserQuantity || '0'} Dispensers</span></li>
+                                </ul>
+                              </div>
+                            </div>
+                          </CardContent>
                         </Card>
 
                         {user.contractUrl && (
-                          <div className="border-t pt-6">
+                          <div className="pt-2">
                               <Button asChild className="w-full">
                                   <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
                                       <FileText className="mr-2 h-4 w-4" />
