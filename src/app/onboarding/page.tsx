@@ -78,7 +78,7 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
-  const [addOnLiters, setAddOnLiters] = React.useState<number>(0);
+  const [bonusLiters, setBonusLiters] = React.useState<number>(0);
   const [selectedDay, setSelectedDay] = React.useState<string>('');
   const [deliveryFrequency, setDeliveryFrequency] = React.useState<string>('');
   const [deliveryTime, setDeliveryTime] = React.useState<string>('');
@@ -129,7 +129,7 @@ export default function OnboardingPage() {
 
   const handleClientTypeSelect = (clientTypeName: string) => {
     setCustomLiters(0);
-    setAddOnLiters(0);
+    setBonusLiters(0);
     setAmountPerMonth(0);
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
@@ -150,7 +150,7 @@ export default function OnboardingPage() {
     if (customLiters > 0 && deliveryFrequency && selectedDay && deliveryTime) {
         setCustomPlanDetails({
             litersPerMonth: customLiters,
-            bonusLiters: addOnLiters,
+            bonusLiters: bonusLiters,
             deliveryFrequency: deliveryFrequency,
             deliveryDay: selectedDay,
             deliveryTime: deliveryTime,
@@ -162,7 +162,7 @@ export default function OnboardingPage() {
         });
         
         const clientTypeDetails = clientTypes.find(c => c.name === selectedClientType);
-        let planName = `Custom ${selectedClientType} Plan`;
+        let planName = `${selectedClientType} Plan`;
         const totalAmount = amountPerMonth + gallonPrice + dispenserPrice;
         setSelectedPlan({name: planName, price: totalAmount, imageId: clientTypeDetails?.imageId});
         
@@ -182,9 +182,9 @@ export default function OnboardingPage() {
     setCustomLiters(value);
   }
 
-  const handleAddOnLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBonusLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value ? parseInt(e.target.value) : 0;
-    setAddOnLiters(value);
+    setBonusLiters(value);
   }
   
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,8 +234,8 @@ export default function OnboardingPage() {
                                     <Input id="litersPerMonth" name="litersPerMonth" type="number" placeholder="e.g., 5000" onChange={handleLitersChange} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="addOnLiters">Add-on Liters/Month</Label>
-                                    <Input id="addOnLiters" name="addOnLiters" type="number" placeholder="e.g., 500" onChange={handleAddOnLitersChange} />
+                                    <Label htmlFor="bonusLiters">Bonus Liters/Month</Label>
+                                    <Input id="bonusLiters" name="bonusLiters" type="number" placeholder="e.g., 500" onChange={handleBonusLitersChange} />
                                 </div>
                             </div>
                             <div className="grid gap-2">
@@ -247,7 +247,7 @@ export default function OnboardingPage() {
                         <Separator />
 
                         <div className="space-y-4">
-                            <h4 className="font-semibold text-sm flex items-center gap-2"><Package className="h-4 w-4" /> Equipment</h4>
+                             <h4 className="font-semibold text-sm flex items-center gap-2"><Package className="h-4 w-4" /> Equipment</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="gallonQuantity">Gallon Quantity</Label>
@@ -517,7 +517,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
-
-    
