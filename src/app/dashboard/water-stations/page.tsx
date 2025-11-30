@@ -1,14 +1,26 @@
 'use client'
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { waterStations } from '@/lib/data';
+import { waterStations as initialWaterStations } from '@/lib/data';
 import { FileText, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
+import type { WaterStation } from '@/lib/types';
+
 
 export default function WaterStationsPage() {
+    const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
+
+    useEffect(() => {
+        const storedWaterStations = localStorage.getItem('waterStations');
+        if (storedWaterStations) {
+            setWaterStations(JSON.parse(storedWaterStations));
+        }
+    }, []);
+
+
   return (
     <>
       <DialogHeader>

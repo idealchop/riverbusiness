@@ -8,8 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History } from 'lucide-react';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries, waterStations as initialWaterStations } from '@/lib/data';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Feedback, Delivery } from '@/lib/types';
+import type { AppUser, Feedback, Delivery, WaterStation } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -62,6 +62,9 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState('user-management');
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
+    const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [stationToUpdate, setStationToUpdate] = useState<string | null>(null);
 
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
@@ -89,6 +92,14 @@ export default function AdminPage() {
         } else {
             localStorage.setItem('feedbackLogs', JSON.stringify(initialFeedbackLogs));
         }
+        
+        const storedWaterStations = localStorage.getItem('waterStations');
+        if (storedWaterStations) {
+            setWaterStations(JSON.parse(storedWaterStations));
+        } else {
+            localStorage.setItem('waterStations', JSON.stringify(initialWaterStations));
+        }
+
     }, []);
 
     useEffect(() => {
@@ -146,6 +157,26 @@ export default function AdminPage() {
         setFeedbackLogs(updatedFeedback);
         localStorage.setItem('feedbackLogs', JSON.stringify(updatedFeedback));
     };
+
+    const handleAttachPermit = (stationId: string) => {
+        setStationToUpdate(stationId);
+        // This is a mock of a file picker. In a real app, this would open a file dialog.
+        // We'll simulate the successful "upload" by providing a sample PDF URL.
+        const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2Fdocuments%2FSample%20Permit.pdf?alt=media&token=143f2908-0aa3-4903-b8a7-7b247b97537b';
+
+        const updatedStations = waterStations.map(station =>
+            station.id === stationId ? { ...station, permitUrl: samplePermitUrl } : station
+        );
+
+        setWaterStations(updatedStations);
+        localStorage.setItem('waterStations', JSON.stringify(updatedStations));
+
+        toast({
+            title: 'Permit Attached',
+            description: `A sample permit has been attached to station ${stationId}.`,
+        });
+    };
+
 
     const adminUser = appUsers.find(user => user.role === 'Admin');
 
@@ -402,11 +433,12 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
              <Card>
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4">
+                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-5">
                         <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
                         <TabsTrigger value="login-logs"><LogIn className="mr-2 h-4 w-4"/>Login Logs</TabsTrigger>
                         <TabsTrigger value="transactions"><Handshake className="mr-2 h-4 w-4"/>Transactions</TabsTrigger>
                         <TabsTrigger value="feedback"><MessageSquare className="mr-2 h-4 w-4" />Feedback</TabsTrigger>
+                        <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
                     </TabsList>
                 </CardHeader>
                  <CardContent>
@@ -609,6 +641,43 @@ export default function AdminPage() {
                                             <TableCell colSpan={5} className="text-center">No feedback yet.</TableCell>
                                         </TableRow>
                                     )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="water-stations">
+                        <div className="overflow-x-auto">
+                           <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Station ID</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Location</TableHead>
+                                        <TableHead>Permit Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {waterStations.map((station) => (
+                                        <TableRow key={station.id}>
+                                            <TableCell>{station.id}</TableCell>
+                                            <TableCell>{station.name}</TableCell>
+                                            <TableCell>{station.location}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={station.permitUrl && station.permitUrl !== '#' ? 'default' : 'outline'}
+                                                  className={station.permitUrl && station.permitUrl !== '#' ? 'bg-green-100 text-green-800' : ''}
+                                                >
+                                                    {station.permitUrl && station.permitUrl !== '#' ? 'Attached' : 'Missing'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="outline" size="sm" onClick={() => handleAttachPermit(station.id)}>
+                                                    <Paperclip className="mr-2 h-4 w-4"/>
+                                                    Attach Permit
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
                                 </TableBody>
                             </Table>
                         </div>
