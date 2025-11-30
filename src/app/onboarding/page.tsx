@@ -52,6 +52,7 @@ type AnyPlan = {
 
 interface CustomPlanDetails {
     litersPerMonth: number;
+    bonusLiters: number;
     deliveryDays: string[];
     waterStation: string;
 }
@@ -67,6 +68,7 @@ export default function OnboardingPage() {
   const [selectedPlan, setSelectedPlan] = React.useState<AnyPlan | null>(null);
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
+  const [bonusLiters, setBonusLiters] = React.useState<number>(0);
   const [selectedDays, setSelectedDays] = React.useState<string[]>([]);
   const [amountPerMonth, setAmountPerMonth] = React.useState<number>(0);
 
@@ -103,6 +105,7 @@ export default function OnboardingPage() {
 
   const handleClientTypeSelect = (clientTypeName: string) => {
     setCustomLiters(0);
+    setBonusLiters(0);
     setAmountPerMonth(0);
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
@@ -117,6 +120,7 @@ export default function OnboardingPage() {
     if (customLiters > 0 && selectedDays.length > 0) {
         setCustomPlanDetails({
             litersPerMonth: customLiters,
+            bonusLiters: bonusLiters,
             deliveryDays: selectedDays,
             waterStation: '' // Removed from UI
         });
@@ -139,6 +143,11 @@ export default function OnboardingPage() {
     const pricePerLiter = 3; // Example price
     setCustomLiters(value);
     setAmountPerMonth(value * pricePerLiter);
+  }
+
+  const handleBonusLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    setBonusLiters(value);
   }
 
   const calculatePeopleAccommodated = (liters: number) => {
@@ -178,6 +187,10 @@ export default function OnboardingPage() {
                                     Can accommodate approximately <span className="font-bold text-primary">{peopleAccommodated}</span> person(s).
                                 </p>
                             )}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="bonusLiters">Bonus Liters/Month</Label>
+                            <Input id="bonusLiters" name="bonusLiters" type="number" placeholder="e.g., 500" onChange={handleBonusLitersChange} />
                         </div>
                         <div className="grid gap-2">
                             <Label>Amount/Month</Label>
@@ -362,5 +375,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
