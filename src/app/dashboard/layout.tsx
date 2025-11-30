@@ -367,7 +367,7 @@ export default function DashboardLayout({
                                         <Label htmlFor="businessName">Business Name</Label>
                                         <Input id="businessName" name="businessName" value={editableFormData.businessName} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
-                                    <div className="space-y-1 md:col-span-2">
+                                    <div className="space-y-1">
                                         <Label htmlFor="address">Address</Label>
                                         <Input id="address" name="address" value={editableFormData.address} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
