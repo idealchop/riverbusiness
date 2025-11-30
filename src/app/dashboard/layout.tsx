@@ -48,8 +48,10 @@ export default function DashboardLayout({
     const onboardingDataString = localStorage.getItem('onboardingData');
     if (onboardingDataString) {
       const onboardingData = JSON.parse(onboardingDataString);
-      if (onboardingData.clientType) {
-        setAccountType(onboardingData.clientType);
+      if (onboardingData.plan && onboardingData.plan.name) {
+        setAccountType(onboardingData.plan.name);
+      } else if (onboardingData.clientType) {
+        setAccountType(`${onboardingData.clientType} Plan`);
       }
     }
   }, []);
@@ -204,7 +206,7 @@ export default function DashboardLayout({
                 )}
                 <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{accountType ? `${accountType} Plan` : 'Account'}</p>
+                  <p className="text-xs text-muted-foreground">{accountType || 'Account'}</p>
                 </div>
               </div>
             </DialogTrigger>
@@ -234,7 +236,7 @@ export default function DashboardLayout({
                 )}
                 <div>
                   <h4 className="font-semibold text-lg">{userName}</h4>
-                  <p className="text-sm text-muted-foreground">{accountType ? `${accountType} Plan` : 'Account'}</p>
+                  <p className="text-sm text-muted-foreground">{accountType || 'Account'}</p>
                 </div>
               </div>
               <Tabs defaultValue="username">
@@ -298,5 +300,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
