@@ -489,76 +489,92 @@ export default function DashboardLayout({
 
                 <TabsContent value="plan" className="py-4">
                   {user?.plan ? (
-                      <Card>
-                          <CardHeader>
-                              <CardTitle>Your Current Plan</CardTitle>
-                              <CardDescription>Details of your subscription with River Business.</CardDescription>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                              {planImage && (
-                                <div className="relative h-40 w-full rounded-lg overflow-hidden">
-                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{objectFit: 'cover'}} data-ai-hint={planImage.imageHint} />
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Your Current Plan</CardTitle>
+                        <CardDescription>Details of your subscription with River Business.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {planImage && (
+                          <div className="relative h-40 w-full rounded-lg overflow-hidden">
+                            <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
+                          </div>
+                        )}
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-baseline">
+                                <h3 className="text-2xl font-bold">{user.plan.name}</h3>
+                                <p className="text-3xl font-bold">
+                                    ₱{user.plan.price.toLocaleString()}
+                                    <span className="text-lg font-normal text-muted-foreground">/month</span>
+                                </p>
+                            </div>
+                            <Separator />
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Liters per Month</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'}</p>
                                 </div>
-                              )}
-                              <div className="flex justify-between items-baseline">
-                                  <h3 className="text-xl font-bold">{user.plan.name}</h3>
-                                  <p className="text-2xl font-bold">
-                                      ₱{user.plan.price.toLocaleString()}
-                                      <span className="text-sm font-normal text-muted-foreground">/month</span>
-                                  </p>
-                              </div>
-                              <Separator />
-                              <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                                  <div>
-                                      <p className="font-medium text-muted-foreground">Liters per Month</p>
-                                      <p>{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'}</p>
-                                  </div>
-                                  <div>
-                                      <p className="font-medium text-muted-foreground">Bonus Liters</p>
-                                      <p>{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'}</p>
-                                  </div>
-                                  <div>
-                                      <p className="font-medium text-muted-foreground">Delivery Frequency</p>
-                                      <p>{user.customPlanDetails?.deliveryFrequency || 'N/A'}</p>
-                                  </div>
-                                  <div>
-                                      <p className="font-medium text-muted-foreground">Preferred Delivery Day</p>
-                                      <p>{user.customPlanDetails?.deliveryDay || 'N-A'}</p>
-                                  </div>
-                                  <div>
-                                      <p className="font-medium text-muted-foreground">Preferred Delivery Time</p>
-                                      <p>{user.customPlanDetails?.deliveryTime || 'N-A'}</p>
-                                  </div>
-                                  <Separator className="col-span-2 my-2"/>
-                                   <div>
-                                      <p className="font-medium text-muted-foreground">Gallon Quantity</p>
-                                      <p>{user.customPlanDetails?.gallonQuantity || '0'}</p>
-                                  </div>
-                                    <div>
-                                      <p className="font-medium text-muted-foreground">Monthly Gallon Fee</p>
-                                      <p>₱{user.customPlanDetails?.gallonPrice?.toLocaleString() || '0'}</p>
-                                  </div>
-                                   <div>
-                                      <p className="font-medium text-muted-foreground">Dispenser Quantity</p>
-                                      <p>{user.customPlanDetails?.dispenserQuantity || '0'}</p>
-                                  </div>
-                                  <div>
-                                      <p className="font-medium text-muted-foreground">Monthly Dispenser Fee</p>
-                                      <p>₱{user.customPlanDetails?.dispenserPrice?.toLocaleString() || '0'}</p>
-                                  </div>
-                              </div>
-                               {user.contractUrl && (
-                                <div className="border-t pt-4">
-                                    <Button asChild className="w-full">
-                                        <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            View Contract
-                                        </a>
-                                    </Button>
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Bonus Liters</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'}</p>
                                 </div>
-                            )}
-                          </CardContent>
-                      </Card>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-base">Delivery Schedule</h4>
+                            <Separator />
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Frequency</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.deliveryFrequency || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Preferred Day</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.deliveryDay || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Preferred Time</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.deliveryTime || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-base">Equipment Fees</h4>
+                            <Separator />
+                             <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Gallon Quantity</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.gallonQuantity || '0'}</p>
+                                </div>
+                                  <div>
+                                    <p className="font-medium text-muted-foreground">Monthly Gallon Fee</p>
+                                    <p className="font-semibold">₱{user.customPlanDetails?.gallonPrice?.toLocaleString() || '0'}</p>
+                                </div>
+                                 <div>
+                                    <p className="font-medium text-muted-foreground">Dispenser Quantity</p>
+                                    <p className="font-semibold">{user.customPlanDetails?.dispenserQuantity || '0'}</p>
+                                </div>
+                                <div>
+                                    <p className="font-medium text-muted-foreground">Monthly Dispenser Fee</p>
+                                    <p className="font-semibold">₱{user.customPlanDetails?.dispenserPrice?.toLocaleString() || '0'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                         {user.contractUrl && (
+                          <div className="border-t pt-6">
+                              <Button asChild className="w-full">
+                                  <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      View Contract
+                                  </a>
+                              </Button>
+                          </div>
+                      )}
+                      </CardContent>
+                    </Card>
                   ) : (
                       <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
                   )}
