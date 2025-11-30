@@ -114,7 +114,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
     return (
     <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4 border-b pb-4">
+        <div className="flex items-center gap-4 py-2">
             <Link href="/dashboard">
                 <Badge
                 variant={pathname === '/dashboard' ? 'default' : 'secondary'}
@@ -284,6 +284,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 }
 
       
+
+    
 
     
 
