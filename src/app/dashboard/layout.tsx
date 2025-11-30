@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -60,6 +60,10 @@ export default function DashboardLayout({
   const auth = getAuth();
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
+  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
+  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
+  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
@@ -508,10 +512,57 @@ export default function DashboardLayout({
                                             <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">
                                                 {payment.status === 'Upcoming' ? (
-                                                <Button size="sm" onClick={() => { setSelectedInvoiceForProof(payment); setIsProofUploadDialogOpen(true); }}>
-                                                    <Upload className="mr-2 h-4 w-4" />
-                                                    Upload Proof
-                                                </Button>
+                                                  <div className='flex gap-2 justify-end'>
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                          <Button size="sm">
+                                                              <CreditCard className="mr-2 h-4 w-4" />
+                                                              Pay Now
+                                                          </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogHeader>
+                                                              <DialogTitle>Pay Invoice {payment.id}</DialogTitle>
+                                                              <DialogDescription>
+                                                                Scan a QR code to pay ₱{payment.amount.toFixed(2)}.
+                                                              </DialogDescription>
+                                                            </DialogHeader>
+                                                            <div className="grid grid-cols-2 gap-4 py-4">
+                                                                {gcashQr && (
+                                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
+                                                                        <Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} />
+                                                                        <p className="font-semibold">GCash</p>
+                                                                    </div>
+                                                                )}
+                                                                {bankQr && (
+                                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
+                                                                        <Image src={bankQr.imageUrl} alt="BPI QR" width={150} height={150} data-ai-hint={bankQr.imageHint} />
+                                                                        <p className="font-semibold">BPI</p>
+                                                                    </div>
+                                                                )}
+                                                                {paymayaQr && (
+                                                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
+                                                                        <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} />
+                                                                        <p className="font-semibold">PayMaya</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <DialogFooter>
+                                                              <Button onClick={() => {
+                                                                setSelectedInvoiceForProof(payment);
+                                                                setIsProofUploadDialogOpen(true);
+                                                              }}>
+                                                                <Upload className="mr-2 h-4 w-4" />
+                                                                Upload Proof
+                                                              </Button>
+                                                            </DialogFooter>
+                                                          </DialogContent>
+                                                    </Dialog>
+                                                    <Button variant="outline" size="sm" onClick={() => toast({ title: 'Feature in development' })}>
+                                                        <History className="mr-2 h-4 w-4" />
+                                                        View History
+                                                    </Button>
+                                                  </div>
                                                 ) : payment.proofOfPaymentUrl ? (
                                                 <Button variant="outline" size="sm" asChild>
                                                     <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
@@ -521,8 +572,7 @@ export default function DashboardLayout({
                                                 </Button>
                                                 ) : (
                                                 <Button variant="outline" size="sm" disabled>
-                                                    <Download className="mr-2 h-4 w-4" />
-                                                    Download
+                                                    Paid
                                                 </Button>
                                                 )}
                                             </TableCell>
