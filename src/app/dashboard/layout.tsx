@@ -59,6 +59,11 @@ interface OnboardingData {
         deliveryFrequency: string;
         deliveryDay: string;
         deliveryTime: string;
+        waterStation: string;
+        gallonQuantity: number;
+        gallonPrice: number;
+        dispenserQuantity: number;
+        dispenserPrice: number;
     };
     contractUrl?: string;
 }
@@ -564,7 +569,9 @@ export default function DashboardLayout({
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
                                         <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
                                         <p><strong>Bonus Liters:</strong> {(onboardingData.customPlanDetails.bonusLiters || 0).toLocaleString()}</p>
-                                        <p><strong>Est. Bill/Month:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
+                                        <p><strong>Gallons:</strong> {onboardingData.customPlanDetails.gallonQuantity}</p>
+                                        <p><strong>Dispensers:</strong> {onboardingData.customPlanDetails.dispenserQuantity}</p>
+                                        <p><strong>Subscription:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
                                         <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
                                     </div>
                                 </div>
@@ -886,5 +893,6 @@ export default function DashboardLayout({
 
 
     
+
 
 
