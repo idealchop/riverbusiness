@@ -151,7 +151,7 @@ export default function DashboardLayout({
                     height={40}
                     alt={userAvatar.description}
                     data-ai-hint={userAvatar.imageHint}
-                    className="overflow-hidden rounded-full"
+                    className="rounded-full overflow-hidden"
                   />
                 )}
                 <div className="hidden sm:block">
