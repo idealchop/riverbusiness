@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Card, CardHeader, CardContent, CardDescription, CardTitle } from 'lucide-react';
 import { deliveries } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -219,7 +219,7 @@ export default function DashboardLayout({
                 )}
                 <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{onboardingData?.plan?.name || 'Account'}</p>
+                  <p className="text-xs text-muted-foreground">{onboardingData?.plan?.name || 'No Plan Selected'}</p>
                 </div>
               </div>
             </DialogTrigger>
@@ -316,14 +316,14 @@ export default function DashboardLayout({
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Invoice Details</CardTitle>
-                                    <CardDescription>Ref: INV-{new Date().getFullYear()}{new Date().getMonth() + 1}</CardDescription>
+                                    <CardDescription>Ref: INV-{new Date().getFullYear()}{String(new Date().getMonth() + 1).padStart(2, '0')}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between"><span>Plan Subscription</span> <span>₱{onboardingData.plan.price.toLocaleString()}</span></div>
-                                        <div className="flex justify-between"><span>VAT (12%)</span> <span>₱{(onboardingData.plan.price * 0.12).toLocaleString()}</span></div>
+                                        <div className="flex justify-between"><span>VAT (12%)</span> <span>₱{(onboardingData.plan.price * 0.12).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                                         <Separator/>
-                                        <div className="flex justify-between font-bold"><span>Total</span> <span>₱{(onboardingData.plan.price * 1.12).toLocaleString()}</span></div>
+                                        <div className="flex justify-between font-bold"><span>Total</span> <span>₱{(onboardingData.plan.price * 1.12).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -339,7 +339,7 @@ export default function DashboardLayout({
           </Dialog>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
-            <div className="container">
+            <div className="container mx-auto">
               {React.cloneElement(children as React.ReactElement, { userName })}
             </div>
           </main>

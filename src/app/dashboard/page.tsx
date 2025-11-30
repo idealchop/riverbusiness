@@ -68,11 +68,16 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
         const onboardingDataString = localStorage.getItem('onboardingData');
         let totalPurchased = 5000; // Fallback value
+        let nextRefillDate = new Date();
+        nextRefillDate.setDate(nextRefillDate.getDate() + 15);
+        let estDeliveryLiters = 5000;
 
         if (onboardingDataString) {
             const onboardingData = JSON.parse(onboardingDataString);
-            if (onboardingData.customPlanDetails && onboardingData.customPlanDetails.litersPerMonth) {
-                totalPurchased = onboardingData.customPlanDetails.litersPerMonth;
+            if (onboardingData.customPlanDetails) {
+                totalPurchased = onboardingData.customPlanDetails.litersPerMonth || totalPurchased;
+                estDeliveryLiters = onboardingData.customPlanDetails.litersPerMonth || estDeliveryLiters;
+                // You could add logic here to set nextRefillDate based on deliveryFrequency, etc.
             }
         }
         
@@ -348,10 +353,4 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
-
-    
-
-
-    
-
-    
+}
