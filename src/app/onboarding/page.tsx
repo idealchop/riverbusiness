@@ -487,7 +487,7 @@ export default function OnboardingPage() {
                                         <p><strong>Add-on Liters:</strong> {customPlanDetails.addOnLiters.toLocaleString()}</p>
                                         <p><strong>Gallons:</strong> {customPlanDetails.gallonQuantity}</p>
                                         <p><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</p>
-                                        <p><strong>Est. Bill/Month:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
+                                        <p><strong>Subscription:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
                                         <p><strong>Delivery:</strong> {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
                                     </div>
                                 </div>
@@ -517,5 +517,7 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
 
     
