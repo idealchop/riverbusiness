@@ -58,21 +58,6 @@ const includedFeatures = [
         description: 'Monitor consumption, compliance, water providers, and payments in real time.',
     },
     {
-        icon: CalendarCheck,
-        title: 'Automated Scheduling & Delivery',
-        description: 'No manual ordering; Smart Refill handles refills automatically.',
-    },
-    {
-        icon: Repeat,
-        title: 'Roll-Over Liters',
-        description: 'Unused liters carry over to the next cycle.',
-    },
-    {
-        icon: Thermometer,
-        title: 'Free Dispensers, Gallons & Sanitary Items',
-        description: 'Included based on your plan.',
-    },
-    {
         icon: Wrench,
         title: 'Monthly Sanitation Visit',
         description: 'Regular cleaning and compliance check for your dispensers.',
@@ -81,16 +66,6 @@ const includedFeatures = [
         icon: HelpCircle,
         title: 'Guaranteed Water Compliance',
         description: 'All partner stations meet strict sanitation and quality standards.',
-    },
-    {
-        icon: Headset,
-        title: 'Customer Support',
-        description: 'Assistance available for any service or delivery concerns.',
-    },
-    {
-        icon: Rocket,
-        title: 'Custom & Scalable Plans',
-        description: 'Adjust liters, branches, and schedules as your business grows.',
     },
 ];
 
