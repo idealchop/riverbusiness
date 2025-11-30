@@ -298,10 +298,9 @@ export default function OnboardingPage() {
                                 <h4 className="font-semibold mb-2">Your Details</h4>
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
                                     <p><strong>Client ID:</strong> {form.getValues('clientId')}</p>
-                                    <p><strong>Name:</strong> {form.getValues('name')}</p>
+                                    <p><strong>Business Name:</strong> {form.getValues('businessName')}</p>
                                     <p><strong>Login Email:</strong> {authUser?.email}</p>
                                     <p><strong>Business Email:</strong> {form.getValues('businessEmail')}</p>
-                                    <p><strong>Business:</strong> {form.getValues('businessName')}</p>
                                     <p><strong>Address:</strong> {form.getValues('address')}</p>
                                     <p><strong>Contact:</strong> {form.getValues('contactNumber')}</p>
                                 </div>

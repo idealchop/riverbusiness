@@ -257,7 +257,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
             <div>
                 <h1 className="text-3xl font-bold">Dashboard</h1>
-                <p className="text-muted-foreground">{greeting}, {user?.name}. Here is an overview of your water consumption.</p>
+                <p className="text-muted-foreground">{greeting}, {user?.businessName}. Here is an overview of your water consumption.</p>
             </div>
              <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                 <DialogTrigger asChild>

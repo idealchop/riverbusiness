@@ -301,7 +301,7 @@ export default function DashboardLayout({
             </DialogTrigger>
             <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl font-bold">Hello, {user?.name}!</DialogTitle>
+                    <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
@@ -408,7 +408,7 @@ export default function DashboardLayout({
             <DialogTrigger asChild>
               <div className="flex items-center gap-3 cursor-pointer">
                 <div className="hidden sm:flex flex-col items-start">
-                  <p className="font-semibold text-sm">{user?.name}</p>
+                  <p className="font-semibold text-sm">{user?.businessName}</p>
                 </div>
               </div>
             </DialogTrigger>
