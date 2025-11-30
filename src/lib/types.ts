@@ -1,4 +1,5 @@
 
+
 export interface ConsumptionRecord {
   date: string;
   consumptionGallons: number;
@@ -41,6 +42,10 @@ export interface WaterStation {
       lguPermitUrl?: string;
       healthCertsUrl?: string;
       pestControlContractUrl?: string;
+      bacteriologicalTestUrl?: string;
+      physicalChemicalTestUrl?: string;
+      annualMonitoringUrl?: string;
+      partnershipAgreementUrl?: string;
   };
 }
 
@@ -108,3 +113,4 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
+

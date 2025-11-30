@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -398,14 +399,14 @@ export default function AdminPage() {
     const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
 
     const permitFields: { key: keyof WaterStation['permits'], label: string }[] = [
-        { key: 'businessPermitUrl', label: 'Business Permit' },
+        { key: 'businessPermitUrl', label: 'Business / Mayor\'s Permit' },
         { key: 'sanitationPermitUrl', label: 'Sanitary Permit' },
-        { key: 'engineersReportUrl', label: 'Sanitary Plans and Engineer\'s Report' },
-        { key: 'waterTestResultsUrl', label: 'Water Laboratory Testing' },
-        { key: 'cprUrl', label: 'FDA/DOH Certificate of Product Registration (CPR)' },
-        { key: 'lguPermitUrl', label: 'LGU Operational Permit' },
-        { key: 'healthCertsUrl', label: 'Health Certificates for Employees' },
-        { key: 'pestControlContractUrl', label: 'Pest Control Contract' },
+    ];
+
+    const complianceFields: { key: keyof WaterStation['permits'], label: string }[] = [
+        { key: 'bacteriologicalTestUrl', label: 'Bacteriological' },
+        { key: 'physicalChemicalTestUrl', label: 'Physical-Chemical' },
+        { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
     ];
 
 
@@ -864,7 +865,7 @@ export default function AdminPage() {
                                             <TableCell>{station.location}</TableCell>
                                             <TableCell>
                                                 <Badge variant={station.permits && Object.values(station.permits).some(p => p) ? 'default' : 'outline'}>
-                                                    {station.permits ? Object.values(station.permits).filter(p => p).length : 0} / {permitFields.length} Attached
+                                                    {station.permits ? Object.values(station.permits).filter(p => p).length : 0} / {permitFields.length + complianceFields.length} Attached
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -907,89 +908,114 @@ export default function AdminPage() {
             </DialogContent>
         </Dialog>
          <Dialog open={isStationProfileOpen} onOpenChange={(open) => {if (!open) {setStationToUpdate(null); stationForm.reset();} setIsStationProfileOpen(open);}}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
-                    <DialogTitle>{stationToUpdate ? 'Edit' : 'Create'} Water Station Profile</DialogTitle>
+                    <DialogTitle>Partnership Requirements</DialogTitle>
                     <DialogDescription>
-                        Manage the station's details and permit attachments.
+                        Submit the following documents to become a verified Refill Partner.
                     </DialogDescription>
                 </DialogHeader>
-                <Form {...stationForm}>
-                    <form onSubmit={stationForm.handleSubmit(handleSaveStation)}>
-                        <ScrollArea className="max-h-[70vh] p-1">
-                            <div className="space-y-6 p-4">
-                                <div className="space-y-4">
-                                    <FormField
-                                        control={stationForm.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Station Name</FormLabel>
-                                                <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
+                <ScrollArea className="max-h-[70vh] p-1">
+                    <div className="space-y-8 p-4">
+                         <Form {...stationForm}>
+                            <form onSubmit={stationForm.handleSubmit(handleSaveStation)} className="space-y-4">
+                                <FormField
+                                    control={stationForm.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Station Name</FormLabel>
+                                            <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={stationForm.control}
+                                    name="location"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Location</FormLabel>
+                                            <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                {stationToUpdate && (
+                                    <Button type="submit" size="sm">Save Changes</Button>
+                                )}
+                            </form>
+                        </Form>
+
+                        <Separator />
+
+                        <div>
+                            <h3 className="font-semibold text-base mb-1">1. Valid Business Permits</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Please upload the following required documents for a water refilling station to operate.</p>
+                            <div className="space-y-3">
+                                {permitFields.map(field => (
+                                    <div key={field.key} className="flex justify-between items-center text-sm p-3 border rounded-lg bg-background">
+                                        <span className="font-medium">{field.label}</span>
+                                        {stationToUpdate?.permits?.[field.key] ? (
+                                             <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
+                                        ) : (
+                                            <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
+                                                <Upload className="mr-2 h-4 w-4" /> Upload
+                                            </Button>
                                         )}
-                                    />
-                                    <FormField
-                                        control={stationForm.control}
-                                        name="location"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Location</FormLabel>
-                                                <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <Separator />
-
-                                <div>
-                                    <h3 className="font-semibold mb-2">DOH Requirements</h3>
-                                    <div className="space-y-3">
-                                        {permitFields.slice(2, 8).map(field => (
-                                            <div key={field.key} className="flex justify-between items-center text-sm p-2 border rounded-md">
-                                                <span className="flex-1 mr-4">{field.label}</span>
-                                                {stationToUpdate?.permits?.[field.key] ? (
-                                                     <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
-                                                ) : (
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
-                                                        <Upload className="mr-2 h-4 w-4" /> Attach
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ))}
                                     </div>
-                                </div>
-                                
-                                <Separator />
-
-                                <div>
-                                    <h3 className="font-semibold mb-2">LGU Requirements</h3>
-                                    <div className="space-y-3">
-                                        {permitFields.slice(0, 2).map(field => (
-                                            <div key={field.key} className="flex justify-between items-center text-sm p-2 border rounded-md">
-                                                <span className="flex-1 mr-4">{field.label}</span>
-                                                {stationToUpdate?.permits?.[field.key] ? (
-                                                     <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
-                                                ) : (
-                                                    <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
-                                                        <Upload className="mr-2 h-4 w-4" /> Attach
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                ))}
                             </div>
-                        </ScrollArea>
-                        <DialogFooter className="mt-4 pt-4 border-t">
-                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
-                            <Button type="submit">{stationToUpdate ? 'Save Changes' : 'Create Station'}</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                        </div>
+                        
+                        <div>
+                             <h3 className="font-semibold text-base mb-1">2. Compliance</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Submit your latest water test results. All three tests are required for full partner verification.</p>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Test Type</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {complianceFields.map(field => (
+                                        <TableRow key={field.key}>
+                                            <TableCell className="font-medium">{field.label}</TableCell>
+                                            <TableCell>
+                                                 {stationToUpdate?.permits?.[field.key] ? (
+                                                    <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
+                                                ) : (
+                                                    <Badge variant="destructive">Needs Compliance</Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                 <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
+                                                    <Upload className="mr-2 h-4 w-4" /> Upload
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        
+                        <div>
+                            <h3 className="font-semibold text-base mb-1">3. Partnership Agreement</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
+                            <Button variant="outline"><FileText className="mr-2 h-4 w-4" /> View & Sign Agreement</Button>
+                        </div>
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="mt-4 pt-4 border-t">
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
+                    </DialogClose>
+                    {!stationToUpdate && (
+                        <Button onClick={stationForm.handleSubmit(handleSaveStation)}>Create Station</Button>
+                    )}
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     </div>
