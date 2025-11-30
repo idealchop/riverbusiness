@@ -64,6 +64,12 @@ export default function DashboardLayout({
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
 
+  const paymentOptions: PaymentOption[] = [
+      { name: 'GCash', qr: gcashQr },
+      { name: 'BPI', qr: bankQr },
+      { name: 'PayMaya', qr: paymayaQr }
+  ];
+
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
@@ -81,6 +87,7 @@ export default function DashboardLayout({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Payment | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentOption | null>(null);
   
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -105,6 +112,13 @@ export default function DashboardLayout({
       setEditableFormData(user);
     }
   }, [user]);
+  
+  useEffect(() => {
+    if (!isPaymentDialogOpen) {
+      // Reset payment method selection when dialog closes
+      setSelectedPaymentMethod(null);
+    }
+  }, [isPaymentDialogOpen]);
 
   const handleLogout = () => {
     signOut(auth).then(() => {
@@ -548,7 +562,7 @@ export default function DashboardLayout({
             </DialogContent>
           </Dialog>
            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Pay Invoice {selectedInvoice?.id}</DialogTitle>
                         <DialogDescription>
@@ -557,30 +571,46 @@ export default function DashboardLayout({
                     </DialogHeader>
                     <Tabs defaultValue="qr">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="qr"><QrCode className="mr-2 h-4 w-4" />Scan QR</TabsTrigger>
+                            <TabsTrigger value="qr"><QrCode className="mr-2 h-4 w-4" />Scan to Pay</TabsTrigger>
                             <TabsTrigger value="upload"><Upload className="mr-2 h-4 w-4" />Upload Proof</TabsTrigger>
                         </TabsList>
                         <TabsContent value="qr" className="py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                {gcashQr && (
-                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                        <Image src={gcashQr.imageUrl} alt="GCash QR" width={120} height={120} data-ai-hint={gcashQr.imageHint} />
-                                        <p className="font-semibold text-sm">GCash</p>
+                            {!selectedPaymentMethod ? (
+                                <div className="space-y-4">
+                                     <p className="text-sm text-muted-foreground text-center">Select a payment method to see the QR code.</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        {paymentOptions.map((opt) => (
+                                        <Card
+                                            key={opt.name}
+                                            className="flex flex-col items-center justify-center p-4 cursor-pointer hover:bg-accent transition-colors"
+                                            onClick={() => setSelectedPaymentMethod(opt)}
+                                        >
+                                            {opt.qr && <Image src={opt.qr.imageUrl} alt={opt.name} width={60} height={60} className="mb-2 rounded-md" data-ai-hint={opt.qr.imageHint} />}
+                                            <p className="font-semibold text-sm">{opt.name}</p>
+                                        </Card>
+                                        ))}
                                     </div>
-                                )}
-                                {bankQr && (
-                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                        <Image src={bankQr.imageUrl} alt="BPI QR" width={120} height={120} data-ai-hint={bankQr.imageHint} />
-                                        <p className="font-semibold text-sm">BPI</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center gap-4">
+                                    <Button variant="ghost" size="sm" className="self-start" onClick={() => setSelectedPaymentMethod(null)}>
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Back
+                                    </Button>
+                                    <h3 className="font-semibold text-lg">Scan to Pay with {selectedPaymentMethod.name}</h3>
+                                    {selectedPaymentMethod.qr && (
+                                        <div className="p-4 border rounded-lg bg-white">
+                                            <Image src={selectedPaymentMethod.qr.imageUrl} alt={`${selectedPaymentMethod.name} QR Code`} width={200} height={200} data-ai-hint={selectedPaymentMethod.qr.imageHint} />
+                                        </div>
+                                    )}
+                                    <div className="text-center text-sm text-muted-foreground space-y-1">
+                                        <p>Account Name: <span className="font-medium text-foreground">RIVER PHILIPPINES</span></p>
+                                        <p>Account Number: <span className="font-medium text-foreground">09182719091</span></p>
+                                        <p className="font-bold text-foreground pt-2">Total Amount: ₱{selectedInvoice?.amount.toFixed(2)}</p>
                                     </div>
-                                )}
-                                {paymayaQr && (
-                                    <div className="flex flex-col items-center gap-2 border p-4 rounded-lg">
-                                        <Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={120} height={120} data-ai-hint={paymayaQr.imageHint} />
-                                        <p className="font-semibold text-sm">PayMaya</p>
-                                    </div>
-                                )}
-                            </div>
+                                    <p className="text-xs text-muted-foreground text-center mt-2">After paying, please go to the 'Upload Proof' tab to submit your payment confirmation.</p>
+                                </div>
+                            )}
                         </TabsContent>
                         <TabsContent value="upload" className="py-4">
                             <div className="grid gap-4">
