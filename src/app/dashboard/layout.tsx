@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -350,7 +350,7 @@ export default function DashboardLayout({
                                   <h4 className="font-semibold">Your Details</h4>
                                    {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                                     <div className="space-y-1">
                                         <Label htmlFor="fullName">Full Name</Label>
                                         <Input id="fullName" name="fullName" value={editableFormData.fullName} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
@@ -386,7 +386,13 @@ export default function DashboardLayout({
                             <Separator />
                             <div>
                                 <h4 className="font-semibold mb-4">Security</h4>
-                                <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+                                <div className="flex gap-2">
+                                    <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+                                    <Button variant="outline" onClick={() => toast({ title: "Coming Soon!", description: "This feature is under development." })}>
+                                        <ShieldCheck className="mr-2 h-4 w-4" />
+                                        Add Authentication
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     ) : <p>No account information available. Please complete onboarding.</p>}
@@ -614,5 +620,7 @@ export default function DashboardLayout({
 }
 
 
+
+    
 
     
