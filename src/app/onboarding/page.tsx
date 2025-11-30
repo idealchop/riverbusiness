@@ -289,7 +289,7 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                   <h3 className="font-bold text-lg">Water Plan</h3>
                   <p className="text-muted-foreground">Choose the client type to see the recommended plans.</p>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                       {clientTypes.map((client) => {
                           const image = getImageForPlan(client.imageId);
                           return (
