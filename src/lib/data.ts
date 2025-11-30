@@ -18,11 +18,11 @@ export const consumptionData: ConsumptionRecord[] = [
 ];
 
 export const deliveries: Delivery[] = [
-  { id: 'DEL-001', date: '2024-07-12', volumeGallons: 5000, status: 'Delivered' },
-  { id: 'DEL-002', date: '2024-07-15', volumeGallons: 7500, status: 'In Transit' },
-  { id: 'DEL-003', date: '2024-07-18', volumeGallons: 5000, status: 'Pending' },
-  { id: 'DEL-004', date: '2024-07-05', volumeGallons: 6000, status: 'Delivered' },
-  { id: 'DEL-005', date: '2024-07-01', volumeGallons: 4500, status: 'Delivered' },
+  { id: 'DEL-001', userId: 'USR-001', date: '2024-07-12', volumeGallons: 5000, status: 'Delivered' },
+  { id: 'DEL-002', userId: 'USR-002', date: '2024-07-15', volumeGallons: 7500, status: 'In Transit' },
+  { id: 'DEL-003', userId: 'USR-004', date: '2024-07-18', volumeGallons: 5000, status: 'Pending' },
+  { id: 'DEL-004', userId: 'USR-001', date: '2024-07-05', volumeGallons: 6000, status: 'Delivered' },
+  { id: 'DEL-005', userId: 'USR-005', date: '2024-07-01', volumeGallons: 4500, status: 'Delivered' },
 ];
 
 export const complianceReports: ComplianceReport[] = [

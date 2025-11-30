@@ -7,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star } from 'lucide-react';
+import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries } from '@/lib/data';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Feedback } from '@/lib/types';
+import type { AppUser, Feedback, Delivery } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -161,6 +161,27 @@ export default function AdminPage() {
         setUserFilter(filter);
         setActiveTab('user-management');
     };
+
+    const getLatestDelivery = (userId: string): Delivery | undefined => {
+        return deliveries
+            .filter(d => d.userId === userId)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    };
+
+    const getStatusInfo = (status: Delivery['status'] | undefined) => {
+        if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
+        switch (status) {
+            case 'Delivered':
+                return { variant: 'default', icon: PackageCheck, label: 'Delivered' };
+            case 'In Transit':
+                return { variant: 'secondary', icon: Truck, label: 'In Transit' };
+            case 'Pending':
+                return { variant: 'outline', icon: Package, label: 'Pending' };
+            default:
+                return { variant: 'outline', icon: null, label: 'No Deliveries' };
+        }
+    };
+
 
   return (
     <div className="flex flex-col gap-6 font-sans">
@@ -345,11 +366,16 @@ export default function AdminPage() {
                                         <TableHead>Status</TableHead>
                                         <TableHead>Last Login</TableHead>
                                         <TableHead>Role</TableHead>
+                                        <TableHead>Delivery Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredUsers.map((user) => (
+                                    {filteredUsers.map((user) => {
+                                        const latestDelivery = getLatestDelivery(user.id);
+                                        const statusInfo = getStatusInfo(latestDelivery?.status);
+                                        const StatusIcon = statusInfo.icon;
+                                        return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.name}</TableCell>
@@ -360,6 +386,16 @@ export default function AdminPage() {
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap">{format(new Date(user.lastLogin), 'PP')}</TableCell>
                                             <TableCell>{user.role}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={statusInfo.variant} className={cn(
+                                                    statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+                                                    statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+                                                    statusInfo.variant === 'outline' && latestDelivery && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                                                )}>
+                                                    {StatusIcon && <StatusIcon className="mr-1 h-3 w-3" />}
+                                                    {statusInfo.label}
+                                                </Badge>
+                                            </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
@@ -389,10 +425,10 @@ export default function AdminPage() {
                                                 </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )})}
                                     {filteredUsers.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center">No users found.</TableCell>
+                                            <TableCell colSpan={7} className="text-center">No users found.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>

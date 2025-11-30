@@ -5,6 +5,7 @@ export interface ConsumptionRecord {
 
 export interface Delivery {
   id: string;
+  userId: string;
   date: string;
   volumeGallons: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
