@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -15,10 +15,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Feedback, AppUser } from '@/lib/types';
+import type { Feedback, AppUser, Delivery } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
 
 
 const gallonToLiter = (gallons: number) => gallons * 19;
@@ -46,6 +48,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [hoverRating, setHoverRating] = useState(0);
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+    const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
 
     useEffect(() => {
         if (initialUserName) {
@@ -122,6 +125,22 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const consumedLiters = currentUser ? currentUser.totalConsumptionLiters : 0;
     const upcomingDeliveries = deliveries.filter(d => d.status === 'Pending' || d.status === 'In Transit').length;
 
+    const userDeliveries = currentUser ? deliveries.filter(d => d.userId === currentUser.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+
+    const getStatusInfo = (status: Delivery['status'] | undefined) => {
+        if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
+        switch (status) {
+            case 'Delivered':
+                return { variant: 'default', icon: PackageCheck, label: 'Delivered' };
+            case 'In Transit':
+                return { variant: 'secondary', icon: Truck, label: 'In Transit' };
+            case 'Pending':
+                return { variant: 'outline', icon: Package, label: 'Pending' };
+            default:
+                return { variant: 'outline', icon: null, label: 'No Deliveries' };
+        }
+    };
+
     return (
     <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
@@ -134,12 +153,61 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     <History className="h-4 w-4 mr-2" />
                     History
                 </Button>
-                <Button>
-                    <Droplet className="h-4 w-4 mr-2" />
-                    Water Station
+                <Button onClick={() => setIsDeliveryHistoryOpen(true)}>
+                    <Truck className="h-4 w-4 mr-2" />
+                    Delivery History
                 </Button>
             </div>
         </div>
+
+        <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userName}</DialogTitle>
+                    <DialogDescription>
+                        A log of all past deliveries for this user.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="py-4 max-h-[60vh] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Volume</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {userDeliveries.map(delivery => {
+                                const statusInfo = getStatusInfo(delivery.status);
+                                return (
+                                <TableRow key={delivery.id}>
+                                    <TableCell>{delivery.id}</TableCell>
+                                    <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
+                                    <TableCell>{delivery.volumeGallons} gal</TableCell>
+                                    <TableCell>
+                                         <Badge variant={statusInfo.variant} className={cn(
+                                            statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+                                            statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+                                            statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                                        )}>
+                                            {statusInfo.label}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            )})}
+                             {userDeliveries.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center">No delivery history found.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </DialogContent>
+        </Dialog>
+
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
