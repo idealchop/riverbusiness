@@ -436,10 +436,6 @@ export default function DashboardLayout({
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                                     <div className="space-y-1">
-                                        <Label htmlFor="clientId">Client ID</Label>
-                                        <Input id="clientId" name="clientId" value={editableFormData.clientId || ''} disabled />
-                                    </div>
-                                    <div className="space-y-1">
                                         <Label htmlFor="fullName">Full Name</Label>
                                         <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
@@ -474,9 +470,15 @@ export default function DashboardLayout({
                             <Separator />
                             <div>
                                 <h4 className="font-semibold mb-4">Security</h4>
-                                <div className="space-y-2 mb-4">
-                                    <Label htmlFor="uid">User ID (UID)</Label>
-                                    <Input id="uid" value={authUser?.uid || ''} disabled />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="clientId">Client ID</Label>
+                                        <Input id="clientId" value={editableFormData.clientId || ''} disabled />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="uid">User ID (UID)</Label>
+                                        <Input id="uid" value={authUser?.uid || ''} disabled />
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
