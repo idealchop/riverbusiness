@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -24,6 +24,7 @@ import { doc, collection } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import Link from 'next/link';
 
 const gallonToLiter = (gallons: number) => gallons * 3.785;
 
@@ -240,6 +241,12 @@ export default function DashboardPage() {
                 <h1 className="text-3xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground">{greeting}, {user?.name}. Here is an overview of your water consumption.</p>
             </div>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/quality">
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Compliance
+              </Link>
+            </Button>
         </div>
 
         <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
@@ -396,10 +403,6 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
-                     <div className="flex items-center text-xs text-red-600 mt-1">
-                        <ArrowDown className="h-3 w-3 mr-1" />
-                        <span>-</span>
-                    </div>
                 </CardContent>
             </Card>
             <Card className="flex flex-col">
@@ -410,10 +413,6 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
-                     <div className="flex items-center text-xs text-muted-foreground mt-1">
-                        <ArrowDown className="h-3 w-3 mr-1" />
-                        <span>-</span>
-                    </div>
                 </CardContent>
             </Card>
             <Card>
@@ -581,6 +580,8 @@ export default function DashboardPage() {
         </div>
     </div>
     );
+
+    
 
     
 
