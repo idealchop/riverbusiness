@@ -3,16 +3,21 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { deliveries, consumptionData } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Search } from 'lucide-react';
+import { deliveries, consumptionData, feedbackLogs as initialFeedbackLogs } from '@/lib/data';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Search, Star, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import SupportPage from './support/page';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import Link from 'next/link';
 import DeliveriesPage from './deliveries/page';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import type { Feedback } from '@/lib/types';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.78541;
@@ -22,6 +27,11 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
     const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
     const [remainingLiters, setRemainingLiters] = useState(0);
+    const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+    const [feedbackMessage, setFeedbackMessage] = useState('');
+    const [feedbackRating, setFeedbackRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const { toast } = useToast();
 
     useEffect(() => {
         if (initialUserName) {
@@ -59,6 +69,40 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         
     }, []);
 
+    const handleFeedbackSubmit = () => {
+        if (feedbackMessage.trim() === '' || feedbackRating === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Incomplete Feedback',
+                description: 'Please provide a message and a rating.'
+            });
+            return;
+        }
+
+        const newFeedback: Feedback = {
+            id: `FB-${Date.now()}`,
+            userId: 'USR-001', // This would be dynamic in a real app
+            userName: userName,
+            timestamp: new Date().toISOString(),
+            feedback: feedbackMessage,
+            rating: feedbackRating,
+            read: false,
+        };
+
+        const existingFeedback = JSON.parse(localStorage.getItem('feedbackLogs') || '[]');
+        localStorage.setItem('feedbackLogs', JSON.stringify([...existingFeedback, newFeedback]));
+
+        toast({
+            title: 'Feedback Submitted!',
+            description: 'Thank you for your valuable input.',
+        });
+
+        setIsFeedbackDialogOpen(false);
+        setFeedbackMessage('');
+        setFeedbackRating(0);
+        setHoverRating(0);
+    };
+
 
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ date: d.date, value: gallonToLiter(d.consumptionGallons) }));
     const deliveryChartData = deliveries.filter(d=>d.status === 'Delivered').slice(0,7).map(d => ({ date: d.date, value: gallonToLiter(d.volumeGallons) })).reverse();
@@ -68,10 +112,62 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">{greeting}, {userName}!</h1>
             <div className="flex items-center gap-2">
-                <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    <span>Feedback</span>
-                </Button>
+                <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="bg-primary/90 hover:bg-primary" aria-label="Feedback">
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            <span>Feedback</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Share Your Feedback</DialogTitle>
+                            <DialogDescription>
+                                We value your opinion. Let us know what you think.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="feedback-message">Your Message</Label>
+                                <Textarea
+                                    id="feedback-message"
+                                    placeholder="Tell us about your experience..."
+                                    value={feedbackMessage}
+                                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                                    rows={5}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Your Rating</Label>
+                                <div className="flex items-center gap-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                            key={star}
+                                            className={cn(
+                                                'h-6 w-6 cursor-pointer',
+                                                (hoverRating >= star || feedbackRating >= star)
+                                                    ? 'text-yellow-400 fill-yellow-400'
+                                                    : 'text-muted-foreground'
+                                            )}
+                                            onClick={() => setFeedbackRating(star)}
+                                            onMouseEnter={() => setHoverRating(star)}
+                                            onMouseLeave={() => setHoverRating(0)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary">Cancel</Button>
+                            </DialogClose>
+                            <Button type="button" onClick={handleFeedbackSubmit}>
+                                <Send className="mr-2 h-4 w-4" />
+                                Submit Feedback
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
                 <Dialog>
                     <DialogTrigger asChild>
                         <Button className="bg-primary/90 hover:bg-primary" aria-label="Support">
@@ -204,13 +300,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
-
-    
-
-
-
-    
-
-    
+}
 
     
