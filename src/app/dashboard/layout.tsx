@@ -615,19 +615,19 @@ export default function DashboardLayout({
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Included in Every Plan</CardTitle>
-                            <CardDescription>Every subscription plan includes full access to our growing network of partner perks.</CardDescription>
+                            <CardTitle className="text-base">Included in Every Plan</CardTitle>
+                            <CardDescription className="text-xs">Every subscription plan includes full access to our growing network of partner perks.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                 {includedFeatures.map((feature, index) => {
                                     const Icon = feature.icon;
                                     return (
-                                        <div key={index} className="flex items-start gap-4">
-                                            <Icon className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                                        <div key={index} className="flex items-start gap-3">
+                                            <Icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                                             <div>
-                                                <h4 className="font-semibold">{feature.title}</h4>
-                                                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                                                <h4 className="text-sm font-medium">{feature.title}</h4>
+                                                <p className="text-xs text-muted-foreground">{feature.description}</p>
                                             </div>
                                         </div>
                                     );
