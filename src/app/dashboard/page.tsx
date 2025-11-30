@@ -56,6 +56,7 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
     const firestore = useFirestore();
     
     const [greeting, setGreeting] = useState('');
+    const [autoRefill, setAutoRefill] = useState(true);
     
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
@@ -149,6 +150,21 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
         link.click();
         document.body.removeChild(link);
         toast({ title: "Download Started", description: "Your delivery history CSV is downloading." });
+    };
+
+    const handleAutoRefillToggle = (checked: boolean) => {
+        setAutoRefill(checked);
+        if (checked) {
+            toast({
+                title: "Auto-Refill Enabled",
+                description: "Your next delivery will be scheduled automatically when your balance is low.",
+            });
+        } else {
+            toast({
+                title: "Auto-Refill Disabled",
+                description: "Please remember to schedule your deliveries manually.",
+            });
+        }
     };
 
     return (
@@ -303,7 +319,7 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
                 <CardContent className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                         <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
-                        <Switch id="auto-refill" defaultChecked />
+                        <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
                     </div>
                      <p className="text-xs text-muted-foreground">
                         System will auto-schedule if balance is low.
@@ -444,3 +460,4 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
     );
 
     
+
