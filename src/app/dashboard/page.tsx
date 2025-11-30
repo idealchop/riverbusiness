@@ -23,6 +23,7 @@ import { useCollection, useDoc, useFirestore, useUser as useAuthUser, useMemoFir
 import { doc, collection } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { WaterIndicator } from '@/components/ui/water-indicator';
 
 const gallonToLiter = (gallons: number) => gallons * 3.785;
 
@@ -122,6 +123,9 @@ export default function DashboardPage() {
     const consumedLiters = user?.totalConsumptionLiters || 0;
     const remainingLiters = Math.max(0, totalLitersPurchased - consumedLiters);
     const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
+    
+    const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
+    const remainingPercentage = totalLitersPurchased > 0 ? (remainingLiters / totalLitersPurchased) * 100 : 0;
 
     const getStatusInfo = (status: Delivery['status'] | undefined) => {
         if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
@@ -342,7 +346,7 @@ export default function DashboardPage() {
 
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            <Card className="overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Total Purchased
@@ -356,8 +360,9 @@ export default function DashboardPage() {
                         <div className="flex justify-between"><span>From Last Month:</span> <span>{fromLastMonthLiters.toLocaleString()} L</span></div>
                     </div>
                 </CardContent>
+                <WaterIndicator percentage={100} />
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
@@ -370,8 +375,9 @@ export default function DashboardPage() {
                         <span>-</span>
                     </div>
                 </CardContent>
+                 <WaterIndicator percentage={consumedPercentage} />
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Remaining Liters
@@ -384,6 +390,7 @@ export default function DashboardPage() {
                         <span>-</span>
                     </div>
                 </CardContent>
+                <WaterIndicator percentage={remainingPercentage} />
             </Card>
             <Card>
                 <CardHeader>
