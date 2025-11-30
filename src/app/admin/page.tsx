@@ -229,7 +229,7 @@ export default function AdminPage() {
         <Tabs defaultValue="user-management">
              <Card>
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-3">
+                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
                         <TabsTrigger value="user-management"><Users className="mr-2"/>User Management</TabsTrigger>
                         <TabsTrigger value="login-logs"><LogIn className="mr-2"/>Login Logs</TabsTrigger>
                         <TabsTrigger value="transactions"><Handshake className="mr-2"/>Transactions</TabsTrigger>
