@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -276,7 +276,7 @@ export default function DashboardPage() {
             </div>
              <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline" className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-4 sm:py-2" onClick={() => setIsComplianceDialogOpen(true)}>
+                    <Button variant="outline" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
                         <ShieldCheck className="h-4 w-4 sm:mr-2" />
                         <span className="hidden sm:inline">Water Quality Compliance</span>
                     </Button>
@@ -565,6 +565,12 @@ export default function DashboardPage() {
                 <CardContent className="flex-1">
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
                 </CardContent>
+                <CardFooter>
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setIsDeliveryHistoryOpen(true)}>
+                        <History className="mr-2 h-4 w-4"/>
+                        View History
+                    </Button>
+                </CardFooter>
             </Card>
             <Card className="flex flex-col">
                 <CardHeader>
