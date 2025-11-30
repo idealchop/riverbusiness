@@ -276,7 +276,7 @@ export default function DashboardPage() {
             </div>
              <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline" size="icon" className="sm:size-auto sm:px-4" onClick={() => setIsComplianceDialogOpen(true)}>
+                    <Button variant="outline" className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-4 sm:py-2" onClick={() => setIsComplianceDialogOpen(true)}>
                         <ShieldCheck className="h-4 w-4 sm:mr-2" />
                         <span className="hidden sm:inline">Water Quality Compliance</span>
                     </Button>
