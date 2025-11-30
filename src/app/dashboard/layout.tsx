@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { Chatbot } from '@/components/chatbot';
+import { LiveChat } from '@/components/live-chat';
 
 export default function DashboardLayout({
   children,
@@ -132,7 +132,7 @@ export default function DashboardLayout({
                       </div>
                     </div>
                     <div className="flex flex-col h-full">
-                         <Chatbot />
+                         <LiveChat />
                     </div>
                 </div>
               </DialogContent>
