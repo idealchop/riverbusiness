@@ -65,6 +65,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [monthlyPlanLiters, setMonthlyPlanLiters] = useState(0);
     const [bonusLiters, setBonusLiters] = useState(0);
+    const [fromLastMonthLiters, setFromLastMonthLiters] = useState(250);
 
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
@@ -101,25 +102,22 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             if (onboardingData.customPlanDetails) {
                 monthlyLiters = onboardingData.customPlanDetails.litersPerMonth || monthlyLiters;
                 bonus = onboardingData.customPlanDetails.bonusLiters || bonus;
-                totalPurchased = monthlyLiters + bonus;
                 estDeliveryLiters = onboardingData.customPlanDetails.litersPerMonth || estDeliveryLiters;
                 // You could add logic here to set nextRefillDate based on deliveryFrequency, etc.
             }
         }
         
-        setTotalLitersPurchased(totalPurchased);
         setMonthlyPlanLiters(monthlyLiters);
         setBonusLiters(bonus);
+        setTotalLitersPurchased(monthlyLiters + bonus + fromLastMonthLiters);
         
         const user = initialAppUsers.find(u => u.id === 'USR-001');
         if (user) {
             setCurrentUser(user);
-            // Assuming the totalPurchased includes everything for the current period.
-            // We'll add a static "from last month" for display purposes.
-            setRemainingLiters(Math.max(0, totalPurchased + 250 - user.totalConsumptionLiters));
+            setRemainingLiters(Math.max(0, (monthlyLiters + bonus + fromLastMonthLiters) - user.totalConsumptionLiters));
         }
 
-    }, []);
+    }, [fromLastMonthLiters]);
 
 
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), value: gallonToLiter(d.consumptionGallons) }));
@@ -143,7 +141,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         }
     };
     
-    const fromLastMonthLiters = 250; // Static example value
 
     return (
     <div className="flex flex-col gap-8">
@@ -360,18 +357,12 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                         Total Purchased
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                    <div>
-                        <p className="text-xs text-muted-foreground">Monthly Plan</p>
-                        <p className="text-lg font-bold">{monthlyPlanLiters.toLocaleString()} Liters</p>
-                    </div>
-                     <div>
-                        <p className="text-xs text-muted-foreground">Bonus Liters</p>
-                        <p className="text-lg font-bold">{bonusLiters.toLocaleString()} Liters</p>
-                    </div>
-                     <div>
-                        <p className="text-xs text-muted-foreground">From Last Month</p>
-                        <p className="text-lg font-bold">{fromLastMonthLiters.toLocaleString()} Liters</p>
+                <CardContent>
+                    <p className="text-3xl font-bold mb-2">{totalLitersPurchased.toLocaleString()} L</p>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="flex justify-between"><span>Monthly Plan:</span> <span>{monthlyPlanLiters.toLocaleString()} L</span></div>
+                        <div className="flex justify-between"><span>Bonus Liters:</span> <span>{bonusLiters.toLocaleString()} L</span></div>
+                        <div className="flex justify-between"><span>From Last Month:</span> <span>{fromLastMonthLiters.toLocaleString()} L</span></div>
                     </div>
                 </CardContent>
             </Card>
@@ -566,3 +557,4 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     
 
     
+
