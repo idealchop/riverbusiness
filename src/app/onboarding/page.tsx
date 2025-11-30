@@ -243,6 +243,13 @@ export default function OnboardingPage() {
                     </FormItem>
                   )}
                 />
+                 <FormItem>
+                    <FormLabel>Client ID</FormLabel>
+                    <FormControl>
+                        <Input readOnly value="SC2500000029" />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
                 <FormField
                   control={form.control}
                   name="businessName"
@@ -349,3 +356,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
