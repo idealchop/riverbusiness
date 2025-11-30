@@ -1,3 +1,4 @@
+
 import type { ConsumptionRecord, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, LoginLog, Feedback, Payment } from '@/lib/types';
 
 export const consumptionData: ConsumptionRecord[] = [
