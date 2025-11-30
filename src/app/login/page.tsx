@@ -141,10 +141,10 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-            <div className="hidden lg:flex flex-col items-center justify-center p-6">
+            <div className="hidden lg:flex flex-col items-center justify-center p-6 overflow-hidden">
               <div className="relative w-full h-80">
                   <Image
-                    src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FLP_image_v3.png?alt=media&token=b2f8fa47-22ef-4e9f-a713-324f97655779"
+                    src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FSmartRefill_01.png?alt=media&token=b4bd2e32-6cb3-4f17-b0be-64018ba33a77"
                     alt="River Business Marketing Material"
                     fill
                     className="object-contain dark:brightness-[0.2] dark:grayscale"
