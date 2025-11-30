@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -70,7 +70,7 @@ type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 export default function AdminPage() {
     const { toast } = useToast();
     const auth = useAuth();
-    const { user: authUser } = useUser();
+    const { user: authUser, isUserLoading } = useUser();
     const firestore = useFirestore();
 
     const isSuperAdmin = authUser?.email === 'admin@riverph.com';
@@ -338,15 +338,16 @@ export default function AdminPage() {
     
         const deliveriesRef = collection(firestore, 'users', userForHistory.id, 'deliveries');
         
+        const newDeliveryData = {
+            userId: userForHistory.id,
+            date: values.date.toISOString(),
+            volumeGallons: values.volumeGallons,
+            status: 'Delivered',
+            proofOfDeliveryUrl: proofUrl,
+        };
+
         try {
-            const newDelivery = {
-                userId: userForHistory.id,
-                date: values.date.toISOString(),
-                volumeGallons: values.volumeGallons,
-                status: 'Delivered',
-                proofOfDeliveryUrl: proofUrl,
-            };
-            const docRef = await addDocumentNonBlocking(deliveriesRef, newDelivery);
+            const docRef = await addDocumentNonBlocking(deliveriesRef, newDeliveryData);
             if(docRef) {
                 // Now update the document with its own ID.
                 const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', docRef.id);
@@ -432,8 +433,18 @@ export default function AdminPage() {
         { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
     ];
 
-  if (usersLoading || stationsLoading) {
-    return <div>Loading...</div>
+  if (isUserLoading || usersLoading || stationsLoading) {
+    return <div className="flex items-center justify-center h-full">Loading...</div>;
+  }
+
+  if (!isSuperAdmin) {
+    return (
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center">
+            <ShieldX className="h-16 w-16 text-destructive mb-4" />
+            <h1 className="text-3xl font-bold">Access Denied</h1>
+            <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
+        </div>
+    );
   }
 
   return (
