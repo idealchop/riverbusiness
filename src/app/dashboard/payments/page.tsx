@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -109,6 +110,46 @@ export default function PaymentsPage() {
   
   const { toast } = useToast();
   const [date, setDate] = React.useState<DateRange | undefined>()
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string | null>(null);
+
+  const handleSendInvoice = () => {
+    if (!selectedCustomerId || !date?.from || !date?.to) {
+      toast({
+        variant: "destructive",
+        title: "Incomplete Information",
+        description: "Please select a customer and a date range.",
+      });
+      return;
+    }
+
+    const customer = appUsers.find(user => user.id === selectedCustomerId);
+    if (!customer) {
+      toast({
+        variant: "destructive",
+        title: "Customer not found",
+      });
+      return;
+    }
+
+    const newRequest = {
+      id: `INV-REQ-${Date.now()}`,
+      userName: customer.name,
+      userId: customer.id,
+      dateRange: `${format(date.from, "LLL dd, y")} - ${format(date.to, "LLL dd, y")}`,
+      status: 'Pending' as 'Pending' | 'Sent',
+    };
+
+    const existingRequests = JSON.parse(localStorage.getItem('invoiceRequests') || '[]');
+    localStorage.setItem('invoiceRequests', JSON.stringify([...existingRequests, newRequest]));
+
+    toast({
+      title: "Invoice Request Sent",
+      description: `Your request for ${customer.name} has been sent to the admin.`,
+    });
+    
+    setDate(undefined);
+    setSelectedCustomerId(null);
+  };
   
 
   return (
@@ -212,7 +253,7 @@ export default function PaymentsPage() {
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="customer">Select a Customer</Label>
-                                <Select>
+                                <Select onValueChange={setSelectedCustomerId} value={selectedCustomerId || undefined}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a customer..." />
                                     </SelectTrigger>
@@ -269,7 +310,9 @@ export default function PaymentsPage() {
                                 Cancel
                                 </Button>
                             </DialogClose>
-                            <Button type="button">Send Invoice to Smart Refill</Button>
+                            <DialogClose asChild>
+                                <Button type="button" onClick={handleSendInvoice}>Send Invoice to Smart Refill</Button>
+                            </DialogClose>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
@@ -301,3 +344,5 @@ export default function PaymentsPage() {
     </div>
   );
 }
+
+    
