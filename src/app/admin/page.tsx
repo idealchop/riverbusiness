@@ -184,7 +184,7 @@ export default function AdminPage() {
                              </div>
                              <div>
                                  <p className="font-medium text-muted-foreground">Last Login</p>
-                                 <p>{new Date(selectedUser.lastLogin).toLocaleString()}</p>
+                                 <p>{new Date(selectedUser.lastLogin).toLocaleString('default', { month: 'long' })}</p>
                              </div>
                          </div>
                     </div>
@@ -347,7 +347,7 @@ export default function AdminPage() {
                                                     {user.accountStatus}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap">{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{new Date(user.lastLogin).toLocaleString('default', { month: 'long' })}</TableCell>
                                             <TableCell>{user.role}</TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -466,5 +466,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
