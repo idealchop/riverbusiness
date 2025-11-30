@@ -45,23 +45,35 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      if(user) {
+      if (user) {
+        // Special case for admin user
+        if (data.email === 'admin@riverph.com') {
+          const userDocRef = doc(firestore, "users", user.uid);
+           const { setDoc } = await import('firebase/firestore');
+           await setDoc(userDocRef, {
+                id: user.uid,
+                name: 'Admin',
+                email: user.email,
+                businessName: 'River Business Admin',
+                role: 'Admin',
+                accountStatus: 'Active',
+                onboardingComplete: true,
+                createdAt: new Date().toISOString(),
+                lastLogin: new Date().toISOString()
+           }, { merge: true });
+          router.push('/admin');
+          return;
+        }
+
         const userDocRef = doc(firestore, 'users', user.uid);
-        // This is a bit of a hack to get user role, in a real app this might come from custom claims
-        // For now, we fetch the user document to check the role.
         const userSnap = await (await import('firebase/firestore')).getDoc(userDocRef);
         
         if (userSnap.exists()) {
           const userData = userSnap.data() as AppUser;
-          if (userData.role === 'Admin') {
-            router.push('/admin');
+          if (userData.onboardingComplete) {
+            router.push('/dashboard');
           } else {
-             // Check if onboarding is complete
-             if (userData.onboardingComplete) {
-                router.push('/dashboard');
-             } else {
-                router.push('/onboarding');
-             }
+            router.push('/onboarding');
           }
         } else {
            router.push('/onboarding');
