@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { QrCode } from 'lucide-react';
 
 
@@ -331,11 +331,11 @@ export default function DashboardLayout({
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableCell>Invoice ID</TableCell>
-                                                        <TableCell>Date</TableCell>
-                                                        <TableCell>Status</TableCell>
-                                                        <TableCell className="text-right">Amount</TableCell>
-                                                        <TableCell className="text-right">Actions</TableCell>
+                                                        <TableHead>Invoice ID</TableHead>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead>Status</TableHead>
+                                                        <TableHead className="text-right">Amount</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
@@ -351,23 +351,10 @@ export default function DashboardLayout({
                                                             </TableCell>
                                                             <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
                                                             <TableCell className="text-right">
-                                                                {payment.status === 'Upcoming' ? (
-                                                                    <Dialog>
-                                                                        <DialogTrigger asChild><Button size="sm"><CreditCard className="mr-2 h-4 w-4" />Pay Now</Button></DialogTrigger>
-                                                                        <DialogContent>
-                                                                            <DialogHeader>
-                                                                                <DialogTitle>Pay Invoice {payment.id}</DialogTitle>
-                                                                                <DialogDescription>Scan a QR code to pay ₱{payment.amount.toFixed(2)}.</DialogDescription>
-                                                                            </DialogHeader>
-                                                                            <div className="grid grid-cols-2 gap-4 py-4">
-                                                                                {gcashQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={gcashQr.imageUrl} alt="GCash QR" width={150} height={150} data-ai-hint={gcashQr.imageHint} /><p className="font-semibold">GCash</p></div>)}
-                                                                                {bankQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={bankQr.imageUrl} alt="BDO QR" width={150} height={150} data-ai-hint={bankQr.imageHint} /><p className="font-semibold">BDO</p></div>)}
-                                                                                {bankQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={bankQr.imageUrl} alt="BPI QR" width={150} height={150} data-ai-hint={bankQr.imageHint} /><p className="font-semibold">BPI</p></div>)}
-                                                                                {paymayaQr && (<div className="flex flex-col items-center gap-2 border p-4 rounded-lg"><Image src={paymayaQr.imageUrl} alt="PayMaya QR" width={150} height={150} data-ai-hint={paymayaQr.imageHint} /><p className="font-semibold">PayMaya</p></div>)}
-                                                                            </div>
-                                                                        </DialogContent>
-                                                                    </Dialog>
-                                                                ) : (<Button variant="outline" size="sm" disabled><Check className="mr-2 h-4 w-4" />Paid</Button>)}
+                                                                <Button variant="outline" size="sm">
+                                                                    <Download className="mr-2 h-4 w-4" />
+                                                                    Download
+                                                                </Button>
                                                             </TableCell>
                                                         </TableRow>
                                                     ))}
@@ -396,3 +383,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
