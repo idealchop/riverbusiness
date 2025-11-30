@@ -66,7 +66,7 @@ export default function DashboardLayout({
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
             
             <div className="flex items-center">
-                <span className="font-bold">River</span>
+                <span className="font-bold">River Business</span>
             </div>
           </Link>
           <div className="flex-1" />
