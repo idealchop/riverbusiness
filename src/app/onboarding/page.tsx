@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const onboardingSchema = z.object({
   fullName: z.string().min(1, { message: 'Required' }),
+  clientId: z.string().min(1, { message: 'Required' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   businessName: z.string().min(1, { message: 'Required' }),
   address: z.string().min(1, { message: 'Required' }),
@@ -77,6 +78,7 @@ export default function OnboardingPage() {
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
         fullName: 'Juan dela Cruz',
+        clientId: 'SC2500000029',
         email: 'juan.delacruz@example.com',
         businessName: 'River business inc.',
         address: '123 Main St, Anytown',
@@ -250,13 +252,19 @@ export default function OnboardingPage() {
                     </FormItem>
                   )}
                 />
-                 <FormItem>
-                    <FormLabel>Client ID</FormLabel>
-                    <FormControl>
-                        <Input readOnly value="SC2500000029" />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
+                 <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. SC2500000029" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="email"
