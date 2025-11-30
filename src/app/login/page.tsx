@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -82,6 +83,10 @@ export default function LoginPage() {
           <div className="mt-4 text-center text-sm">
             <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
             <p className="text-xs text-muted-foreground">By Smart Refill</p>
+          </div>
+          <div className="mt-4 text-center text-xs text-muted-foreground">
+            <p>For questions or inquiries, contact us at:</p>
+            <a href="mailto:business@smartrefill.io" className="font-semibold text-primary hover:underline">business@smartrefill.io</a>
           </div>
         </div>
       </div>
