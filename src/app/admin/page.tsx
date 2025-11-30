@@ -209,7 +209,7 @@ export default function AdminPage() {
                              </div>
                              <div>
                                  <p className="font-medium text-muted-foreground">Last Login</p>
-                                 <p>{new Date(selectedUser.lastLogin).toLocaleString('default', { month: 'long' })}</p>
+                                 <p>{format(new Date(selectedUser.lastLogin), 'MMMM')}</p>
                              </div>
                          </div>
                          <Separator className="my-4" />
@@ -244,7 +244,7 @@ export default function AdminPage() {
                     <div className="text-2xl font-bold">{activeUsers}</div>
                 </CardContent>
             </Card>
-             <Card className="bg-primary text-primary-foreground">
+             <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => setActiveTab('transactions')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
                     <FileClock className="h-4 w-4 text-primary-foreground" />
@@ -366,7 +366,7 @@ export default function AdminPage() {
                                                     {user.accountStatus}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap">{new Date(user.lastLogin).toLocaleString('default', { month: 'long' })}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{format(new Date(user.lastLogin), 'MMMM')}</TableCell>
                                             <TableCell>{user.role}</TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
