@@ -564,7 +564,7 @@ export default function DashboardLayout({
                           <CardContent className="p-0">
                             <div className="flex flex-col md:flex-row">
                               {planImage && (
-                                <div className="relative md:w-1/3 aspect-square md:aspect-auto">
+                                <div className="relative md:w-1/2 aspect-square md:aspect-auto">
                                   <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
                                 </div>
                               )}
