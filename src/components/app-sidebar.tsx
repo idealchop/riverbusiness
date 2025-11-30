@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -11,12 +12,15 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Home, CreditCard } from 'lucide-react';
+import { Home, CreditCard, Droplets, LifeBuoy, MessageSquare, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/dashboard/deliveries', label: 'Deliveries', icon: Truck },
   { href: '/dashboard/payments', label: 'Payments', icon: CreditCard },
+  { href: '/dashboard/quality', label: 'Quality', icon: Droplets },
+  { href: '/dashboard/support', label: 'Support', icon: LifeBuoy },
 ];
 
 export function AppSidebar() {
@@ -52,3 +56,5 @@ export function AppSidebar() {
     </>
   );
 }
+
+    

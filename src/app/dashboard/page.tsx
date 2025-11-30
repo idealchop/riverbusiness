@@ -166,9 +166,11 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 <p className="text-muted-foreground">Plan, prioritize, and accomplish your tasks with ease.</p>
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline">
-                    <History className="h-4 w-4 mr-2" />
-                    History
+                <Button variant="outline" asChild>
+                    <Link href="/dashboard/quality">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Compliance & Feedback
+                    </Link>
                 </Button>
             </div>
         </div>
@@ -396,5 +398,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
     
 
+
+    
 
     
