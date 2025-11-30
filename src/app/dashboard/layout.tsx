@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -83,40 +83,40 @@ export default function DashboardLayout({
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
   const { data: paymentHistoryFromDb } = useCollection<Payment>(paymentsQuery);
   
-  const [editableFormData, setEditableFormData] = useState<Partial<AppUser>>({});
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
+  const [isEditingDetails, setIsEditingDetails] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
   
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<Payment | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentOption | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
+  const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
   
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [feedbackRating, setFeedbackRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = useState(false);
-  const [switchReason, setSwitchReason] = useState('');
-  const [switchUrgency, setSwitchUrgency] = useState('');
-  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = React.useState(false);
+  const [feedbackMessage, setFeedbackMessage] = React.useState('');
+  const [feedbackRating, setFeedbackRating] = React.useState(0);
+  const [hoverRating, setHoverRating] = React.useState(0);
+  const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = React.useState(false);
+  const [switchReason, setSwitchReason] = React.useState('');
+  const [switchUrgency, setSwitchUrgency] = React.useState('');
+  const [hasNewMessage, setHasNewMessage] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!isUserLoading && !authUser) {
       router.push('/login');
     }
   }, [authUser, isUserLoading, router]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if(user) {
       setEditableFormData(user);
     }
   }, [user]);
   
-  useEffect(() => {
+  React.useEffect(() => {
     if (!isPaymentDialogOpen) {
       // Reset payment method selection when dialog closes
       setSelectedPaymentMethod(null);
@@ -202,14 +202,14 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-    const planImage = useMemo(() => {
+    const planImage = React.useMemo(() => {
       if (!user?.clientType) return null;
       const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
       if (!clientTypeDetails) return null;
       return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [user]);
 
-    const generatedInvoices = useMemo(() => {
+    const generatedInvoices = React.useMemo(() => {
       if (!user?.createdAt || !user.plan) return [];
       
       const invoices: Payment[] = [];
@@ -453,7 +453,7 @@ export default function DashboardLayout({
                           <CardContent className="space-y-4">
                               {planImage && (
                                 <div className="relative h-40 w-full rounded-lg overflow-hidden">
-                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} layout="fill" objectFit="cover" data-ai-hint={planImage.imageHint} />
+                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{objectFit: 'cover'}} data-ai-hint={planImage.imageHint} />
                                 </div>
                               )}
                               <div className="flex justify-between items-baseline">
@@ -592,7 +592,7 @@ export default function DashboardLayout({
                             {!selectedPaymentMethod ? (
                                 <div className="space-y-4">
                                      <p className="text-sm text-muted-foreground text-center">Select a payment method to see the QR code.</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                         {paymentOptions.map((opt) => (
                                         <Card
                                             key={opt.name}
@@ -790,4 +790,5 @@ export default function DashboardLayout({
     
 
     
+
 
