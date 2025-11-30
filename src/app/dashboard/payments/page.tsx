@@ -40,6 +40,7 @@ import {
   Check,
   Building2,
   Calendar as CalendarIcon,
+  Send,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -59,6 +60,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { appUsers } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
 
 
 const paymentHistory = [
@@ -105,8 +107,36 @@ export default function PaymentsPage() {
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
   const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
   
+  const { toast } = useToast();
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = React.useState(false);
   const [date, setDate] = React.useState<DateRange | undefined>()
+  
+  const handleRequestInvoice = () => {
+    if (date?.from && date?.to) {
+        const newRequest = {
+            id: `REQ-${Date.now()}`,
+            userName: 'Juan dela Cruz',
+            userId: 'USR-001', // This would be dynamically set in a real app
+            dateRange: `${format(date.from, "LLL dd, y")} - ${format(date.to, "LLL dd, y")}`,
+            status: 'Pending' as 'Pending' | 'Sent',
+        };
+
+        const existingRequests = JSON.parse(localStorage.getItem('invoiceRequests') || '[]');
+        localStorage.setItem('invoiceRequests', JSON.stringify([...existingRequests, newRequest]));
+        
+        toast({
+            title: "Request Sent!",
+            description: "Your invoice history request has been sent to the admin.",
+        });
+        setIsInvoiceDialogOpen(false);
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid Date Range",
+            description: "Please select a valid date range.",
+        });
+    }
+  };
 
 
   return (
@@ -195,8 +225,73 @@ export default function PaymentsPage() {
                 ))}
               </TableBody>
             </Table>
-             <div className="flex justify-end mt-4">
-                <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+             <div className="flex justify-end mt-4 gap-2">
+                 <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline">Request Invoice History</Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Request Invoice History</DialogTitle>
+                            <DialogDescription>
+                                Select a date range to request your invoice history. The admin will be notified.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="date-range">Select Date Range</Label>
+                                <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                    >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date?.from ? (
+                                        date.to ? (
+                                        <>
+                                            {format(date.from, "LLL dd, y")} -{" "}
+                                            {format(date.to, "LLL dd, y")}
+                                        </>
+                                        ) : (
+                                        format(date.from, "LLL dd, y")
+                                        )
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={date?.from}
+                                    selected={date}
+                                    onSelect={setDate}
+                                    numberOfMonths={2}
+                                    />
+                                </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
+                        <DialogFooter className="grid grid-cols-2 gap-2">
+                            <DialogClose asChild>
+                                <Button type="button" variant="secondary">
+                                Cancel
+                                </Button>
+                            </DialogClose>
+                            <Button type="button" onClick={handleRequestInvoice}>
+                                <Send className="mr-2 h-4 w-4" />
+                                Send Request
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                <Dialog>
                     <DialogTrigger asChild>
                         <Button className="bg-primary/90 hover:bg-primary">Create Invoice</Button>
                     </DialogTrigger>
@@ -226,7 +321,7 @@ export default function PaymentsPage() {
                                 <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
-                                    id="date"
+                                    id="date-create"
                                     variant={"outline"}
                                     className={cn(
                                         "w-full justify-start text-left font-normal",

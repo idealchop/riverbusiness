@@ -9,7 +9,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, paymentHistory } from '@/lib/data';
-import { ArrowRight, ChevronRight, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, MoreHorizontal, Users, DollarSign, Activity, AlertTriangle, Monitor, Receipt, LogIn, Handshake, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, ChevronRight, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, MoreHorizontal, Users, DollarSign, Activity, AlertTriangle, Monitor, Receipt, LogIn, Handshake, Eye, EyeOff, FileText, Calendar as CalendarIcon, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar } from 'recharts';
 import {
@@ -26,6 +26,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -36,12 +41,28 @@ const newUserSchema = z.object({
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
 
+interface InvoiceRequest {
+  id: string;
+  userName: string;
+  userId: string;
+  dateRange: string;
+  status: 'Pending' | 'Sent';
+}
+
 
 export default function AdminPage() {
     const [appUsers, setAppUsers] = useState(initialAppUsers);
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
+    const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
+    
+    useEffect(() => {
+        const storedRequests = localStorage.getItem('invoiceRequests');
+        if (storedRequests) {
+            setInvoiceRequests(JSON.parse(storedRequests));
+        }
+    }, []);
 
     useEffect(() => {
         const hour = new Date().getHours();
@@ -321,38 +342,40 @@ export default function AdminPage() {
                         <Table>
                         <TableHeader>
                             <TableRow>
-                            <TableHead>Invoice ID</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Description</TableHead>
+                            <TableHead>Request ID</TableHead>
+                            <TableHead>User Name</TableHead>
+                            <TableHead>Date Range</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paymentHistory.map((payment) => (
-                            <TableRow key={payment.id}>
-                                <TableCell className="font-medium">{payment.id}</TableCell>
-                                <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                <TableCell>{payment.description}</TableCell>
+                            {invoiceRequests.map((request) => (
+                            <TableRow key={request.id}>
+                                <TableCell className="font-medium">{request.id}</TableCell>
+                                <TableCell>{request.userName}</TableCell>
+                                <TableCell>{request.dateRange}</TableCell>
                                 <TableCell>
                                 <Badge
-                                    variant={
-                                    payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')
-                                    }
-                                    className={
-                                    payment.status === 'Paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                    : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
-                                    }
+                                    variant={request.status === 'Sent' ? 'default' : 'secondary'}
+                                     className={request.status === 'Sent' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
                                 >
-                                    {payment.status}
+                                    {request.status}
                                 </Badge>
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
-                                ₱{payment.amount.toFixed(2)}
+                                <TableCell className="text-right">
+                                    <Button variant="outline" size="sm">
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        View Invoice
+                                    </Button>
                                 </TableCell>
                             </TableRow>
                             ))}
+                             {invoiceRequests.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center">No invoice requests yet.</TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                         </Table>
                     </TabsContent>
