@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -37,16 +37,6 @@ const perks = [
         ],
         websiteUrl: "https://www.newbreed.com",
         mapUrl: "https://www.google.com/maps/search/?api=1&query=fitness+gym"
-    },
-    { 
-        brand: "Aqua Flask", 
-        image: "https://images.unsplash.com/photo-1559056199-591a307a5598?q=80&w=2070&auto=format&fit=crop",
-        subtitle: "Stay hydrated in style.",
-        discounts: [
-            "Get 15% off on your next purchase of any Aqua Flask bottle."
-        ],
-        websiteUrl: "#",
-        mapUrl: "#"
     },
 ];
 
@@ -188,10 +178,66 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
             <div className="flex items-center gap-2">
                 <Button variant="outline" asChild>
                     <Link href="/dashboard/quality">
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Compliance & Feedback
+                        <FileText className="h-4 w-4 mr-2" />
+                        Compliance Reports
                     </Link>
                 </Button>
+                <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline">
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Submit Feedback
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Submit Feedback</DialogTitle>
+                            <DialogDescription>
+                                We value your opinion. Let us know how we can improve.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            <div>
+                                <Label htmlFor="feedback-rating" className="mb-2 block">Rating</Label>
+                                <div className="flex items-center gap-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                            key={star}
+                                            className={cn(
+                                                'h-6 w-6 cursor-pointer',
+                                                (hoverRating >= star || feedbackRating >= star)
+                                                    ? 'text-yellow-400 fill-yellow-400'
+                                                    : 'text-muted-foreground'
+                                            )}
+                                            onMouseEnter={() => setHoverRating(star)}
+                                            onMouseLeave={() => setHoverRating(0)}
+                                            onClick={() => setFeedbackRating(star)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="feedback-message">Message</Label>
+                                <Textarea
+                                    id="feedback-message"
+                                    placeholder="Tell us about your experience..."
+                                    value={feedbackMessage}
+                                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                                    rows={4}
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button onClick={handleFeedbackSubmit}>
+                                <Send className="mr-2 h-4 w-4" />
+                                Submit
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
 
@@ -440,5 +486,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     );
 
 }
+
+    
 
     
