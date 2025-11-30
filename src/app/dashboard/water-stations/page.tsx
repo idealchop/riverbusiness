@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { waterStations } from '@/lib/data';
 import { FileText, MapPin } from 'lucide-react';
-import { DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 
 export default function WaterStationsPage() {
@@ -35,12 +35,26 @@ export default function WaterStationsPage() {
                   {station.location}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={station.permitUrl} target="_blank" rel="noopener noreferrer">
-                      <FileText className="mr-2 h-4 w-4" />
-                      View Permit
-                    </a>
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <FileText className="mr-2 h-4 w-4" />
+                        View Permit
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Compliance Permit: {station.name}</DialogTitle>
+                            <DialogDescription>
+                                Permit ID: {station.id}-PERMIT
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 text-center">
+                            <p className="text-muted-foreground">Permit content would be displayed here.</p>
+                            <iframe src={station.permitUrl} className="w-full h-96 mt-4 border rounded-md" title={`Permit for ${station.name}`} />
+                        </div>
+                    </DialogContent>
+                  </Dialog>
                 </TableCell>
               </TableRow>
             ))}
