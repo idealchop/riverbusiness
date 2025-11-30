@@ -227,7 +227,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                                 }}
                                 labelStyle={{color: 'hsl(var(--foreground))'}}
                             />
-                            <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="hsl(var(--primary))" />
+                            <Bar dataKey="value" radius={[8, 8, 0, 0]} fill="hsl(var(--primary))" />
                         </BarChart>
                     </ResponsiveContainer>
                 </CardContent>
