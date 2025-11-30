@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { deliveries, paymentHistory } from '@/lib/data';
+import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
+import type { Payment } from '@/lib/types';
 
 
 interface OnboardingData {
@@ -67,6 +68,7 @@ export default function DashboardLayout({
 
   const [userName, setUserName] = useState('Juan dela Cruz');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<Payment[]>(initialPaymentHistory);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
@@ -79,6 +81,17 @@ export default function DashboardLayout({
       setOnboardingData(data);
       if (data.formData && data.formData.fullName) {
         setUserName(data.formData.fullName);
+      }
+      
+      // Update payment history with plan price
+      if (data.plan && data.plan.price) {
+        setPaymentHistory(prevHistory => {
+          return prevHistory.map(invoice => 
+            invoice.status === 'Upcoming' 
+              ? { ...invoice, amount: data.plan.price }
+              : invoice
+          );
+        });
       }
     }
   }, []);
@@ -427,3 +440,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
