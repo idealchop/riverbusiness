@@ -56,6 +56,7 @@ interface CustomPlanDetails {
     bonusLiters: number;
     deliveryFrequency: string;
     deliveryDay: string;
+    deliveryTime: string;
     waterStation: string;
 }
 
@@ -74,6 +75,7 @@ export default function OnboardingPage() {
   const [bonusLiters, setBonusLiters] = React.useState<number>(0);
   const [selectedDay, setSelectedDay] = React.useState<string>('');
   const [deliveryFrequency, setDeliveryFrequency] = React.useState<string>('');
+  const [deliveryTime, setDeliveryTime] = React.useState<string>('');
   const [amountPerMonth, setAmountPerMonth] = React.useState<number>(0);
 
   
@@ -117,18 +119,20 @@ export default function OnboardingPage() {
     setCustomPlanDetails(null);
     setSelectedDay('');
     setDeliveryFrequency('');
+    setDeliveryTime('');
     setIsPlanDialogOpen(true);
   };
   
   const handleSaveCustomization = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (customLiters > 0 && deliveryFrequency && selectedDay) {
+    if (customLiters > 0 && deliveryFrequency && selectedDay && deliveryTime) {
         setCustomPlanDetails({
             litersPerMonth: customLiters,
             bonusLiters: bonusLiters,
             deliveryFrequency: deliveryFrequency,
             deliveryDay: selectedDay,
+            deliveryTime: deliveryTime,
             waterStation: ''
         });
         
@@ -188,7 +192,7 @@ export default function OnboardingPage() {
                             <Input id="amountPerMonth" name="amountPerMonth" type="number" placeholder="e.g., 15000" onChange={handleAmountChange} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Delivery Schedule</Label>
+                            <Label>Delivery Frequency</Label>
                             <Select onValueChange={setDeliveryFrequency}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select frequency..." />
@@ -212,6 +216,10 @@ export default function OnboardingPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="deliveryTime">Delivery Time</Label>
+                            <Input id="deliveryTime" name="deliveryTime" type="time" onChange={(e) => setDeliveryTime(e.target.value)} />
                         </div>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -354,21 +362,16 @@ export default function OnboardingPage() {
                   </div>
               </div>
               
-                {selectedPlan && (
+                {selectedPlan && customPlanDetails && (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold">3. Confirm Your Plan</h3>
                         <div className="mt-4 border rounded-lg p-4 flex justify-between items-start bg-accent/50">
                             <div>
                                 <p className="font-bold text-lg">{selectedPlan.name}</p>
-                                {customPlanDetails ? (
-                                     <div className="text-sm text-muted-foreground">
-                                        <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month (Est. ₱{selectedPlan.price.toLocaleString()}/month)</p>
-                                        <p>{customPlanDetails.deliveryFrequency} delivery on {customPlanDetails.deliveryDay}</p>
-                                    </div>
-                                ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as any).details?.map((d: any) => (
-                                    <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
-                                ))
-                                }
+                                <div className="text-sm text-muted-foreground">
+                                    <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month (Est. ₱{selectedPlan.price.toLocaleString()}/month)</p>
+                                    <p>{customPlanDetails.deliveryFrequency} delivery on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
+                                </div>
                             </div>
                             <Button variant="outline" onClick={() => handleClientTypeSelect(selectedClientType!)}>Change Plan</Button>
                         </div>
@@ -386,3 +389,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
