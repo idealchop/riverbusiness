@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -54,8 +55,7 @@ export default function AdminPage() {
 
     const filteredUsers = appUsers.filter(user => 
         user.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        user.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
     useEffect(() => {
@@ -117,7 +117,7 @@ export default function AdminPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search by ID, name, or email..."
+                  placeholder="Search by ID or name..."
                   className="w-full appearance-none bg-background pl-8 shadow-none md:w-64 lg:w-96"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -158,7 +158,7 @@ export default function AdminPage() {
                      <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 flex flex-col justify-center items-center">
                         <CardHeader className="p-4 flex-row items-center gap-2">
                             <UserPlus className="h-5 w-5" />
-                            <CardTitle className="text-lg">Create User</CardTitle>
+                            <CardTitle className="text-lg font-bold">Create User</CardTitle>
                         </CardHeader>
                     </Card>
                 </DialogTrigger>
