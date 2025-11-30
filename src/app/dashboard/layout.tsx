@@ -100,9 +100,12 @@ export default function DashboardLayout({
                 </DialogHeader>
                 <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
                     <div className="space-y-4">
-                      <div className="text-sm text-foreground pt-4 font-bold">
-                        Our team will reach out to you as soon as possible. Thank you!
-                      </div>
+                      <DialogHeader>
+                        <DialogTitle>Hello, {userName}!</DialogTitle>
+                        <DialogDescription>
+                          Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
+                        </DialogDescription>
+                      </DialogHeader>
                       <div className="flex items-center gap-4 rounded-md border p-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                           <Phone className="h-6 w-6" />
