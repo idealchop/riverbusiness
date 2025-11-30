@@ -201,7 +201,7 @@ export default function AdminPage() {
         let updatedStations;
         if (stationToUpdate) { // Editing existing station
             updatedStations = waterStations.map(station =>
-                station.id === stationToUpdate.id ? { ...station, ...values, permits: stationToUpdate.permits } : station
+                station.id === stationToUpdate.id ? { ...station, ...values, permits: stationToUpdate.permits || {} } : station
             );
             toast({ title: 'Station Updated', description: `Station ${values.name} has been updated.` });
         } else { // Creating new station
@@ -863,8 +863,8 @@ export default function AdminPage() {
                                             <TableCell>{station.name}</TableCell>
                                             <TableCell>{station.location}</TableCell>
                                             <TableCell>
-                                                <Badge variant={Object.values(station.permits).some(p => p) ? 'default' : 'outline'}>
-                                                    {Object.values(station.permits).filter(p => p).length} / {permitFields.length} Attached
+                                                <Badge variant={station.permits && Object.values(station.permits).some(p => p) ? 'default' : 'outline'}>
+                                                    {station.permits ? Object.values(station.permits).filter(p => p).length : 0} / {permitFields.length} Attached
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -951,7 +951,7 @@ export default function AdminPage() {
                                         {permitFields.slice(2, 8).map(field => (
                                             <div key={field.key} className="flex justify-between items-center text-sm p-2 border rounded-md">
                                                 <span className="flex-1 mr-4">{field.label}</span>
-                                                {stationToUpdate?.permits[field.key] ? (
+                                                {stationToUpdate?.permits?.[field.key] ? (
                                                      <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
                                                 ) : (
                                                     <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
@@ -971,7 +971,7 @@ export default function AdminPage() {
                                         {permitFields.slice(0, 2).map(field => (
                                             <div key={field.key} className="flex justify-between items-center text-sm p-2 border rounded-md">
                                                 <span className="flex-1 mr-4">{field.label}</span>
-                                                {stationToUpdate?.permits[field.key] ? (
+                                                {stationToUpdate?.permits?.[field.key] ? (
                                                      <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
                                                 ) : (
                                                     <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
@@ -995,3 +995,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
