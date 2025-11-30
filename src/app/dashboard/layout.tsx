@@ -39,6 +39,7 @@ import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type Notification = {
     id: string;
@@ -103,6 +104,7 @@ export default function DashboardLayout({
   const [switchReason, setSwitchReason] = React.useState('');
   const [switchUrgency, setSwitchUrgency] = React.useState('');
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
+  const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
 
   React.useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -120,6 +122,7 @@ export default function DashboardLayout({
     if (!isPaymentDialogOpen) {
       // Reset payment method selection when dialog closes
       setSelectedPaymentMethod(null);
+      setPaymentProofFile(null);
     }
   }, [isPaymentDialogOpen]);
 
@@ -129,13 +132,33 @@ export default function DashboardLayout({
     })
   }
 
-  const handleProofUpload = (invoiceId: string) => {
-    if(!authUser || !firestore) return;
-    const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', invoiceId);
-    updateDocumentNonBlocking(paymentRef, { status: 'Paid', proofOfPaymentUrl: 'https://example.com/proof.pdf' });
-    setIsPaymentDialogOpen(false);
-    setSelectedInvoice(null);
-  };
+  const handleProofUpload = async (invoiceId: string) => {
+    if (!authUser || !firestore || !paymentProofFile) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select a file to upload.' });
+        return;
+    }
+    const storage = getStorage();
+    const filePath = `users/${authUser.uid}/payments/${invoiceId}/${paymentProofFile.name}`;
+    const storageRef = ref(storage, filePath);
+
+    try {
+        await uploadBytes(storageRef, paymentProofFile);
+        const downloadURL = await getDownloadURL(storageRef);
+
+        const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', invoiceId);
+        updateDocumentNonBlocking(paymentRef, { 
+            status: 'Pending Review', 
+            proofOfPaymentUrl: downloadURL 
+        });
+
+        toast({ title: 'Upload Successful', description: 'Your proof of payment has been submitted for verification.' });
+        setIsPaymentDialogOpen(false);
+        setSelectedInvoice(null);
+        setPaymentProofFile(null);
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment.' });
+    }
+};
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditableFormData({
@@ -202,7 +225,7 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-    const planImage = useMemo(() => {
+    const planImage = React.useMemo(() => {
       if (!user?.clientType) return null;
       const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
       if (!clientTypeDetails) return null;
@@ -326,7 +349,7 @@ export default function DashboardLayout({
                         <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-xs">
                           {notifications.length}
                         </Badge>
-                      )}
+                   )}
               </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-96">
@@ -541,7 +564,7 @@ export default function DashboardLayout({
                                             <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
                                             <TableCell className="text-center">
                                                 <div className='flex gap-2 justify-center'>
-                                                {payment.status === 'Upcoming' && (
+                                                {(payment.status === 'Upcoming' || payment.status === 'Overdue' || payment.status === 'Pending Review') && (
                                                     <Button size="sm" onClick={() => { setSelectedInvoice(payment); setIsPaymentDialogOpen(true); }}>
                                                         <CreditCard className="mr-2 h-4 w-4" />
                                                         Pay Now
@@ -555,6 +578,10 @@ export default function DashboardLayout({
                                                         </a>
                                                     </Button>
                                                 )}
+                                                <Button variant="outline" size="sm" onClick={() => toast({title: "Coming soon!"})}>
+                                                    <History className="mr-2 h-4 w-4" />
+                                                    History
+                                                </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -625,8 +652,8 @@ export default function DashboardLayout({
                         <TabsContent value="upload" className="py-4">
                             <div className="grid gap-4">
                                 <Label htmlFor="payment-proof">Upload Screenshot or Document</Label>
-                                <Input id="payment-proof" type="file" />
-                                <Button onClick={() => selectedInvoice && handleProofUpload(selectedInvoice.id)}>Upload & Mark as Paid</Button>
+                                <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} />
+                                <Button onClick={() => selectedInvoice && handleProofUpload(selectedInvoice.id)}>Submit for Verification</Button>
                             </div>
                         </TabsContent>
                     </Tabs>
@@ -784,8 +811,3 @@ export default function DashboardLayout({
 }
 
     
-
-    
-
-
-

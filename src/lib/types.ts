@@ -102,7 +102,7 @@ export interface Payment {
   date: string;
   description: string;
   amount: number;
-  status: 'Paid' | 'Upcoming' | 'Overdue';
+  status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review';
   proofOfPaymentUrl?: string;
 }
 
@@ -122,3 +122,5 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
+
+    
