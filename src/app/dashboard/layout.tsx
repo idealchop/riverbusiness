@@ -124,6 +124,10 @@ export default function DashboardLayout({
                           <a href="mailto:jayvee@riverph.com" className="text-sm text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
                         </div>
                       </div>
+                       <div className="mt-4 text-center text-sm">
+                        <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
+                        <p className="text-xs text-muted-foreground">By Smart Refill</p>
+                      </div>
                     </div>
                     <div className="flex flex-col h-full">
                          <Chatbot />
