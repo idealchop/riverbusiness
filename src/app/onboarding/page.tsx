@@ -30,6 +30,7 @@ const onboardingSchema = z.object({
   clientId: z.string().min(1, { message: 'Required' }),
   name: z.string().min(1, { message: 'Required' }),
   businessName: z.string().min(1, { message: 'Required' }),
+  businessEmail: z.string().email({ message: 'Invalid email' }),
   address: z.string().min(1, { message: 'Required' }),
   contactNumber: z.string().min(10, { message: 'Required' }),
 });
@@ -76,7 +77,7 @@ export default function OnboardingPage() {
   
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
-    defaultValues: { clientId: '', name: '', businessName: '', address: '', contactNumber: '' }
+    defaultValues: { clientId: '', name: '', businessName: '', businessEmail: '', address: '', contactNumber: '' }
   });
 
   const onSubmit = (data: OnboardingFormValues) => {
@@ -204,6 +205,13 @@ export default function OnboardingPage() {
                                 <FormMessage />
                             </FormItem>
                         )}/>
+                        <FormField control={form.control} name="businessEmail" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Business Email</FormLabel>
+                                <FormControl><Input type="email" placeholder="e.g. contact@business.com" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
                         <FormField control={form.control} name="address" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Address</FormLabel>
@@ -291,7 +299,8 @@ export default function OnboardingPage() {
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
                                     <p><strong>Client ID:</strong> {form.getValues('clientId')}</p>
                                     <p><strong>Name:</strong> {form.getValues('name')}</p>
-                                    <p><strong>Email:</strong> {authUser?.email}</p>
+                                    <p><strong>Login Email:</strong> {authUser?.email}</p>
+                                    <p><strong>Business Email:</strong> {form.getValues('businessEmail')}</p>
                                     <p><strong>Business:</strong> {form.getValues('businessName')}</p>
                                     <p><strong>Address:</strong> {form.getValues('address')}</p>
                                     <p><strong>Contact:</strong> {form.getValues('contactNumber')}</p>

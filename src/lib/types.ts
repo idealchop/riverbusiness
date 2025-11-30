@@ -62,7 +62,8 @@ export interface AppUser {
     id: string; // This is the Firebase Auth UID
     clientId?: string; // This is the manually entered client ID
     name: string;
-    email: string;
+    email: string; // Login email
+    businessEmail?: string; // Contact email
     businessName: string;
     address?: string;
     contactNumber?: string;

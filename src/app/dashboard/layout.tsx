@@ -444,8 +444,12 @@ export default function DashboardLayout({
                                         <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="email">Email Address</Label>
+                                        <Label htmlFor="email">Login Email</Label>
                                         <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                    </div>
+                                     <div className="space-y-1">
+                                        <Label htmlFor="businessEmail">Business Email</Label>
+                                        <Input id="businessEmail" name="businessEmail" type="email" value={editableFormData.businessEmail || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="businessName">Business Name</Label>
