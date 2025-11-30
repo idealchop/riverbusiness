@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AppUser } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -55,6 +56,9 @@ export default function AdminPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+    const [activeTab, setActiveTab] = useState('user-management');
+    const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
+
 
     const handleSearch = () => {
         if (!searchTerm) return;
@@ -142,6 +146,18 @@ export default function AdminPage() {
     const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
     const pendingRequests = invoiceRequests.filter(r => r.status === 'Pending').length;
 
+    const filteredUsers = appUsers.filter(user => {
+        if (userFilter === 'all') return true;
+        if (userFilter === 'active') return user.accountStatus === 'Active';
+        if (userFilter === 'inactive') return user.accountStatus === 'Inactive';
+        return true;
+    });
+
+    const handleFilterClick = (filter: 'all' | 'active' | 'inactive') => {
+        setUserFilter(filter);
+        setActiveTab('user-management');
+    };
+
   return (
     <div className="flex flex-col gap-6 font-sans">
         <div className="flex justify-between items-center">
@@ -210,7 +226,7 @@ export default function AdminPage() {
         </Dialog>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-primary text-primary-foreground">
+            <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                     <Users2 className="h-4 w-4 text-primary-foreground" />
@@ -219,7 +235,7 @@ export default function AdminPage() {
                     <div className="text-2xl font-bold">{totalUsers}</div>
                 </CardContent>
             </Card>
-            <Card className="bg-primary text-primary-foreground">
+            <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('active')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Active Users</CardTitle>
                     <UserCheck className="h-4 w-4 text-primary-foreground" />
@@ -317,7 +333,7 @@ export default function AdminPage() {
             </Dialog>
         </div>
         
-        <Tabs defaultValue="user-management">
+        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
              <Card>
                 <CardHeader>
                      <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
@@ -341,7 +357,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {appUsers.map((user) => (
+                                    {filteredUsers.map((user) => (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.name}</TableCell>
@@ -382,7 +398,7 @@ export default function AdminPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
-                                    {appUsers.length === 0 && (
+                                    {filteredUsers.length === 0 && (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center">No users found.</TableCell>
                                         </TableRow>
