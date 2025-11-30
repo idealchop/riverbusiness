@@ -79,6 +79,10 @@ export default function LoginPage() {
               Sign in
             </Button>
           </form>
+          <div className="mt-4 text-center text-sm">
+            <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
+            <p className="text-xs text-muted-foreground">By Smart Refill</p>
+          </div>
         </div>
       </div>
       <div className="hidden bg-muted lg:block">
