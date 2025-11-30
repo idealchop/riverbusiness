@@ -25,8 +25,8 @@ export function AdminSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg justify-center">
-          <Logo className="h-8 group-data-[collapsible=icon]:block hidden" />
+        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg">
+          <Logo className="h-8 hidden group-data-[collapsible=icon]:block" />
           <span className="group-data-[collapsible=icon]:hidden">River Business</span>
         </Link>
       </SidebarHeader>

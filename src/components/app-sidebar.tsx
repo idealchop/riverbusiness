@@ -25,9 +25,9 @@ export function AppSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg justify-center">
-           <Logo className="h-8 group-data-[collapsible=icon]:block hidden" />
-          <span className="group-data-[collapsible=icon]:hidden">River Business</span>
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
+           <Logo className="h-8 hidden group-data-[collapsible=icon]:block" />
+           <span className="group-data-[collapsible=icon]:hidden">River Business</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
