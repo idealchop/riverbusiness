@@ -120,7 +120,7 @@ export default function LoginPage() {
                   <div className="grid gap-2 relative">
                     <Label htmlFor="password">Password</Label>
                     <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
-                    <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => setShowPassword(!showPassword)} type="button">
+                    <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                     {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
@@ -144,7 +144,7 @@ export default function LoginPage() {
                 src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Overflow.png?alt=media&token=ad6cec25-c755-4de3-8276-430a013741b5"
                 alt="River Business Marketing Material"
                 fill
-                className="object-cover dark:brightness-[0.2] dark:grayscale"
+                className="object-contain dark:brightness-[0.2] dark:grayscale"
               />
             </div>
           </div>
