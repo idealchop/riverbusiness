@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -19,11 +19,15 @@ import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useDoc, useFirestore, useUser as useAuthUser, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useUser as useAuthUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
-
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 const gallonToLiter = (gallons: number) => gallons * 3.785;
+
+const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 
 const perks = [
     { 
@@ -66,6 +70,10 @@ export default function DashboardPage() {
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
+    
+    const [isUpdateScheduleOpen, setIsUpdateScheduleOpen] = useState(false);
+    const [newDeliveryDay, setNewDeliveryDay] = useState<string>('');
+    const [newDeliveryTime, setNewDeliveryTime] = useState<string>('');
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -85,6 +93,13 @@ export default function DashboardPage() {
         else if (hour < 18) setGreeting('Good afternoon');
         else setGreeting('Good evening');
     }, []);
+
+    useEffect(() => {
+        if (user?.customPlanDetails) {
+            setNewDeliveryDay(user.customPlanDetails.deliveryDay || '');
+            setNewDeliveryTime(user.customPlanDetails.deliveryTime || '');
+        }
+    }, [user]);
 
     const consumptionChartData = React.useMemo(() => {
         if (!deliveries) return [];
@@ -169,6 +184,21 @@ export default function DashboardPage() {
                 description: "Please remember to schedule your deliveries manually.",
             });
         }
+    };
+    
+    const handleScheduleUpdate = () => {
+        if (!userDocRef || !newDeliveryDay || !newDeliveryTime) {
+            toast({ variant: "destructive", title: "Update Failed", description: "Please select a valid day and time." });
+            return;
+        }
+
+        updateDocumentNonBlocking(userDocRef, {
+            'customPlanDetails.deliveryDay': newDeliveryDay,
+            'customPlanDetails.deliveryTime': newDeliveryTime,
+        });
+
+        toast({ title: "Schedule Updated", description: "Your delivery schedule has been updated successfully." });
+        setIsUpdateScheduleOpen(false);
     };
     
     if (isUserLoading || areDeliveriesLoading) {
@@ -274,6 +304,43 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
 
+        <Dialog open={isUpdateScheduleOpen} onOpenChange={setIsUpdateScheduleOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Update Delivery Schedule</DialogTitle>
+                    <DialogDescription>
+                        Select your preferred day and time for your recurring delivery.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="grid gap-2">
+                        <Label>Delivery Day</Label>
+                        <Select onValueChange={setNewDeliveryDay} defaultValue={newDeliveryDay}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a day..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {daysOfWeek.map(day => (
+                                    <SelectItem key={day} value={day}>{day}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="deliveryTime">Delivery Time</Label>
+                        <Input id="deliveryTime" type="time" value={newDeliveryTime} onChange={(e) => setNewDeliveryTime(e.target.value)} />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleScheduleUpdate}>Save Changes</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
                 <CardHeader>
@@ -341,6 +408,10 @@ export default function DashboardPage() {
                             <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
                             <p className="font-semibold text-sm">{user?.customPlanDetails?.litersPerMonth?.toLocaleString() || '0'} Liters</p>
                         </div>
+                        <Button variant="outline" size="sm" className="w-full" onClick={() => setIsUpdateScheduleOpen(true)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Update Schedule
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
