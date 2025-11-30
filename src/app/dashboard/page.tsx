@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -21,13 +21,33 @@ import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
+import Image from 'next/image';
 
 
 const gallonToLiter = (gallons: number) => gallons * 19;
 
 const perks = [
-    { brand: "Aqua Flask", offer: "Get 15% off on your next purchase of any Aqua Flask bottle.", icon: Droplet },
-    { brand: "Healthy Human", offer: "Enjoy a free cleaning kit with any stein or tumbler purchase.", icon: Droplets }
+    { 
+        brand: "Fitness Gym", 
+        image: "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPartners%2FNewBreed.png?alt=media&token=51a87e73-21f0-448c-9596-cc4a7016ad27",
+        subtitle: "6 locations currently and continuously growing",
+        discounts: [
+            "20% membership discounts",
+            "1 monthly free session"
+        ],
+        websiteUrl: "https://www.newbreed.com",
+        mapUrl: "https://www.google.com/maps/search/?api=1&query=fitness+gym"
+    },
+    { 
+        brand: "Aqua Flask", 
+        image: "https://images.unsplash.com/photo-1559056199-591a307a5598?q=80&w=2070&auto=format&fit=crop",
+        subtitle: "Stay hydrated in style.",
+        discounts: [
+            "Get 15% off on your next purchase of any Aqua Flask bottle."
+        ],
+        websiteUrl: "#",
+        mapUrl: "#"
+    },
 ];
 
 const tips = [
@@ -348,30 +368,53 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                             </CardContent>
                         </Card>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
                             <DialogTitle>Exclusive Partner Perks</DialogTitle>
                             <DialogDescription>
                                 As a River Business client, you get access to these special offers.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="py-4 space-y-4">
-                            {perks.map((perk, index) => {
-                                const Icon = perk.icon;
-                                return (
-                                <Card key={index}>
-                                    <CardHeader className="flex flex-row items-center gap-4">
-                                        <div className="bg-accent p-3 rounded-full">
-                                            <Icon className="h-6 w-6 text-primary" />
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-lg">{perk.brand}</CardTitle>
-                                            <CardDescription>{perk.offer}</CardDescription>
-                                        </div>
+                        <div className="py-4 space-y-6">
+                            {perks.map((perk, index) => (
+                                <Card key={index} className="overflow-hidden">
+                                    <div className="relative h-40 w-full">
+                                        <Image src={perk.image} alt={perk.brand} layout="fill" objectFit="cover" />
+                                    </div>
+                                    <CardHeader>
+                                        <CardTitle>{perk.brand}</CardTitle>
+                                        <CardDescription>{perk.subtitle}</CardDescription>
                                     </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <ul className="text-sm space-y-2">
+                                            {perk.discounts.map((discount, i) => (
+                                                <li key={i} className="flex items-start">
+                                                    <CheckCircle className="h-4 w-4 mr-2 mt-1 shrink-0 text-green-500" />
+                                                    <span>{discount}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <div className="flex gap-2 pt-2">
+                                             <Button asChild className="flex-1">
+                                                <a href={perk.websiteUrl} target="_blank" rel="noopener noreferrer">
+                                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                                    Visit Website
+                                                </a>
+                                            </Button>
+                                            <Button asChild variant="outline" className="flex-1">
+                                                <a href={perk.mapUrl} target="_blank" rel="noopener noreferrer">
+                                                    <MapPin className="mr-2 h-4 w-4" />
+                                                   Find Nearby
+                                                </a>
+                                            </Button>
+                                        </div>
+                                    </CardContent>
                                 </Card>
-                            )})}
+                            ))}
                         </div>
+                        <DialogFooter className="text-xs text-muted-foreground text-center sm:text-center pt-4 border-t">
+                            <p>All employees of your company are entitled to these perks.</p>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
@@ -396,9 +439,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     </div>
     );
 
-    
-
-
-    
+}
 
     
