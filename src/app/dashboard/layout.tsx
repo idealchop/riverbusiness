@@ -1,5 +1,4 @@
 
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -17,10 +16,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { deliveries as initialDeliveries, paymentHistory as initialPaymentHistory, waterStations as initialWaterStations, complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits, appUsers as initialAppUsers } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -36,37 +33,10 @@ import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, Comp
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-
-
-interface OnboardingData {
-    formData: {
-        fullName: string;
-        clientId: string;
-        email: string;
-        businessName: string;
-        address: string;
-        contactNumber: string;
-    };
-    clientType: string;
-    plan: {
-        name: string;
-        price: number;
-        imageId: string;
-    };
-    customPlanDetails: {
-        litersPerMonth: number;
-        bonusLiters: number;
-        deliveryFrequency: string;
-        deliveryDay: string;
-        deliveryTime: string;
-        waterStation: string;
-        gallonQuantity: number;
-        gallonPrice: number;
-        dispenserQuantity: number;
-        dispenserPrice: number;
-    };
-    contractUrl?: string;
-}
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import { getAuth, signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 type Notification = {
     id: string;
@@ -78,34 +48,34 @@ type Notification = {
     data: Delivery | Payment | ComplianceReport | SanitationVisit;
 };
 
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const auth = getAuth();
+  const firestore = useFirestore();
+  const { user: authUser, isUserLoading } = useUser();
 
-  const [userName, setUserName] = useState('Juan dela Cruz');
-  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
-  const [paymentHistory, setPaymentHistory] = useState<Payment[]>(initialPaymentHistory);
-  const [editableFormData, setEditableFormData] = useState<OnboardingData['formData'] | null>(null);
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+  
+  const deliveriesQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'deliveries') : null, [firestore, authUser]);
+  const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
+
+  const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
+  const { data: paymentHistory } = useCollection<Payment>(paymentsQuery);
+  
+  const [editableFormData, setEditableFormData] = useState<Partial<AppUser>>({});
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [deliveries, setDeliveries] = useState<Delivery[]>(initialDeliveries);
-  const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
-  const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
-  const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
-  const [appUsers, setAppUsers] = useState<AppUser[]>(initialAppUsers);
   
-  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
-  const bpiQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
-  const mayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
-
   const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
-  const [selectedPaymentOption, setSelectedPaymentOption] = useState<PaymentOption | null>(null);
+  
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -119,156 +89,40 @@ export default function DashboardLayout({
   const [hasNewMessage, setHasNewMessage] = useState(false);
 
   useEffect(() => {
-    const storedDeliveries = localStorage.getItem('deliveries');
-    const storedComplianceReports = localStorage.getItem('complianceReports');
-    const storedSanitationVisits = localStorage.getItem('sanitationVisits');
-    const storedWaterStations = localStorage.getItem('waterStations');
-    const storedAppUsers = localStorage.getItem('appUsers');
-    
-    setDeliveries(storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries);
-    setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
-    setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
-    setWaterStations(storedWaterStations ? JSON.parse(storedWaterStations) : initialWaterStations);
-    setAppUsers(storedAppUsers ? JSON.parse(storedAppUsers) : initialAppUsers);
-  }, []);
+    if (!isUserLoading && !authUser) {
+      router.push('/login');
+    }
+  }, [authUser, isUserLoading, router]);
 
   useEffect(() => {
-    const allNotifications: Notification[] = [];
-
-    const deliveryNotifications = deliveries
-      .filter(d => d.status === 'In Transit' || d.status === 'Pending')
-      .map(d => ({
-        id: `del-${d.id}`,
-        type: 'delivery' as const,
-        title: `Delivery ${d.status}`,
-        description: `${d.volumeGallons} gallons are on the way.`,
-        date: d.date,
-        icon: Truck,
-        data: d
-      }));
-    allNotifications.push(...deliveryNotifications);
-    
-    const invoiceNotifications = paymentHistory
-        .filter(inv => inv.status === 'Upcoming')
-        .map(inv => ({
-            id: `inv-${inv.id}`,
-            type: 'invoice' as const,
-            title: 'New Invoice',
-            description: `Invoice for ${format(new Date(inv.date), 'MMMM yyyy')} is ready.`,
-            date: inv.date,
-            icon: FileClock,
-            data: inv
-        }));
-    allNotifications.push(...invoiceNotifications);
-
-    const latestComplianceReport = complianceReports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-    if (latestComplianceReport) {
-        allNotifications.push({
-            id: `comp-${latestComplianceReport.id}`,
-            type: 'compliance' as const,
-            title: 'New Compliance Report',
-            description: `Report from ${format(new Date(latestComplianceReport.date), 'PP')} is available.`,
-            date: latestComplianceReport.date,
-            icon: ShieldCheck,
-            data: latestComplianceReport
-        });
+    if(user) {
+      setEditableFormData(user);
     }
+  }, [user]);
 
-    const upcomingSanitationVisits = sanitationVisits
-        .filter(v => v.status === 'Scheduled')
-        .map(v => ({
-            id: `san-${v.id}`,
-            type: 'sanitation' as const,
-            title: 'Sanitation Visit Scheduled',
-            description: `Visit on ${format(new Date(v.scheduledDate), 'PP')} with ${v.assignedTo}.`,
-            date: v.scheduledDate,
-            icon: Droplets,
-            data: v
-        }));
-    allNotifications.push(...upcomingSanitationVisits);
-
-
-    allNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    setNotifications(allNotifications);
-}, [paymentHistory, deliveries, complianceReports, sanitationVisits]);
-
-
-  useEffect(() => {
-    const storedOnboardingData = localStorage.getItem('onboardingData');
-    if (storedOnboardingData) {
-      const data: OnboardingData = JSON.parse(storedOnboardingData);
-      setOnboardingData(data);
-      setEditableFormData(data.formData);
-      if (data.formData && data.formData.fullName) {
-        setUserName(data.formData.fullName);
-      }
-      
-      const storedPaymentHistory = localStorage.getItem('paymentHistory');
-      const initialHistory = storedPaymentHistory ? JSON.parse(storedPaymentHistory) : [];
-
-      setPaymentHistory(prevHistory => {
-        let currentHistory = [...initialHistory];
-        
-        const hasUpcomingInvoice = currentHistory.some(inv => inv.status === 'Upcoming');
-
-        if (!hasUpcomingInvoice && data.plan && data.plan.price > 0) {
-            const now = new Date();
-            const lastInvoice = currentHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-            
-            let shouldCreate = true;
-            if (lastInvoice) {
-                const lastInvoiceDate = new Date(lastInvoice.date);
-                if (lastInvoiceDate.getFullYear() === now.getFullYear() && lastInvoiceDate.getMonth() === now.getMonth()) {
-                    shouldCreate = false;
-                }
-            }
-
-            if (shouldCreate) {
-                const newUpcomingInvoice: Payment = {
-                    id: `INV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`,
-                    date: now.toISOString(),
-                    description: `Bill for ${format(now, 'MMMM yyyy')}`,
-                    amount: data.plan.price,
-                    status: 'Upcoming',
-                };
-                currentHistory = [...currentHistory, newUpcomingInvoice];
-            }
-        }
-        localStorage.setItem('paymentHistory', JSON.stringify(currentHistory));
-        return currentHistory;
-      });
-    }
-  }, []);
+  const handleLogout = () => {
+    signOut(auth).then(() => {
+      router.push('/login');
+    })
+  }
 
   const handleProofUpload = (invoiceId: string) => {
-    // Simulate file upload and update state
-    const updatedHistory = paymentHistory.map(invoice => {
-        if (invoice.id === invoiceId) {
-            return { ...invoice, status: 'Paid' as 'Paid', proofOfPaymentUrl: 'https://example.com/proof.pdf' };
-        }
-        return invoice;
-    });
-    setPaymentHistory(updatedHistory);
-    localStorage.setItem('paymentHistory', JSON.stringify(updatedHistory));
+    if(!authUser || !firestore) return;
+    const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', invoiceId);
+    updateDocumentNonBlocking(paymentRef, { status: 'Paid', proofOfPaymentUrl: 'https://example.com/proof.pdf' });
     setIsProofUploadDialogOpen(false);
   };
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (editableFormData) {
-        setEditableFormData({
-            ...editableFormData,
-            [e.target.name]: e.target.value
-        });
-    }
+    setEditableFormData({
+        ...editableFormData,
+        [e.target.name]: e.target.value
+    });
   };
 
   const handleSaveChanges = () => {
-    if (onboardingData && editableFormData) {
-        const updatedData = { ...onboardingData, formData: editableFormData };
-        localStorage.setItem('onboardingData', JSON.stringify(updatedData));
-        setOnboardingData(updatedData);
-        setUserName(editableFormData.fullName);
+    if (userDocRef && editableFormData) {
+        updateDocumentNonBlocking(userDocRef, editableFormData);
         setIsEditingDetails(false);
         toast({
             title: "Account Updated",
@@ -278,8 +132,8 @@ export default function DashboardLayout({
   };
 
   const handleCancelEdit = () => {
-    if (onboardingData) {
-        setEditableFormData(onboardingData.formData);
+    if (user) {
+        setEditableFormData(user);
     }
     setIsEditingDetails(false);
   }
@@ -291,38 +145,12 @@ export default function DashboardLayout({
     });
     setIsPasswordDialogOpen(false);
   }
-
   
     const handleFeedbackSubmit = () => {
-        const currentUser = appUsers.find(u => u.id === 'USR-001');
-        const station = waterStations.find(ws => ws.id === currentUser?.assignedWaterStationId) || waterStations[0];
-        if (feedbackMessage.trim() === '' || feedbackRating === 0) {
-            toast({
-                variant: 'destructive',
-                title: 'Incomplete Feedback',
-                description: 'Please provide a rating and write a message.'
-            });
-            return;
-        }
-
-        const newFeedback: Feedback = {
-            id: `FB-${Date.now()}`,
-            userId: currentUser?.id || 'USR-001',
-            userName: userName,
-            timestamp: new Date().toISOString(),
-            feedback: `[${station.name}] ${feedbackMessage}`,
-            rating: feedbackRating,
-            read: false,
-        };
-
-        const existingFeedback = JSON.parse(localStorage.getItem('feedbackLogs') || '[]');
-        localStorage.setItem('feedbackLogs', JSON.stringify([...existingFeedback, newFeedback]));
-
         toast({
             title: 'Feedback Submitted!',
             description: 'Thank you for your valuable input.',
         });
-
         setIsFeedbackDialogOpen(false);
         setFeedbackMessage('');
         setFeedbackRating(0);
@@ -330,60 +158,24 @@ export default function DashboardLayout({
     };
 
     const handleSwitchProviderSubmit = () => {
-        if (switchReason.trim() === '' || !switchUrgency) {
-            toast({
-                variant: 'destructive',
-                title: 'Incomplete Request',
-                description: 'Please provide a reason and select an urgency level.',
-            });
-            return;
-        }
-
-        console.log({
-            type: 'Switch Provider Request',
-            reason: switchReason,
-            urgency: switchUrgency,
-        });
-
         toast({
             title: 'Request Submitted',
             description: 'Your request to switch providers has been sent to the admin team.',
         });
-
         setIsSwitchProviderDialogOpen(false);
         setSwitchReason('');
         setSwitchUrgency('');
     };
 
-  const planImage = onboardingData?.plan?.imageId ? PlaceHolderImages.find(p => p.id === onboardingData.plan.imageId) : null;
-
-  const paymentOptions: PaymentOption[] = [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
-      { name: 'Maya', qr: mayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
-      { name: 'Bank', qr: bpiQr, details: { bankName: 'Bank of the Philippine Islands', accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
-      { name: 'Card' },
-  ];
-
-  const handlePaymentOptionClick = (option: PaymentOption) => {
-    if (option.name === 'Card') {
-        toast({
-            title: "Coming Soon!",
-            description: "Card payment option is currently under development."
-        });
-    } else {
-        setSelectedPaymentOption(option);
-    }
-  };
-  
-  const currentUser = appUsers.find(u => u.id === 'USR-001');
-  const assignedWaterStation = waterStations.find(ws => ws.id === currentUser?.assignedWaterStationId) || waterStations[0];
+  if (isUserLoading || isUserDocLoading) {
+    return <div>Loading...</div>
+  }
 
 
   return (
       <div className="flex flex-col h-full">
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-            
             <div className="flex items-center">
                 <span className="font-bold">River Business</span>
             </div>
@@ -402,7 +194,7 @@ export default function DashboardLayout({
             </DialogTrigger>
             <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="text-3xl font-bold">Hello, {userName}!</DialogTitle>
+                    <DialogTitle className="text-3xl font-bold">Hello, {user?.name}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
@@ -509,8 +301,7 @@ export default function DashboardLayout({
             <DialogTrigger asChild>
               <div className="flex items-center gap-3 cursor-pointer">
                 <div className="hidden sm:flex flex-col items-start">
-                  <p className="font-semibold text-sm">{userName}</p>
-                  <p className="text-xs text-muted-foreground">{onboardingData?.plan?.name || 'No Plan Selected'}</p>
+                  <p className="font-semibold text-sm">{user?.name}</p>
                 </div>
               </div>
             </DialogTrigger>
@@ -522,9 +313,8 @@ export default function DashboardLayout({
                 </DialogDescription>
               </DialogHeader>
               <Tabs defaultValue="accounts">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="accounts"><User className="mr-2" />Accounts</TabsTrigger>
-                  <TabsTrigger value="plans"><Home className="mr-2" />Plans</TabsTrigger>
                   <TabsTrigger value="invoices"><Receipt className="mr-2" />Invoices</TabsTrigger>
                 </TabsList>
 
@@ -539,27 +329,27 @@ export default function DashboardLayout({
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                                     <div className="space-y-1">
                                         <Label htmlFor="fullName">Full Name</Label>
-                                        <Input id="fullName" name="fullName" value={editableFormData.fullName} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                        <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
                                      <div className="space-y-1">
                                         <Label htmlFor="clientId">Client ID</Label>
-                                        <Input id="clientId" name="clientId" value={editableFormData.clientId} disabled />
+                                        <Input id="clientId" name="id" value={user?.id || ''} disabled />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="email">Email Address</Label>
-                                        <Input id="email" name="email" type="email" value={editableFormData.email} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                        <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="businessName">Business Name</Label>
-                                        <Input id="businessName" name="businessName" value={editableFormData.businessName} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                        <Input id="businessName" name="businessName" value={editableFormData.businessName || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="address">Address</Label>
-                                        <Input id="address" name="address" value={editableFormData.address} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                        <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="contactNumber">Contact Number</Label>
-                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
                                 </div>
                                 {isEditingDetails && (
@@ -574,179 +364,72 @@ export default function DashboardLayout({
                                 <h4 className="font-semibold mb-4">Security</h4>
                                 <div className="flex gap-2">
                                     <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                                    <Button variant="outline" onClick={() => toast({ title: "Coming Soon!", description: "This feature is under development." })}>
-                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                        Add Authentication
-                                    </Button>
                                 </div>
                             </div>
                         </div>
-                    ) : <p>No account information available. Please complete onboarding.</p>}
-                </TabsContent>
-
-                <TabsContent value="plans" className="py-4">
-                  {onboardingData?.plan && onboardingData.customPlanDetails ? (
-                    <div className="border rounded-lg p-4 bg-accent/50 space-y-4">
-                        <div className="flex flex-col sm:flex-row items-start gap-6">
-                                {planImage && (
-                                <Image
-                                    src={planImage.imageUrl}
-                                    alt={onboardingData.plan.name}
-                                    width={150}
-                                    height={150}
-                                    className="rounded-lg object-cover"
-                                    data-ai-hint={planImage.imageHint}
-                                />
-                            )}
-                            <div className="flex-1 space-y-4">
-                                <div>
-                                    <p className="font-bold text-xl">{onboardingData.plan.name}</p>
-                                    <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                        <p><strong>Liters/Month:</strong> {onboardingData.customPlanDetails.litersPerMonth.toLocaleString()}</p>
-                                        <p><strong>Bonus Liters:</strong> {(onboardingData.customPlanDetails.bonusLiters || 0).toLocaleString()}</p>
-                                        <p><strong>Gallons:</strong> {onboardingData.customPlanDetails.gallonQuantity}</p>
-                                        <p><strong>Dispensers:</strong> {onboardingData.customPlanDetails.dispenserQuantity}</p>
-                                        <p><strong>Subscription:</strong> ₱{onboardingData.plan.price.toLocaleString()}</p>
-                                        <p><strong>Delivery:</strong> {onboardingData.customPlanDetails.deliveryFrequency} on {onboardingData.customPlanDetails.deliveryDay} at {onboardingData.customPlanDetails.deliveryTime}</p>
-                                    </div>
-                                </div>
-                                <div className="border-t pt-4">
-                                     <h4 className="font-semibold mb-2">Contract</h4>
-                                      <Button variant="outline" disabled={!onboardingData.contractUrl}>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        {onboardingData.contractUrl ? 'View Contract' : 'Contract Not Available'}
-                                      </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                  ) : <p>No plan information available. Please complete onboarding.</p>}
+                    ) : <p>No account information available.</p>}
                 </TabsContent>
                 
                 <TabsContent value="invoices" className="py-4">
-                    {onboardingData?.plan ? (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Invoice Summary</CardTitle>
-                                <CardDescription>Your estimated recurring bill and payment options.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex justify-between items-baseline">
-                                    <p className="text-muted-foreground">Estimated Monthly Bill</p>
-                                    <p className="text-2xl font-bold">₱{onboardingData.plan.price.toLocaleString()}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                     <Dialog onOpenChange={() => setSelectedPaymentOption(null)}>
-                                        <DialogTrigger asChild>
-                                             <Button className="flex-1">
-                                                <CreditCard className="mr-2 h-4 w-4" />
-                                                Pay Now
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                {selectedPaymentOption ? (
-                                                     <Button variant="ghost" className="absolute top-3 left-3 h-8 w-8 p-0" onClick={() => setSelectedPaymentOption(null)}>
-                                                        <ArrowLeft className="h-4 w-4" />
-                                                    </Button>
-                                                ): null}
-                                                <DialogTitle className={cn(selectedPaymentOption ? 'text-center' : '')}>
-                                                  {selectedPaymentOption ? `Scan to Pay with ${selectedPaymentOption.name}` : 'Select Payment Method'}
-                                                </DialogTitle>
-                                                <DialogDescription className={cn(selectedPaymentOption ? 'text-center' : '')}>
-                                                    {selectedPaymentOption ? 'Use your preferred payment app to scan.' : 'Choose your preferred payment method below.'}
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            {selectedPaymentOption?.qr ? (
-                                                <div className="flex flex-col items-center justify-center py-4 gap-4">
-                                                    <Image src={selectedPaymentOption.qr.imageUrl} alt={selectedPaymentOption.qr.description} width={250} height={250} data-ai-hint={selectedPaymentOption.qr.imageHint} />
-                                                     {selectedPaymentOption.details && (
-                                                        <div className="text-center text-sm space-y-1">
-                                                            {selectedPaymentOption.details.bankName && <p><strong>Bank:</strong> {selectedPaymentOption.details.bankName}</p>}
-                                                            <p><strong>Account Name:</strong> {selectedPaymentOption.details.accountName}</p>
-                                                            <p><strong>Account Number:</strong> {selectedPaymentOption.details.accountNumber}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                 <div className="grid grid-cols-2 gap-4 py-4">
-                                                    {paymentOptions.map(option => (
-                                                        <Card key={option.name} className="flex flex-col items-center justify-center p-4 hover:bg-accent cursor-pointer" onClick={() => handlePaymentOptionClick(option)}>
-                                                            <p className="font-semibold">{option.name}</p>
-                                                        </Card>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </DialogContent>
-                                    </Dialog>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" className="flex-1">View History</Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="sm:max-w-3xl">
-                                            <DialogHeader>
-                                                <DialogTitle>Invoice History</DialogTitle>
-                                                <DialogDescription>A record of all your past and upcoming invoices.</DialogDescription>
-                                            </DialogHeader>
-                                            <div className="py-4 max-h-[60vh] overflow-y-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead>Invoice ID</TableHead>
-                                                            <TableHead>Date</TableHead>
-                                                            <TableHead>Status</TableHead>
-                                                            <TableHead className="text-right">Amount</TableHead>
-                                                            <TableHead className="text-right">Actions</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {paymentHistory.map((payment) => (
-                                                            <TableRow key={payment.id}>
-                                                                <TableCell className="font-medium">{payment.id}</TableCell>
-                                                                <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                                                <TableCell>
-                                                                    <Badge
-                                                                        variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                                        className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                                                    >{payment.status}</Badge>
-                                                                </TableCell>
-                                                                <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {payment.status === 'Upcoming' ? (
-                                                                    <Button size="sm" onClick={() => { setSelectedInvoiceForProof(payment); setIsProofUploadDialogOpen(true); }}>
-                                                                        <Upload className="mr-2 h-4 w-4" />
-                                                                        Upload Proof
-                                                                    </Button>
-                                                                    ) : payment.proofOfPaymentUrl ? (
-                                                                    <Button variant="outline" size="sm" asChild>
-                                                                        <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
-                                                                            <Check className="mr-2 h-4 w-4" />
-                                                                            View Proof
-                                                                        </a>
-                                                                    </Button>
-                                                                    ) : (
-                                                                    <Button variant="outline" size="sm" disabled>
-                                                                        <Download className="mr-2 h-4 w-4" />
-                                                                        Download
-                                                                    </Button>
-                                                                    )}
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        </DialogContent>
-                                    </Dialog>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : <p>No invoice information available. Please complete onboarding.</p>}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Invoice History</CardTitle>
+                            <CardDescription>A record of all your past and upcoming invoices.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Invoice ID</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {paymentHistory?.map((payment) => (
+                                        <TableRow key={payment.id}>
+                                            <TableCell className="font-medium">{payment.id}</TableCell>
+                                            <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                    className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                >{payment.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono">₱{payment.amount.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">
+                                                {payment.status === 'Upcoming' ? (
+                                                <Button size="sm" onClick={() => { setSelectedInvoiceForProof(payment); setIsProofUploadDialogOpen(true); }}>
+                                                    <Upload className="mr-2 h-4 w-4" />
+                                                    Upload Proof
+                                                </Button>
+                                                ) : payment.proofOfPaymentUrl ? (
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                                                        <Check className="mr-2 h-4 w-4" />
+                                                        View Proof
+                                                    </a>
+                                                </Button>
+                                                ) : (
+                                                <Button variant="outline" size="sm" disabled>
+                                                    <Download className="mr-2 h-4 w-4" />
+                                                    Download
+                                                </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
               </Tabs>
               <div className="flex justify-end pt-4">
-                  <Button variant="outline">Logout</Button>
+                  <Button variant="outline" onClick={handleLogout}>Logout</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -814,33 +497,21 @@ export default function DashboardLayout({
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                        {assignedWaterStation && (
-                            <div className="flex items-center gap-3 rounded-md border p-3 bg-muted/50">
-                                <Building className="h-6 w-6 text-muted-foreground" />
-                                <div>
-                                    <p className="font-semibold">{assignedWaterStation.name}</p>
-                                    <p className="text-sm text-muted-foreground">{assignedWaterStation.location}</p>
-                                </div>
-                            </div>
-                        )}
-                        <div>
-                            <Label htmlFor="feedback-rating" className="mb-2 block">Rating</Label>
-                            <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                    <Star
-                                        key={star}
-                                        className={cn(
-                                            'h-6 w-6 cursor-pointer',
-                                            (hoverRating >= star || feedbackRating >= star)
-                                                ? 'text-yellow-400 fill-yellow-400'
-                                                : 'text-muted-foreground'
-                                        )}
-                                        onMouseEnter={() => setHoverRating(star)}
-                                        onMouseLeave={() => setHoverRating(0)}
-                                        onClick={() => setFeedbackRating(star)}
-                                    />
-                                ))}
-                            </div>
+                        <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                    key={star}
+                                    className={cn(
+                                        'h-6 w-6 cursor-pointer',
+                                        (hoverRating >= star || feedbackRating >= star)
+                                            ? 'text-yellow-400 fill-yellow-400'
+                                            : 'text-muted-foreground'
+                                    )}
+                                    onMouseEnter={() => setHoverRating(star)}
+                                    onMouseLeave={() => setHoverRating(0)}
+                                    onClick={() => setFeedbackRating(star)}
+                                />
+                            ))}
                         </div>
                         <div>
                             <Label htmlFor="feedback-message">Recommendation / Message</Label>
@@ -909,11 +580,10 @@ export default function DashboardLayout({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
-              {React.cloneElement(children as React.ReactElement, { userName })}
+              {React.cloneElement(children as React.ReactElement, { user })}
             </div>
           </main>
           <footer className="p-4 text-center text-xs text-muted-foreground border-t">

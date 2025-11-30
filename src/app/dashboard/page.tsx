@@ -1,33 +1,27 @@
 
-
 'use client'
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { deliveries as initialDeliveries, consumptionData, appUsers as initialAppUsers, complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits, waterStations as initialWaterStations } from '@/lib/data';
+import { consumptionData } from '@/lib/data';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import SupportPage from './support/page';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import DeliveriesPage from './deliveries/page';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Feedback, AppUser, Delivery, WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
+import type { Delivery, WaterStation, ComplianceReport, SanitationVisit, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 
 
 const gallonToLiter = (gallons: number) => gallons * 3.785;
@@ -58,113 +52,56 @@ const tips = [
     { title: "⭐ Hydration Tip", description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!" }
 ];
 
-export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
+export default function DashboardPage({ user }: { user?: AppUser | null }) {
     const { toast } = useToast();
+    const firestore = useFirestore();
+    
     const [greeting, setGreeting] = useState('');
-    const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
-    const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
-    const [remainingLiters, setRemainingLiters] = useState(0);
-    const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+    
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
-    const [monthlyPlanLiters, setMonthlyPlanLiters] = useState(0);
-    const [bonusLiters, setBonusLiters] = useState(0);
-    const [fromLastMonthLiters, setFromLastMonthLiters] = useState(250);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
 
-    const [deliveries, setDeliveries] = useState<Delivery[]>(initialDeliveries);
-    const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
-    const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
-    const [appUsers, setAppUsers] = useState<AppUser[]>(initialAppUsers);
+    const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+    const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
 
-
+    const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
+    const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
+    
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
         const tipIndex = dayOfYear % tips.length;
         setDailyTip(tips[tipIndex]);
-
-        const storedDeliveries = localStorage.getItem('deliveries');
-        setDeliveries(storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries);
-
-        const storedComplianceReports = localStorage.getItem('complianceReports');
-        setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
-
-        const storedSanitationVisits = localStorage.getItem('sanitationVisits');
-        setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
-
-        const storedUsers = localStorage.getItem('appUsers');
-        setAppUsers(storedUsers ? JSON.parse(storedUsers) : initialAppUsers);
-
     }, []);
 
     useEffect(() => {
-        if (initialUserName) {
-            setUserName(initialUserName);
-        }
-    }, [initialUserName]);
-
-    useEffect(() => {
         const hour = new Date().getHours();
-        if (hour < 12) {
-            setGreeting('Good morning');
-        } else if (hour < 18) {
-            setGreeting('Good afternoon');
-        } else {
-            setGreeting('Good evening');
-        }
-
-        const onboardingDataString = localStorage.getItem('onboardingData');
-        let totalPurchased = 5000; // Fallback value
-        let monthlyLiters = 5000;
-        let bonus = 0;
-        let nextRefillDate = new Date();
-        nextRefillDate.setDate(nextRefillDate.getDate() + 15);
-        let estDeliveryLiters = 5000;
-
-        if (onboardingDataString) {
-            const onboardingData = JSON.parse(onboardingDataString);
-            if (onboardingData.customPlanDetails) {
-                monthlyLiters = onboardingData.customPlanDetails.litersPerMonth || monthlyLiters;
-                bonus = onboardingData.customPlanDetails.bonusLiters || bonus;
-                estDeliveryLiters = onboardingData.customPlanDetails.litersPerMonth || estDeliveryLiters;
-            }
-        }
-        
-        setMonthlyPlanLiters(monthlyLiters);
-        setBonusLiters(bonus);
-        setTotalLitersPurchased(monthlyLiters + bonus + fromLastMonthLiters);
-        
-        const user = appUsers.find(u => u.id === 'USR-001');
-        if (user) {
-            setCurrentUser(user);
-            setRemainingLiters(Math.max(0, (monthlyLiters + bonus + fromLastMonthLiters) - user.totalConsumptionLiters));
-        }
-
-    }, [fromLastMonthLiters, appUsers]);
-
+        if (hour < 12) setGreeting('Good morning');
+        else if (hour < 18) setGreeting('Good afternoon');
+        else setGreeting('Good evening');
+    }, []);
 
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), value: gallonToLiter(d.consumptionGallons) }));
     
-    const consumedLiters = currentUser ? currentUser.totalConsumptionLiters : 0;
-
-    const userDeliveries = currentUser ? deliveries.filter(d => d.userId === currentUser.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+    const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
+    const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
+    const fromLastMonthLiters = 250; // Placeholder
+    const totalLitersPurchased = monthlyPlanLiters + bonusLiters + fromLastMonthLiters;
+    const consumedLiters = user?.totalConsumptionLiters || 0;
+    const remainingLiters = Math.max(0, totalLitersPurchased - consumedLiters);
 
     const getStatusInfo = (status: Delivery['status'] | undefined) => {
         if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
         switch (status) {
-            case 'Delivered':
-                return { variant: 'default', icon: PackageCheck, label: 'Delivered' };
-            case 'In Transit':
-                return { variant: 'secondary', icon: Truck, label: 'In Transit' };
-            case 'Pending':
-                return { variant: 'outline', icon: Package, label: 'Pending' };
-            default:
-                return { variant: 'outline', icon: null, label: 'No Deliveries' };
+            case 'Delivered': return { variant: 'default', icon: PackageCheck, label: 'Delivered' };
+            case 'In Transit': return { variant: 'secondary', icon: Truck, label: 'In Transit' };
+            case 'Pending': return { variant: 'outline', icon: Package, label: 'Pending' };
+            default: return { variant: 'outline', icon: null, label: 'No Deliveries' };
         }
     };
     
-    const filteredDeliveries = userDeliveries.filter(delivery => {
+    const filteredDeliveries = (deliveries || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
         const fromDate = deliveryDateRange.from;
         const toDate = deliveryDateRange.to || fromDate;
@@ -195,7 +132,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `delivery-history-${userName.replace(/\s/g, '_')}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        link.setAttribute("download", `delivery-history-${user?.name?.replace(/\s/g, '_')}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -207,140 +144,14 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         <div className="flex items-center justify-between">
             <div>
                 <h1 className="text-3xl font-bold">Dashboard</h1>
-                <p className="text-muted-foreground">{greeting}, {userName}. Here is an overview of your water consumption.</p>
-            </div>
-            <div className="flex items-center gap-2">
-                 <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="icon" className="sm:w-auto sm:px-4">
-                            <FileText className="h-4 w-4" />
-                            <span className="hidden sm:inline sm:ml-2">Compliance Reports</span>
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-4xl">
-                        <DialogHeader>
-                            <DialogTitle>Quality Assurance</DialogTitle>
-                            <DialogDescription>
-                                Review water quality compliance and sanitation visit records.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                            <Tabs defaultValue="compliance" className="flex flex-col gap-4">
-                              <TabsList className="grid w-full grid-cols-2 md:w-96">
-                                <TabsTrigger value="compliance">Compliance Reports</TabsTrigger>
-                                <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
-                              </TabsList>
-                              
-                              <TabsContent value="compliance">
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Water Quality Compliance</CardTitle>
-                                    <CardDescription>View all historical compliance reports and their status.</CardDescription>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow>
-                                          <TableHead>Report ID</TableHead>
-                                          <TableHead>Date</TableHead>
-                                          <TableHead>Status</TableHead>
-                                          <TableHead className="text-right">Attachment</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {complianceReports.map((report) => (
-                                          <TableRow key={report.id}>
-                                            <TableCell className="font-medium">{report.id}</TableCell>
-                                            <TableCell>{new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                            <TableCell>
-                                              <Badge variant={report.status === 'Compliant' ? 'default' : 'destructive'}
-                                               className={
-                                                report.status === 'Compliant' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                                : report.status === 'Non-compliant' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
-                                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                              }>
-                                                {report.status}
-                                              </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                              <Button variant="outline" size="sm" asChild>
-                                                <a href={report.reportUrl} target="_blank" rel="noopener noreferrer">
-                                                  <Eye className="mr-2 h-4 w-4" />
-                                                  View
-                                                </a>
-                                              </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </CardContent>
-                                </Card>
-                              </TabsContent>
-                              
-                              <TabsContent value="sanitation">
-                                <Card>
-                                  <CardHeader>
-                                    <CardTitle>Sanitation Visits</CardTitle>
-                                    <CardDescription>Manage scheduling and records of sanitation visits.</CardDescription>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow>
-                                          <TableHead>Visit ID</TableHead>
-                                          <TableHead>Scheduled Date</TableHead>
-                                          <TableHead>Status</TableHead>
-                                          <TableHead>Assigned To</TableHead>
-                                          <TableHead className="text-right">Report</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {sanitationVisits.map((visit) => (
-                                          <TableRow key={visit.id}>
-                                            <TableCell className="font-medium">{visit.id}</TableCell>
-                                            <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                                            <TableCell>
-                                              <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
-                                              className={
-                                                visit.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                                : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'
-                                              }>
-                                                {visit.status}
-                                              </Badge>
-                                            </TableCell>
-                                            <TableCell>{visit.assignedTo}</TableCell>
-                                            <TableCell className="text-right">
-                                              {visit.reportUrl ? (
-                                                <Button variant="outline" size="sm" asChild>
-                                                  <a href={visit.reportUrl} target="_blank" rel="noopener noreferrer">
-                                                    <FileText className="mr-2 h-4 w-4" />
-                                                    View Report
-                                                  </a>
-                                                </Button>
-                                              ) : (
-                                                <span className="text-muted-foreground text-sm">N/A</span>
-                                              )}
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </CardContent>
-                                </Card>
-                              </TabsContent>
-                            </Tabs>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                <p className="text-muted-foreground">{greeting}, {user?.name}. Here is an overview of your water consumption.</p>
             </div>
         </div>
 
         <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userName}</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {user?.name}</DialogTitle>
                     <DialogDescription>
                         A log of all past deliveries for this user.
                     </DialogDescription>
@@ -348,38 +159,13 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 <div className="flex items-center gap-2 py-4">
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                                "w-[300px] justify-start text-left font-normal",
-                                !deliveryDateRange && "text-muted-foreground"
-                            )}
-                            >
+                            <Button id="date" variant={"outline"} className={cn( "w-[300px] justify-start text-left font-normal", !deliveryDateRange && "text-muted-foreground" )}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {deliveryDateRange?.from ? (
-                                deliveryDateRange.to ? (
-                                <>
-                                    {format(deliveryDateRange.from, "LLL dd, y")} -{" "}
-                                    {format(deliveryDateRange.to, "LLL dd, y")}
-                                </>
-                                ) : (
-                                format(deliveryDateRange.from, "LLL dd, y")
-                                )
-                            ) : (
-                                <span>Pick a date range</span>
-                            )}
+                            {deliveryDateRange?.from ? ( deliveryDateRange.to ? ( <> {format(deliveryDateRange.from, "LLL dd, y")} - {format(deliveryDateRange.to, "LLL dd, y")} </> ) : ( format(deliveryDateRange.from, "LLL dd, y") ) ) : ( <span>Pick a date range</span> )}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={deliveryDateRange?.from}
-                            selected={deliveryDateRange}
-                            onSelect={setDeliveryDateRange}
-                            numberOfMonths={2}
-                            />
+                            <Calendar initialFocus mode="range" defaultMonth={deliveryDateRange?.from} selected={deliveryDateRange} onSelect={setDeliveryDateRange} numberOfMonths={2}/>
                         </PopoverContent>
                     </Popover>
                     <Button onClick={handleDownloadDeliveries} disabled={filteredDeliveries.length === 0}>
@@ -428,7 +214,7 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                                     </TableCell>
                                 </TableRow>
                             )})}
-                             {userDeliveries.length === 0 && (
+                             {(deliveries || []).length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
                                 </TableRow>
@@ -451,7 +237,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 )}
             </DialogContent>
         </Dialog>
-
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>

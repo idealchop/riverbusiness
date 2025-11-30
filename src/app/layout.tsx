@@ -3,7 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'River Business',
@@ -23,9 +23,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased")}>
-        <SidebarProvider>
+        <FirebaseClientProvider>
           {children}
-        </SidebarProvider>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

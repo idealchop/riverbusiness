@@ -1,433 +1,105 @@
+
 {
   "entities": {
-    "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserProfile",
+    "AppUser": {
+      "title": "AppUser",
       "type": "object",
-      "description": "Represents a user profile within the River Business application.",
+      "description": "Represents a user of the River Business application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user profile."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "User's first name."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "User's last name."
-        },
-        "email": {
-          "type": "string",
-          "description": "User's email address.",
-          "format": "email"
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "User's phone number."
-        },
-        "address": {
-          "type": "string",
-          "description": "User's address."
-        },
-        "creationDate": {
-          "type": "string",
-          "description": "Date and time the user profile was created.",
-          "format": "date-time"
+        "id": { "type": "string", "description": "Unique identifier for the user (matches Auth UID)." },
+        "name": { "type": "string", "description": "User's full name." },
+        "email": { "type": "string", "format": "email", "description": "User's email address." },
+        "businessName": { "type": "string", "description": "User's business name." },
+        "address": { "type": "string", "description": "User's address." },
+        "contactNumber": { "type": "string", "description": "User's phone number." },
+        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters." },
+        "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
+        "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
+        "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the user was created." },
+        "onboardingComplete": { "type": "boolean", "description": "Flag indicating if user has completed onboarding." },
+        "plan": { "type": "object", "description": "User's subscription plan details." },
+        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
+      },
+      "required": ["id", "name", "email", "businessName", "role", "createdAt"]
+    },
+    "WaterStation": {
+      "title": "WaterStation",
+      "type": "object",
+      "description": "Represents a water refilling station.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the station." },
+        "name": { "type": "string", "description": "Name of the station." },
+        "location": { "type": "string", "description": "Location of the station." },
+        "permits": {
+          "type": "object",
+          "properties": {
+            "businessPermitUrl": { "type": "string", "format": "uri" },
+            "sanitationPermitUrl": { "type": "string", "format": "uri" },
+            "engineersReportUrl": { "type": "string", "format": "uri" },
+            "waterTestResultsUrl": { "type": "string", "format": "uri" },
+            "cprUrl": { "type": "string", "format": "uri" },
+            "lguPermitUrl": { "type": "string", "format": "uri" },
+            "healthCertsUrl": { "type": "string", "format": "uri" },
+            "pestControlContractUrl": { "type": "string", "format": "uri" },
+            "bacteriologicalTestUrl": { "type": "string", "format": "uri" },
+            "physicalChemicalTestUrl": { "type": "string", "format": "uri" },
+            "annualMonitoringUrl": { "type": "string", "format": "uri" },
+            "partnershipAgreementUrl": { "type": "string", "format": "uri" }
+          }
         }
       },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "email",
-        "creationDate"
-      ]
+      "required": ["id", "name", "location"]
     },
-    "WaterConsumption": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "WaterConsumption",
-      "type": "object",
-      "description": "Represents a user's water consumption record.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the water consumption record."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N WaterConsumption)"
-        },
-        "consumptionDate": {
-          "type": "string",
-          "description": "Date and time of the water consumption reading.",
-          "format": "date-time"
-        },
-        "gallons": {
-          "type": "number",
-          "description": "Water consumption in gallons."
-        },
-        "liters": {
-          "type": "number",
-          "description": "Water consumption in liters."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "consumptionDate",
-        "gallons",
-        "liters"
-      ]
-    },
-    "WaterDelivery": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "WaterDelivery",
+    "Delivery": {
+      "title": "Delivery",
       "type": "object",
       "description": "Represents a water delivery record.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the water delivery record."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N WaterDelivery)"
-        },
-        "deliveryDate": {
-          "type": "string",
-          "description": "Date and time of the water delivery.",
-          "format": "date-time"
-        },
-        "gallons": {
-          "type": "number",
-          "description": "Amount of water delivered in gallons."
-        },
-        "liters": {
-          "type": "number",
-          "description": "Amount of water delivered in liters."
-        },
-        "fileUrl": {
-          "type": "string",
-          "description": "URL to the file attachment for the delivery (e.g., delivery receipt).",
-          "format": "uri"
-        }
+        "id": { "type": "string", "description": "Unique identifier for the delivery." },
+        "userId": { "type": "string", "description": "ID of the user receiving the delivery." },
+        "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
+        "volumeGallons": { "type": "number", "description": "Volume of water delivered in gallons." },
+        "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },
+        "proofOfDeliveryUrl": { "type": "string", "format": "uri" }
       },
-      "required": [
-        "id",
-        "userId",
-        "deliveryDate",
-        "gallons",
-        "liters"
-      ]
+      "required": ["id", "userId", "date", "volumeGallons", "status"]
     },
-    "ComplianceReport": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ComplianceReport",
+    "Payment": {
+      "title": "Payment",
       "type": "object",
-      "description": "Represents a water quality compliance report.",
+      "description": "Represents a payment or invoice.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the compliance report."
-        },
-        "reportDate": {
-          "type": "string",
-          "description": "Date of the compliance report.",
-          "format": "date-time"
-        },
-        "fileUrl": {
-          "type": "string",
-          "description": "URL to the compliance report file.",
-          "format": "uri"
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the compliance report findings."
-        }
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue"] },
+        "proofOfPaymentUrl": { "type": "string", "format": "uri" }
       },
-      "required": [
-        "id",
-        "reportDate",
-        "fileUrl"
-      ]
-    },
-    "SanitationVisit": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SanitationVisit",
-      "type": "object",
-      "description": "Represents a sanitation visit record.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the sanitation visit record."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N SanitationVisit)"
-        },
-        "scheduledDate": {
-          "type": "string",
-          "description": "Scheduled date and time of the sanitation visit.",
-          "format": "date-time"
-        },
-        "visitDate": {
-          "type": "string",
-          "description": "Actual date and time of the sanitation visit.",
-          "format": "date-time"
-        },
-        "notes": {
-          "type": "string",
-          "description": "Notes from the sanitation visit."
-        },
-        "reportUrl": {
-          "type": "string",
-          "description": "URL to the sanitation visit report file.",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "scheduledDate"
-      ]
-    },
-    "ConsumptionPrediction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ConsumptionPrediction",
-      "type": "object",
-      "description": "Represents a predicted water consumption record, generated by the AI model.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the consumption prediction record."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ConsumptionPrediction)"
-        },
-        "predictionDate": {
-          "type": "string",
-          "description": "The date for which the water consumption is predicted.",
-          "format": "date-time"
-        },
-        "predictedGallons": {
-          "type": "number",
-          "description": "Predicted water consumption in gallons."
-        },
-        "predictedLiters": {
-          "type": "number",
-          "description": "Predicted water consumption in liters."
-        },
-        "pastUsageWeight": {
-          "type": "number",
-          "description": "Weight given to past usage in the prediction."
-        },
-        "externalConditionsWeight": {
-          "type": "number",
-          "description": "Weight given to external conditions in the prediction."
-        },
-        "seasonalDataWeight": {
-          "type": "number",
-          "description": "Weight given to seasonal data in the prediction."
-        },
-        "userGoalWeight": {
-          "type": "number",
-          "description": "Weight given to user-defined goals in the prediction."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "predictionDate",
-        "predictedGallons",
-        "predictedLiters"
-      ]
-    },
-    "CustomerServiceRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CustomerServiceRequest",
-      "type": "object",
-      "description": "Represents a customer service request.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the customer service request."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N CustomerServiceRequest)"
-        },
-        "requestDate": {
-          "type": "string",
-          "description": "Date and time the request was submitted.",
-          "format": "date-time"
-        },
-        "requestType": {
-          "type": "string",
-          "description": "Type of customer service request (e.g., billing inquiry, technical support)."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the customer service request."
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the customer service request (e.g., open, in progress, resolved)."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "requestDate",
-        "requestType",
-        "description",
-        "status"
-      ]
+      "required": ["id", "date", "description", "amount", "status"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}/userProfile",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user profile information. Path-based ownership ensures only the user can access their own profile.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/waterConsumption/{waterConsumptionId}",
-        "definition": {
-          "entityName": "WaterConsumption",
-          "schema": {
-            "$ref": "#/backend/entities/WaterConsumption"
-          },
-          "description": "Stores water consumption records for each user. Path-based ownership ensures only the user can access their own consumption data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "waterConsumptionId",
-              "description": "The unique identifier of the water consumption record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/waterDeliveries/{waterDeliveryId}",
-        "definition": {
-          "entityName": "WaterDelivery",
-          "schema": {
-            "$ref": "#/backend/entities/WaterDelivery"
-          },
-          "description": "Stores water delivery records for each user. Path-based ownership ensures only the user can access their own delivery data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "waterDeliveryId",
-              "description": "The unique identifier of the water delivery record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/sanitationVisits/{sanitationVisitId}",
-        "definition": {
-          "entityName": "SanitationVisit",
-          "schema": {
-            "$ref": "#/backend/entities/SanitationVisit"
-          },
-          "description": "Stores sanitation visit records for each user. Path-based ownership ensures only the user can access their own sanitation visit data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "sanitationVisitId",
-              "description": "The unique identifier of the sanitation visit record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/consumptionPredictions/{consumptionPredictionId}",
-        "definition": {
-          "entityName": "ConsumptionPrediction",
-          "schema": {
-            "$ref": "#/backend/entities/ConsumptionPrediction"
-          },
-          "description": "Stores water consumption predictions for each user. Path-based ownership ensures only the user can access their own predicted consumption data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "consumptionPredictionId",
-              "description": "The unique identifier of the consumption prediction record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/customerServiceRequests/{customerServiceRequestId}",
-        "definition": {
-          "entityName": "CustomerServiceRequest",
-          "schema": {
-            "$ref": "#/backend/entities/CustomerServiceRequest"
-          },
-          "description": "Stores customer service requests for each user. Path-based ownership ensures only the user can access their own requests.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "customerServiceRequestId",
-              "description": "The unique identifier of the customer service request."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/complianceReports/{complianceReportId}",
-        "definition": {
-          "entityName": "ComplianceReport",
-          "schema": {
-            "$ref": "#/backend/entities/ComplianceReport"
-          },
-          "description": "Stores water quality compliance reports. Access can be controlled through security rules to specific roles or all authenticated users.",
-          "params": [
-            {
-              "name": "complianceReportId",
-              "description": "The unique identifier of the compliance report."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore data structure is designed to support the River Business application's core features: consumption monitoring, water quality and sanitation management, delivery tracking, predictive usage, and customer service access. The structure prioritizes security, scalability, and debuggability, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters).\n\n**Authorization Independence:** The design avoids hierarchical authorization dependencies by using path-based ownership for user-specific data. This eliminates the need for `get()` calls in security rules, enabling atomic operations (transactions/batches) and simplifying debugging.\n\n**Structural Segregation (Homogeneous Security Posture):** Each collection is designed to contain documents with similar access needs, simplifying security rules. User profiles are stored separately from compliance reports to allow for different access controls.\n\n**Access Modeling:** Path-based ownership (`/users/{userId}/...`) is employed for entities directly associated with users (water consumption, water deliveries, sanitation visits, consumption predictions, and customer service requests). This pattern simplifies security rules and ensures clear ownership. Compliance reports are stored in a separate collection with broader read access (if required, this can be controlled through security rules).\n\n**QAPs (Rules are not Filters):** The use of path-based ownership allows for secure `list` operations. A user can only list documents under their own user ID, preventing unauthorized access to other users' data. Separate collections are used for data with different access requirements, ensuring that rules do not act as filters.\n\n**Justification for Structure:**\n\n*   `/users/{userId}/userProfile`: Stores user profile information. Path-based ownership ensures that only the user can access their own profile data.\n*   `/users/{userId}/waterConsumption/{waterConsumptionId}`: Stores water consumption records for each user. Path-based ownership ensures that only the user can access their own consumption data.\n*   `/users/{userId}/waterDeliveries/{waterDeliveryId}`: Stores water delivery records for each user.  Path-based ownership ensures that only the user can access their own delivery data.\n*   `/users/{userId}/sanitationVisits/{sanitationVisitId}`: Stores sanitation visit records for each user. Path-based ownership ensures that only the user can access their own sanitation visit data.\n*   `/users/{userId}/consumptionPredictions/{consumptionPredictionId}`: Stores water consumption predictions for each user. Path-based ownership ensures that only the user can access their own predicted consumption data.\n*   `/users/{userId}/customerServiceRequests/{customerServiceRequestId}`: Stores customer service requests for each user. Path-based ownership ensures that only the user can access their own requests.\n*   `/complianceReports/{complianceReportId}`: Stores water quality compliance reports. This collection can be secured to allow read access to specific roles or all authenticated users, depending on the application's requirements. If specific users or roles need to have access to this, a `members` map could be added to the compliance report to only allow certain users read access.\n\n**Firebase Authentication and Storage:**\n\n*   Firebase Authentication is used to authenticate users via password or anonymous authentication.\n*   Firebase Storage is used to store file attachments for water deliveries, sanitation visit reports, and compliance reports. The `fileUrl` field in the corresponding Firestore documents stores the URL of the file in Firebase Storage.  Storage security rules should be configured to match the Firestore security rules. For example, only the user who created a delivery document can upload to a specific path in storage."
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/AppUser" },
+      "description": "Stores user profile information."
+    },
+    "/users/{userId}/deliveries/{deliveryId}": {
+      "schema": { "$ref": "#/entities/Delivery" },
+      "description": "Subcollection for a user's delivery records."
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Subcollection for a user's payment history."
+    },
+    "/waterStations/{stationId}": {
+      "schema": { "$ref": "#/entities/WaterStation" },
+      "description": "Top-level collection for all water stations."
+    }
   }
 }

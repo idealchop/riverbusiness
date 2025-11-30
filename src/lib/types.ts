@@ -1,4 +1,5 @@
 
+import {FieldValue} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
   date: string;
@@ -60,14 +61,20 @@ export type Permission =
 export interface AppUser {
     id: string;
     name: string;
+    email: string;
     businessName: string;
-    password?: string;
+    address?: string;
+    contactNumber?: string;
     totalConsumptionLiters: number;
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
     role: 'Admin' | 'User';
     assignedWaterStationId?: string;
+    createdAt: FieldValue;
+    onboardingComplete?: boolean;
+    plan?: any;
+    customPlanDetails?: any;
 }
 
 export interface LoginLog {

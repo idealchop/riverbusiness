@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
   Table,
@@ -25,34 +24,12 @@ import { Badge } from '@/components/ui/badge';
 import {
   FileText,
   CreditCard,
-  QrCode,
-  Download,
-  Receipt,
-  X,
-  Users,
-  Building,
-  Briefcase,
-  Layers,
-  Factory,
-  RefreshCw,
-  Droplet,
-  Home,
-  User,
   Check,
-  Building2,
   Calendar as CalendarIcon,
-  Send,
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { clientTypes, familyPlans, smePlans, commercialPlans, corporatePlans, enterprisePlans } from '@/lib/plans';
+
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,54 +37,27 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
-import { appUsers } from '@/lib/data';
+
 import { useToast } from '@/hooks/use-toast';
-
-
-const paymentHistory = [
-    { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 155.00, status: 'Upcoming' },
-    { id: 'INV-07-2024', date: '2024-07-15', description: 'July 2024 Invoice', amount: 150.0, status: 'Paid' },
-    { id: 'INV-06-2024', date: '2024-06-15', description: 'June 2024 Invoice', amount: 145.0, status: 'Paid' },
-    { id: 'INV-05-2024', date: '2024-05-15', description: 'May 2024 Invoice', amount: 0.0, status: 'Paid' },
-    { id: 'INV-04-2024', date: '2024-04-15', description: 'April 2024 Invoice', amount: 152.0, status: 'Paid' },
-    { id: 'INV-03-2024', date: '2024-03-15', description: 'March 2024 Invoice', amount: 148.0, status: 'Paid' },
-    { id: 'INV-02-2024', date: '2024-02-15', description: 'February 2024 Invoice', amount: 155.0, status: 'Paid' },
-    { id: 'INV-01-2024', date: '2024-01-15', description: 'January 2024 Invoice', amount: 160.0, status: 'Paid' },
-    { id: 'INV-12-2023', date: '2023-12-15', description: 'December 2023 Invoice', amount: 158.0, status: 'Paid' },
-    { id: 'INV-11-2023', date: '2023-11-15', description: 'November 2023 Invoice', amount: 154.0, status: 'Paid' },
-    { id: 'INV-10-2023', date: '2023-10-15', description: 'October 2023 Invoice', amount: 150.0, status: 'Paid' },
-    { id: 'INV-09-2023', date: '2023-09-15', description: 'September 2023 Invoice', amount: 147.0, status: 'Paid' },
-];
-
-const totalPaid = paymentHistory.filter(p => p.status === 'Paid').reduce((sum, item) => sum + item.amount, 0);
-
-const chartData = paymentHistory.filter(p => p.status === 'Paid').map(p => ({
-    month: new Date(p.date).toLocaleString('default', { month: 'short' }),
-    amount: p.amount
-})).reverse();
-
-const icons: { [key: string]: React.ElementType } = {
-  Family: Users,
-  SME: Briefcase,
-  Commercial: Building,
-  Corporate: Layers,
-  Enterprise: Factory,
-};
-
-type FamilyPlan = (typeof familyPlans)[0] & { details?: string[] };
-type SmePlan = (typeof smePlans)[0] & { details?: string[], employees?: string, stations?: string };
-type CommercialPlan = (typeof commercialPlans)[0] & { details?: string[], employees?: string, stations?: string };
-type CorporatePlan = (typeof corporatePlans)[0] & { details?: string[], employees?: string, stations?: string };
-type EnterprisePlan = (typeof enterprisePlans)[0] & { details?: string[], imageId?: string, description?: string };
-type AnyPlan = FamilyPlan | SmePlan | CommercialPlan | CorporatePlan | EnterprisePlan;
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Payment, AppUser } from '@/lib/types';
 
 
 export default function PaymentsPage() {
-  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr');
-  const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr');
-  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'paymaya-qr');
-  const upcomingPayment = paymentHistory.find(p => p.status === 'Upcoming');
+  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
+  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
+  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const paymentsQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'payments') : null, [firestore, user]);
+  const { data: paymentHistory, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
   
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
+
   const { toast } = useToast();
   const [date, setDate] = React.useState<DateRange | undefined>()
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string | null>(null);
@@ -121,36 +71,18 @@ export default function PaymentsPage() {
       });
       return;
     }
-
-    const customer = appUsers.find(user => user.id === selectedCustomerId);
-    if (!customer) {
-      toast({
-        variant: "destructive",
-        title: "Customer not found",
-      });
-      return;
-    }
-
-    const newRequest = {
-      id: `INV-REQ-${Date.now()}`,
-      userName: customer.name,
-      userId: customer.id,
-      dateRange: `${format(date.from, "LLL dd, y")} - ${format(date.to, "LLL dd, y")}`,
-      status: 'Pending' as 'Pending' | 'Sent',
-    };
-
-    const existingRequests = JSON.parse(localStorage.getItem('invoiceRequests') || '[]');
-    localStorage.setItem('invoiceRequests', JSON.stringify([...existingRequests, newRequest]));
-
     toast({
       title: "Invoice Request Sent",
-      description: `Your request for ${customer.name} has been sent to the admin.`,
+      description: `Your request has been sent to the admin.`,
     });
     
     setDate(undefined);
     setSelectedCustomerId(null);
   };
   
+  if (paymentsLoading || usersLoading) {
+    return <div>Loading payments...</div>
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -174,7 +106,7 @@ export default function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paymentHistory.map((payment) => (
+                {paymentHistory?.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">{payment.id}</TableCell>
                     <TableCell>{new Date(payment.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
@@ -271,7 +203,7 @@ export default function PaymentsPage() {
                                         <SelectValue placeholder="Select a customer..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {appUsers.map(user => (
+                                        {appUsers?.map(user => (
                                             <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -335,5 +267,3 @@ export default function PaymentsPage() {
     </div>
   );
 }
-
-    

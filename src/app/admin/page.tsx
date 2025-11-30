@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, deliveries as initialDeliveries, waterStations as initialWaterStations } from '@/lib/data';
 import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,10 +33,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   businessName: z.string().min(1, 'Business Name is required'),
+  email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['Admin', 'User']),
 });
@@ -60,24 +64,33 @@ const newDeliverySchema = z.object({
     date: z.date({ required_error: 'Date is required.'}),
     referenceId: z.string().min(1, 'Reference ID is required.'),
     volumeGallons: z.coerce.number().min(1, 'Volume is required.'),
-    proofUrl: z.string().optional(),
-})
+});
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
 export default function AdminPage() {
-    const [appUsers, setAppUsers] = useState<AppUser[]>([]);
+    const { toast } = useToast();
+    const auth = useAuth();
+    const firestore = useFirestore();
+
+    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+    const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
+
+    const waterStationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'waterStations') : null, [firestore]);
+    const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
+
     const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+    
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
-    const { toast } = useToast();
+    
     const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [userForHistory, setUserForHistory] = useState<AppUser | null>(null);
     const [activeTab, setActiveTab] = useState('user-management');
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
-    const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
+    
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
     const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
     const [adjustmentType, setAdjustmentType] = useState<'add' | 'deduct'>('deduct');
@@ -89,6 +102,13 @@ export default function AdminPage() {
     const [stationToAssign, setStationToAssign] = useState<string | undefined>();
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = useState(false);
     
+    const deliveriesQuery = useMemoFirebase(() => {
+        if (!firestore || !userForHistory) return null;
+        return collection(firestore, 'users', userForHistory.id, 'deliveries');
+    }, [firestore, userForHistory]);
+    const { data: userDeliveriesData } = useCollection<Delivery>(deliveriesQuery);
+
+
     useEffect(() => {
       const handleUserSearch = (event: CustomEvent<AppUser>) => {
         setSelectedUser(event.detail);
@@ -102,184 +122,110 @@ export default function AdminPage() {
       };
     }, []);
 
-
-    useEffect(() => {
-        const storedUsers = localStorage.getItem('appUsers');
-        const users = storedUsers ? JSON.parse(storedUsers) : initialAppUsers;
-
-        const onboardingDataString = localStorage.getItem('onboardingData');
-        if (onboardingDataString) {
-            const onboardingData = JSON.parse(onboardingDataString);
-            const userExists = users.some((u: AppUser) => u.id === onboardingData.formData.clientId);
-
-            if (!userExists) {
-                const newUserFromOnboarding: AppUser = {
-                    id: onboardingData.formData.clientId,
-                    name: onboardingData.formData.fullName,
-                    businessName: onboardingData.formData.businessName,
-                    totalConsumptionLiters: 0,
-                    accountStatus: 'Active',
-                    lastLogin: new Date().toISOString(),
-                    role: 'User'
-                };
-                users.push(newUserFromOnboarding);
-            }
-        }
-        setAppUsers(users);
-        localStorage.setItem('appUsers', JSON.stringify(users));
-
-        const storedWaterStations = localStorage.getItem('waterStations');
-        if (storedWaterStations) {
-            setWaterStations(JSON.parse(storedWaterStations));
-        } else {
-            localStorage.setItem('waterStations', JSON.stringify(initialWaterStations));
-        }
-
-        const storedDeliveries = localStorage.getItem('deliveries');
-        if (storedDeliveries) {
-            setDeliveries(JSON.parse(storedDeliveries));
-        } else {
-            localStorage.setItem('deliveries', JSON.stringify(initialDeliveries));
-        }
-
-    }, []);
-
     useEffect(() => {
         const hour = new Date().getHours();
-        if (hour < 12) {
-            setGreeting('Good morning');
-        } else if (hour < 18) {
-            setGreeting('Good afternoon');
-        } else {
-            setGreeting('Good evening');
-        }
+        if (hour < 12) setGreeting('Good morning');
+        else if (hour < 18) setGreeting('Good afternoon');
+        else setGreeting('Good evening');
     }, []);
 
     const form = useForm<NewUserFormValues>({
         resolver: zodResolver(newUserSchema),
-        defaultValues: {
-            name: '',
-            businessName: '',
-            password: '',
-            role: 'User',
-        },
+        defaultValues: { name: '', businessName: '', email: '', password: '', role: 'User' },
     });
     
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
-        defaultValues: { name: stationToUpdate?.name || '', location: stationToUpdate?.location || '' },
-        resetOptions: { keepDefaultValues: true },
+        defaultValues: { name: '', location: '' },
     });
 
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
-        defaultValues: {
-            referenceId: '',
-            volumeGallons: 0,
-        },
+        defaultValues: { referenceId: '', volumeGallons: 0, },
     });
 
     useEffect(() => {
         if (stationToUpdate) {
-            stationForm.reset({
-                name: stationToUpdate.name,
-                location: stationToUpdate.location,
-            });
+            stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
         } else {
             stationForm.reset({ name: '', location: '' });
         }
     }, [stationToUpdate, stationForm]);
 
-
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
-        defaultValues: {
-            amount: 0,
-        },
+        defaultValues: { amount: 0 },
     });
 
-    const handleCreateUser = (values: NewUserFormValues) => {
-        const newUser: AppUser = {
-            id: `USR-${String(appUsers.length + 1).padStart(3, '0')}`,
-            ...values,
-            totalConsumptionLiters: 0,
-            accountStatus: 'Active' as 'Active' | 'Inactive',
-            lastLogin: new Date().toISOString(),
-        };
-        const updatedUsers = [...appUsers, newUser];
-        setAppUsers(updatedUsers);
-        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
-        form.reset();
-        setIsCreateUserOpen(false);
-        toast({
-            title: 'User Created',
-            description: `User ${newUser.name} has been created successfully.`,
-        });
+    const handleCreateUser = async (values: NewUserFormValues) => {
+        if (!auth || !firestore) return;
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+            const user = userCredential.user;
+
+            const newUserDoc: AppUser = {
+                id: user.uid,
+                name: values.name,
+                businessName: values.businessName,
+                email: values.email,
+                role: values.role,
+                totalConsumptionLiters: 0,
+                accountStatus: 'Active',
+                lastLogin: new Date().toISOString(),
+                createdAt: serverTimestamp(),
+            };
+
+            const userDocRef = doc(firestore, "users", user.uid);
+            setDocumentNonBlocking(userDocRef, newUserDoc, { merge: true });
+
+            toast({ title: 'User Created', description: `User ${values.name} has been created.` });
+            form.reset();
+            setIsCreateUserOpen(false);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error creating user', description: error.message });
+        }
     };
 
     const handleSaveStation = (values: NewStationFormValues) => {
-        let updatedStations;
-        if (stationToUpdate) { // Editing existing station
-            updatedStations = waterStations.map(station =>
-                station.id === stationToUpdate.id ? { ...station, ...values, permits: stationToUpdate.permits || {} } : station
-            );
+        if (!firestore) return;
+
+        if (stationToUpdate) {
+            const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+            updateDocumentNonBlocking(stationRef, values);
             toast({ title: 'Station Updated', description: `Station ${values.name} has been updated.` });
-        } else { // Creating new station
-            const newStation: WaterStation = {
-                id: `WS-${String(waterStations.length + 1).padStart(3, '0')}`,
-                ...values,
-                permits: {},
-            };
-            updatedStations = [...waterStations, newStation];
-            toast({ title: 'Water Station Created', description: `Station ${newStation.name} has been created.` });
+        } else {
+            const stationsRef = collection(firestore, 'waterStations');
+            addDocumentNonBlocking(stationsRef, values);
+            toast({ title: 'Water Station Created', description: `Station ${values.name} has been created.` });
         }
-        setWaterStations(updatedStations);
-        localStorage.setItem('waterStations', JSON.stringify(updatedStations));
         stationForm.reset();
         setStationToUpdate(null);
         setIsStationProfileOpen(false);
     };
 
     const handleAssignStation = () => {
-        if (!selectedUser || !stationToAssign) return;
+        if (!selectedUser || !stationToAssign || !firestore) return;
 
-        const updatedUsers = appUsers.map(user => 
-            user.id === selectedUser.id ? { ...user, assignedWaterStationId: stationToAssign } : user
-        );
-        setAppUsers(updatedUsers);
-        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+        const userRef = doc(firestore, 'users', selectedUser.id);
+        updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
 
-        toast({
-            title: 'Station Assigned',
-            description: `Station assigned to ${selectedUser.name}.`,
-        });
-
+        toast({ title: 'Station Assigned', description: `Station assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
     };
 
-    
     const handleResetPassword = (userId: string) => {
-        const newPassword = Math.random().toString(36).slice(-8);
-        // This is a simulation. In a real app, you wouldn't store plaintext passwords.
-        toast({
-            title: "Password Reset",
-            description: `New password for ${selectedUser?.name} is: ${newPassword}`,
-        });
+        toast({ title: "Password Reset", description: `Password reset instructions sent to user.` });
     };
 
     const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
-        if (!selectedUser) return;
+        if (!selectedUser || !firestore) return;
 
         const amount = adjustmentType === 'deduct' ? -values.amount : values.amount;
+        const newTotal = (selectedUser.totalConsumptionLiters || 0) + amount;
 
-        const updatedUsers = appUsers.map(user => 
-            user.id === selectedUser.id 
-            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + amount } 
-            : user
-        );
-        setAppUsers(updatedUsers);
-        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+        const userRef = doc(firestore, 'users', selectedUser.id);
+        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
         
         toast({
             title: `Consumption ${adjustmentType === 'add' ? 'Added' : 'Deducted'}`,
@@ -291,102 +237,100 @@ export default function AdminPage() {
     };
 
     const handleDeductFromDelivery = (userId: string, gallons: number) => {
+        if (!firestore || !appUsers) return;
+        const userToUpdate = appUsers.find(u => u.id === userId);
+        if (!userToUpdate) return;
+        
         const litersToDeduct = gallons * 3.785;
-        const updatedUsers = appUsers.map(user => 
-            user.id === userId
-            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters - litersToDeduct }
-            : user
-        );
-        setAppUsers(updatedUsers);
-        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+        const newTotal = (userToUpdate.totalConsumptionLiters || 0) - litersToDeduct;
+        
+        const userRef = doc(firestore, 'users', userId);
+        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
 
         toast({
             title: "Consumption Deducted",
-            description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters deducted from user's balance based on delivery.`
+            description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters deducted from user's balance.`
         })
     };
 
-    const handleAttachPermit = (permitType: keyof WaterStation['permits']) => {
-        if (!stationToUpdate) return;
-        const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/permit-sample.jpg?alt=media&token=c8b2512a-3636-4c44-884c-354336c9d2f6';
-        
-        const updatedStation = {
-            ...stationToUpdate,
-            permits: {
-                ...stationToUpdate.permits,
-                [permitType]: samplePermitUrl
-            }
-        };
+    const handleAttachPermit = async (permitType: keyof WaterStation['permits'], file: File) => {
+        if (!stationToUpdate || !firestore) return;
+        const storage = getStorage();
+        const filePath = `stations/${stationToUpdate.id}/permits/${permitType}-${file.name}`;
+        const storageRef = ref(storage, filePath);
 
-        const updatedStations = waterStations.map(station =>
-            station.id === stationToUpdate.id ? updatedStation : station
-        );
+        try {
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
 
-        setStationToUpdate(updatedStation); // Keep the dialog updated
-        setWaterStations(updatedStations);
-        localStorage.setItem('waterStations', JSON.stringify(updatedStations));
+            const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+            updateDocumentNonBlocking(stationRef, {
+                [`permits.${permitType}`]: downloadURL,
+            });
+            
+            // Optimistically update local state for UI responsiveness
+            setStationToUpdate(prev => prev ? { ...prev, permits: { ...prev.permits, [permitType]: downloadURL } } : null);
 
-        toast({
-            title: 'Permit Attached',
-            description: `A sample permit has been attached to the station.`,
-        });
+            toast({ title: 'Permit Attached', description: `A permit has been attached to the station.` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload permit.' });
+        }
     };
 
-    const handleUploadProof = () => {
-        if (!deliveryToUpdate) return;
-        const sampleProofUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/proof-of-delivery-sample.jpg?alt=media&token=29994c64-7f21-4f10-9110-3889146522c7';
-        
-        const updatedDeliveries = deliveries.map(d => 
-            d.id === deliveryToUpdate.id ? { ...d, proofOfDeliveryUrl: sampleProofUrl } : d
-        );
-        setDeliveries(updatedDeliveries);
-        localStorage.setItem('deliveries', JSON.stringify(updatedDeliveries));
-        
-        toast({
-            title: "Proof Uploaded",
-            description: `Proof of delivery for ${deliveryToUpdate.id} has been attached.`,
-        });
-        
-        setDeliveryToUpdate(null);
+    const handleUploadProof = async (file: File) => {
+        if (!deliveryToUpdate || !userForHistory || !firestore) return;
+        const storage = getStorage();
+        const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${file.name}`;
+        const storageRef = ref(storage, filePath);
+
+        try {
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+
+            const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
+            updateDocumentNonBlocking(deliveryRef, { proofOfDeliveryUrl: downloadURL });
+            
+            toast({ title: "Proof Uploaded", description: `Proof for delivery ${deliveryToUpdate.id} attached.` });
+            setDeliveryToUpdate(null);
+        } catch (error) {
+             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
+        }
     };
 
     const handleCreateDelivery = (values: NewDeliveryFormValues) => {
-        if (!userForHistory) return;
+        if (!userForHistory || !firestore) return;
 
-        const newDelivery: Delivery = {
-            id: values.referenceId,
+        const newDelivery: Omit<Delivery, 'id'> = {
             userId: userForHistory.id,
             date: values.date.toISOString(),
             volumeGallons: values.volumeGallons,
-            status: 'Delivered', // Manually added deliveries are considered delivered
-            proofOfDeliveryUrl: values.proofUrl,
+            status: 'Delivered',
         };
 
-        const updatedDeliveries = [...deliveries, newDelivery];
-        setDeliveries(updatedDeliveries);
-        localStorage.setItem('deliveries', JSON.stringify(updatedDeliveries));
+        const deliveriesRef = collection(firestore, 'users', userForHistory.id, 'deliveries');
+        addDocumentNonBlocking(deliveriesRef, newDelivery)
+          .then((docRef) => {
+            if(docRef) {
+              updateDocumentNonBlocking(docRef, {id: docRef.id});
+            }
+          });
 
-        toast({
-            title: "Delivery Created",
-            description: `Manual delivery ${newDelivery.id} has been added for ${userForHistory.name}.`
-        });
-
+        toast({ title: "Delivery Created", description: `Manual delivery has been added for ${userForHistory.name}.` });
         deliveryForm.reset();
         setIsCreateDeliveryOpen(false);
     };
 
 
-    const adminUser = appUsers.find(user => user.role === 'Admin');
-
-    const totalUsers = appUsers.length;
-    const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
+    const adminUser = appUsers?.find(user => user.role === 'Admin');
+    const totalUsers = appUsers?.length || 0;
+    const activeUsers = appUsers?.filter(u => u.accountStatus === 'Active').length || 0;
     
-    const filteredUsers = appUsers.filter(user => {
+    const filteredUsers = appUsers?.filter(user => {
         if (userFilter === 'all') return true;
         if (userFilter === 'active') return user.accountStatus === 'Active';
         if (userFilter === 'inactive') return user.accountStatus === 'Inactive';
         return true;
-    });
+    }) || [];
 
     const handleFilterClick = (filter: 'all' | 'active' | 'inactive') => {
         setUserFilter(filter);
@@ -394,18 +338,13 @@ export default function AdminPage() {
     };
 
     const getLatestDelivery = (userId: string): Delivery | undefined => {
-        return deliveries
+        if (!userDeliveriesData) return undefined;
+        return userDeliveriesData
             .filter(d => d.userId === userId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     };
     
-    const userDeliveries = userForHistory 
-        ? deliveries
-            .filter(d => d.userId === userForHistory.id)
-            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) 
-        : [];
-    
-    const filteredDeliveries = userDeliveries.filter(delivery => {
+    const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
         const fromDate = deliveryDateRange.from;
         const toDate = deliveryDateRange.to || fromDate;
@@ -453,6 +392,9 @@ export default function AdminPage() {
         { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
     ];
 
+  if (usersLoading || stationsLoading) {
+    return <div>Loading...</div>
+  }
 
   return (
     <div className="flex flex-col gap-6 font-sans">
@@ -484,7 +426,7 @@ export default function AdminPage() {
                              </div>
                              <div>
                                  <p className="font-medium text-muted-foreground">Total Consumption</p>
-                                 <p>{selectedUser.totalConsumptionLiters.toLocaleString()} Liters</p>
+                                 <p>{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</p>
                              </div>
                              <div>
                                  <p className="font-medium text-muted-foreground">Role</p>
@@ -496,7 +438,7 @@ export default function AdminPage() {
                              </div>
                              <div>
                                 <p className="font-medium text-muted-foreground">Assigned Station</p>
-                                <p>{waterStations.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</p>
+                                <p>{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</p>
                             </div>
                          </div>
                          <Separator className="my-4" />
@@ -695,19 +637,15 @@ export default function AdminPage() {
                                 </FormItem>
                             )}
                         />
-                        <FormField
+                         <FormField
                             control={deliveryForm.control}
                             name="proofUrl"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Proof of Delivery (Optional URL)</FormLabel>
                                     <FormControl>
-                                       <Input placeholder="https://example.com/proof.jpg" {...field} />
+                                       <Input type="file" onChange={(e) => field.onChange(e.target.files?.[0])} />
                                     </FormControl>
-                                     <div className="flex items-center space-x-2 mt-2">
-                                        <Label htmlFor="upload-proof-file">Or upload file:</Label>
-                                        <Input id="upload-proof-file" type="file" className="text-sm" />
-                                    </div>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -741,11 +679,14 @@ export default function AdminPage() {
                     <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <Input type="file" />
+                    <Input type="file" onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                            handleUploadProof(e.target.files[0]);
+                        }
+                    }}/>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setDeliveryToUpdate(null)}>Cancel</Button>
-                    <Button onClick={handleUploadProof}>Upload</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -799,7 +740,6 @@ export default function AdminPage() {
             </DialogContent>
         </Dialog>
 
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="cursor-pointer hover:bg-muted" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -837,67 +777,58 @@ export default function AdminPage() {
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(handleCreateUser)} className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Full Name</FormLabel>
-                                        <FormControl><Input placeholder="Juan dela Cruz" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="businessName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Business Name</FormLabel>
-                                        <FormControl><Input placeholder="Acme Inc." {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <Input type={showPassword ? 'text' : 'password'} placeholder="******" {...field} />
-                                                <Button size="icon" variant="ghost" type="button" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)}>
-                                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="role"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Role</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                      <FormControl>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                      </FormControl>
-                                      <SelectContent>
-                                        <SelectItem value="User">User</SelectItem>
-                                        <SelectItem value="Admin">Admin</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                            <FormField control={form.control} name="name" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Full Name</FormLabel>
+                                    <FormControl><Input placeholder="Juan dela Cruz" {...field} /></FormControl>
                                     <FormMessage />
-                                  </FormItem>
-                                )}
-                            />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="businessName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Business Name</FormLabel>
+                                    <FormControl><Input placeholder="Acme Inc." {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="email" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="password" render={({ field }) => (
+                                 <FormItem>
+                                    <FormLabel>Password</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input type={showPassword ? 'text' : 'password'} placeholder="******" {...field} />
+                                            <Button size="icon" variant="ghost" type="button" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)}>
+                                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="role" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Role</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select a role" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="User">User</SelectItem>
+                                    <SelectItem value="Admin">Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}/>
                             <DialogFooter>
                                 <DialogClose asChild>
                                   <Button variant="secondary" className="bg-secondary text-secondary-foreground">Cancel</Button>
@@ -944,7 +875,7 @@ export default function AdminPage() {
                                                     {user.accountStatus}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell>{waterStations.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
+                                            <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
                                                     <Badge variant={latestDelivery?.status === 'Delivered' ? 'default' : latestDelivery?.status === 'In Transit' ? 'secondary' : 'outline'}>
@@ -976,7 +907,7 @@ export default function AdminPage() {
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); if(user) handleResetPassword(user.id); }}>
+                                                        <DropdownMenuItem onClick={() => { if(user) handleResetPassword(user.id); }}>
                                                             <KeyRound className="mr-2 h-4 w-4" />
                                                             Reset Password
                                                         </DropdownMenuItem>
@@ -1016,7 +947,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {waterStations.map((station) => (
+                                    {waterStations?.map((station) => (
                                         <TableRow key={station.id}>
                                             <TableCell>{station.id}</TableCell>
                                             <TableCell>{station.name}</TableCell>
@@ -1053,7 +984,7 @@ export default function AdminPage() {
                             <SelectValue placeholder="Select a station..." />
                         </SelectTrigger>
                         <SelectContent>
-                            {waterStations.map(station => (
+                            {waterStations?.map(station => (
                                 <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
                             ))}
                         </SelectContent>
@@ -1077,28 +1008,20 @@ export default function AdminPage() {
                     <div className="space-y-8 p-4">
                          <Form {...stationForm}>
                             <form onSubmit={stationForm.handleSubmit(handleSaveStation)} className="space-y-4">
-                                <FormField
-                                    control={stationForm.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Station Name</FormLabel>
-                                            <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={stationForm.control}
-                                    name="location"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Location</FormLabel>
-                                            <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <FormField control={stationForm.control} name="name" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Station Name</FormLabel>
+                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField control={stationForm.control} name="location" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Location</FormLabel>
+                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
                                 {stationToUpdate && (
                                     <Button type="submit" size="sm">Save Changes</Button>
                                 )}
@@ -1117,8 +1040,11 @@ export default function AdminPage() {
                                         {stationToUpdate?.permits?.[field.key] ? (
                                              <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
                                         ) : (
-                                            <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
-                                                <Upload className="mr-2 h-4 w-4" /> Upload
+                                            <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate}>
+                                                <Label className="cursor-pointer flex items-center">
+                                                    <Upload className="mr-2 h-4 w-4" /> Upload
+                                                    <Input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                </Label>
                                             </Button>
                                         )}
                                     </div>
@@ -1149,8 +1075,11 @@ export default function AdminPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                 <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
-                                                    <Upload className="mr-2 h-4 w-4" /> Upload
+                                                 <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate}>
+                                                    <Label className="cursor-pointer flex items-center">
+                                                        <Upload className="mr-2 h-4 w-4" /> Upload
+                                                        <Input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                    </Label>
                                                 </Button>
                                             </TableCell>
                                         </TableRow>

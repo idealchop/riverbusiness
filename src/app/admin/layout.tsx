@@ -8,11 +8,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import type { Feedback, AppUser } from '@/lib/types';
-import { feedbackLogs as initialFeedbackLogs, appUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Sidebar, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin-sidebar';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 export default function AdminLayout({
   children,
@@ -20,28 +22,31 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
+
+  const usersQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'users') : null),
+    [firestore]
+  );
+  const { data: appUsers } = useCollection<AppUser>(usersQuery);
 
   useEffect(() => {
-    const storedFeedback = localStorage.getItem('feedbackLogs');
-    if (storedFeedback) {
-      setFeedbackLogs(JSON.parse(storedFeedback));
+    if (!isUserLoading && !user) {
+      router.push('/login');
     }
-  }, []);
+  }, [user, isUserLoading, router]);
   
-  const unreadFeedbackCount = feedbackLogs.filter(fb => !fb.read).length;
-  const totalNotifications = unreadFeedbackCount;
-
   const handleSearch = () => {
-    if (!searchTerm) return;
+    if (!searchTerm || !appUsers) return;
 
     const foundUser = appUsers.find(user => 
-        user.id.toLowerCase() === searchTerm.toLowerCase() || user.name.toLowerCase().includes(searchTerm.toLowerCase())
+        user.id.toLowerCase() === searchTerm.toLowerCase() || (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (foundUser) {
-        // This is a bit of a hack. In a real app, we'd use a global state manager.
         const event = new CustomEvent('admin-user-search', { detail: foundUser });
         window.dispatchEvent(event);
     } else {
@@ -92,18 +97,14 @@ export default function AdminLayout({
                                 className="relative overflow-hidden rounded-full"
                             >
                                 <Bell className="h-5 w-5" />
-                                {totalNotifications > 0 && (
-                                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-xs">
-                                    {totalNotifications}
-                                  </Badge>
-                                )}
+                               
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-96">
                             <div className="space-y-2">
                                 <h4 className="font-medium text-sm">Notifications</h4>
                                 <p className="text-sm text-muted-foreground">
-                                    You have {totalNotifications} new notifications.
+                                    You have 0 new notifications.
                                 </p>
                             </div>
                             <Separator className="my-4" />

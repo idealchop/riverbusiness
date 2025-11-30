@@ -6,40 +6,41 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { deliveries as initialDeliveries } from '@/lib/data';
 import { MoreHorizontal, Paperclip, Search, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { Delivery } from '@/lib/types';
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
-// Conversion rate
 const gallonToLiter = (gallons: number) => gallons * 19;
 
 export default function DeliveriesPage() {
-  const [allDeliveries, setAllDeliveries] = useState<Delivery[]>(initialDeliveries);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+  const { data: allDeliveries, isLoading } = useCollection<Delivery>(deliveriesQuery);
+
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const storedDeliveries = localStorage.getItem('deliveries');
-    const deliveriesData = storedDeliveries ? JSON.parse(storedDeliveries) : initialDeliveries;
-    setAllDeliveries(deliveriesData);
-    setDeliveries(deliveriesData);
-  }, []);
+    if (allDeliveries) {
+      setDeliveries(allDeliveries);
+    }
+  }, [allDeliveries]);
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
-      case 'Delivered':
-        return 'default';
-      case 'In Transit':
-        return 'secondary';
-      case 'Pending':
-        return 'outline';
-      default:
-        return 'outline';
+      case 'Delivered': return 'default';
+      case 'In Transit': return 'secondary';
+      case 'Pending': return 'outline';
+      default: return 'outline';
     }
   };
 
   const handleSearch = () => {
+    if(!allDeliveries) return;
     const filteredDeliveries = allDeliveries.filter(delivery => {
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -54,7 +55,7 @@ export default function DeliveriesPage() {
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    if (term === '') {
+    if (term === '' && allDeliveries) {
       setDeliveries(allDeliveries);
     }
   };
@@ -64,6 +65,8 @@ export default function DeliveriesPage() {
       handleSearch();
     }
   };
+
+  if(isLoading) return <div>Loading deliveries...</div>
 
   return (
     <div className="py-4 space-y-4">

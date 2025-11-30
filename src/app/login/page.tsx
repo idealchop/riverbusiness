@@ -3,7 +3,6 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,11 +10,13 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Logo } from '@/components/icons';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { AppUser } from '@/lib/types';
+import { doc } from 'firebase/firestore';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -26,25 +27,55 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    console.log(data);
-    if (data.email === 'admin@river.com' && data.password === 'password') {
-      router.push('/admin');
-    } else {
-      router.push('/onboarding');
+  const onSubmit = async (data: LoginFormValues) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      if(user) {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        // This is a bit of a hack to get user role, in a real app this might come from custom claims
+        // For now, we fetch the user document to check the role.
+        const userSnap = await (await import('firebase/firestore')).getDoc(userDocRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data() as AppUser;
+          if (userData.role === 'Admin') {
+            router.push('/admin');
+          } else {
+             // Check if onboarding is complete
+             if (userData.onboardingComplete) {
+                router.push('/dashboard');
+             } else {
+                router.push('/onboarding');
+             }
+          }
+        } else {
+           router.push('/onboarding');
+        }
+      }
+
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: error.message || 'An unknown error occurred.',
+      });
     }
   };
-
-  const loginImage = PlaceHolderImages.find(p => p.id === 'login-background');
 
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
@@ -65,19 +96,20 @@ export default function LoginPage() {
                 type="email"
                 placeholder="Enter your email"
                 {...register('email')}
+                disabled={isSubmitting}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
             <div className="grid gap-2 relative">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} />
+              <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
               <Button size="icon" variant="ghost" className="absolute right-1 top-7" onClick={() => setShowPassword(!showPassword)} type="button">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full">
-              Sign in
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Signing In...' : 'Sign in'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
