@@ -25,11 +25,11 @@ export function AdminSidebar() {
   return (
     <>
       <SidebarHeader>
-        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:hidden h-8">
-          <Logo />
+        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:hidden">
+          <Logo className="h-8" />
         </Link>
-        <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex h-8">
-          <Logo />
+        <Link href="/dashboard" className="hidden items-center gap-2 font-semibold text-lg justify-center group-data-[collapsible=icon]:flex">
+          <Logo className="h-8" />
         </Link>
       </SidebarHeader>
       <SidebarContent>
