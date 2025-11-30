@@ -62,8 +62,8 @@ type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
 const newDeliverySchema = z.object({
     date: z.date({ required_error: 'Date is required.'}),
-    referenceId: z.string().min(1, 'Reference ID is required.'),
     volumeGallons: z.coerce.number().min(1, 'Volume is required.'),
+    proofUrl: z.any().optional(),
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
@@ -141,7 +141,7 @@ export default function AdminPage() {
 
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
-        defaultValues: { referenceId: '', volumeGallons: 0, },
+        defaultValues: { volumeGallons: 0, },
     });
 
     useEffect(() => {
@@ -297,27 +297,40 @@ export default function AdminPage() {
         }
     };
 
-    const handleCreateDelivery = (values: NewDeliveryFormValues) => {
+    const handleCreateDelivery = async (values: NewDeliveryFormValues) => {
         if (!userForHistory || !firestore) return;
-
-        const newDelivery: Omit<Delivery, 'id'> = {
-            userId: userForHistory.id,
-            date: values.date.toISOString(),
-            volumeGallons: values.volumeGallons,
-            status: 'Delivered',
-        };
-
+    
+        let proofUrl = '';
+        if (values.proofUrl && values.proofUrl.length > 0) {
+            const file = values.proofUrl[0];
+            const storage = getStorage();
+            const filePath = `users/${userForHistory.id}/deliveries/${file.name}-${Date.now()}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, file);
+            proofUrl = await getDownloadURL(storageRef);
+        }
+    
         const deliveriesRef = collection(firestore, 'users', userForHistory.id, 'deliveries');
-        addDocumentNonBlocking(deliveriesRef)
-          .then((docRef) => {
+        
+        try {
+            const docRef = await addDocumentNonBlocking(deliveriesRef, {
+                userId: userForHistory.id,
+                date: values.date.toISOString(),
+                volumeGallons: values.volumeGallons,
+                status: 'Delivered',
+                proofOfDeliveryUrl: proofUrl,
+            });
             if(docRef) {
-              updateDocumentNonBlocking(docRef, {id: docRef.id});
+                // Now update the document with its own ID.
+                const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', docRef.id);
+                updateDocumentNonBlocking(newDeliveryDocRef, { id: docRef.id });
+                toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             }
-          });
-
-        toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
-        deliveryForm.reset();
-        setIsCreateDeliveryOpen(false);
+            deliveryForm.reset();
+            setIsCreateDeliveryOpen(false);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the delivery record.' });
+        }
     };
 
 
@@ -611,19 +624,6 @@ export default function AdminPage() {
                                 </FormItem>
                             )}
                         />
-                         <FormField
-                            control={deliveryForm.control}
-                            name="referenceId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Reference ID</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="e.g., MAN-001" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
                         <FormField
                             control={deliveryForm.control}
                             name="volumeGallons"
@@ -642,9 +642,9 @@ export default function AdminPage() {
                             name="proofUrl"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Proof of Delivery (Optional URL)</FormLabel>
+                                    <FormLabel>Proof of Delivery (Optional)</FormLabel>
                                     <FormControl>
-                                       <Input type="file" onChange={(e) => field.onChange(e.target.files?.[0])} />
+                                       <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -1108,3 +1108,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

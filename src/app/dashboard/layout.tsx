@@ -133,33 +133,41 @@ export default function DashboardLayout({
     })
   }
 
-  const handleProofUpload = async (invoiceId: string) => {
-    if (!authUser || !firestore || !paymentProofFile) {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select a file to upload first.' });
-        return;
+  const handleProofUpload = async () => {
+    if (!authUser || !firestore || !paymentProofFile || !selectedInvoice) {
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select an invoice and a file to upload.' });
+      return;
     }
     const storage = getStorage();
-    const filePath = `users/${authUser.uid}/payments/${invoiceId}/${paymentProofFile.name}`;
+    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
     const storageRef = ref(storage, filePath);
-
+  
     try {
-        await uploadBytes(storageRef, paymentProofFile);
-        const downloadURL = await getDownloadURL(storageRef);
+      await uploadBytes(storageRef, paymentProofFile);
+      const downloadURL = await getDownloadURL(storageRef);
+  
+      const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
+      
+      const paymentData: Partial<Payment> = {
+        id: selectedInvoice.id,
+        date: selectedInvoice.date,
+        description: selectedInvoice.description,
+        amount: selectedInvoice.amount,
+        status: 'Pending Review',
+        proofOfPaymentUrl: downloadURL,
+      };
 
-        const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', invoiceId);
-        updateDocumentNonBlocking(paymentRef, { 
-            status: 'Pending Review', 
-            proofOfPaymentUrl: downloadURL 
-        });
-
-        toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-        setIsPaymentDialogOpen(false);
-        setSelectedInvoice(null);
-        setPaymentProofFile(null);
+      setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
+  
+      toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
+      setIsPaymentDialogOpen(false);
+      setSelectedInvoice(null);
+      setPaymentProofFile(null);
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
+      console.error("Upload error:", error);
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
     }
-};
+  };
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditableFormData({
@@ -662,7 +670,7 @@ export default function DashboardLayout({
                             <div className="grid gap-4">
                                 <Label htmlFor="payment-proof">Upload Screenshot or Document</Label>
                                 <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} />
-                                <Button onClick={() => selectedInvoice && handleProofUpload(selectedInvoice.id)}>Submit for Verification</Button>
+                                <Button onClick={handleProofUpload}>Submit for Verification</Button>
                             </div>
                         </TabsContent>
                     </Tabs>
@@ -858,5 +866,7 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
 
     
