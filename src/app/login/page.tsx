@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -141,7 +140,7 @@ export default function LoginPage() {
             </div>
             <div className="hidden lg:block relative">
               <Image
-                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Overflow.png?alt=media&token=ad6cec25-c755-4de3-8276-430a013741b5"
+                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FLP_image_v2.png?alt=media&token=746f19aa-ee43-4657-9503-262c52411dff"
                 alt="River Business Marketing Material"
                 fill
                 className="object-contain dark:brightness-[0.2] dark:grayscale"
