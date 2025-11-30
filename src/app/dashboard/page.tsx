@@ -78,6 +78,7 @@ export default function DashboardPage() {
     const [newDeliveryDay, setNewDeliveryDay] = useState<string>('');
     const [newDeliveryTime, setNewDeliveryTime] = useState<string>('');
     const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
+    const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -258,9 +259,9 @@ export default function DashboardPage() {
                 <h1 className="text-3xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground">{greeting}, {user?.name}. Here is an overview of your water consumption.</p>
             </div>
-             <Dialog>
+             <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={() => setIsComplianceDialogOpen(true)}>
                         <ShieldCheck className="mr-2 h-4 w-4" />
                         Water Quality Compliance
                     </Button>
@@ -723,10 +724,4 @@ export default function DashboardPage() {
         </div>
     </div>
     );
-
-    
-
-    
-
-    
-
+}
