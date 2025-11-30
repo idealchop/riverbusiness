@@ -346,7 +346,7 @@ export default function DashboardPage() {
 
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="flex flex-col">
+            <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Total Purchased
@@ -364,7 +364,7 @@ export default function DashboardPage() {
                     <Progress value={100} className="h-2"/>
                 </div>
             </Card>
-            <Card className="flex flex-col">
+            <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
@@ -377,11 +377,8 @@ export default function DashboardPage() {
                         <span>-</span>
                     </div>
                 </CardContent>
-                 <div className="p-6 pt-0">
-                    <Progress value={consumedPercentage} className="h-2"/>
-                </div>
             </Card>
-            <Card className="flex flex-col">
+            <Card className="flex flex-col overflow-hidden">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Remaining Liters
@@ -394,9 +391,6 @@ export default function DashboardPage() {
                         <span>-</span>
                     </div>
                 </CardContent>
-                <div className="p-6 pt-0">
-                    <Progress value={remainingPercentage} className="h-2"/>
-                </div>
             </Card>
             <Card>
                 <CardHeader>
@@ -550,4 +544,5 @@ export default function DashboardPage() {
         </div>
     </div>
     );
-}
+
+    
