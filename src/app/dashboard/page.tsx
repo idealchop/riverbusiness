@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { deliveries, consumptionData, appUsers as initialAppUsers } from '@/lib/data';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Calendar, Info, PackageCheck, Package, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import WaterStationsPage from './water-stations/page';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -33,22 +33,15 @@ const goals = [
 ];
 
 const tips = [
-    { 
-        title: "Your Daily Routine: Before You Go", 
-        description: "1. Give Your Bottle a Sniff Test to check for cleanliness. If it smells off, it needs a proper wash.\n2. Empty Out Old Water to not mix old water with the fresh refill.\n3. Check the Cap and Spout to ensure the part that touches your mouth is clean."
-    },
-    { 
-        title: "At the Refill Station", 
-        description: "4. Look for Clean Signs to check the station's hygiene.\n5. Stop the Touch: Prevent germs by not letting the nozzle touch your bottle.\n6. Pick the Right Temperature. Cold water encourages more hydration!"
-    },
-    {
-        title: "Your Weekly Routine: Deep Cleaning",
-        description: "7. Use Soap and Water to scrub the inside walls, bottom, and neck threads.\n8. The Sanitizing Soak: Use a bleach or vinegar solution to kill bacteria, then rinse thoroughly."
-    },
-    {
-        title: "⭐ Hydration Tip",
-        description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!"
-    }
+    { title: "Give Your Bottle a Sniff Test", description: "Before you leave home, check your bottle for cleanliness. If it smells sour or 'off,' it needs a proper wash. That smell means germs are in the bottle, not the water!" },
+    { title: "Empty Out Old Water", description: "Don't mix old, potentially contaminated water with your fresh refill. Always pour out any standing water from the day before to start fresh." },
+    { title: "Check the Cap and Spout", description: "Inspect the threads and spout for any residue. The part that touches your mouth should always be clean to protect the fresh water." },
+    { title: "Look for the Clean Signs", description: "At the refill station, check if the area is dry and tidy. A well-maintained station is a good sign of safe practices." },
+    { title: "Stop the Touch", description: "Prevent cross-contamination by making sure the refilling nozzle never touches the inside of your bottle. Hold your container carefully beneath it." },
+    { title: "Pick the Right Temperature", description: "If the station offers chilled water, choose it! People naturally drink more when water is cold and refreshing." },
+    { title: "Weekly Soap and Water Wash", description: "Once a week, use dish soap and a bottle brush to scrub the inside walls, bottom, and especially the neck and threads where germs hide." },
+    { title: "The Sanitizing Soak", description: "For a deep clean, fill your bottle with a mix of equal parts white vinegar and water and let it sit for 30 minutes. Rinse thoroughly afterward." },
+    { title: "⭐ Hydration Tip", description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!" }
 ];
 
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
@@ -63,6 +56,13 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
+    const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
+
+    useEffect(() => {
+        const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+        const tipIndex = dayOfYear % tips.length;
+        setDailyTip(tips[tipIndex]);
+    }, []);
 
     useEffect(() => {
         if (initialUserName) {
@@ -352,16 +352,18 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>How to Get the Cleanest, Safest Water Refill</CardTitle>
-                         <CardDescription>Your refill station handles the purification, but your bottle is the key to safety and hydration! Follow these easy steps every time you refill.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                           <Lightbulb className="h-5 w-5 text-yellow-400" /> Tip of the Day
+                        </CardTitle>
+                         <CardDescription>A daily tip to keep your water safe and refreshing.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                       {tips.map((tip, index) => (
-                           <div key={index}>
-                               <h4 className="font-semibold">{tip.title}</h4>
-                               <p className="text-sm text-muted-foreground whitespace-pre-line">{tip.description}</p>
-                           </div>
-                       ))}
+                    <CardContent className="space-y-2">
+                       {dailyTip && (
+                           <>
+                               <h4 className="font-semibold">{dailyTip.title}</h4>
+                               <p className="text-sm text-muted-foreground">{dailyTip.description}</p>
+                           </>
+                       )}
                     </CardContent>
                 </Card>
             </div>
