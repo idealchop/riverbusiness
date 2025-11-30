@@ -12,7 +12,7 @@ export function WaterIndicator({ percentage, className }: WaterIndicatorProps) {
 
   return (
     <div
-      className={cn("relative mt-auto h-24 w-full overflow-hidden bg-primary/10", className)}
+      className={cn("relative h-24 w-full overflow-hidden bg-primary/10", className)}
     >
       <div
         className="absolute bottom-0 left-0 w-full"
