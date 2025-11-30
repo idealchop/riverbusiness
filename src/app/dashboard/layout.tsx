@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +73,7 @@ export default function DashboardLayout({
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>(initialPaymentHistory);
   const [editableFormData, setEditableFormData] = useState<OnboardingData['formData'] | null>(null);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bank-qr-payment');
@@ -80,6 +81,7 @@ export default function DashboardLayout({
   const cardPayment = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
   const [isProofUploadDialogOpen, setIsProofUploadDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [selectedInvoiceForProof, setSelectedInvoiceForProof] = useState<Payment | null>(null);
   const [selectedPaymentQr, setSelectedPaymentQr] = useState<ImagePlaceholder | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -150,6 +152,7 @@ export default function DashboardLayout({
         localStorage.setItem('onboardingData', JSON.stringify(updatedData));
         setOnboardingData(updatedData);
         setUserName(editableFormData.fullName);
+        setIsEditingDetails(false);
         toast({
             title: "Account Updated",
             description: "Your account information has been saved.",
@@ -157,11 +160,19 @@ export default function DashboardLayout({
     }
   };
 
+  const handleCancelEdit = () => {
+    if (onboardingData) {
+        setEditableFormData(onboardingData.formData);
+    }
+    setIsEditingDetails(false);
+  }
+
   const handlePasswordChange = () => {
     toast({
         title: "Password Changed",
         description: "Your password has been updated successfully.",
     });
+    setIsPasswordDialogOpen(false);
   }
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
@@ -335,11 +346,14 @@ export default function DashboardLayout({
                     {editableFormData ? (
                         <div className="space-y-6">
                             <div>
-                                <h4 className="font-semibold mb-4">Your Details</h4>
+                                <div className="flex justify-between items-center mb-4">
+                                  <h4 className="font-semibold">Your Details</h4>
+                                   {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                                     <div className="space-y-1">
                                         <Label htmlFor="fullName">Full Name</Label>
-                                        <Input id="fullName" name="fullName" value={editableFormData.fullName} onChange={handleAccountInfoChange} />
+                                        <Input id="fullName" name="fullName" value={editableFormData.fullName} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
                                      <div className="space-y-1">
                                         <Label htmlFor="clientId">Client ID</Label>
@@ -347,50 +361,32 @@ export default function DashboardLayout({
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="email">Email Address</Label>
-                                        <Input id="email" name="email" type="email" value={editableFormData.email} onChange={handleAccountInfoChange} />
+                                        <Input id="email" name="email" type="email" value={editableFormData.email} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="businessName">Business Name</Label>
-                                        <Input id="businessName" name="businessName" value={editableFormData.businessName} onChange={handleAccountInfoChange} />
+                                        <Input id="businessName" name="businessName" value={editableFormData.businessName} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
                                     <div className="space-y-1 md:col-span-2">
                                         <Label htmlFor="address">Address</Label>
-                                        <Input id="address" name="address" value={editableFormData.address} onChange={handleAccountInfoChange} />
+                                        <Input id="address" name="address" value={editableFormData.address} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="contactNumber">Contact Number</Label>
-                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber} onChange={handleAccountInfoChange} />
+                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                     </div>
                                 </div>
-                                <Button className="mt-4" onClick={handleSaveChanges}>Save Changes</Button>
+                                {isEditingDetails && (
+                                    <div className="flex justify-end gap-2 mt-4">
+                                        <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                                        <Button onClick={handleSaveChanges}>Save Changes</Button>
+                                    </div>
+                                )}
                             </div>
                             <Separator />
-                             <div>
-                                <h4 className="font-semibold mb-4">Update Password</h4>
-                                <div className="space-y-4">
-                                    <div className="space-y-1 relative">
-                                        <Label htmlFor="current-password">Current Password</Label>
-                                        <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
-                                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                     <div className="space-y-1 relative">
-                                        <Label htmlFor="new-password">New Password</Label>
-                                        <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
-                                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
-                                            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                     <div className="space-y-1 relative">
-                                        <Label htmlFor="confirm-password">Confirm New Password</Label>
-                                        <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
-                                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <Button className="mt-4" onClick={handlePasswordChange}>Change Password</Button>
+                            <div>
+                                <h4 className="font-semibold mb-4">Security</h4>
+                                <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
                             </div>
                         </div>
                     ) : <p>No account information available. Please complete onboarding.</p>}
@@ -570,6 +566,43 @@ export default function DashboardLayout({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Password</DialogTitle>
+                        <DialogDescription>
+                           Enter your current and new password to update.
+                        </DialogDescription>
+                    </DialogHeader>
+                     <div className="space-y-4 py-4">
+                        <div className="space-y-1 relative">
+                            <Label htmlFor="current-password">Current Password</Label>
+                            <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
+                            <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                            <div className="space-y-1 relative">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
+                            <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
+                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                            <div className="space-y-1 relative">
+                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
+                            <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handlePasswordChange}>Change Password</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
@@ -580,3 +613,6 @@ export default function DashboardLayout({
   );
 }
 
+
+
+    
