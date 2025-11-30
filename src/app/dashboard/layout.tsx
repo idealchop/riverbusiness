@@ -178,7 +178,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const storedOnboardingData = localStorage.getItem('onboardingData');
     if (storedOnboardingData) {
-      const data = JSON.parse(storedOnboardingData);
+      const data: OnboardingData = JSON.parse(storedOnboardingData);
       setOnboardingData(data);
       setEditableFormData(data.formData);
       if (data.formData && data.formData.fullName) {
@@ -186,26 +186,36 @@ export default function DashboardLayout({
       }
       
       setPaymentHistory(prevHistory => {
-          const updatedHistory = prevHistory.map(invoice => 
-              invoice.status === 'Upcoming' 
-                  ? { ...invoice, amount: data.plan.price || invoice.amount }
-                  : invoice
-          );
+        let currentHistory = [...prevHistory];
+        
+        const hasUpcomingInvoice = currentHistory.some(inv => inv.status === 'Upcoming');
 
-          const hasUpcomingInvoice = updatedHistory.some(inv => inv.status === 'Upcoming');
+        if (!hasUpcomingInvoice && data.plan && data.plan.price > 0) {
+            const now = new Date();
+            const lastInvoice = currentHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+            
+            let shouldCreate = true;
+            if (lastInvoice) {
+                const lastInvoiceDate = new Date(lastInvoice.date);
+                // Don't create if an invoice for the current month already exists (paid or otherwise)
+                if (lastInvoiceDate.getFullYear() === now.getFullYear() && lastInvoiceDate.getMonth() === now.getMonth()) {
+                    shouldCreate = false;
+                }
+            }
 
-          if (!hasUpcomingInvoice && data.plan && data.plan.price > 0) {
-              const newUpcomingInvoice: Payment = {
-                  id: `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}`,
-                  date: new Date().toISOString(),
-                  description: `Bill for ${format(new Date(), 'MMMM yyyy')}`,
-                  amount: data.plan.price,
-                  status: 'Upcoming',
-              };
-              return [...updatedHistory, newUpcomingInvoice];
-          }
-          
-          return updatedHistory;
+            if (shouldCreate) {
+                const newUpcomingInvoice: Payment = {
+                    id: `INV-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}`,
+                    date: now.toISOString(),
+                    description: `Bill for ${format(now, 'MMMM yyyy')}`,
+                    amount: data.plan.price,
+                    status: 'Upcoming',
+                };
+                currentHistory = [...currentHistory, newUpcomingInvoice];
+            }
+        }
+        
+        return currentHistory;
       });
     }
   }, []);
@@ -893,6 +903,7 @@ export default function DashboardLayout({
 
 
     
+
 
 
 

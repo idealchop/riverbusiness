@@ -71,6 +71,4 @@ export const feedbackLogs: Feedback[] = [
 ];
 
 
-export const paymentHistory: Payment[] = [
-    { id: 'INV-08-2024', date: '2024-08-15', description: 'August 2024 Invoice', amount: 0, status: 'Upcoming' },
-];
+export const paymentHistory: Payment[] = [];
