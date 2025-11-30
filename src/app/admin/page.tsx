@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -50,6 +50,13 @@ export default function AdminPage() {
     const [greeting, setGreeting] = useState('');
     const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
     const { toast } = useToast();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredUsers = appUsers.filter(user => 
+        user.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     
     useEffect(() => {
         const storedRequests = localStorage.getItem('invoiceRequests');
@@ -104,7 +111,19 @@ export default function AdminPage() {
 
   return (
     <div className="flex flex-col gap-6 font-sans">
-        <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
+        <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by ID, name, or email..."
+                  className="w-full appearance-none bg-background pl-8 shadow-none md:w-64 lg:w-96"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
@@ -250,7 +269,7 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {appUsers.map((user) => (
+                                    {filteredUsers.map((user) => (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.name}</TableCell>
@@ -292,6 +311,11 @@ export default function AdminPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+                                    {filteredUsers.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center">No users found.</TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                          </div>
