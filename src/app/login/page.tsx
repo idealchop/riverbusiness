@@ -92,7 +92,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full lg:grid h-screen overflow-hidden lg:grid-cols-2">
+    <div className="w-full lg:grid h-screen lg:grid-cols-2">
       <div className="flex items-center justify-center py-12">
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center justify-center">
@@ -136,7 +136,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <div className="hidden bg-muted lg:block">
+      <div className="hidden bg-muted lg:block overflow-hidden">
         <Image
           src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FSales_Mats_v3.png?alt=media&token=5e2fc62e-0082-4c37-9078-e1cf5e188635"
           alt="River Business Marketing Material"
