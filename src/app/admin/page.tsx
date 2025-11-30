@@ -78,7 +78,6 @@ export default function AdminPage() {
     const [userForHistory, setUserForHistory] = useState<AppUser | null>(null);
     const [activeTab, setActiveTab] = useState('user-management');
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
-    const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
     const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
     const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
@@ -132,13 +131,6 @@ export default function AdminPage() {
             setInvoiceRequests(JSON.parse(storedRequests));
         }
 
-        const storedFeedback = localStorage.getItem('feedbackLogs');
-        if (storedFeedback) {
-            setFeedbackLogs(JSON.parse(storedFeedback));
-        } else {
-            localStorage.setItem('feedbackLogs', JSON.stringify(initialFeedbackLogs));
-        }
-        
         const storedWaterStations = localStorage.getItem('waterStations');
         if (storedWaterStations) {
             setWaterStations(JSON.parse(storedWaterStations));
@@ -261,7 +253,7 @@ export default function AdminPage() {
     const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
         if (!selectedUser) return;
 
-        const amount = adjustmentType === 'deduct' ? values.amount : -values.amount;
+        const amount = adjustmentType === 'deduct' ? -values.amount : values.amount;
 
         const updatedUsers = appUsers.map(user => 
             user.id === selectedUser.id 
@@ -272,8 +264,8 @@ export default function AdminPage() {
         localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
         
         toast({
-            title: `Consumption ${adjustmentType === 'deduct' ? 'Deducted' : 'Added'}`,
-            description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'deduct' ? 'deducted from' : 'added to'} ${selectedUser.name}'s balance.`
+            title: `Consumption ${adjustmentType === 'add' ? 'Added' : 'Deducted'}`,
+            description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
         });
         
         setIsAdjustConsumptionOpen(false);
@@ -284,7 +276,7 @@ export default function AdminPage() {
         const litersToDeduct = gallons * 3.785;
         const updatedUsers = appUsers.map(user => 
             user.id === userId
-            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + litersToDeduct }
+            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters - litersToDeduct }
             : user
         );
         setAppUsers(updatedUsers);
@@ -294,14 +286,6 @@ export default function AdminPage() {
             title: "Consumption Deducted",
             description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters deducted from user's balance based on delivery.`
         })
-    };
-
-    const handleToggleFeedbackRead = (feedbackId: string) => {
-        const updatedFeedback = feedbackLogs.map(fb => 
-            fb.id === feedbackId ? { ...fb, read: !fb.read } : fb
-        );
-        setFeedbackLogs(updatedFeedback);
-        localStorage.setItem('feedbackLogs', JSON.stringify(updatedFeedback));
     };
 
     const handleAttachPermit = () => {
@@ -345,8 +329,7 @@ export default function AdminPage() {
 
     const totalUsers = appUsers.length;
     const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
-    const unreadFeedback = feedbackLogs.filter(fb => !fb.read).length;
-
+    
     const filteredUsers = appUsers.filter(user => {
         if (userFilter === 'all') return true;
         if (userFilter === 'active') return user.accountStatus === 'Active';
@@ -394,17 +377,14 @@ export default function AdminPage() {
     });
 
     const handleDownloadDeliveries = () => {
-        const headers = ["ID", "Date", "Volume (Liters)", "Bottles", "Status", "Proof of Delivery URL"];
+        const headers = ["ID", "Date", "Volume (Gallons)", "Status", "Proof of Delivery URL"];
         const csvRows = [headers.join(',')];
 
         filteredDeliveries.forEach(delivery => {
-            const liters = delivery.volumeGallons * 3.785;
-            const bottles = Math.round(liters / 19);
             const row = [
                 delivery.id,
                 format(new Date(delivery.date), 'PP'),
-                liters.toFixed(2),
-                bottles,
+                delivery.volumeGallons,
                 delivery.status,
                 delivery.proofOfDeliveryUrl || "N/A"
             ].join(',');
@@ -786,7 +766,7 @@ export default function AdminPage() {
                             <Table className="min-w-full">
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ID</TableHead>
+                                        <TableHead>User ID</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Assigned Station</TableHead>
@@ -1016,6 +996,8 @@ export default function AdminPage() {
   );
 }
 
+
+    
 
     
 
