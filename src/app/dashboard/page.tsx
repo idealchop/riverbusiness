@@ -3,21 +3,19 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { consumptionData } from '@/lib/data';
 import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Delivery, WaterStation, ComplianceReport, SanitationVisit, AppUser } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import Image from 'next/image';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
@@ -83,7 +81,19 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
         else setGreeting('Good evening');
     }, []);
 
-    const consumptionChartData = consumptionData.slice(-7).map(d => ({ name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), value: gallonToLiter(d.consumptionGallons) }));
+    const consumptionChartData = React.useMemo(() => {
+        if (!deliveries) return [];
+        const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
+        
+        return last7Days.map(date => {
+            const deliveriesOnDay = deliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
+            const totalGallons = deliveriesOnDay.reduce((sum, d) => sum + d.volumeGallons, 0);
+            return {
+                name: format(date, 'EEE').charAt(0),
+                value: gallonToLiter(totalGallons)
+            };
+        });
+    }, [deliveries]);
     
     const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
     const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
@@ -372,7 +382,7 @@ export default function DashboardPage({ user }: { user?: AppUser | null }) {
                             {perks.map((perk, index) => (
                                 <Card key={index} className="overflow-hidden">
                                     <div className="relative h-40 w-full">
-                                        <Image src={perk.image} alt={perk.brand} layout="fill" objectFit="cover" />
+                                        <Image src={perk.image} alt={perk.brand} fill objectFit="cover" />
                                     </div>
                                     <CardHeader>
                                         <CardTitle>{perk.brand}</CardTitle>

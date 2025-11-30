@@ -1,26 +1,51 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { complianceReports as initialComplianceReports, sanitationVisits as initialSanitationVisits } from '@/lib/data';
 import { FileText, Eye } from 'lucide-react';
-import type { ComplianceReport, SanitationVisit } from '@/lib/types';
+import type { ComplianceReport, SanitationVisit, AppUser } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
-export default function QualityPage() {
-  const [complianceReports, setComplianceReports] = useState<ComplianceReport[]>(initialComplianceReports);
-  const [sanitationVisits, setSanitationVisits] = useState<SanitationVisit[]>(initialSanitationVisits);
+export default function QualityPage({ user }: { user?: AppUser | null }) {
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    const storedComplianceReports = localStorage.getItem('complianceReports');
-    setComplianceReports(storedComplianceReports ? JSON.parse(storedComplianceReports) : initialComplianceReports);
+  const complianceReportsQuery = useMemoFirebase(() => 
+    (firestore && user?.assignedWaterStationId) 
+      ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') 
+      : null, 
+    [firestore, user]
+  );
+  const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
 
-    const storedSanitationVisits = localStorage.getItem('sanitationVisits');
-    setSanitationVisits(storedSanitationVisits ? JSON.parse(storedSanitationVisits) : initialSanitationVisits);
-  }, []);
+  const sanitationVisitsQuery = useMemoFirebase(() => 
+    (firestore && user?.assignedWaterStationId) 
+      ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'sanitationVisits') 
+      : null, 
+    [firestore, user]
+  );
+  const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+
+  if (!user?.assignedWaterStationId) {
+    return (
+        <Card className="mt-4">
+            <CardHeader>
+                <CardTitle>No Water Station Assigned</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground">Please contact your administrator to have a water station assigned to your account to view quality reports.</p>
+            </CardContent>
+        </Card>
+    )
+  }
+  
+  if (complianceLoading || sanitationLoading) {
+      return <div>Loading quality reports...</div>
+  }
 
   return (
     <Tabs defaultValue="compliance" className="flex flex-col gap-4">
@@ -46,7 +71,7 @@ export default function QualityPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {complianceReports.map((report) => (
+                {complianceReports?.map((report) => (
                   <TableRow key={report.id}>
                     <TableCell className="font-medium">{report.id}</TableCell>
                     <TableCell>{new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
@@ -70,6 +95,11 @@ export default function QualityPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                 {(!complianceReports || complianceReports.length === 0) && (
+                    <TableRow>
+                        <TableCell colSpan={4} className="text-center">No compliance reports found for your assigned station.</TableCell>
+                    </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -94,7 +124,7 @@ export default function QualityPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sanitationVisits.map((visit) => (
+                {sanitationVisits?.map((visit) => (
                   <TableRow key={visit.id}>
                     <TableCell className="font-medium">{visit.id}</TableCell>
                     <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
@@ -123,6 +153,11 @@ export default function QualityPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                 {(!sanitationVisits || sanitationVisits.length === 0) && (
+                    <TableRow>
+                        <TableCell colSpan={5} className="text-center">No sanitation visit records found for your assigned station.</TableCell>
+                    </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

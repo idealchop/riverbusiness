@@ -1,88 +1,108 @@
 
 'use client'
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { waterStations as initialWaterStations } from '@/lib/data';
 import { FileText, MapPin } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { X } from 'lucide-react';
-import type { WaterStation } from '@/lib/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import type { WaterStation, AppUser } from '@/lib/types';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 
-export default function WaterStationsPage() {
-    const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
+export default function WaterStationsPage({ user }: { user?: AppUser | null }) {
+    const firestore = useFirestore();
+    
+    const stationDocRef = useMemoFirebase(() => 
+        (firestore && user?.assignedWaterStationId) 
+            ? doc(firestore, 'waterStations', user.assignedWaterStationId) 
+            : null, 
+        [firestore, user]
+    );
+    const { data: waterStation, isLoading: stationLoading } = useDoc<WaterStation>(stationDocRef);
+    
+    const allPermits = waterStation?.permits ? Object.entries(waterStation.permits).filter(([_, url]) => url) : [];
 
-    useEffect(() => {
-        const storedWaterStations = localStorage.getItem('waterStations');
-        if (storedWaterStations) {
-            setWaterStations(JSON.parse(storedWaterStations));
-        }
-    }, []);
+    if (!user?.assignedWaterStationId) {
+        return (
+            <Card className="mt-4">
+                <CardHeader>
+                    <CardTitle>No Water Station Assigned</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground">Please contact your administrator to have a water station assigned to your account to view its details.</p>
+                </CardContent>
+            </Card>
+        )
+    }
 
+    if(stationLoading) return <div>Loading station details...</div>
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Water Stations</DialogTitle>
+        <DialogTitle>My Water Station</DialogTitle>
         <DialogDescription>
-          View the water stations that supply to you and their compliance status.
+          Details and compliance status for your assigned water station.
         </DialogDescription>
       </DialogHeader>
       <div className="py-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Station Name</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead className="text-right">Compliance Permit</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {waterStations.map((station) => (
-              <TableRow key={station.id}>
-                <TableCell className="font-medium">{station.name}</TableCell>
-                <TableCell className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  {station.location}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <FileText className="mr-2 h-4 w-4" />
-                        View Permit
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Compliance Permit: {station.name}</DialogTitle>
-                            <DialogDescription>
-                                Permit ID: {station.id}-PERMIT
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 text-center min-h-[400px]">
-                          {station.permitUrl && station.permitUrl !== '#' ? (
-                            <iframe src={station.permitUrl} className="w-full h-96 mt-4 border rounded-md" title={`Permit for ${station.name}`} />
-                          ) : (
-                            <div className="w-full h-96 mt-4 border rounded-md bg-background flex items-center justify-center">
-                              {/* This area is intentionally blank unless a permit is attached */}
-                            </div>
-                          )}
-                        </div>
-                    </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {waterStation ? (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Station Name</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="text-right">Compliance Permits</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow key={waterStation.id}>
+                        <TableCell className="font-medium">{waterStation.name}</TableCell>
+                        <TableCell className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        {waterStation.location}
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <Dialog>
+                            <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Permits ({allPermits.length})
+                            </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Compliance Permits: {waterStation.name}</DialogTitle>
+                                    <DialogDescription>
+                                        Permit ID: {waterStation.id}-PERMITS
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                                  {allPermits.length > 0 ? (
+                                    allPermits.map(([permitName, permitUrl]) => (
+                                      <div key={permitName} className="flex items-center justify-between border p-3 rounded-md">
+                                          <span className="text-sm font-medium capitalize">{permitName.replace(/([A-Z])/g, ' $1').replace('Url', '')}</span>
+                                          <Button asChild variant="link">
+                                            <a href={permitUrl as string} target="_blank" rel="noopener noreferrer">View Document</a>
+                                          </Button>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-center text-muted-foreground">No permits have been uploaded for this station.</p>
+                                  )}
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        ) : (
+             <p className="text-center text-muted-foreground py-8">Your assigned water station could not be found.</p>
+        )}
       </div>
     </>
   );
 }
-
-
-    

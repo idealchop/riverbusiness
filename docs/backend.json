@@ -79,6 +79,31 @@
         "proofOfPaymentUrl": { "type": "string", "format": "uri" }
       },
       "required": ["id", "date", "description", "amount", "status"]
+    },
+    "ComplianceReport": {
+      "title": "ComplianceReport",
+      "type": "object",
+      "description": "Represents a water quality compliance report.",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Compliant", "Non-compliant", "Pending Review"] },
+        "reportUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["id", "date", "status", "reportUrl"]
+    },
+    "SanitationVisit": {
+      "title": "SanitationVisit",
+      "type": "object",
+      "description": "Represents a sanitation visit record.",
+      "properties": {
+        "id": { "type": "string" },
+        "scheduledDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
+        "assignedTo": { "type": "string" },
+        "reportUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["id", "scheduledDate", "status"]
     }
   },
   "auth": {
@@ -100,6 +125,14 @@
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
+    },
+    "/waterStations/{stationId}/complianceReports/{reportId}": {
+      "schema": { "$ref": "#/entities/ComplianceReport" },
+      "description": "Subcollection for a station's compliance reports."
+    },
+    "/waterStations/{stationId}/sanitationVisits/{visitId}": {
+      "schema": { "$ref": "#/entities/SanitationVisit" },
+      "description": "Subcollection for a station's sanitation visits."
     }
   }
 }
