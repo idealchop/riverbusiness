@@ -33,8 +33,22 @@ const goals = [
 ];
 
 const tips = [
-    { title: "Take Shorter Showers", description: "Each minute you cut from your shower time can save up to 2.5 gallons of water." },
-    { title: "Turn Off the Tap", description: "Don't let water run while brushing your teeth or washing your hands. You can save up to 4 gallons per minute." },
+    { 
+        title: "Your Daily Routine: Before You Go", 
+        description: "1. Give Your Bottle a Sniff Test to check for cleanliness. If it smells off, it needs a proper wash.\n2. Empty Out Old Water to not mix old water with the fresh refill.\n3. Check the Cap and Spout to ensure the part that touches your mouth is clean."
+    },
+    { 
+        title: "At the Refill Station", 
+        description: "4. Look for Clean Signs to check the station's hygiene.\n5. Stop the Touch: Prevent germs by not letting the nozzle touch your bottle.\n6. Pick the Right Temperature. Cold water encourages more hydration!"
+    },
+    {
+        title: "Your Weekly Routine: Deep Cleaning",
+        description: "7. Use Soap and Water to scrub the inside walls, bottom, and neck threads.\n8. The Sanitizing Soak: Use a bleach or vinegar solution to kill bacteria, then rinse thoroughly."
+    },
+    {
+        title: "⭐ Hydration Tip",
+        description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!"
+    }
 ];
 
 export default function DashboardPage({ userName: initialUserName }: { userName?: string }) {
@@ -338,13 +352,14 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Water Saving Tips</CardTitle>
+                        <CardTitle>How to Get the Cleanest, Safest Water Refill</CardTitle>
+                         <CardDescription>Your refill station handles the purification, but your bottle is the key to safety and hydration! Follow these easy steps every time you refill.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                        {tips.map((tip, index) => (
                            <div key={index}>
                                <h4 className="font-semibold">{tip.title}</h4>
-                               <p className="text-sm text-muted-foreground">{tip.description}</p>
+                               <p className="text-sm text-muted-foreground whitespace-pre-line">{tip.description}</p>
                            </div>
                        ))}
                     </CardContent>
@@ -353,4 +368,5 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
         </div>
     </div>
     );
-}
+
+    
