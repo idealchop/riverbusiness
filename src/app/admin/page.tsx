@@ -9,7 +9,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries as initialDeliveries, waterStations as initialWaterStations } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -52,15 +52,15 @@ interface InvoiceRequest {
   status: 'Pending' | 'Sent';
 }
 
-const deductSchema = z.object({
-    amount: z.coerce.number().positive('Deduction amount must be positive'),
+const adjustConsumptionSchema = z.object({
+    amount: z.coerce.number().min(0, 'Amount must be a positive number'),
 });
-type DeductFormValues = z.infer<typeof deductSchema>;
+type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
 
 export default function AdminPage() {
-    const [appUsers, setAppUsers] = useState(initialAppUsers);
-    const [deliveries, setDeliveries] = useState(initialDeliveries);
+    const [appUsers, setAppUsers] = useState<AppUser[]>([]);
+    const [deliveries, setDeliveries] = useState<Delivery[]>([]);
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
@@ -75,7 +75,8 @@ export default function AdminPage() {
     const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
     const [waterStations, setWaterStations] = useState<WaterStation[]>(initialWaterStations);
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
-    const [isDeductDialogOpen, setIsDeductDialogOpen] = useState(false);
+    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
+    const [adjustmentType, setAdjustmentType] = useState<'add' | 'deduct'>('deduct');
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
@@ -95,6 +96,28 @@ export default function AdminPage() {
 
 
     useEffect(() => {
+        const storedUsers = localStorage.getItem('appUsers');
+        const users = storedUsers ? JSON.parse(storedUsers) : initialAppUsers;
+
+        const onboardingDataString = localStorage.getItem('onboardingData');
+        if (onboardingDataString) {
+            const onboardingData = JSON.parse(onboardingDataString);
+            const userExists = users.some((u: AppUser) => u.id === onboardingData.formData.clientId);
+
+            if (!userExists) {
+                const newUserFromOnboarding: AppUser = {
+                    id: onboardingData.formData.clientId,
+                    name: onboardingData.formData.fullName,
+                    totalConsumptionLiters: 0,
+                    accountStatus: 'Active',
+                    lastLogin: new Date().toISOString(),
+                    role: 'User'
+                };
+                users.push(newUserFromOnboarding);
+            }
+        }
+        setAppUsers(users);
+
         const storedRequests = localStorage.getItem('invoiceRequests');
         if (storedRequests) {
             setInvoiceRequests(JSON.parse(storedRequests));
@@ -143,8 +166,8 @@ export default function AdminPage() {
         },
     });
 
-    const deductForm = useForm<DeductFormValues>({
-        resolver: zodResolver(deductSchema),
+    const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
+        resolver: zodResolver(adjustConsumptionSchema),
         defaultValues: {
             amount: 0,
         },
@@ -182,24 +205,26 @@ export default function AdminPage() {
         });
     };
 
-    const handleDeductConsumption = (values: DeductFormValues) => {
+    const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
         if (!selectedUser) return;
+
+        const amount = adjustmentType === 'deduct' ? values.amount : -values.amount;
 
         const updatedUsers = appUsers.map(user => 
             user.id === selectedUser.id 
-            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + values.amount } 
+            ? { ...user, totalConsumptionLiters: user.totalConsumptionLiters + amount } 
             : user
         );
         setAppUsers(updatedUsers);
         localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
         
         toast({
-            title: 'Consumption Deducted',
-            description: `${values.amount.toLocaleString()} liters deducted from ${selectedUser.name}'s balance.`
+            title: `Consumption ${adjustmentType === 'deduct' ? 'Deducted' : 'Added'}`,
+            description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'deduct' ? 'deducted from' : 'added to'} ${selectedUser.name}'s balance.`
         });
         
-        setIsDeductDialogOpen(false);
-        deductForm.reset();
+        setIsAdjustConsumptionOpen(false);
+        adjustConsumptionForm.reset();
     };
 
     const handleDeductFromDelivery = (userId: string, gallons: number) => {
@@ -542,15 +567,15 @@ export default function AdminPage() {
         </Dialog>
 
 
-        <Dialog open={isDeductDialogOpen} onOpenChange={setIsDeductDialogOpen}>
+        <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Deduct Consumption</DialogTitle>
+                    <DialogTitle>{adjustmentType === 'deduct' ? 'Deduct' : 'Add'} Consumption</DialogTitle>
                     <DialogDescription>
-                        Manually deduct water consumption for {selectedUser?.name}.
+                        Manually {adjustmentType} water consumption for {selectedUser?.name}.
                     </DialogDescription>
                 </DialogHeader>
-                 {latestUserDelivery && (
+                 {latestUserDelivery && adjustmentType === 'deduct' && (
                     <div className="rounded-md border bg-muted/50 p-3 text-sm my-4">
                         <h4 className="font-semibold flex items-center gap-2 mb-2"><Info className="h-4 w-4"/>Last Delivery Info</h4>
                         <p><strong>Date:</strong> {format(new Date(latestUserDelivery.date), 'PP')}</p>
@@ -560,20 +585,20 @@ export default function AdminPage() {
                             size="sm"
                             variant="link"
                             className="p-0 h-auto"
-                            onClick={() => deductForm.setValue('amount', latestUserDelivery.volumeGallons * 3.785)}
+                            onClick={() => adjustConsumptionForm.setValue('amount', latestUserDelivery.volumeGallons * 3.785)}
                         >
                             Use this amount
                         </Button>
                     </div>
                 )}
-                <Form {...deductForm}>
-                    <form onSubmit={deductForm.handleSubmit(handleDeductConsumption)} className="space-y-4">
+                <Form {...adjustConsumptionForm}>
+                    <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4">
                         <FormField
-                            control={deductForm.control}
+                            control={adjustConsumptionForm.control}
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Liters to Deduct</FormLabel>
+                                    <FormLabel>Liters to {adjustmentType}</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="e.g., 100" {...field} />
                                     </FormControl>
@@ -583,7 +608,7 @@ export default function AdminPage() {
                         />
                         <DialogFooter>
                             <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                            <Button type="submit">Deduct</Button>
+                            <Button type="submit">{adjustmentType === 'deduct' ? 'Deduct' : 'Add'}</Button>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -766,7 +791,11 @@ export default function AdminPage() {
                                                             <UserCog className="mr-2 h-4 w-4" />
                                                             View Details
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsDeductDialogOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                                            Add Consumption
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>
@@ -990,3 +1019,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
