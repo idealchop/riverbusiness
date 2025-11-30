@@ -151,7 +151,7 @@ export default function DashboardLayout({
   
       const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
       
-      const paymentData: Partial<Payment> = {
+      const paymentData: Payment = {
         id: selectedInvoice.id,
         date: selectedInvoice.date,
         description: selectedInvoice.description,
