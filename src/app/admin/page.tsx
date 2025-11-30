@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries, waterStations as initialWaterStations } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -261,6 +261,7 @@ export default function AdminPage() {
     
     const userDeliveries = userForHistory ? deliveries.filter(d => d.userId === userForHistory.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
 
+    const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
 
   return (
     <div className="flex flex-col gap-6 font-sans">
@@ -380,6 +381,22 @@ export default function AdminPage() {
                         Manually deduct water consumption for {selectedUser?.name}.
                     </DialogDescription>
                 </DialogHeader>
+                 {latestUserDelivery && (
+                    <div className="rounded-md border bg-muted/50 p-3 text-sm my-4">
+                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Info className="h-4 w-4"/>Last Delivery Info</h4>
+                        <p><strong>Date:</strong> {format(new Date(latestUserDelivery.date), 'PP')}</p>
+                        <p><strong>Volume:</strong> {latestUserDelivery.volumeGallons} gallons ({latestUserDelivery.volumeGallons * 19} liters)</p>
+                        <p><strong>Status:</strong> {latestUserDelivery.status}</p>
+                         <Button
+                            size="sm"
+                            variant="link"
+                            className="p-0 h-auto"
+                            onClick={() => deductForm.setValue('amount', latestUserDelivery.volumeGallons * 19)}
+                        >
+                            Use this amount
+                        </Button>
+                    </div>
+                )}
                 <Form {...deductForm}>
                     <form onSubmit={deductForm.handleSubmit(handleDeductConsumption)} className="space-y-4">
                         <FormField
@@ -804,5 +821,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
