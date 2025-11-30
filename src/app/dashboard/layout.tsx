@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { Chatbot } from '@/components/chatbot';
 
 export default function DashboardLayout({
   children,
@@ -90,36 +91,41 @@ export default function DashboardLayout({
                 <LifeBuoy className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Contact Support</DialogTitle>
                     <DialogDescription>
-                    Reach out to us through any of the channels below.
+                    Get immediate help from our AI assistant or reach out to us through any of the channels below.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="flex items-center gap-4 rounded-md border p-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                      <Phone className="h-6 w-6" />
+                <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 rounded-md border p-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                          <Phone className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">Phone Support</p>
+                          <a href="tel:1-800-555-1234" className="text-sm text-muted-foreground hover:text-primary">1-800-555-1234</a>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 rounded-md border p-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                          <Mail className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">Email Support</p>
+                          <a href="mailto:support@riverbusiness.com" className="text-sm text-muted-foreground hover:text-primary">support@riverbusiness.com</a>
+                        </div>
+                      </div>
+                      <Separator className="my-4" />
+                      <div className="text-sm text-foreground pt-4 font-bold">
+                        Our team will reach out to you as soon as possible. Thank you!
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">Phone Support</p>
-                      <a href="tel:1-800-555-1234" className="text-sm text-muted-foreground hover:text-primary">1-800-555-1234</a>
+                    <div className="flex flex-col h-full">
+                         <Chatbot />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 rounded-md border p-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                      <Mail className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">Email Support</p>
-                      <a href="mailto:support@riverbusiness.com" className="text-sm text-muted-foreground hover:text-primary">support@riverbusiness.com</a>
-                    </div>
-                  </div>
-                  <Separator className="my-4" />
-                  <div className="text-sm text-foreground pt-4 font-bold">
-                    Will reach out to you as soon as possible. Thank you!
-                  </div>
                 </div>
               </DialogContent>
           </Dialog>
