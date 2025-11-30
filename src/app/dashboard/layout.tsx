@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -68,7 +69,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="icon">
+      <Sidebar collapsible="icon" variant="inset">
         <AppSidebar />
       </Sidebar>
       <SidebarInset>

@@ -82,7 +82,7 @@ export default function AdminLayout({
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <Sidebar collapsible="icon">
+      <Sidebar collapsible="icon" variant="inset">
         <AdminSidebar />
       </Sidebar>
       <SidebarInset>
