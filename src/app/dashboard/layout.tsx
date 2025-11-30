@@ -78,6 +78,9 @@ export default function DashboardLayout({
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
+  const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
+  const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
+  
   const deliveriesQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'deliveries') : null, [firestore, authUser]);
   const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
 
@@ -722,7 +725,7 @@ export default function DashboardLayout({
             <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Rate Your Water Station</DialogTitle>
+                        <DialogTitle>Rate {waterStation ? waterStation.name : 'Your Water Station'}</DialogTitle>
                         <DialogDescription>
                             We value your opinion. Let us know how we can improve our service.
                         </DialogDescription>
