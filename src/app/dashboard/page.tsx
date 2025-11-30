@@ -383,18 +383,18 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                     </div>
                 </CardContent>
             </Card>
-            <Card className="bg-primary text-primary-foreground">
+            <Card>
                 <CardHeader>
-                    <CardTitle className="flex justify-between items-center text-sm font-medium text-primary-foreground/80">
+                    <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Remaining Liters
-                         <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-white/20 hover:text-primary-foreground">
+                         <Button variant="ghost" size="icon" className="h-8 w-8">
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
-                     <div className="flex items-center text-xs text-primary-foreground/80 mt-1">
+                     <div className="flex items-center text-xs text-muted-foreground mt-1">
                         <ArrowDown className="h-3 w-3 mr-1" />
                         <span>10% from last month</span>
                     </div>
@@ -557,4 +557,5 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     
 
     
+
 
