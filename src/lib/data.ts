@@ -40,9 +40,9 @@ export const sanitationVisits: SanitationVisit[] = [
 ];
 
 export const waterStations: WaterStation[] = [
-    { id: 'WS-001', name: 'Aqua Pure Fill', location: '123 Main St, Anytown', permitUrl: '#' },
-    { id: 'WS-002', name: 'Crystal Clear Water', location: '456 Oak Ave, Anytown', permitUrl: '#' },
-    { id: 'WS-003', name: 'H2Oasis', location: '789 Pine Ln, Anytown', permitUrl: '#' },
+    { id: 'WS-001', name: 'Aqua Pure Fill', location: '123 Main St, Anytown', permits: {} },
+    { id: 'WS-002', name: 'Crystal Clear Water', location: '456 Oak Ave, Anytown', permits: {} },
+    { id: 'WS-003', name: 'H2Oasis', location: '789 Pine Ln, Anytown', permits: {} },
 ];
 
 export const appUsers: AppUser[] = [

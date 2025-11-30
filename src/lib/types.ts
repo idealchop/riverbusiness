@@ -1,3 +1,4 @@
+
 export interface ConsumptionRecord {
   date: string;
   consumptionGallons: number;
@@ -28,10 +29,19 @@ export interface SanitationVisit {
 }
 
 export interface WaterStation {
-  id: string;
+  id:string;
   name: string;
   location: string;
-  permitUrl: string;
+  permits: {
+      businessPermitUrl?: string;
+      sanitationPermitUrl?: string;
+      engineersReportUrl?: string;
+      waterTestResultsUrl?: string;
+      cprUrl?: string;
+      lguPermitUrl?: string;
+      healthCertsUrl?: string;
+      pestControlContractUrl?: string;
+  };
 }
 
 export type Permission = 

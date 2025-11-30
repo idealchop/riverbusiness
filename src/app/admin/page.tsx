@@ -7,8 +7,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries as initialDeliveries, waterStations as initialWaterStations } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History, Edit, Paperclip, Building, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
+import { appUsers as initialAppUsers, deliveries as initialDeliveries, waterStations as initialWaterStations } from '@/lib/data';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,15 +25,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Feedback, Delivery, WaterStation } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -50,14 +50,6 @@ const newStationSchema = z.object({
 
 type NewStationFormValues = z.infer<typeof newStationSchema>;
 
-interface InvoiceRequest {
-  id: string;
-  userName: string;
-  userId: string;
-  dateRange: string;
-  status: 'Pending' | 'Sent';
-}
-
 const adjustConsumptionSchema = z.object({
     amount: z.coerce.number().min(0, 'Amount must be a positive number'),
 });
@@ -70,7 +62,6 @@ export default function AdminPage() {
     const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
-    const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
     const { toast } = useToast();
     const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
@@ -85,7 +76,7 @@ export default function AdminPage() {
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
-    const [isCreateStationOpen, setIsCreateStationOpen] = useState(false);
+    const [isStationProfileOpen, setIsStationProfileOpen] = useState(false);
     const [isAssignStationOpen, setIsAssignStationOpen] = useState(false);
     const [stationToAssign, setStationToAssign] = useState<string | undefined>();
     
@@ -126,11 +117,6 @@ export default function AdminPage() {
         }
         setAppUsers(users);
 
-        const storedRequests = localStorage.getItem('invoiceRequests');
-        if (storedRequests) {
-            setInvoiceRequests(JSON.parse(storedRequests));
-        }
-
         const storedWaterStations = localStorage.getItem('waterStations');
         if (storedWaterStations) {
             setWaterStations(JSON.parse(storedWaterStations));
@@ -169,11 +155,21 @@ export default function AdminPage() {
     
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
-        defaultValues: {
-            name: '',
-            location: '',
-        },
+        defaultValues: { name: stationToUpdate?.name || '', location: stationToUpdate?.location || '' },
+        resetOptions: { keepDefaultValues: true },
     });
+
+    useEffect(() => {
+        if (stationToUpdate) {
+            stationForm.reset({
+                name: stationToUpdate.name,
+                location: stationToUpdate.location,
+            });
+        } else {
+            stationForm.reset({ name: '', location: '' });
+        }
+    }, [stationToUpdate, stationForm]);
+
 
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
@@ -201,21 +197,27 @@ export default function AdminPage() {
         });
     };
 
-    const handleCreateStation = (values: NewStationFormValues) => {
-        const newStation: WaterStation = {
-            id: `WS-${String(waterStations.length + 1).padStart(3, '0')}`,
-            ...values,
-            permitUrl: '#',
-        };
-        const updatedStations = [...waterStations, newStation];
+    const handleSaveStation = (values: NewStationFormValues) => {
+        let updatedStations;
+        if (stationToUpdate) { // Editing existing station
+            updatedStations = waterStations.map(station =>
+                station.id === stationToUpdate.id ? { ...station, ...values, permits: stationToUpdate.permits } : station
+            );
+            toast({ title: 'Station Updated', description: `Station ${values.name} has been updated.` });
+        } else { // Creating new station
+            const newStation: WaterStation = {
+                id: `WS-${String(waterStations.length + 1).padStart(3, '0')}`,
+                ...values,
+                permits: {},
+            };
+            updatedStations = [...waterStations, newStation];
+            toast({ title: 'Water Station Created', description: `Station ${newStation.name} has been created.` });
+        }
         setWaterStations(updatedStations);
         localStorage.setItem('waterStations', JSON.stringify(updatedStations));
         stationForm.reset();
-        setIsCreateStationOpen(false);
-        toast({
-            title: 'Water Station Created',
-            description: `Station ${newStation.name} has been created.`,
-        });
+        setStationToUpdate(null);
+        setIsStationProfileOpen(false);
     };
 
     const handleAssignStation = () => {
@@ -239,11 +241,7 @@ export default function AdminPage() {
     
     const handleResetPassword = (userId: string) => {
         const newPassword = Math.random().toString(36).slice(-8);
-        const updatedUsers = appUsers.map(user => 
-            user.id === userId ? { ...user, password: newPassword } : user
-        );
-        setAppUsers(updatedUsers);
-        localStorage.setItem('appUsers', JSON.stringify(updatedUsers));
+        // This is a simulation. In a real app, you wouldn't store plaintext passwords.
         toast({
             title: "Password Reset",
             description: `New password for ${selectedUser?.name} is: ${newPassword}`,
@@ -288,22 +286,30 @@ export default function AdminPage() {
         })
     };
 
-    const handleAttachPermit = () => {
+    const handleAttachPermit = (permitType: keyof WaterStation['permits']) => {
         if (!stationToUpdate) return;
         const samplePermitUrl = 'https://firebasestorage.googleapis.com/v0/b/digital-wallet-napas.appspot.com/o/permit-sample.jpg?alt=media&token=c8b2512a-3636-4c44-884c-354336c9d2f6';
+        
+        const updatedStation = {
+            ...stationToUpdate,
+            permits: {
+                ...stationToUpdate.permits,
+                [permitType]: samplePermitUrl
+            }
+        };
 
         const updatedStations = waterStations.map(station =>
-            station.id === stationToUpdate.id ? { ...station, permitUrl: samplePermitUrl } : station
+            station.id === stationToUpdate.id ? updatedStation : station
         );
 
+        setStationToUpdate(updatedStation); // Keep the dialog updated
         setWaterStations(updatedStations);
         localStorage.setItem('waterStations', JSON.stringify(updatedStations));
 
         toast({
             title: 'Permit Attached',
-            description: `A sample permit has been attached to station ${stationToUpdate.name}.`,
+            description: `A sample permit has been attached to the station.`,
         });
-        setStationToUpdate(null);
     };
 
     const handleUploadProof = () => {
@@ -346,20 +352,6 @@ export default function AdminPage() {
         return deliveries
             .filter(d => d.userId === userId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-    };
-
-    const getStatusInfo = (status: Delivery['status'] | undefined) => {
-        if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
-        switch (status) {
-            case 'Delivered':
-                return { variant: 'default', icon: PackageCheck, label: 'Delivered' };
-            case 'In Transit':
-                return { variant: 'secondary', icon: Truck, label: 'In Transit' };
-            case 'Pending':
-                return { variant: 'outline', icon: Package, label: 'Pending' };
-            default:
-                return { variant: 'outline', icon: null, label: 'No Deliveries' };
-        }
     };
     
     const userDeliveries = userForHistory 
@@ -404,6 +396,18 @@ export default function AdminPage() {
     };
 
     const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
+
+    const permitFields: { key: keyof WaterStation['permits'], label: string }[] = [
+        { key: 'businessPermitUrl', label: 'Business Permit' },
+        { key: 'sanitationPermitUrl', label: 'Sanitary Permit' },
+        { key: 'engineersReportUrl', label: 'Sanitary Plans and Engineer\'s Report' },
+        { key: 'waterTestResultsUrl', label: 'Water Laboratory Testing' },
+        { key: 'cprUrl', label: 'FDA/DOH Certificate of Product Registration (CPR)' },
+        { key: 'lguPermitUrl', label: 'LGU Operational Permit' },
+        { key: 'healthCertsUrl', label: 'Health Certificates for Employees' },
+        { key: 'pestControlContractUrl', label: 'Pest Control Contract' },
+    ];
+
 
   return (
     <div className="flex flex-col gap-6 font-sans">
@@ -452,7 +456,7 @@ export default function AdminPage() {
                          </div>
                          <Separator className="my-4" />
                          <div className="flex flex-col space-y-2">
-                             <Button variant="outline" onClick={() => handleResetPassword(selectedUser.id)}><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
+                             <Button variant="outline" onClick={() => { if(selectedUser) handleResetPassword(selectedUser.id)}}><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
                              <Button variant="destructive" className="mt-4"><Trash2 className="mr-2 h-4 w-4" /> Delete User</Button>
                          </div>
                     </div>
@@ -466,7 +470,7 @@ export default function AdminPage() {
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
                     <DialogDescription>
                         A log of all past deliveries for this user.
                     </DialogDescription>
@@ -527,7 +531,6 @@ export default function AdminPage() {
                         </TableHeader>
                         <TableBody>
                             {filteredDeliveries.map(delivery => {
-                                const statusInfo = getStatusInfo(delivery.status);
                                 const liters = delivery.volumeGallons * 3.785;
                                 const bottles = Math.round(liters / 19);
                                 return (
@@ -536,12 +539,8 @@ export default function AdminPage() {
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
                                     <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {bottles} bottles</TableCell>
                                     <TableCell>
-                                         <Badge variant={statusInfo.variant} className={cn(
-                                            statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
-                                            statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-                                            statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                        )}>
-                                            {statusInfo.label}
+                                         <Badge>
+                                            {delivery.status}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
@@ -755,7 +754,7 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
              <Card>
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
+                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
                         <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
                     </TabsList>
@@ -777,8 +776,6 @@ export default function AdminPage() {
                                 <TableBody>
                                     {filteredUsers.map((user) => {
                                         const latestDelivery = getLatestDelivery(user.id);
-                                        const statusInfo = getStatusInfo(latestDelivery?.status);
-                                        const StatusIcon = statusInfo.icon;
                                         return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
@@ -791,14 +788,8 @@ export default function AdminPage() {
                                             <TableCell>{waterStations.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
-                                                    <Badge variant={statusInfo.variant} className={cn(
-                                                        'w-full justify-center',
-                                                        statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
-                                                        statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-                                                        statusInfo.variant === 'outline' && latestDelivery && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                                    )}>
-                                                        {StatusIcon && <StatusIcon className="mr-1 h-3 w-3" />}
-                                                        {statusInfo.label}
+                                                    <Badge variant={latestDelivery?.status === 'Delivered' ? 'default' : latestDelivery?.status === 'In Transit' ? 'secondary' : 'outline'}>
+                                                        {latestDelivery?.status || 'No Delivery'}
                                                     </Badge>
                                                 </div>
                                             </TableCell>
@@ -826,7 +817,7 @@ export default function AdminPage() {
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); handleResetPassword(user.id); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); if(user) handleResetPassword(user.id); }}>
                                                             <KeyRound className="mr-2 h-4 w-4" />
                                                             Reset Password
                                                         </DropdownMenuItem>
@@ -852,46 +843,7 @@ export default function AdminPage() {
                     
                     <TabsContent value="water-stations">
                         <div className="flex justify-end mb-4">
-                            <Dialog open={isCreateStationOpen} onOpenChange={setIsCreateStationOpen}>
-                                <DialogTrigger asChild>
-                                    <Button><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Create New Water Station</DialogTitle>
-                                    </DialogHeader>
-                                    <Form {...stationForm}>
-                                        <form onSubmit={stationForm.handleSubmit(handleCreateStation)} className="space-y-4">
-                                             <FormField
-                                                control={stationForm.control}
-                                                name="name"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Station Name</FormLabel>
-                                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={stationForm.control}
-                                                name="location"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Location</FormLabel>
-                                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <DialogFooter>
-                                                <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                                                <Button type="submit">Create</Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </Form>
-                                </DialogContent>
-                            </Dialog>
+                           <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
                         </div>
                         <div className="overflow-x-auto">
                            <Table>
@@ -900,7 +852,7 @@ export default function AdminPage() {
                                         <TableHead>Station ID</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Location</TableHead>
-                                        <TableHead>Permit Status</TableHead>
+                                        <TableHead>Permits</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -911,26 +863,15 @@ export default function AdminPage() {
                                             <TableCell>{station.name}</TableCell>
                                             <TableCell>{station.location}</TableCell>
                                             <TableCell>
-                                                <Badge variant={station.permitUrl && station.permitUrl !== '#' ? 'default' : 'outline'}
-                                                  className={station.permitUrl && station.permitUrl !== '#' ? 'bg-green-100 text-green-800' : ''}
-                                                >
-                                                    {station.permitUrl && station.permitUrl !== '#' ? 'Attached' : 'Missing'}
+                                                <Badge variant={Object.values(station.permits).some(p => p) ? 'default' : 'outline'}>
+                                                    {Object.values(station.permits).filter(p => p).length} / {permitFields.length} Attached
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                         <DropdownMenuItem onClick={() => setStationToUpdate(station)}>
-                                                            <Paperclip className="mr-2 h-4 w-4"/>
-                                                            Attach Permit
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                 </DropdownMenu>
+                                                <Button variant="outline" size="sm" onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
+                                                    <UserCog className="mr-2 h-4 w-4"/>
+                                                    Manage
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -965,40 +906,92 @@ export default function AdminPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-         <Dialog open={!!stationToUpdate} onOpenChange={(open) => !open && setStationToUpdate(null)}>
-            <DialogContent className="sm:max-w-md">
+         <Dialog open={isStationProfileOpen} onOpenChange={(open) => {if (!open) {setStationToUpdate(null); stationForm.reset();} setIsStationProfileOpen(open);}}>
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Attach Permit for {stationToUpdate?.name}</DialogTitle>
+                    <DialogTitle>{stationToUpdate ? 'Edit' : 'Create'} Water Station Profile</DialogTitle>
                     <DialogDescription>
-                        Upload the permit document for this water station.
+                        Manage the station's details and permit attachments.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="permit-file">Permit File</Label>
-                        <Input id="permit-file" type="file" />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="button" variant="secondary">Cancel</Button>
-                    </DialogClose>
-                  
-                    <Button type="button" onClick={handleAttachPermit}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Attach
-                    </Button>
-                    
-                </DialogFooter>
+                <Form {...stationForm}>
+                    <form onSubmit={stationForm.handleSubmit(handleSaveStation)}>
+                        <ScrollArea className="max-h-[70vh] p-1">
+                            <div className="space-y-6 p-4">
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={stationForm.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Station Name</FormLabel>
+                                                <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={stationForm.control}
+                                        name="location"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Location</FormLabel>
+                                                <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <Separator />
+
+                                <div>
+                                    <h3 className="font-semibold mb-2">DOH Requirements</h3>
+                                    <div className="space-y-3">
+                                        {permitFields.slice(2, 8).map(field => (
+                                            <div key={field.key} className="flex justify-between items-center text-sm p-2 border rounded-md">
+                                                <span className="flex-1 mr-4">{field.label}</span>
+                                                {stationToUpdate?.permits[field.key] ? (
+                                                     <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
+                                                ) : (
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
+                                                        <Upload className="mr-2 h-4 w-4" /> Attach
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <Separator />
+
+                                <div>
+                                    <h3 className="font-semibold mb-2">LGU Requirements</h3>
+                                    <div className="space-y-3">
+                                        {permitFields.slice(0, 2).map(field => (
+                                            <div key={field.key} className="flex justify-between items-center text-sm p-2 border rounded-md">
+                                                <span className="flex-1 mr-4">{field.label}</span>
+                                                {stationToUpdate?.permits[field.key] ? (
+                                                     <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
+                                                ) : (
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => handleAttachPermit(field.key)} disabled={!stationToUpdate}>
+                                                        <Upload className="mr-2 h-4 w-4" /> Attach
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </ScrollArea>
+                        <DialogFooter className="mt-4 pt-4 border-t">
+                            <DialogClose asChild><Button type="button" variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">{stationToUpdate ? 'Save Changes' : 'Create Station'}</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
     </div>
   );
 }
-
-
-    
-
-    
-
-    
