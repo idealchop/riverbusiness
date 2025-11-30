@@ -18,9 +18,9 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { deliveries, paymentHistory as initialPaymentHistory, waterStations } from '@/lib/data';
+import { deliveries, paymentHistory as initialPaymentHistory, waterStations, complianceReports, sanitationVisits } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -32,7 +32,7 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback, PaymentOption } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -63,6 +63,17 @@ interface OnboardingData {
     contractUrl?: string;
 }
 
+type Notification = {
+    id: string;
+    type: 'delivery' | 'invoice' | 'compliance' | 'sanitation';
+    title: string;
+    description: string;
+    date: string;
+    icon: React.ElementType;
+    data: Delivery | Payment | ComplianceReport | SanitationVisit;
+};
+
+
 export default function DashboardLayout({
   children,
 }: {
@@ -75,6 +86,7 @@ export default function DashboardLayout({
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>(initialPaymentHistory);
   const [editableFormData, setEditableFormData] = useState<OnboardingData['formData'] | null>(null);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bpiQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
@@ -91,13 +103,71 @@ export default function DashboardLayout({
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [selectedStation, setSelectedStation] = useState('');
   const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = useState(false);
   const [switchReason, setSwitchReason] = useState('');
   const [switchUrgency, setSwitchUrgency] = useState('');
   const [hasNewMessage, setHasNewMessage] = useState(false);
 
-  const recentDeliveries = deliveries.slice(0, 4);
+  useEffect(() => {
+    const allNotifications: Notification[] = [];
+
+    const deliveryNotifications = deliveries
+      .filter(d => d.status === 'In Transit' || d.status === 'Pending')
+      .map(d => ({
+        id: `del-${d.id}`,
+        type: 'delivery' as const,
+        title: `Delivery ${d.status}`,
+        description: `${d.volumeGallons} gallons are on the way.`,
+        date: d.date,
+        icon: Truck,
+        data: d
+      }));
+    allNotifications.push(...deliveryNotifications);
+    
+    const invoiceNotifications = paymentHistory
+        .filter(inv => inv.status === 'Upcoming')
+        .map(inv => ({
+            id: `inv-${inv.id}`,
+            type: 'invoice' as const,
+            title: 'New Invoice',
+            description: `Invoice for ${format(new Date(inv.date), 'MMMM yyyy')} is ready.`,
+            date: inv.date,
+            icon: FileClock,
+            data: inv
+        }));
+    allNotifications.push(...invoiceNotifications);
+
+    const latestComplianceReport = complianceReports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    if (latestComplianceReport) {
+        allNotifications.push({
+            id: `comp-${latestComplianceReport.id}`,
+            type: 'compliance' as const,
+            title: 'New Compliance Report',
+            description: `Report from ${format(new Date(latestComplianceReport.date), 'PP')} is available.`,
+            date: latestComplianceReport.date,
+            icon: ShieldCheck,
+            data: latestComplianceReport
+        });
+    }
+
+    const upcomingSanitationVisits = sanitationVisits
+        .filter(v => v.status === 'Scheduled')
+        .map(v => ({
+            id: `san-${v.id}`,
+            type: 'sanitation' as const,
+            title: 'Sanitation Visit Scheduled',
+            description: `Visit on ${format(new Date(v.scheduledDate), 'PP')} with ${v.assignedTo}.`,
+            date: v.scheduledDate,
+            icon: Droplets,
+            data: v
+        }));
+    allNotifications.push(...upcomingSanitationVisits);
+
+
+    allNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    setNotifications(allNotifications);
+}, [paymentHistory]);
 
 
   useEffect(() => {
@@ -110,7 +180,6 @@ export default function DashboardLayout({
         setUserName(data.formData.fullName);
       }
       
-      // Update payment history with plan price
       setPaymentHistory(prevHistory => {
           const updatedHistory = prevHistory.map(invoice => 
               invoice.status === 'Upcoming' 
@@ -186,18 +255,6 @@ export default function DashboardLayout({
     setIsPasswordDialogOpen(false);
   }
 
-  const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
-    switch (status) {
-      case 'Delivered':
-        return 'default';
-      case 'In Transit':
-        return 'secondary';
-      case 'Pending':
-        return 'outline';
-      default:
-        return 'outline';
-    }
-  }
   
     const handleFeedbackSubmit = () => {
         const station = waterStations[0]; // Assume first station
@@ -361,47 +418,51 @@ export default function DashboardLayout({
                   className="relative rounded-full"
               >
                   <Bell className="h-4 w-4" />
+                   {notifications.length > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-xs">
+                          {notifications.length}
+                        </Badge>
+                      )}
               </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-96">
               <div className="space-y-2">
                   <div className="flex justify-between items-center">
                   <h4 className="font-medium text-sm">Notifications</h4>
-                  <Badge variant="default" className="rounded-full">
-                      {recentDeliveries.filter(d => d.status !== 'Delivered').length} New
-                  </Badge>
+                   {notifications.length > 0 && (
+                      <Badge variant="secondary" className="rounded-sm">
+                          {notifications.length} New
+                      </Badge>
+                   )}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                  Recent water delivery updates.
+                    Your recent account updates.
                   </p>
               </div>
               <Separator className="my-4" />
-              <div className="space-y-4">
-                  {recentDeliveries.map((delivery) => (
-                  <div key={delivery.id} className="grid grid-cols-[25px_1fr] items-start gap-4">
-                      <span className="flex h-2 w-2 translate-y-1 rounded-full bg-primary" />
-                      <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                          Delivery {delivery.id}
-                      </p>
-                      <p className="text-sm text-muted-foreground flex items-center justify-between">
-                          <span>{delivery.volumeGallons} Gallons</span>
-                          <Badge
-                          variant={getStatusBadgeVariant(delivery.status)}
-                          className={cn('text-xs',
-                              delivery.status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                              delivery.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800'
-                          )}
-                          >
-                          {delivery.status}
-                          </Badge>
-                      </p>
-                      <p className="text-xs text-muted-foreground">{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                      </div>
-                  </div>
-                  ))}
-              </div>
+                <div className="space-y-4 max-h-80 overflow-y-auto">
+                    {notifications.length > 0 ? (
+                        notifications.map((notification) => {
+                            const Icon = notification.icon;
+                            return (
+                                <div key={notification.id} className="grid grid-cols-[25px_1fr] items-start gap-4">
+                                    <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium leading-none">
+                                            {notification.title}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {notification.description}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">{format(new Date(notification.date), 'PP')}</p>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No new notifications.</p>
+                    )}
+                </div>
               </PopoverContent>
           </Popover>
           <Dialog>
@@ -825,3 +886,4 @@ export default function DashboardLayout({
 
 
     
+
