@@ -37,6 +37,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
+  businessName: z.string().min(1, 'Business Name is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['Admin', 'User']),
 });
@@ -115,6 +116,7 @@ export default function AdminPage() {
                 const newUserFromOnboarding: AppUser = {
                     id: onboardingData.formData.clientId,
                     name: onboardingData.formData.fullName,
+                    businessName: onboardingData.formData.businessName,
                     totalConsumptionLiters: 0,
                     accountStatus: 'Active',
                     lastLogin: new Date().toISOString(),
@@ -124,6 +126,7 @@ export default function AdminPage() {
             }
         }
         setAppUsers(users);
+        localStorage.setItem('appUsers', JSON.stringify(users));
 
         const storedWaterStations = localStorage.getItem('waterStations');
         if (storedWaterStations) {
@@ -156,6 +159,7 @@ export default function AdminPage() {
         resolver: zodResolver(newUserSchema),
         defaultValues: {
             name: '',
+            businessName: '',
             password: '',
             role: 'User',
         },
@@ -844,6 +848,17 @@ export default function AdminPage() {
                                     </FormItem>
                                 )}
                             />
+                             <FormField
+                                control={form.control}
+                                name="businessName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Business Name</FormLabel>
+                                        <FormControl><Input placeholder="Acme Inc." {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                             <FormField
                                 control={form.control}
                                 name="password"
@@ -910,7 +925,7 @@ export default function AdminPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>User ID</TableHead>
-                                        <TableHead>Name</TableHead>
+                                        <TableHead>Business Name</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Assigned Station</TableHead>
                                         <TableHead>Delivery Status</TableHead>
@@ -923,7 +938,7 @@ export default function AdminPage() {
                                         return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.id}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{user.name}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                             <TableCell>
                                                 <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>
                                                     {user.accountStatus}

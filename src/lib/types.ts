@@ -60,6 +60,7 @@ export type Permission =
 export interface AppUser {
     id: string;
     name: string;
+    businessName: string;
     password?: string;
     totalConsumptionLiters: number;
     accountStatus: 'Active' | 'Inactive';
@@ -113,4 +114,5 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
+
 
