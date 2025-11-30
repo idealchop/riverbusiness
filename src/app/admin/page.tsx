@@ -60,7 +60,7 @@ export default function AdminPage() {
         if (!searchTerm) return;
 
         const foundUser = appUsers.find(user => 
-            user.id.toLowerCase() === searchTerm.toLowerCase()
+            user.id.toLowerCase() === searchTerm.toLowerCase() || user.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
         if (foundUser) {
@@ -70,7 +70,7 @@ export default function AdminPage() {
             toast({
                 variant: "destructive",
                 title: "User not found",
-                description: `No user found with ID: ${searchTerm}`,
+                description: `No user found with ID or name: ${searchTerm}`,
             });
         }
     };
@@ -139,7 +139,7 @@ export default function AdminPage() {
             <div className="relative">
                 <Input
                   type="search"
-                  placeholder="Enter User ID..."
+                  placeholder="Enter User ID or Name..."
                   className="w-full appearance-none bg-background pl-8 shadow-none md:w-64 lg:w-96"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -466,3 +466,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
