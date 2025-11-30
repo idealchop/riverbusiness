@@ -33,7 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -70,7 +70,10 @@ type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 export default function AdminPage() {
     const { toast } = useToast();
     const auth = useAuth();
+    const { user: authUser } = useUser();
     const firestore = useFirestore();
+
+    const isSuperAdmin = authUser?.email === 'admin@riverph.com';
 
     const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
@@ -480,8 +483,8 @@ export default function AdminPage() {
                          </div>
                          <Separator className="my-4" />
                          <div className="flex flex-col space-y-2">
-                             <Button variant="outline" onClick={() => { if(selectedUser) handleResetPassword(selectedUser.id)}}><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
-                             <Button variant="destructive" className="mt-4"><Trash2 className="mr-2 h-4 w-4" /> Delete User</Button>
+                             <Button variant="outline" onClick={() => { if(selectedUser) handleResetPassword(selectedUser.id)}} disabled={!isSuperAdmin}><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
+                             <Button variant="destructive" className="mt-4" disabled={!isSuperAdmin}><Trash2 className="mr-2 h-4 w-4" /> Delete User</Button>
                          </div>
                     </div>
                 )}
@@ -540,7 +543,7 @@ export default function AdminPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Download CSV
                     </Button>
-                    <Button onClick={() => setIsCreateDeliveryOpen(true)}>
+                    <Button onClick={() => setIsCreateDeliveryOpen(true)} disabled={!isSuperAdmin}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create Delivery
                     </Button>
@@ -575,7 +578,7 @@ export default function AdminPage() {
                                         {delivery.proofOfDeliveryUrl ? (
                                              <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
                                         ) : (
-                                            <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)}>
+                                            <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isSuperAdmin}>
                                                 <Upload className="mr-2 h-3 w-3"/>
                                                 Upload
                                             </Button>
@@ -583,7 +586,7 @@ export default function AdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {delivery.status === 'Delivered' && userForHistory && (
-                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeGallons)}>
+                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeGallons)} disabled={!isSuperAdmin}>
                                                 Deduct
                                             </Button>
                                         )}
@@ -803,8 +806,8 @@ export default function AdminPage() {
                 </CardContent>
             </Card>
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
-                <DialogTrigger asChild>
-                     <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 flex flex-col justify-center items-center">
+                <DialogTrigger asChild disabled={!isSuperAdmin}>
+                     <Card className={cn("bg-primary text-primary-foreground flex flex-col justify-center items-center", isSuperAdmin ? "cursor-pointer hover:bg-primary/90" : "cursor-not-allowed opacity-50")}>
                         <CardHeader className="p-4 flex-row items-center gap-2">
                             <UserPlus className="h-5 w-5" />
                             <CardTitle className="text-lg font-bold">Generate Account</CardTitle>
@@ -938,28 +941,28 @@ export default function AdminPage() {
                                                             <UserCog className="mr-2 h-4 w-4" />
                                                             View Details
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setUserForContract(user); setIsUploadContractOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setUserForContract(user); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
                                                             <Upload className="mr-2 h-4 w-4" />
                                                             Upload Contract
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsAssignStationOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
                                                             <Building className="mr-2 h-4 w-4" />
                                                             Assign Station
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
                                                             <PlusCircle className="mr-2 h-4 w-4" />
                                                             Add Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
+                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { if(user) handleResetPassword(user.id); }}>
+                                                        <DropdownMenuItem onClick={() => { if(user) handleResetPassword(user.id); }} disabled={!isSuperAdmin}>
                                                             <KeyRound className="mr-2 h-4 w-4" />
                                                             Reset Password
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-red-600">
+                                                        <DropdownMenuItem className="text-red-600" disabled={!isSuperAdmin}>
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             Delete User
                                                         </DropdownMenuItem>
@@ -980,7 +983,7 @@ export default function AdminPage() {
                     
                     <TabsContent value="water-stations">
                         <div className="flex justify-end mb-4">
-                           <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
+                           <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isSuperAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
                         </div>
                         <div className="overflow-x-auto">
                            <Table>
@@ -1070,7 +1073,7 @@ export default function AdminPage() {
                                     </FormItem>
                                 )}/>
                                 {stationToUpdate && (
-                                    <Button type="submit" size="sm">Save Changes</Button>
+                                    <Button type="submit" size="sm" disabled={!isSuperAdmin}>Save Changes</Button>
                                 )}
                             </form>
                         </Form>
@@ -1087,10 +1090,10 @@ export default function AdminPage() {
                                         {stationToUpdate?.permits?.[field.key] ? (
                                              <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
                                         ) : (
-                                            <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate}>
-                                                <Label className="cursor-pointer flex items-center">
+                                            <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isSuperAdmin}>
+                                                <Label className={cn("flex items-center", isSuperAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
                                                     <Upload className="mr-2 h-4 w-4" /> Upload
-                                                    <Input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                    <Input type="file" className="hidden" disabled={!isSuperAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
                                                 </Label>
                                             </Button>
                                         )}
@@ -1122,10 +1125,10 @@ export default function AdminPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                 <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate}>
-                                                    <Label className="cursor-pointer flex items-center">
+                                                 <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isSuperAdmin}>
+                                                    <Label className={cn("flex items-center", isSuperAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
                                                         <Upload className="mr-2 h-4 w-4" /> Upload
-                                                        <Input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                        <Input type="file" className="hidden" disabled={!isSuperAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
                                                     </Label>
                                                 </Button>
                                             </TableCell>
@@ -1138,7 +1141,7 @@ export default function AdminPage() {
                         <div>
                             <h3 className="font-semibold text-base mb-1">3. Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
-                            <Button variant="outline"><FileText className="mr-2 h-4 w-4" /> View & Sign Agreement</Button>
+                            <Button variant="outline" disabled={!isSuperAdmin}><FileText className="mr-2 h-4 w-4" /> View & Sign Agreement</Button>
                         </div>
                     </div>
                 </ScrollArea>
@@ -1147,7 +1150,7 @@ export default function AdminPage() {
                         <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                     </DialogClose>
                     {!stationToUpdate && (
-                        <Button onClick={stationForm.handleSubmit(handleSaveStation)}>Create Station</Button>
+                        <Button onClick={stationForm.handleSubmit(handleSaveStation)} disabled={!isSuperAdmin}>Create Station</Button>
                     )}
                 </DialogFooter>
             </DialogContent>
@@ -1155,3 +1158,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
