@@ -150,9 +150,6 @@ export default function LoginPage() {
                     className="object-contain dark:brightness-[0.2] dark:grayscale"
                   />
               </div>
-              <p className="mt-4 text-center text-lg font-semibold text-foreground">
-                Automate Water Refill To Drive Business Growth
-              </p>
             </div>
           </div>
       </Card>
