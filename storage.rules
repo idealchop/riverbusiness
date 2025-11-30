@@ -1,0 +1,13 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow reads and writes for all authenticated users.
+    // This allows users and admins to upload and view files like permits and proofs of delivery.
+    // For higher security, you could restrict paths further, e.g., match /users/{userId}/{allPaths=**}
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
