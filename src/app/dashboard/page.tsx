@@ -38,7 +38,7 @@ const perks = [
             "1 monthly free session"
         ],
         websiteUrl: "https://www.newbreed.com",
-        mapUrl: "https://www.google.com/maps/search/?api=1&query=fitness+gym"
+        mapUrl: "https://www.google.com/maps/search/?api=1&query=New+Breed+Fitness"
     },
 ];
 
@@ -508,6 +508,12 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                                     </CardContent>
                                 </Card>
                             ))}
+                             <Card className="text-center p-6 bg-accent/50 border-dashed">
+                                <CardContent className="p-0">
+                                    <p className="font-semibold">More perks are coming soon!</p>
+                                    <p className="text-sm text-muted-foreground mt-1">We're always working on new partnerships for you.</p>
+                                </CardContent>
+                            </Card>
                         </div>
                         <DialogFooter className="text-xs text-muted-foreground text-center sm:text-center pt-4 border-t">
                             <p>All employees of your company are entitled to these perks.</p>
@@ -537,5 +543,8 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     );
 
 }
+
+    
+
 
     
