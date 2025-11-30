@@ -59,12 +59,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
     const [userName, setUserName] = useState(initialUserName || 'Juan dela Cruz');
     const [totalLitersPurchased, setTotalLitersPurchased] = useState(0);
     const [remainingLiters, setRemainingLiters] = useState(0);
-    const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
-    const [feedbackMessage, setFeedbackMessage] = useState('');
-    const [feedbackRating, setFeedbackRating] = useState(0);
-    const [hoverRating, setHoverRating] = useState(0);
-    const [selectedStation, setSelectedStation] = useState<string>('');
-    const { toast } = useToast();
     const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
@@ -117,40 +111,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
 
     }, []);
 
-    const handleFeedbackSubmit = () => {
-        if (feedbackMessage.trim() === '' || feedbackRating === 0 || !selectedStation) {
-            toast({
-                variant: 'destructive',
-                title: 'Incomplete Feedback',
-                description: 'Please select a station, provide a rating, and write a message.'
-            });
-            return;
-        }
-
-        const newFeedback: Feedback = {
-            id: `FB-${Date.now()}`,
-            userId: currentUser?.id || 'USR-001',
-            userName: userName,
-            timestamp: new Date().toISOString(),
-            feedback: `[${selectedStation}] ${feedbackMessage}`,
-            rating: feedbackRating,
-            read: false,
-        };
-
-        const existingFeedback = JSON.parse(localStorage.getItem('feedbackLogs') || '[]');
-        localStorage.setItem('feedbackLogs', JSON.stringify([...existingFeedback, newFeedback]));
-
-        toast({
-            title: 'Feedback Submitted!',
-            description: 'Thank you for your valuable input.',
-        });
-
-        setIsFeedbackDialogOpen(false);
-        setFeedbackMessage('');
-        setFeedbackRating(0);
-        setHoverRating(0);
-        setSelectedStation('');
-    };
 
     const consumptionChartData = consumptionData.slice(-7).map(d => ({ name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0), value: gallonToLiter(d.consumptionGallons) }));
     
@@ -303,78 +263,6 @@ export default function DashboardPage({ userName: initialUserName }: { userName?
                               </TabsContent>
                             </Tabs>
                         </div>
-                    </DialogContent>
-                </Dialog>
-
-                <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline">
-                            <MessageSquare className="h-4 w-4 mr-2" />
-                            Submit Feedback
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Rate a Water Station</DialogTitle>
-                            <DialogDescription>
-                                We value your opinion. Let us know how we can improve our stations.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 space-y-4">
-                             <div>
-                                <Label htmlFor="water-station" className="mb-2 block">Water Station</Label>
-                                <Select onValueChange={setSelectedStation} value={selectedStation}>
-                                    <SelectTrigger id="water-station">
-                                        <SelectValue placeholder="Select a station..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {waterStations.map((station) => (
-                                            <SelectItem key={station.id} value={station.name}>
-                                                {station.name} - <span className="text-muted-foreground">{station.location}</span>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label htmlFor="feedback-rating" className="mb-2 block">Rating</Label>
-                                <div className="flex items-center gap-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star
-                                            key={star}
-                                            className={cn(
-                                                'h-6 w-6 cursor-pointer',
-                                                (hoverRating >= star || feedbackRating >= star)
-                                                    ? 'text-yellow-400 fill-yellow-400'
-                                                    : 'text-muted-foreground'
-                                            )}
-                                            onMouseEnter={() => setHoverRating(star)}
-                                            onMouseLeave={() => setHoverRating(0)}
-                                            onClick={() => setFeedbackRating(star)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <Label htmlFor="feedback-message">Recommendation / Message</Label>
-                                <Textarea
-                                    id="feedback-message"
-                                    placeholder="Tell us about your experience with this station..."
-                                    value={feedbackMessage}
-                                    onChange={(e) => setFeedbackMessage(e.target.value)}
-                                    rows={4}
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                            <Button onClick={handleFeedbackSubmit}>
-                                <Send className="mr-2 h-4 w-4" />
-                                Submit
-                            </Button>
-                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>

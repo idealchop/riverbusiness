@@ -17,13 +17,13 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { deliveries, paymentHistory as initialPaymentHistory } from '@/lib/data';
+import { deliveries, paymentHistory as initialPaymentHistory, waterStations } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,8 +31,10 @@ import Link from 'next/link';
 import { LiveChat } from '@/components/live-chat';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 
 interface OnboardingData {
@@ -65,8 +67,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
-  const recentDeliveries = deliveries.slice(0, 4);
   const { toast } = useToast();
 
   const [userName, setUserName] = useState('Juan dela Cruz');
@@ -87,6 +87,13 @@ export default function DashboardLayout({
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [selectedStation, setSelectedStation] = useState('');
+
+  const recentDeliveries = deliveries.slice(0, 4);
 
 
   useEffect(() => {
@@ -188,6 +195,41 @@ export default function DashboardLayout({
     }
   }
   
+    const handleFeedbackSubmit = () => {
+        if (feedbackMessage.trim() === '' || feedbackRating === 0 || !selectedStation) {
+            toast({
+                variant: 'destructive',
+                title: 'Incomplete Feedback',
+                description: 'Please select a station, provide a rating, and write a message.'
+            });
+            return;
+        }
+
+        const newFeedback: Feedback = {
+            id: `FB-${Date.now()}`,
+            userId: 'USR-001', // This should be dynamic based on logged in user
+            userName: userName,
+            timestamp: new Date().toISOString(),
+            feedback: `[${selectedStation}] ${feedbackMessage}`,
+            rating: feedbackRating,
+            read: false,
+        };
+
+        const existingFeedback = JSON.parse(localStorage.getItem('feedbackLogs') || '[]');
+        localStorage.setItem('feedbackLogs', JSON.stringify([...existingFeedback, newFeedback]));
+
+        toast({
+            title: 'Feedback Submitted!',
+            description: 'Thank you for your valuable input.',
+        });
+
+        setIsFeedbackDialogOpen(false);
+        setFeedbackMessage('');
+        setFeedbackRating(0);
+        setHoverRating(0);
+        setSelectedStation('');
+    };
+
   const planImage = onboardingData?.plan?.imageId ? PlaceHolderImages.find(p => p.id === onboardingData.plan.imageId) : null;
 
   const paymentOptions = [
@@ -225,7 +267,7 @@ export default function DashboardLayout({
                     </p>
                 </div>
                 <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
-                    <div className="space-y-8">
+                    <div className="space-y-8 flex flex-col">
                       <div className="space-y-4">
                         <div className="flex items-center gap-4 rounded-md border p-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -246,9 +288,12 @@ export default function DashboardLayout({
                             </div>
                         </div>
                       </div>
-                       <div className="mt-4 text-center text-sm">
-                        <p className="font-semibold">In case of urgent need, just contact us.</p>
-                        <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
+                       <div className="mt-auto pt-4 text-center text-sm">
+                         <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Submit Feedback
+                         </Button>
+                        <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
                         <p className="text-xs text-muted-foreground">By Smart Refill</p>
                       </div>
                     </div>
@@ -599,6 +644,73 @@ export default function DashboardLayout({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rate a Water Station</DialogTitle>
+                        <DialogDescription>
+                            We value your opinion. Let us know how we can improve our stations.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                            <div>
+                            <Label htmlFor="water-station" className="mb-2 block">Water Station</Label>
+                            <Select onValueChange={setSelectedStation} value={selectedStation}>
+                                <SelectTrigger id="water-station">
+                                    <SelectValue placeholder="Select a station..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {waterStations.map((station) => (
+                                        <SelectItem key={station.id} value={station.name}>
+                                            {station.name} - <span className="text-muted-foreground">{station.location}</span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="feedback-rating" className="mb-2 block">Rating</Label>
+                            <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                        key={star}
+                                        className={cn(
+                                            'h-6 w-6 cursor-pointer',
+                                            (hoverRating >= star || feedbackRating >= star)
+                                                ? 'text-yellow-400 fill-yellow-400'
+                                                : 'text-muted-foreground'
+                                        )}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        onClick={() => setFeedbackRating(star)}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <Label htmlFor="feedback-message">Recommendation / Message</Label>
+                            <Textarea
+                                id="feedback-message"
+                                placeholder="Tell us about your experience with this station..."
+                                value={feedbackMessage}
+                                onChange={(e) => setFeedbackMessage(e.target.value)}
+                                rows={4}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={handleFeedbackSubmit}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Submit
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
