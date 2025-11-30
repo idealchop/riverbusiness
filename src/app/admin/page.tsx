@@ -968,12 +968,12 @@ export default function AdminPage() {
                                                             <DialogClose asChild>
                                                                 <Button type="button" variant="secondary">Cancel</Button>
                                                             </DialogClose>
-                                                            <DialogClose asChild>
-                                                                <Button type="button" onClick={handleAttachPermit}>
-                                                                    <Upload className="mr-2 h-4 w-4" />
-                                                                    Attach
-                                                                </Button>
-                                                            </DialogClose>
+                                                          
+                                                            <Button type="button" onClick={handleAttachPermit}>
+                                                                <Upload className="mr-2 h-4 w-4" />
+                                                                Attach
+                                                            </Button>
+                                                            
                                                         </DialogFooter>
                                                     </DialogContent>
                                                 </Dialog>
@@ -990,9 +990,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
