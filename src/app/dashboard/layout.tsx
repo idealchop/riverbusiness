@@ -63,11 +63,14 @@ export default function DashboardLayout({
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+  const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
+
 
   const paymentOptions: PaymentOption[] = [
-      { name: 'GCash', qr: gcashQr },
-      { name: 'BPI', qr: bankQr },
-      { name: 'PayMaya', qr: paymayaQr }
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
+      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
+      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+      { name: 'Credit Card', qr: cardQr }
   ];
 
 
@@ -187,6 +190,17 @@ export default function DashboardLayout({
         setSwitchReason('');
         setSwitchUrgency('');
     };
+    
+  const handlePaymentOptionClick = (option: PaymentOption) => {
+    if (option.name === 'Credit Card') {
+      toast({
+        title: 'Coming Soon!',
+        description: 'Credit card payment will be available shortly.',
+      });
+      return;
+    }
+    setSelectedPaymentMethod(option);
+  };
 
     const planImage = useMemo(() => {
       if (!user?.clientType) return null;
@@ -578,12 +592,12 @@ export default function DashboardLayout({
                             {!selectedPaymentMethod ? (
                                 <div className="space-y-4">
                                      <p className="text-sm text-muted-foreground text-center">Select a payment method to see the QR code.</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         {paymentOptions.map((opt) => (
                                         <Card
                                             key={opt.name}
                                             className="flex flex-col items-center justify-center p-4 cursor-pointer hover:bg-accent transition-colors"
-                                            onClick={() => setSelectedPaymentMethod(opt)}
+                                            onClick={() => handlePaymentOptionClick(opt)}
                                         >
                                             {opt.qr && <Image src={opt.qr.imageUrl} alt={opt.name} width={60} height={60} className="mb-2 rounded-md" data-ai-hint={opt.qr.imageHint} />}
                                             <p className="font-semibold text-sm">{opt.name}</p>
@@ -604,8 +618,8 @@ export default function DashboardLayout({
                                         </div>
                                     )}
                                     <div className="text-center text-sm text-muted-foreground space-y-1">
-                                        <p>Account Name: <span className="font-medium text-foreground">RIVER PHILIPPINES</span></p>
-                                        <p>Account Number: <span className="font-medium text-foreground">09182719091</span></p>
+                                        <p>Account Name: <span className="font-medium text-foreground">{selectedPaymentMethod.details?.accountName}</span></p>
+                                        <p>Account Number: <span className="font-medium text-foreground">{selectedPaymentMethod.details?.accountNumber}</span></p>
                                         <p className="font-bold text-foreground pt-2">Total Amount: ₱{selectedInvoice?.amount.toFixed(2)}</p>
                                     </div>
                                     <p className="text-xs text-muted-foreground text-center mt-2">After paying, please go to the 'Upload Proof' tab to submit your payment confirmation.</p>
@@ -776,3 +790,4 @@ export default function DashboardLayout({
     
 
     
+

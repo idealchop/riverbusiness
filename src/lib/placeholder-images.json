@@ -16,7 +16,7 @@
       "id": "card-payment-qr",
       "description": "Card Payment Coming Soon",
       "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FPayments%2Fwaterstations_cardpayments.png?alt=media&token=78ffcb13-8647-42f2-b3b4-95512d468b62",
-      "imageHint": "card payment"
+      "imageHint": "credit card"
     },
     {
       "id": "gcash-qr-payment",
