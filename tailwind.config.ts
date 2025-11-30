@@ -16,6 +16,9 @@ export default {
       },
     },
     extend: {
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--primary-light)))',
+      },
       fontFamily: {
         body: ['Manrope', 'sans-serif'],
         headline: ['Manrope', 'sans-serif'],
@@ -35,6 +38,7 @@ export default {
         },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
+          light: 'hsl(var(--primary-light))',
           foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
