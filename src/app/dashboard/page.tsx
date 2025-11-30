@@ -23,7 +23,7 @@ import { useCollection, useDoc, useFirestore, useUser as useAuthUser, useMemoFir
 import { doc, collection } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { WaterIndicator } from '@/components/ui/water-indicator';
+import { Progress } from '@/components/ui/progress';
 
 const gallonToLiter = (gallons: number) => gallons * 3.785;
 
@@ -346,13 +346,13 @@ export default function DashboardPage() {
 
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="overflow-hidden">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Total Purchased
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                     <p className="text-3xl font-bold mb-2">{totalLitersPurchased.toLocaleString()} L</p>
                     <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex justify-between"><span>Monthly Plan:</span> <span>{monthlyPlanLiters.toLocaleString()} L</span></div>
@@ -360,37 +360,43 @@ export default function DashboardPage() {
                         <div className="flex justify-between"><span>From Last Month:</span> <span>{fromLastMonthLiters.toLocaleString()} L</span></div>
                     </div>
                 </CardContent>
-                <WaterIndicator percentage={100} />
+                <div className="p-6 pt-0">
+                    <Progress value={100} className="h-2"/>
+                </div>
             </Card>
-            <Card className="overflow-hidden">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
                      <div className="flex items-center text-xs text-red-600 mt-1">
                         <ArrowDown className="h-3 w-3 mr-1" />
                         <span>-</span>
                     </div>
                 </CardContent>
-                 <WaterIndicator percentage={consumedPercentage} />
+                 <div className="p-6 pt-0">
+                    <Progress value={consumedPercentage} className="h-2"/>
+                </div>
             </Card>
-            <Card className="overflow-hidden">
+            <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Remaining Liters
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
                      <div className="flex items-center text-xs text-muted-foreground mt-1">
                         <ArrowDown className="h-3 w-3 mr-1" />
                         <span>-</span>
                     </div>
                 </CardContent>
-                <WaterIndicator percentage={remainingPercentage} />
+                <div className="p-6 pt-0">
+                    <Progress value={remainingPercentage} className="h-2"/>
+                </div>
             </Card>
             <Card>
                 <CardHeader>
