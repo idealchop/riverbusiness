@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { deliveries, paymentHistory as initialPaymentHistory, waterStations } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
@@ -199,11 +199,12 @@ export default function DashboardLayout({
   }
   
     const handleFeedbackSubmit = () => {
-        if (feedbackMessage.trim() === '' || feedbackRating === 0 || !selectedStation) {
+        const station = waterStations[0]; // Assume first station
+        if (feedbackMessage.trim() === '' || feedbackRating === 0) {
             toast({
                 variant: 'destructive',
                 title: 'Incomplete Feedback',
-                description: 'Please select a station, provide a rating, and write a message.'
+                description: 'Please provide a rating and write a message.'
             });
             return;
         }
@@ -213,7 +214,7 @@ export default function DashboardLayout({
             userId: 'USR-001', // This should be dynamic based on logged in user
             userName: userName,
             timestamp: new Date().toISOString(),
-            feedback: `[${selectedStation}] ${feedbackMessage}`,
+            feedback: `[${station.name}] ${feedbackMessage}`,
             rating: feedbackRating,
             read: false,
         };
@@ -230,7 +231,6 @@ export default function DashboardLayout({
         setFeedbackMessage('');
         setFeedbackRating(0);
         setHoverRating(0);
-        setSelectedStation('');
     };
 
     const handleSwitchProviderSubmit = () => {
@@ -278,6 +278,8 @@ export default function DashboardLayout({
         setSelectedPaymentOption(option);
     }
   };
+
+  const assignedWaterStation = waterStations[0];
 
   return (
       <div className="flex flex-col h-full">
@@ -701,27 +703,21 @@ export default function DashboardLayout({
             <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Rate a Water Station</DialogTitle>
+                        <DialogTitle>Rate Your Water Station</DialogTitle>
                         <DialogDescription>
-                            We value your opinion. Let us know how we can improve our stations.
+                            We value your opinion. Let us know how we can improve our service.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                            <div>
-                            <Label htmlFor="water-station" className="mb-2 block">Water Station</Label>
-                            <Select onValueChange={setSelectedStation} value={selectedStation}>
-                                <SelectTrigger id="water-station">
-                                    <SelectValue placeholder="Select a station..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {waterStations.map((station) => (
-                                        <SelectItem key={station.id} value={station.name}>
-                                            {station.name} - <span className="text-muted-foreground">{station.location}</span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {assignedWaterStation && (
+                            <div className="flex items-center gap-3 rounded-md border p-3 bg-muted/50">
+                                <Building className="h-6 w-6 text-muted-foreground" />
+                                <div>
+                                    <p className="font-semibold">{assignedWaterStation.name}</p>
+                                    <p className="text-sm text-muted-foreground">{assignedWaterStation.location}</p>
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <Label htmlFor="feedback-rating" className="mb-2 block">Rating</Label>
                             <div className="flex items-center gap-1">
