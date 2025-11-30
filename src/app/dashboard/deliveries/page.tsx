@@ -65,7 +65,7 @@ export default function DeliveriesPage() {
           onKeyDown={handleSearchKeyDown}
           className="flex-1"
         />
-        <Button onClick={handleSearch}>
+        <Button onClick={handleSearch} className="font-bold">
           <Search className="mr-2 h-4 w-4" />
           Search
         </Button>
