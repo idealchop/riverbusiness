@@ -35,7 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -99,6 +99,10 @@ export default function DashboardLayout({
   const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = React.useState(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState('');
   const [feedbackRating, setFeedbackRating] = React.useState(0);
@@ -197,12 +201,49 @@ export default function DashboardLayout({
     setIsEditingDetails(false);
   }
 
-  const handlePasswordChange = () => {
-    toast({
-        title: "Password Updated",
-        description: "Your password has been changed successfully.",
-    });
-    setIsPasswordDialogOpen(false);
+  const handlePasswordChange = async () => {
+    if (!authUser || !authUser.email) {
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to change your password." });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({ variant: "destructive", title: "Error", description: "New passwords do not match." });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({ variant: "destructive", title: "Error", description: "Password must be at least 6 characters long." });
+      return;
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
+      await reauthenticateWithCredential(authUser, credential);
+      await updatePassword(authUser, newPassword);
+      
+      toast({
+          title: "Password Updated",
+          description: "Your password has been changed successfully.",
+      });
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsPasswordDialogOpen(false);
+    } catch (error: any) {
+        let description = 'An unexpected error occurred. Please try again.';
+        if (error.code === 'auth/wrong-password') {
+            description = 'The current password you entered is incorrect.';
+        } else if (error.code === 'auth/weak-password') {
+            description = 'The new password is too weak.';
+        }
+       toast({
+        variant: "destructive",
+        title: "Password Update Failed",
+        description: description,
+      });
+    }
   }
   
     const handleFeedbackSubmit = () => {
@@ -496,8 +537,8 @@ export default function DashboardLayout({
                         <CardTitle>Your Current Plan</CardTitle>
                         <CardDescription>Details of your subscription with River Business.</CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="grid md:grid-cols-2 gap-6">
+                      <CardContent className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6 items-start">
                             <div className="space-y-4">
                                 {planImage && (
                                   <div className="relative h-40 w-full rounded-lg overflow-hidden">
@@ -739,21 +780,21 @@ export default function DashboardLayout({
                      <div className="space-y-4 py-4">
                         <div className="space-y-1 relative">
                             <Label htmlFor="current-password">Current Password</Label>
-                            <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} />
+                            <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
                             <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
                                 {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                         </div>
                             <div className="space-y-1 relative">
                             <Label htmlFor="new-password">New Password</Label>
-                            <Input id="new-password" type={showNewPassword ? 'text' : 'password'} />
+                            <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                             <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
                                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                         </div>
                             <div className="space-y-1 relative">
                             <Label htmlFor="confirm-password">Confirm New Password</Label>
-                            <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} />
+                            <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                             <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
