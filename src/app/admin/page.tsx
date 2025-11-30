@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,7 +9,7 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, feedbackLogs as initialFeedbackLogs, deliveries } from '@/lib/data';
-import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, MoreHorizontal, Users, Handshake, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, FileClock, MessageSquare, Star, Truck, Package, PackageCheck, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -56,6 +57,8 @@ export default function AdminPage() {
     const { toast } = useToast();
     const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+    const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
+    const [userForHistory, setUserForHistory] = useState<AppUser | null>(null);
     const [activeTab, setActiveTab] = useState('user-management');
     const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [feedbackLogs, setFeedbackLogs] = useState<Feedback[]>(initialFeedbackLogs);
@@ -181,6 +184,8 @@ export default function AdminPage() {
                 return { variant: 'outline', icon: null, label: 'No Deliveries' };
         }
     };
+    
+    const userDeliveries = userForHistory ? deliveries.filter(d => d.userId === userForHistory.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
 
 
   return (
@@ -237,6 +242,55 @@ export default function AdminPage() {
             </DialogContent>
         </Dialog>
         
+         <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
+                    <DialogDescription>
+                        A log of all past deliveries for this user.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="py-4 max-h-[60vh] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Volume</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {userDeliveries.map(delivery => {
+                                const statusInfo = getStatusInfo(delivery.status);
+                                return (
+                                <TableRow key={delivery.id}>
+                                    <TableCell>{delivery.id}</TableCell>
+                                    <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
+                                    <TableCell>{delivery.volumeGallons} gal</TableCell>
+                                    <TableCell>
+                                         <Badge variant={statusInfo.variant} className={cn(
+                                            statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+                                            statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+                                            statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                                        )}>
+                                            {statusInfo.label}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            )})}
+                             {userDeliveries.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center">No delivery history found.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90" onClick={() => handleFilterClick('all')}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -387,14 +441,17 @@ export default function AdminPage() {
                                             <TableCell className="whitespace-nowrap">{format(new Date(user.lastLogin), 'PP')}</TableCell>
                                             <TableCell>{user.role}</TableCell>
                                             <TableCell>
-                                                <Badge variant={statusInfo.variant} className={cn(
-                                                    statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
-                                                    statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
-                                                    statusInfo.variant === 'outline' && latestDelivery && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                                )}>
-                                                    {StatusIcon && <StatusIcon className="mr-1 h-3 w-3" />}
-                                                    {statusInfo.label}
-                                                </Badge>
+                                                <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
+                                                    <Badge variant={statusInfo.variant} className={cn(
+                                                        'w-full justify-center',
+                                                        statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
+                                                        statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200',
+                                                        statusInfo.variant === 'outline' && latestDelivery && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
+                                                    )}>
+                                                        {StatusIcon && <StatusIcon className="mr-1 h-3 w-3" />}
+                                                        {statusInfo.label}
+                                                    </Badge>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
