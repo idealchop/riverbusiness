@@ -9,9 +9,8 @@ import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { appUsers as initialAppUsers, loginLogs, paymentHistory } from '@/lib/data';
-import { ArrowRight, ChevronRight, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, MoreHorizontal, Users, DollarSign, Activity, AlertTriangle, Monitor, Receipt, LogIn, Handshake, Eye, EyeOff, FileText, Calendar as CalendarIcon, Send } from 'lucide-react';
+import { ArrowRight, ChevronRight, UserCog, UserPlus, KeyRound, Trash2, ShieldCheck, View, MoreHorizontal, Users, DollarSign, Activity, AlertTriangle, Monitor, Receipt, LogIn, Handshake, Eye, EyeOff, FileText, Calendar as CalendarIcon, Send, Users2, UserCheck, FileClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, BarChart, Bar } from 'recharts';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -98,34 +97,51 @@ export default function AdminPage() {
         setIsCreateUserOpen(false);
     };
 
-    const barChartData = [
-        { month: 'January', value: 5000 },
-        { month: 'February', value: 8000 },
-        { month: 'March', value: 7000 },
-        { month: 'April', value: 10000 },
-        { month: 'May', value: 12000 },
-        { month: 'June', value: 18000 },
-    ];
-
     const adminUser = appUsers.find(user => user.role === 'Admin');
 
+    const totalUsers = appUsers.length;
+    const activeUsers = appUsers.filter(u => u.accountStatus === 'Active').length;
+    const pendingRequests = invoiceRequests.filter(r => r.status === 'Pending').length;
 
   return (
     <div className="flex flex-col gap-6 font-sans">
         <h1 className="text-3xl font-bold">{greeting}, {adminUser?.name || 'Admin'}!</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                    <Users2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{totalUsers}</div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{activeUsers}</div>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                    <FileClock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{pendingRequests}</div>
+                </CardContent>
+            </Card>
             <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
                 <DialogTrigger asChild>
-                     <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90">
-                        <CardHeader className="p-4">
-                            <CardTitle>Make an Account</CardTitle>
+                     <Card className="bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 flex flex-col justify-center items-center">
+                        <CardHeader className="p-4 flex-row items-center gap-2">
+                            <UserPlus className="h-5 w-5" />
+                            <CardTitle className="text-lg">Create User</CardTitle>
                         </CardHeader>
-                        <CardFooter className="p-4 pt-0">
-                            <p className="flex items-center text-sm">
-                                Create User <UserPlus className="h-4 w-4 ml-1" />
-                            </p>
-                        </CardFooter>
                     </Card>
                 </DialogTrigger>
                 <DialogContent>
@@ -208,37 +224,6 @@ export default function AdminPage() {
                     </Form>
                 </DialogContent>
             </Dialog>
-
-            <Card className="bg-primary text-primary-foreground">
-                <CardHeader className="p-4">
-                    <CardTitle>Warning Card</CardTitle>
-                </CardHeader>
-                 <CardFooter className="p-4 pt-0">
-                    <a href="#" className="flex items-center text-sm hover:underline">
-                        View Details <ChevronRight className="h-4 w-4 ml-1" />
-                    </a>
-                </CardFooter>
-            </Card>
-            <Card className="bg-primary text-primary-foreground">
-                <CardHeader className="p-4">
-                    <CardTitle>Success Card</CardTitle>
-                </CardHeader>
-                 <CardFooter className="p-4 pt-0">
-                    <a href="#" className="flex items-center text-sm hover:underline">
-                        View Details <ChevronRight className="h-4 w-4 ml-1" />
-                    </a>
-                </CardFooter>
-            </Card>
-            <Card className="bg-primary text-primary-foreground">
-                <CardHeader className="p-4">
-                    <CardTitle>Danger Card</CardTitle>
-                </CardHeader>
-                <CardFooter className="p-4 pt-0">
-                    <a href="#" className="flex items-center text-sm hover:underline">
-                        View Details <ChevronRight className="h-4 w-4 ml-1" />
-                    </a>
-                </CardFooter>
-            </Card>
         </div>
         
         <Tabs defaultValue="user-management">
