@@ -68,6 +68,7 @@ export default function OnboardingPage() {
   const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
   const [selectedDays, setSelectedDays] = React.useState<string[]>([]);
+  const [amountPerMonth, setAmountPerMonth] = React.useState<number>(0);
 
   
   const form = useForm<OnboardingFormValues>({
@@ -102,6 +103,7 @@ export default function OnboardingPage() {
 
   const handleClientTypeSelect = (clientTypeName: string) => {
     setCustomLiters(0);
+    setAmountPerMonth(0);
     setSelectedClientType(clientTypeName);
     setSelectedPlan(null); 
     setCustomPlanDetails(null);
@@ -111,33 +113,32 @@ export default function OnboardingPage() {
   
   const handleSaveCustomization = (e: React.FormEvent) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const liters = form.querySelector<HTMLInputElement>('input[name="litersPerMonth"]')?.value;
-    const station = form.querySelector<HTMLSelectElement>('select[name="waterStation"]')?.value;
     
-    if (liters && selectedDays.length > 0 && station) {
+    if (customLiters > 0 && selectedDays.length > 0) {
         setCustomPlanDetails({
-            litersPerMonth: parseInt(liters),
+            litersPerMonth: customLiters,
             deliveryDays: selectedDays,
-            waterStation: station
+            waterStation: '' // Removed from UI
         });
         
         let planName = `Custom ${selectedClientType} Plan`;
-        setSelectedPlan({name: planName, price: 0});
+        setSelectedPlan({name: planName, price: amountPerMonth});
         
         setIsPlanDialogOpen(false);
     } else {
         toast({
             variant: "destructive",
             title: "Incomplete Information",
-            description: "Please fill out all fields for your custom plan, including at least one delivery day.",
+            description: "Please specify liters per month and at least one delivery day.",
         })
     }
   };
 
   const handleLitersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCustomLiters(value ? parseInt(value) : 0);
+    const value = e.target.value ? parseInt(e.target.value) : 0;
+    const pricePerLiter = 3; // Example price
+    setCustomLiters(value);
+    setAmountPerMonth(value * pricePerLiter);
   }
 
   const calculatePeopleAccommodated = (liters: number) => {
@@ -179,6 +180,10 @@ export default function OnboardingPage() {
                             )}
                         </div>
                         <div className="grid gap-2">
+                            <Label>Amount/Month</Label>
+                            <Input readOnly value={`₱${amountPerMonth.toLocaleString()}`} />
+                        </div>
+                        <div className="grid gap-2">
                             <Label>Delivery Days</Label>
                             <div className="flex flex-wrap gap-2 justify-center">
                                 {reorderedDaysOfWeek.map(day => (
@@ -193,19 +198,6 @@ export default function OnboardingPage() {
                                     </Button>
                                 ))}
                             </div>
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="waterStation">Water Station</Label>
-                            <Select name="waterStation">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a water station" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {waterStations.map(station => (
-                                        <SelectItem key={station.id} value={station.name}>{station.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
                         </div>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -346,9 +338,8 @@ export default function OnboardingPage() {
                                 <p className="font-bold text-lg">{selectedPlan.name}</p>
                                 {customPlanDetails ? (
                                      <div className="text-sm text-muted-foreground">
-                                        <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month</p>
+                                        <p>{customPlanDetails.litersPerMonth.toLocaleString()} Liters/Month (Est. ₱{selectedPlan.price.toLocaleString()}/month)</p>
                                         <p>{customPlanDetails.deliveryDays.length} Deliveries/Week ({customPlanDetails.deliveryDays.join(', ')})</p>
-                                        <p>Station: {customPlanDetails.waterStation}</p>
                                     </div>
                                 ) : 'details' in selectedPlan && selectedPlan.details && Array.isArray(selectedPlan.details) && (selectedPlan as any).details?.map((d: any) => (
                                     <p key={d.label} className="text-sm text-muted-foreground">{d.label}: {d.value}</p>
