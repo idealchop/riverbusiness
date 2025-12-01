@@ -57,6 +57,7 @@ type NewStationFormValues = z.infer<typeof newStationSchema>;
 
 const adjustConsumptionSchema = z.object({
     amount: z.coerce.number().min(0, 'Amount must be a positive number'),
+    gallons: z.coerce.number().optional(),
 });
 type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
@@ -159,7 +160,7 @@ export default function AdminPage() {
 
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
-        defaultValues: { amount: 0 },
+        defaultValues: { amount: 0, gallons: 0 },
     });
 
     const handleCreateUser = async (values: NewUserFormValues) => {
@@ -360,6 +361,14 @@ export default function AdminPage() {
             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the delivery record.' });
         }
     };
+
+    const watchedGallons = adjustConsumptionForm.watch('gallons');
+    useEffect(() => {
+        if (adjustmentType === 'deduct') {
+            const liters = (watchedGallons || 0) * 19.5;
+            adjustConsumptionForm.setValue('amount', liters);
+        }
+    }, [watchedGallons, adjustmentType, adjustConsumptionForm]);
 
 
     const adminUser = appUsers?.find(user => user.role === 'Admin');
@@ -770,37 +779,52 @@ export default function AdminPage() {
                         Manually {adjustmentType} water consumption for {selectedUser?.name}.
                     </DialogDescription>
                 </DialogHeader>
-                 {latestUserDelivery && adjustmentType === 'deduct' && (
-                    <div className="rounded-md border bg-muted/50 p-3 text-sm my-4">
-                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Info className="h-4 w-4"/>Last Delivery Info</h4>
-                        <p><strong>Date:</strong> {format(new Date(latestUserDelivery.date), 'PP')}</p>
-                        <p><strong>Volume:</strong> {latestUserDelivery.volumeGallons} gallons ({(latestUserDelivery.volumeGallons * 3.785).toLocaleString(undefined, { maximumFractionDigits: 0 })} liters)</p>
-                        <p><strong>Status:</strong> {latestUserDelivery.status}</p>
-                         <Button
-                            size="sm"
-                            variant="link"
-                            className="p-0 h-auto"
-                            onClick={() => adjustConsumptionForm.setValue('amount', latestUserDelivery.volumeGallons * 3.785)}
-                        >
-                            Use this amount
-                        </Button>
-                    </div>
-                )}
                 <Form {...adjustConsumptionForm}>
-                    <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4">
-                        <FormField
-                            control={adjustConsumptionForm.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Liters to {adjustmentType}</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="e.g., 100" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                    <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4 py-4">
+                        {adjustmentType === 'deduct' ? (
+                            <>
+                                <FormField
+                                    control={adjustConsumptionForm.control}
+                                    name="gallons"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Gallons to Deduct</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g., 5" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={adjustConsumptionForm.control}
+                                    name="amount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Equivalent Liters</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} readOnly className="bg-muted" />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </>
+                        ) : (
+                             <FormField
+                                control={adjustConsumptionForm.control}
+                                name="amount"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Liters to {adjustmentType}</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="e.g., 100" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                         <DialogFooter>
                             <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
                             <Button type="submit">{adjustmentType === 'deduct' ? 'Deduct' : 'Add'}</Button>
@@ -1076,11 +1100,5 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
 
     
