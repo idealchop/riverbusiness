@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { LiveChat } from '@/components/live-chat';
+import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
 import { format, differenceInMonths, addMonths } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
@@ -138,6 +138,10 @@ export default function DashboardLayout({
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
+  
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
+  ]);
 
   React.useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -322,6 +326,26 @@ export default function DashboardLayout({
     }
   };
 
+  const handleMessageSubmit = (messageContent: string) => {
+    const newUserMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: messageContent,
+    };
+    setChatMessages((prev) => [...prev, newUserMessage]);
+
+    // Simulate an admin response
+    setTimeout(() => {
+      const adminResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'admin',
+        content: "Thanks for your message. An admin will be with you shortly."
+      };
+      setChatMessages((prev) => [...prev, adminResponse]);
+      setHasNewMessage(true);
+    }, 1500);
+  };
+
     const planImage = useMemo(() => {
       if (!user?.clientType) return null;
       const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
@@ -430,7 +454,11 @@ export default function DashboardLayout({
                         </div>
                       </div>
                       <div className="flex flex-col h-[60vh] md:h-auto">
-                          <LiveChat setHasNewMessage={setHasNewMessage} />
+                          <LiveChat
+                            messages={chatMessages}
+                            onMessageSubmit={handleMessageSubmit}
+                            user={user}
+                          />
                       </div>
                   </div>
                 </ScrollArea>

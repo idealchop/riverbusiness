@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -13,24 +13,24 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, User, UserCog } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
+import type { AppUser } from '@/lib/types';
 
-interface Message {
+export interface Message {
   id: string;
   role: 'user' | 'admin';
   content: string;
 }
 
 interface LiveChatProps {
-    setHasNewMessage: (hasNewMessage: boolean) => void;
+    messages: Message[];
+    onMessageSubmit: (content: string) => void;
+    user: AppUser | null;
 }
 
-export function LiveChat({ setHasNewMessage }: LiveChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
-  ]);
-  const [input, setInput] = useState('');
+export function LiveChat({ messages, onMessageSubmit, user }: LiveChatProps) {
+  const [input, setInput] = React.useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,25 +40,8 @@ export function LiveChat({ setHasNewMessage }: LiveChatProps) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim() === '') return;
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-    };
-    setMessages((prev) => [...prev, newMessage]);
+    onMessageSubmit(input);
     setInput('');
-
-    // Simulate an admin response for demonstration purposes
-    setTimeout(() => {
-        const adminResponse: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'admin',
-            content: "Thanks for your message. An admin will be with you shortly."
-        };
-        setMessages((prev) => [...prev, adminResponse]);
-        setHasNewMessage(true);
-    }, 1500)
   };
 
   useEffect(() => {
@@ -100,6 +83,7 @@ export function LiveChat({ setHasNewMessage }: LiveChatProps) {
                 </div>
                 {m.role === 'user' && (
                   <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.photoURL} alt={user?.name || ''} />
                     <AvatarFallback>
                       <User />
                     </AvatarFallback>
