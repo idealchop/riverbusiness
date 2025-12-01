@@ -143,12 +143,12 @@ export default function AdminPage() {
     });
 
     useEffect(() => {
-        if (stationToUpdate) {
+        if (isStationProfileOpen && stationToUpdate) {
             stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
         } else {
             stationForm.reset({ name: '', location: '' });
         }
-    }, [stationToUpdate, stationForm]);
+    }, [stationToUpdate, stationForm, isStationProfileOpen]);
 
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
@@ -907,7 +907,7 @@ export default function AdminPage() {
                                 <FormItem>
                                     <FormLabel>Liters to {adjustmentType}</FormLabel>
                                     <FormControl>
-                                        <Input type="number" {...field} readOnly={adjustmentType === 'deduct'} className={cn(adjustmentType === 'deduct' && "bg-muted")} />
+                                        <Input type="number" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -1171,7 +1171,7 @@ export default function AdminPage() {
                         <div>
                             <h3 className="font-semibold text-base mb-1">3. Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
-                            <Button variant="outline" disabled={!isSuperAdmin}><FileText className="mr-2 h-4 w-4" /> View & Sign Agreement</Button>
+                            <Button variant="outline" disabled={!isSuperAdmin} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
                         </div>
                     </div>
                 </ScrollArea>
