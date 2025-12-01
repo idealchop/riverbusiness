@@ -177,9 +177,8 @@ export default function AdminPage() {
 
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
-        if (selectedUser) {
-            setSelectedUser({ ...selectedUser, assignedWaterStationId: stationToAssign });
-        }
+        
+        setSelectedUser({ ...selectedUser, assignedWaterStationId: stationToAssign });
 
         toast({ title: 'Station Assigned', description: `A new water station has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
@@ -199,9 +198,7 @@ export default function AdminPage() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
         
-        if (selectedUser) {
-            setSelectedUser({ ...selectedUser, totalConsumptionLiters: newTotal });
-        }
+        setSelectedUser({ ...selectedUser, totalConsumptionLiters: newTotal });
 
         toast({
             title: `Liters Adjusted`,
