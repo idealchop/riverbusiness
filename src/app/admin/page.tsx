@@ -452,48 +452,87 @@ export default function AdminPage() {
         </div>
 
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>User Details</DialogTitle>
+                    <DialogTitle>User Account Management</DialogTitle>
                     <DialogDescription>
-                        Information for user ID: {selectedUser?.clientId}
+                        View user details and perform administrative actions.
                     </DialogDescription>
                 </DialogHeader>
                 {selectedUser && (
-                     <div className="space-y-4 py-4">
-                        <div className="flex items-center space-x-4">
-                            <div>
-                                <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
-                            </div>
+                     <div className="grid md:grid-cols-2 gap-8 py-4">
+                        {/* Left Column: User Profile */}
+                        <div className="space-y-4">
+                            <h4 className="font-semibold text-lg border-b pb-2">Client Profile</h4>
+                             <div className="space-y-3 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Client ID:</span>
+                                    <span className="font-medium">{selectedUser.clientId}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Business Name:</span>
+                                    <span className="font-medium">{selectedUser.businessName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Contact Person:</span>
+                                    <span className="font-medium">{selectedUser.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Account Status:</span>
+                                    <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
+                                        {selectedUser.accountStatus}
+                                    </Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total Consumption:</span>
+                                    <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Assigned Station:</span>
+                                    <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Role:</span>
+                                    <span className="font-medium">{selectedUser.role}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Last Login:</span>
+                                    <span className="font-medium">{format(new Date(selectedUser.lastLogin), 'PPp')}</span>
+                                </div>
+                             </div>
                         </div>
-                         <div className="grid grid-cols-2 gap-4 text-sm">
-                             <div>
-                                 <p className="font-medium text-muted-foreground">Account Status</p>
-                                 <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
-                                     {selectedUser.accountStatus}
-                                 </Badge>
+
+                        {/* Right Column: Actions */}
+                        <div className="space-y-4">
+                             <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
+                             <div className="flex flex-col gap-2">
+                                <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
+                                    <Building className="mr-2 h-4 w-4" />
+                                    Assign Station
+                                </Button>
+                                <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Add Consumption
+                                </Button>
+                                <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
+                                    <MinusCircle className="mr-2 h-4 w-4" />
+                                    Deduct Consumption
+                                </Button>
+                                <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Upload Contract
+                                </Button>
+                                {selectedUser.contractUrl && (
+                                     <Button variant="link" asChild>
+                                        <a href={selectedUser.contractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
+                                    </Button>
+                                )}
                              </div>
-                             <div>
-                                 <p className="font-medium text-muted-foreground">Total Consumption</p>
-                                 <p>{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</p>
-                             </div>
-                             <div>
-                                 <p className="font-medium text-muted-foreground">Role</p>
-                                 <p>{selectedUser.role}</p>
-                             </div>
-                             <div>
-                                 <p className="font-medium text-muted-foreground">Last Login</p>
-                                 <p>{format(new Date(selectedUser.lastLogin), 'PP')}</p>
-                             </div>
-                             <div>
-                                <p className="font-medium text-muted-foreground">Assigned Station</p>
-                                <p>{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</p>
-                            </div>
-                         </div>
+                        </div>
                     </div>
                 )}
                 <DialogFooter>
-                    <Button onClick={() => setIsUserDetailOpen(false)}>Close</Button>
+                    <Button variant="outline" onClick={() => setIsUserDetailOpen(false)}>Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -844,22 +883,6 @@ export default function AdminPage() {
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
                                                             <UserCog className="mr-2 h-4 w-4" />
                                                             View Details
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setUserForContract(user); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
-                                                            <Upload className="mr-2 h-4 w-4" />
-                                                            Upload Contract
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
-                                                            <Building className="mr-2 h-4 w-4" />
-                                                            Assign Station
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
-                                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                                            Add Consumption
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
-                                                            <MinusCircle className="mr-2 h-4 w-4" />
-                                                            Deduct Consumption
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
