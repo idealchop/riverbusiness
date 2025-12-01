@@ -70,6 +70,7 @@ export default function DashboardPage() {
     const [autoRefill, setAutoRefill] = useState(true);
     
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
+    const [isConsumptionHistoryOpen, setIsConsumptionHistoryOpen] = useState(false);
     const [dailyTip, setDailyTip] = useState<{title: string, description: string} | null>(null);
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
@@ -484,6 +485,46 @@ export default function DashboardPage() {
                 </div>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isConsumptionHistoryOpen} onOpenChange={setIsConsumptionHistoryOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Consumption History</DialogTitle>
+                    <DialogDescription>
+                        A log of your water consumption from deliveries.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 max-h-[60vh] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">Liters</TableHead>
+                                <TableHead className="text-right">Bottles</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {(deliveries || []).map(delivery => {
+                                const liters = gallonToLiter(delivery.volumeGallons);
+                                const bottles = Math.round(liters / 19);
+                                return (
+                                <TableRow key={delivery.id}>
+                                    <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
+                                    <TableCell className="text-right">{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}</TableCell>
+                                    <TableCell className="text-right">{bottles}</TableCell>
+                                </TableRow>
+                                );
+                            })}
+                            {(deliveries || []).length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center">No consumption data available.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </DialogContent>
+        </Dialog>
         
         <Dialog open={!!selectedProofUrl} onOpenChange={(open) => !open && setSelectedProofUrl(null)}>
             <DialogContent>
@@ -564,7 +605,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col justify-center">
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
-                    <Button variant="link" size="sm" className="h-auto p-0 mt-2 self-start" onClick={() => setIsDeliveryHistoryOpen(true)}>
+                    <Button variant="link" size="sm" className="h-auto p-0 mt-2 self-start" onClick={() => setIsConsumptionHistoryOpen(true)}>
                         View History
                     </Button>
                 </CardContent>
@@ -745,3 +786,4 @@ export default function DashboardPage() {
     </div>
     );
 }
+
