@@ -583,7 +583,7 @@ export default function AdminPage() {
                                 <div className="flex flex-col gap-2">
                                     <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
                                         <History className="mr-2 h-4 w-4" />
-                                        View Delivery History
+                                        Delivery History
                                     </Button>
                                     <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
                                         <Building className="mr-2 h-4 w-4" />
