@@ -73,7 +73,7 @@ export interface AppUser {
     permissions?: Permission[];
     role: 'Admin' | 'User';
     assignedWaterStationId?: string;
-    createdAt: Timestamp | FieldValue;
+    createdAt: any;
     onboardingComplete?: boolean;
     plan?: any;
     clientType?: string | null;
@@ -126,3 +126,5 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
+
+    

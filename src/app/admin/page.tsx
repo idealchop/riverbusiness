@@ -53,8 +53,10 @@ const adjustConsumptionSchema = z.object({
 type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
 const newDeliverySchema = z.object({
+    refId: z.string().min(1, 'Reference ID is required'),
     date: z.date({ required_error: 'Date is required.'}),
     volumeGallons: z.coerce.number().min(1, 'Volume is required.'),
+    status: z.enum(['Pending', 'In Transit', 'Delivered']),
     proofUrl: z.any().optional(),
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
@@ -137,7 +139,7 @@ export default function AdminPage() {
 
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
-        defaultValues: { volumeGallons: 0, },
+        defaultValues: { refId: '', volumeGallons: 0, status: 'Pending' },
     });
 
     useEffect(() => {
@@ -292,30 +294,26 @@ export default function AdminPage() {
         if (values.proofUrl && values.proofUrl.length > 0) {
             const file = values.proofUrl[0];
             const storage = getStorage();
-            const filePath = `users/${userForHistory.id}/deliveries/${file.name}-${Date.now()}`;
+            const filePath = `users/${userForHistory.id}/deliveries/${values.refId}/${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             proofUrl = await getDownloadURL(storageRef);
         }
     
-        const deliveriesRef = collection(firestore, 'users', userForHistory.id, 'deliveries');
+        const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.refId);
         
-        const newDeliveryData = {
+        const newDeliveryData: Delivery = {
+            id: values.refId,
             userId: userForHistory.id,
             date: values.date.toISOString(),
             volumeGallons: values.volumeGallons,
-            status: 'Delivered',
+            status: values.status,
             proofOfDeliveryUrl: proofUrl,
         };
 
         try {
-            const docRef = await addDocumentNonBlocking(deliveriesRef, newDeliveryData);
-            if(docRef) {
-                // Now update the document with its own ID.
-                const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', docRef.id);
-                updateDocumentNonBlocking(newDeliveryDocRef, { id: docRef.id });
-                toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
-            }
+            await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+            toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             deliveryForm.reset();
             setIsCreateDeliveryOpen(false);
         } catch (error) {
@@ -722,6 +720,19 @@ export default function AdminPage() {
                     <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
                         <FormField
                             control={deliveryForm.control}
+                            name="refId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Reference ID</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., DEL-00123" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={deliveryForm.control}
                             name="date"
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
@@ -768,6 +779,28 @@ export default function AdminPage() {
                                     <FormControl>
                                         <Input type="number" placeholder="e.g., 5000" {...field} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={deliveryForm.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a status" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Pending">Pending</SelectItem>
+                                            <SelectItem value="In Transit">In Transit</SelectItem>
+                                            <SelectItem value="Delivered">Delivered</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -1140,4 +1173,7 @@ export default function AdminPage() {
 }
 
     
+    
+
+
     
