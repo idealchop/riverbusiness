@@ -487,228 +487,233 @@ export default function DashboardLayout({
                   Manage your plan, account details, and invoices.
                 </DialogDescription>
               </DialogHeader>
-              <Tabs defaultValue="accounts">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="accounts"><User className="mr-2" />Accounts</TabsTrigger>
-                  <TabsTrigger value="plan"><FileText className="mr-2" />Plan</TabsTrigger>
-                  <TabsTrigger value="invoices"><Receipt className="mr-2" />Invoices</TabsTrigger>
-                </TabsList>
+              <ScrollArea className="max-h-[70vh] w-full">
+                <div className="pr-6">
+                  <Tabs defaultValue="accounts">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="accounts"><User className="mr-2" />Accounts</TabsTrigger>
+                      <TabsTrigger value="plan"><FileText className="mr-2" />Plan</TabsTrigger>
+                      <TabsTrigger value="invoices"><Receipt className="mr-2" />Invoices</TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="accounts" className="py-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                        {editableFormData ? (
-                            <div className="space-y-6">
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                      <h4 className="font-semibold">Your Details</h4>
-                                      {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                                            <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                    <TabsContent value="accounts" className="py-4">
+                      <Card>
+                        <CardContent className="pt-6">
+                            {editableFormData ? (
+                                <div className="space-y-6">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
+                                          <h4 className="font-semibold">Your Details</h4>
+                                          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
                                         </div>
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="email" className="text-right">Login Email</Label>
-                                            <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                        </div>
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
-                                            <Input id="businessEmail" name="businessEmail" type="email" value={editableFormData.businessEmail || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                        </div>
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="businessName" className="text-right">Business Name</Label>
-                                            <Input id="businessName" name="businessName" value={editableFormData.businessName || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                        </div>
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="address" className="text-right">Address</Label>
-                                            <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                        </div>
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                                            <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                        </div>
-                                    </div>
-                                    {isEditingDetails && (
-                                        <div className="flex justify-end gap-2 mt-4">
-                                            <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
-                                            <Button onClick={handleSaveChanges}>Save Changes</Button>
-                                        </div>
-                                    )}
-                                </div>
-                                <Separator />
-                                <div>
-                                    <h4 className="font-semibold mb-4">Security</h4>
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="clientId" className="text-right">Client ID</Label>
-                                            <Input id="clientId" value={editableFormData.clientId || ''} disabled />
-                                        </div>
-                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                            <Label htmlFor="uid" className="text-right">User ID (UID)</Label>
-                                            <Input id="uid" value={authUser?.uid || ''} disabled />
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                                        <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : <p>No account information available.</p>}
-                    </CardContent>
-                  </Card>
-              </TabsContent>
-
-                <TabsContent value="plan" className="py-4">
-                  <div className="space-y-6">
-                    {user?.plan ? (
-                        <Card className="overflow-hidden">
-                          <CardContent className="p-0">
-                            <div className="flex flex-col md:flex-row">
-                              {planImage && (
-                                <div className="relative md:w-1/2 aspect-square md:aspect-auto">
-                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
-                                </div>
-                              )}
-                              <div className="flex-1 p-6">
-                                <CardTitle>{user.plan.name}</CardTitle>
-                                <CardDescription className="text-xl font-bold text-foreground">₱{user.plan.price.toLocaleString()}/month</CardDescription>
-                                <Separator className="my-4" />
-                                <h4 className="font-semibold mb-2">Inclusions:</h4>
-                                <ul className="space-y-2 text-sm text-muted-foreground">
-                                    <li className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'} Liters/Month (+{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'} bonus)</span></li>
-                                    <li className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.deliveryFrequency || 'N/A'} on {user.customPlanDetails?.deliveryDay}</span></li>
-                                    <li className="flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.gallonQuantity || '0'} Gallons, {user.customPlanDetails?.dispenserQuantity || '0'} Dispensers</span></li>
-                                </ul>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                    ) : (
-                        <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                        {user?.contractUrl ? (
-                            <Button asChild className="w-full">
-                                <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    View Contract
-                                </a>
-                            </Button>
-                        ) : (
-                             <Button variant="outline" disabled className="w-full">
-                                <FileX className="mr-2 h-4 w-4" />
-                                Contract Not Available
-                            </Button>
-                        )}
-                         <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Change Plan
-                        </Button>
-                    </div>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Included in Every Plan</CardTitle>
-                            <CardDescription className="text-xs">Every subscription plan includes full access to our growing network of partner perks.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                {includedFeatures.map((feature, index) => {
-                                    const Icon = feature.icon;
-                                    return (
-                                        <div key={index} className="flex items-start gap-3">
-                                            <Icon className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                                            <div>
-                                                <h4 className="text-sm font-medium">{feature.title}</h4>
-                                                <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="fullName" className="text-right">Full Name</Label>
+                                                <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="email" className="text-right">Login Email</Label>
+                                                <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
+                                                <Input id="businessEmail" name="businessEmail" type="email" value={editableFormData.businessEmail || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="businessName" className="text-right">Business Name</Label>
+                                                <Input id="businessName" name="businessName" value={editableFormData.businessName || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="address" className="text-right">Address</Label>
+                                                <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
+                                                <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        {isEditingDetails && (
+                                            <div className="flex justify-end gap-2 mt-4">
+                                                <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                                                <Button onClick={handleSaveChanges}>Save Changes</Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Separator />
+                                    <div>
+                                        <h4 className="font-semibold mb-4">Security</h4>
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="clientId" className="text-right">Client ID</Label>
+                                                <Input id="clientId" value={editableFormData.clientId || ''} disabled />
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="uid" className="text-right">User ID (UID)</Label>
+                                                <Input id="uid" value={authUser?.uid || ''} disabled />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+                                            <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : <p>No account information available.</p>}
                         </CardContent>
-                    </Card>
+                      </Card>
+                  </TabsContent>
 
-                  </div>
-              </TabsContent>
+                    <TabsContent value="plan" className="py-4">
+                      <div className="space-y-6">
+                        {user?.plan ? (
+                            <Card className="overflow-hidden">
+                              <CardContent className="p-0">
+                                <div className="flex flex-col md:flex-row">
+                                  {planImage && (
+                                    <div className="relative md:w-1/2 aspect-square md:aspect-auto">
+                                      <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 p-6">
+                                    <CardTitle>{user.plan.name}</CardTitle>
+                                    <CardDescription className="text-xl font-bold text-foreground">₱{user.plan.price.toLocaleString()}/month</CardDescription>
+                                    <Separator className="my-4" />
+                                    <h4 className="font-semibold mb-2">Inclusions:</h4>
+                                    <ul className="space-y-2 text-sm text-muted-foreground">
+                                        <li className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'} Liters/Month (+{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'} bonus)</span></li>
+                                        <li className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.deliveryFrequency || 'N/A'} on {user.customPlanDetails?.deliveryDay}</span></li>
+                                        <li className="flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.gallonQuantity || '0'} Gallons, {user.customPlanDetails?.dispenserQuantity || '0'} Dispensers</span></li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
+                        )}
 
-                <TabsContent value="invoices" className="py-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Invoice History</CardTitle>
-                                <CardDescription>A record of all your past and upcoming invoices.</CardDescription>
-                            </div>
-                            <Button variant="outline" size="sm" onClick={() => toast({title: "Coming soon!"})}>
-                                <History className="mr-2 h-4 w-4" />
-                                History
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                            {user?.contractUrl ? (
+                                <Button asChild className="w-full">
+                                    <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        View Contract
+                                    </a>
+                                </Button>
+                            ) : (
+                                 <Button variant="outline" disabled className="w-full">
+                                    <FileX className="mr-2 h-4 w-4" />
+                                    Contract Not Available
+                                </Button>
+                            )}
+                             <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Change Plan
                             </Button>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="w-full whitespace-nowrap">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Invoice ID</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Amount</TableHead>
-                                            <TableHead className="text-center">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {generatedInvoices.map((payment) => (
-                                            <TableRow key={payment.id}>
-                                                <TableCell className="font-medium">{payment.id}</TableCell>
-                                                <TableCell>{format(new Date(payment.date), 'PP')}</TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                        className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                                    >{payment.status}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">₱{payment.amount.toFixed(2)}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className='flex gap-2 justify-center'>
-                                                    {(payment.status === 'Upcoming' || payment.status === 'Overdue') && (
-                                                        <Button size="sm" onClick={() => { setSelectedInvoice(payment); setIsPaymentDialogOpen(true); }}>
-                                                            <CreditCard className="mr-2 h-4 w-4" />
-                                                            Pay Now
-                                                        </Button>
-                                                    )}
-                                                    {payment.status === 'Pending Review' && (
-                                                        <Button variant="secondary" size="sm" onClick={() => setIsVerificationDialogOpen(true)}>
-                                                            <Hourglass className="mr-2 h-4 w-4" />
-                                                            Processing
-                                                        </Button>
-                                                    )}
-                                                    {payment.status === 'Paid' && payment.proofOfPaymentUrl && (
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
-                                                                <Check className="mr-2 h-4 w-4" />
-                                                                View Proof
-                                                            </a>
-                                                        </Button>
-                                                    )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
+                        </div>
 
-              </Tabs>
-              <div className="flex justify-end pt-4">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Included in Every Plan</CardTitle>
+                                <CardDescription className="text-xs">Every subscription plan includes full access to our growing network of partner perks.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                    {includedFeatures.map((feature, index) => {
+                                        const Icon = feature.icon;
+                                        return (
+                                            <div key={index} className="flex items-start gap-3">
+                                                <Icon className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                                <div>
+                                                    <h4 className="text-sm font-medium">{feature.title}</h4>
+                                                    <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                      </div>
+                  </TabsContent>
+
+                    <TabsContent value="invoices" className="py-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle>Invoice History</CardTitle>
+                                    <CardDescription>A record of all your past and upcoming invoices.</CardDescription>
+                                </div>
+                                <Button variant="outline" size="sm" onClick={() => toast({title: "Coming soon!"})}>
+                                    <History className="mr-2 h-4 w-4" />
+                                    History
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                <ScrollArea className="w-full whitespace-nowrap">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Invoice ID</TableHead>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Amount</TableHead>
+                                                <TableHead className="text-center">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {generatedInvoices.map((payment) => (
+                                                <TableRow key={payment.id}>
+                                                    <TableCell className="font-medium">{payment.id}</TableCell>
+                                                    <TableCell>{format(new Date(payment.date), 'PP')}</TableCell>
+                                                    <TableCell>
+                                                        <Badge
+                                                            variant={payment.status === 'Paid' ? 'default' : (payment.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                            className={payment.status === 'Paid' ? 'bg-green-100 text-green-800' : payment.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                        >{payment.status}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">₱{payment.amount.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <div className='flex gap-2 justify-center'>
+                                                        {(payment.status === 'Upcoming' || payment.status === 'Overdue') && (
+                                                            <Button size="sm" onClick={() => { setSelectedInvoice(payment); setIsPaymentDialogOpen(true); }}>
+                                                                <CreditCard className="mr-2 h-4 w-4" />
+                                                                Pay Now
+                                                            </Button>
+                                                        )}
+                                                        {payment.status === 'Pending Review' && (
+                                                            <Button variant="secondary" size="sm" onClick={() => setIsVerificationDialogOpen(true)}>
+                                                                <Hourglass className="mr-2 h-4 w-4" />
+                                                                Processing
+                                                            </Button>
+                                                        )}
+                                                        {payment.status === 'Paid' && payment.proofOfPaymentUrl && (
+                                                            <Button variant="outline" size="sm" asChild>
+                                                                <a href={payment.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                                                                    <Check className="mr-2 h-4 w-4" />
+                                                                    View Proof
+                                                                </a>
+                                                            </Button>
+                                                        )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                    <div className="h-1" />
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                  </Tabs>
+                </div>
+              </ScrollArea>
+              <DialogFooter className="pr-6 pt-4">
                   <Button variant="outline" onClick={handleLogout}>Logout</Button>
-              </div>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
