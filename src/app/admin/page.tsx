@@ -449,84 +449,6 @@ export default function AdminPage() {
     <div className="flex flex-col gap-6 font-sans">
         <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">{greeting}, {adminUser?.businessName || 'Admin'}!</h1>
-            <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
-                <DialogTrigger asChild disabled={!isSuperAdmin}>
-                     <Button className={cn(isSuperAdmin ? "cursor-pointer" : "cursor-not-allowed opacity-50")}>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Generate Account
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                     <DialogHeader>
-                        <DialogTitle>Create a New User</DialogTitle>
-                        <DialogDescription>
-                            Fill in the details to create a new user account.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleCreateUser)} className="space-y-4">
-                            <FormField control={form.control} name="name" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Full Name</FormLabel>
-                                    <FormControl><Input placeholder="Juan dela Cruz" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-                             <FormField control={form.control} name="businessName" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Business Name</FormLabel>
-                                    <FormControl><Input placeholder="Acme Inc." {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-                            <FormField control={form.control} name="email" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <FormControl><Input type="email" placeholder="user@example.com" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-                            <FormField control={form.control} name="password" render={({ field }) => (
-                                 <FormItem>
-                                    <FormLabel>Password</FormLabel>
-                                    <FormControl>
-                                        <div className="relative">
-                                            <Input type={showPassword ? 'text' : 'password'} placeholder="******" {...field} />
-                                            <Button size="icon" variant="ghost" type="button" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)}>
-                                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                            </Button>
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}/>
-                             <FormField control={form.control} name="role" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Role</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="User">User</SelectItem>
-                                    <SelectItem value="Admin">Admin</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}/>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                  <Button variant="secondary" className="bg-secondary text-secondary-foreground">Cancel</Button>
-                                </DialogClose>
-                                <Button type="submit" className="bg-primary text-primary-foreground">Create User</Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
         </div>
 
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
@@ -567,11 +489,6 @@ export default function AdminPage() {
                                 <p className="font-medium text-muted-foreground">Assigned Station</p>
                                 <p>{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</p>
                             </div>
-                         </div>
-                         <Separator className="my-4" />
-                         <div className="flex flex-col space-y-2">
-                             <Button variant="outline" onClick={() => { if(selectedUser) handleResetPassword(selectedUser.id)}} disabled={!isSuperAdmin}><KeyRound className="mr-2 h-4 w-4" /> Reset Password</Button>
-                             <Button variant="destructive" className="mt-4" disabled={!isSuperAdmin}><Trash2 className="mr-2 h-4 w-4" /> Delete User</Button>
                          </div>
                     </div>
                 )}
@@ -1136,5 +1053,9 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
+
+    
 
     
