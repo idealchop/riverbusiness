@@ -365,11 +365,9 @@ export default function AdminPage() {
 
     const watchedGallons = adjustConsumptionForm.watch('gallons');
     useEffect(() => {
-        if (adjustmentType === 'deduct') {
-            const liters = (watchedGallons || 0) * 19.5;
-            adjustConsumptionForm.setValue('amount', liters);
-        }
-    }, [watchedGallons, adjustmentType, adjustConsumptionForm]);
+        const liters = (watchedGallons || 0) * 19.5;
+        adjustConsumptionForm.setValue('amount', liters, { shouldValidate: true });
+    }, [watchedGallons, adjustConsumptionForm]);
 
 
     const adminUser = appUsers?.find(user => user.role === 'Admin');
@@ -804,50 +802,34 @@ export default function AdminPage() {
                 </DialogHeader>
                 <Form {...adjustConsumptionForm}>
                     <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4 py-4">
-                        {adjustmentType === 'deduct' ? (
-                            <>
-                                <FormField
-                                    control={adjustConsumptionForm.control}
-                                    name="gallons"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Gallons to Deduct</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="e.g., 5" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={adjustConsumptionForm.control}
-                                    name="amount"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Equivalent Liters</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" {...field} readOnly className="bg-muted" />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </>
-                        ) : (
-                             <FormField
+                        <>
+                            <FormField
+                                control={adjustConsumptionForm.control}
+                                name="gallons"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Gallons</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="e.g., 5" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
                                 control={adjustConsumptionForm.control}
                                 name="amount"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Liters to {adjustmentType}</FormLabel>
                                         <FormControl>
-                                            <Input type="number" placeholder="e.g., 100" {...field} />
+                                            <Input type="number" {...field} readOnly={adjustmentType === 'deduct'} className={cn(adjustmentType === 'deduct' && "bg-muted")} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-                        )}
+                        </>
                         <DialogFooter>
                             <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
                             <Button type="submit">{adjustmentType === 'deduct' ? 'Deduct' : 'Add'}</Button>
