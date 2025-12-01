@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -80,6 +80,7 @@ export default function DashboardPage() {
     const [newDeliveryTime, setNewDeliveryTime] = useState<string>('');
     const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
     const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
+    const [isSaveLitersDialogOpen, setIsSaveLitersDialogOpen] = useState(false);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -262,6 +263,16 @@ export default function DashboardPage() {
 
         toast({ title: "Schedule Updated", description: "Your delivery schedule has been updated successfully." });
         setIsUpdateScheduleOpen(false);
+    };
+
+    const handleSaveLiters = () => {
+        // Here you would typically have backend logic to handle this.
+        // For now, we'll just show a toast notification as a placeholder.
+        toast({
+            title: "Liters Saved!",
+            description: `${remainingLiters.toLocaleString()} liters will be added to your next month's balance.`,
+        });
+        setIsSaveLitersDialogOpen(false);
     };
     
     if (isUserLoading || areDeliveriesLoading) {
@@ -575,6 +586,32 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
 
+        <Dialog open={isSaveLitersDialogOpen} onOpenChange={setIsSaveLitersDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Save Remaining Liters</DialogTitle>
+                    <DialogDescription>
+                        Carry over your unused water credits to the next month.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                        <p className="text-sm text-muted-foreground">You are about to save:</p>
+                        <p className="text-2xl font-bold">{remainingLiters.toLocaleString()} Liters</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            This amount will be cleared from your current balance and added to your purchased liters for next month, {format(new Date(), 'MMMM')}.
+                        </p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleSaveLiters}>Confirm & Save</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card className="flex flex-col">
@@ -618,6 +655,9 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
+                    <Button variant="link" size="sm" className="h-auto p-0 mt-2" onClick={() => setIsSaveLitersDialogOpen(true)}>
+                        Save Liters
+                    </Button>
                 </CardContent>
             </Card>
             <Card>
@@ -786,4 +826,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
