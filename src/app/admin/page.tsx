@@ -75,7 +75,7 @@ export default function AdminPage() {
 
     const isSuperAdmin = authUser?.email === 'admin@riverph.com';
 
-    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+    const usersQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'users') : null, [firestore, isSuperAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
     const waterStationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'waterStations') : null, [firestore]);
@@ -1053,6 +1053,8 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
 
