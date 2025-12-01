@@ -635,9 +635,9 @@ export default function DashboardPage() {
                         <div className="flex justify-between"><span>From Last Month:</span> <span>{fromLastMonthLiters.toLocaleString()} L</span></div>
                     </div>
                 </CardContent>
-                <div className="p-6 pt-0">
+                <CardFooter className="pt-0">
                     <Progress value={100} className="h-2"/>
-                </div>
+                </CardFooter>
             </Card>
             <Card className="flex flex-col">
                 <CardHeader>
@@ -648,10 +648,12 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col justify-center">
                     <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
-                    <Button variant="link" size="sm" className="h-auto p-0 mt-2 self-start" onClick={() => setIsConsumptionHistoryOpen(true)}>
+                </CardContent>
+                <CardFooter>
+                    <Button variant="link" size="sm" className="h-auto p-0 self-start" onClick={() => setIsConsumptionHistoryOpen(true)}>
                         View History
                     </Button>
-                </CardContent>
+                </CardFooter>
             </Card>
             <Card className="flex flex-col">
                 <CardHeader>
@@ -659,12 +661,14 @@ export default function DashboardPage() {
                         Remaining Liters
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1">
+                <CardContent className="flex-1 flex flex-col justify-center">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
-                    <Button variant="link" size="sm" className="h-auto p-0 mt-2" onClick={() => setIsSaveLitersDialogOpen(true)}>
+                </CardContent>
+                <CardFooter>
+                    <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>
                         Save Liters
                     </Button>
-                </CardContent>
+                </CardFooter>
             </Card>
             <Card>
                 <CardHeader>
@@ -832,4 +836,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
