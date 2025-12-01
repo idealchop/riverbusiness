@@ -67,7 +67,6 @@ export default function DashboardPage() {
     const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
 
     const [greeting, setGreeting] = useState('');
-    const [autoRefill, setAutoRefill] = useState(true);
     
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [isConsumptionHistoryOpen, setIsConsumptionHistoryOpen] = useState(false);
@@ -122,7 +121,7 @@ export default function DashboardPage() {
             setNewDeliveryDay(user.customPlanDetails.deliveryDay || '');
             setNewDeliveryTime(user.customPlanDetails.deliveryTime || '');
         }
-    }, [user]);
+    }, [user?.customPlanDetails]);
 
     const consumptionChartData = React.useMemo(() => {
       const sourceDeliveries = deliveries || [];
@@ -171,7 +170,7 @@ export default function DashboardPage() {
     
     const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
     const remainingPercentage = totalLitersPurchased > 0 ? (remainingLiters / totalLitersPurchased) * 100 : 0;
-    const remainingLitersLastMonth = 1250; // Example placeholder data
+    const autoRefill = user?.customPlanDetails?.autoRefillEnabled ?? true;
 
     const getStatusInfo = (status: Delivery['status'] | undefined) => {
         if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
@@ -221,7 +220,12 @@ export default function DashboardPage() {
     };
 
     const handleAutoRefillToggle = (checked: boolean) => {
-        setAutoRefill(checked);
+        if (!userDocRef) return;
+
+        updateDocumentNonBlocking(userDocRef, {
+            'customPlanDetails.autoRefillEnabled': checked,
+        });
+
         if (checked) {
             toast({
                 title: "Auto-Refill Enabled",
@@ -596,7 +600,7 @@ export default function DashboardPage() {
                     <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button onClick={handleSaveLiters}>Confirm & Save</Button>
+                    <Button onClick={handleSaveLiters}>Confirm &amp; Save</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -646,10 +650,6 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()} L</p>
-                    <div className="flex items-center text-xs text-muted-foreground">
-                        {remainingLiters > remainingLitersLastMonth ? <ArrowUp className="h-4 w-4 text-green-500" /> : <ArrowDown className="h-4 w-4 text-red-500" />}
-                        <span>{Math.abs(remainingLiters - remainingLitersLastMonth).toLocaleString()} L vs last month</span>
-                    </div>
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>
@@ -823,3 +823,5 @@ export default function DashboardPage() {
     </div>
     );
 }
+
+    
