@@ -10,10 +10,10 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    // Users can read/update their own profile. Admins can read any profile.
+    // Users can read/update their own profile. Admins can read/list all profiles.
     match /users/{userId} {
       allow read, update: if request.auth.uid == userId;
-      allow read: if isAdmin();
+      allow read, list: if isAdmin();
       // Allow user creation during onboarding
       allow create: if request.auth.uid == userId;
     }
