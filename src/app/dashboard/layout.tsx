@@ -364,54 +364,56 @@ export default function DashboardLayout({
                  {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col">
+             <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 overflow-hidden">
-                    <div className="space-y-8 flex flex-col">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4 rounded-md border p-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                            <Phone className="h-6 w-6" />
-                            </div>
-                            <div>
-                            <p className="font-semibold">Jayvee Victor Co</p>
-                            <a href="tel:09182719091" className="text-sm text-muted-foreground hover:text-primary">09182719091</a>
-                            </div>
+                <ScrollArea className="flex-1">
+                  <div className="grid md:grid-cols-2 gap-8 py-4 pr-6">
+                      <div className="space-y-8 flex flex-col">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4 rounded-md border p-4">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                              <Phone className="h-6 w-6" />
+                              </div>
+                              <div>
+                              <p className="font-semibold">Jayvee Victor Co</p>
+                              <a href="tel:09182719091" className="text-sm text-muted-foreground hover:text-primary">09182719091</a>
+                              </div>
+                          </div>
+                          <div className="flex items-center gap-4 rounded-md border p-4">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                              <Mail className="h-6 w-6" />
+                              </div>
+                              <div>
+                              <p className="font-semibold">Email Support</p>
+                              <a href="mailto:jayvee@riverph.com" className="text-sm text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
+                              </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4 rounded-md border p-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                            <Mail className="h-6 w-6" />
-                            </div>
-                            <div>
-                            <p className="font-semibold">Email Support</p>
-                            <a href="mailto:jayvee@riverph.com" className="text-sm text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
-                            </div>
-                        </div>
-                      </div>
-                       <div className="mt-auto pt-4 text-center text-sm space-y-4">
-                         <div className="flex justify-center gap-2">
-                             <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
+                        <div className="mt-auto pt-4 text-center text-sm space-y-4">
+                          <div className="flex justify-center gap-2">
+                              <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
                                 <MessageSquare className="h-4 w-4 mr-2" />
                                 Submit Feedback
-                             </Button>
-                             <Button variant="outline" onClick={() => setIsSwitchProviderDialogOpen(true)}>
+                              </Button>
+                              <Button variant="outline" onClick={() => setIsSwitchProviderDialogOpen(true)}>
                                 <FileUp className="h-4 w-4 mr-2" />
                                 Switch Provider
-                             </Button>
-                         </div>
-                        <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
-                        <p className="text-xs text-muted-foreground">By Smart Refill</p>
+                              </Button>
+                          </div>
+                          <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
+                          <p className="text-xs text-muted-foreground">By Smart Refill</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col h-full">
-                         <LiveChat setHasNewMessage={setHasNewMessage} />
-                    </div>
-                </div>
+                      <div className="flex flex-col h-[60vh] md:h-auto">
+                          <LiveChat setHasNewMessage={setHasNewMessage} />
+                      </div>
+                  </div>
+                </ScrollArea>
               </DialogContent>
           </Dialog>
           <Popover>
