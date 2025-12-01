@@ -39,16 +39,6 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-const newUserSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  businessName: z.string().min(1, 'Business Name is required'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['Admin', 'User']),
-});
-
-type NewUserFormValues = z.infer<typeof newUserSchema>;
-
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     location: z.string().min(1, 'Location is required'),
@@ -85,8 +75,6 @@ export default function AdminPage() {
 
     const [deliveries, setDeliveries] = useState<Delivery[]>([]);
     
-    const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
     const [greeting, setGreeting] = useState('');
     
     const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
@@ -136,11 +124,6 @@ export default function AdminPage() {
         else setGreeting('Good evening');
     }, []);
 
-    const form = useForm<NewUserFormValues>({
-        resolver: zodResolver(newUserSchema),
-        defaultValues: { name: '', businessName: '', email: '', password: '', role: 'User' },
-    });
-    
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
         defaultValues: { name: '', location: '' },
@@ -163,35 +146,6 @@ export default function AdminPage() {
         resolver: zodResolver(adjustConsumptionSchema),
         defaultValues: { amount: 0, gallons: 0 },
     });
-
-    const handleCreateUser = async (values: NewUserFormValues) => {
-        if (!auth || !firestore) return;
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-            const user = userCredential.user;
-
-            const newUserDoc: AppUser = {
-                id: user.uid,
-                name: values.name,
-                businessName: values.businessName,
-                email: values.email,
-                role: values.role,
-                totalConsumptionLiters: 0,
-                accountStatus: 'Active',
-                lastLogin: new Date().toISOString(),
-                createdAt: serverTimestamp(),
-            };
-
-            const userDocRef = doc(firestore, "users", user.uid);
-            setDocumentNonBlocking(userDocRef, newUserDoc, { merge: true });
-
-            toast({ title: 'User Account Created', description: `An account for ${values.name} has been successfully created.` });
-            form.reset();
-            setIsCreateUserOpen(false);
-        } catch (error: any) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to create user. Please try again.' });
-        }
-    };
 
     const handleSaveStation = (values: NewStationFormValues) => {
         if (!firestore) return;
@@ -1105,3 +1059,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
