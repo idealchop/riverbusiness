@@ -300,9 +300,9 @@ export default function OnboardingPage() {
                                 <div className="flex-1">
                                     <p className="font-bold text-xl">{selectedPlan.name} ({selectedClientType})</p>
                                     <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                        <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()}</p>
+                                        <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()} ({customPlanDetails.litersPerMonth / 19.5} containers)</p>
                                         <p><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</p>
-                                        <p><strong>Gallons:</strong> {customPlanDetails.gallonQuantity}</p>
+                                        <p><strong>Containers:</strong> {customPlanDetails.gallonQuantity}</p>
                                         <p><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</p>
                                         <p><strong>Subscription:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
                                         <p><strong>Delivery:</strong> {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
@@ -365,11 +365,11 @@ export default function OnboardingPage() {
                              <h4 className="font-semibold text-sm flex items-center gap-2"><Package className="h-4 w-4" /> Equipment</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="gallonQuantity">Gallon Quantity</Label>
+                                    <Label htmlFor="gallonQuantity">Container Quantity</Label>
                                     <Input id="gallonQuantity" type="number" placeholder="e.g., 10" onChange={(e) => setGallonQuantity(Number(e.target.value))} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="gallonPrice">Gallon Price/Month</Label>
+                                    <Label htmlFor="gallonPrice">Container Price/Month</Label>
                                     <Input id="gallonPrice" type="number" placeholder="e.g., 100" onChange={(e) => setGallonPrice(Number(e.target.value))} />
                                 </div>
                             </div>

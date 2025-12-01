@@ -88,7 +88,7 @@ export default function DeliveriesPage() {
           <TableRow>
             <TableHead>Delivery ID</TableHead>
             <TableHead>Date</TableHead>
-            <TableHead>Volume (Liters)</TableHead>
+            <TableHead>Volume</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -100,7 +100,7 @@ export default function DeliveriesPage() {
               <TableRow key={delivery.id}>
                 <TableCell className="font-medium">{delivery.id}</TableCell>
                 <TableCell>{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                <TableCell>{volumeLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell>
+                <TableCell>{volumeLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })}L / {delivery.volumeContainers} containers</TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(delivery.status)}
                     className={

@@ -677,9 +677,9 @@ export default function DashboardLayout({
                                     <Separator className="my-4" />
                                     <h4 className="font-semibold mb-2">Inclusions:</h4>
                                     <ul className="space-y-2 text-sm text-muted-foreground">
-                                        <li className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A'} Liters/Month (+{user.customPlanDetails?.bonusLiters?.toLocaleString() || 'N/A'} bonus)</span></li>
+                                        <li className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" /> <span>{(user.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month (+{(user.customPlanDetails?.bonusLiters || 0).toLocaleString()} bonus)</span></li>
                                         <li className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.deliveryFrequency || 'N/A'} on {user.customPlanDetails?.deliveryDay}</span></li>
-                                        <li className="flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.gallonQuantity || '0'} Gallons, {user.customPlanDetails?.dispenserQuantity || '0'} Dispensers</span></li>
+                                        <li className="flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> <span>{user.customPlanDetails?.gallonQuantity || '0'} Gallons / {user.customPlanDetails?.dispenserQuantity || '0'} Dispensers</span></li>
                                     </ul>
                                   </div>
                                 </div>

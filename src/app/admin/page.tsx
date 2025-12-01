@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -795,6 +795,9 @@ export default function AdminPage() {
                                     <FormControl>
                                         <Input type="number" placeholder="e.g., 50" {...field} />
                                     </FormControl>
+                                    <FormDescription>
+                                        1 container = 19.5 liters.
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -895,6 +898,9 @@ export default function AdminPage() {
                                     <FormControl>
                                         <Input type="number" placeholder="e.g., 5" {...field} />
                                     </FormControl>
+                                    <FormDescription>
+                                        1 container = 19.5 liters. This will automatically calculate the liters below.
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
