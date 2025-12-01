@@ -342,6 +342,8 @@ export default function AdminPage() {
         adjustConsumptionForm.setValue('amount', parseFloat(liters.toFixed(2)), { shouldValidate: true });
     }, [watchedContainers, adjustConsumptionForm]);
 
+    const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
+
 
     const adminUser = appUsers?.find(user => user.role === 'Admin');
     
@@ -796,7 +798,7 @@ export default function AdminPage() {
                                         <Input type="number" placeholder="e.g., 50" {...field} />
                                     </FormControl>
                                     <FormDescription>
-                                        1 container = 19.5 liters.
+                                        1 container = 19.5 liters. Total: { (watchedDeliveryContainers * 19.5).toLocaleString() } liters.
                                     </FormDescription>
                                     <FormMessage />
                                 </FormItem>
