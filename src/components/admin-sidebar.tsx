@@ -11,12 +11,11 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Logo } from '@/components/icons';
-import { Shield, Users, LogIn, MessageSquare } from 'lucide-react';
+import { Users, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { href: '/admin', label: 'User Management', icon: Users },
-  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
 ];
 
 export function AdminSidebar() {
