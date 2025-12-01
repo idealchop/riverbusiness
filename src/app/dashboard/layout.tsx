@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle, FileX, RefreshCw } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -505,28 +505,28 @@ export default function DashboardLayout({
                                       {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="fullName">Full Name</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="fullName" className="text-right">Full Name</Label>
                                             <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="email">Login Email</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="email" className="text-right">Login Email</Label>
                                             <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="businessEmail">Business Email</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
                                             <Input id="businessEmail" name="businessEmail" type="email" value={editableFormData.businessEmail || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="businessName">Business Name</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="businessName" className="text-right">Business Name</Label>
                                             <Input id="businessName" name="businessName" value={editableFormData.businessName || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="address">Address</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="address" className="text-right">Address</Label>
                                             <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="contactNumber">Contact Number</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
                                             <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
                                         </div>
                                     </div>
@@ -540,13 +540,13 @@ export default function DashboardLayout({
                                 <Separator />
                                 <div>
                                     <h4 className="font-semibold mb-4">Security</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
-                                        <div className="space-y-1">
-                                            <Label htmlFor="clientId">Client ID</Label>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm mb-4">
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="clientId" className="text-right">Client ID</Label>
                                             <Input id="clientId" value={editableFormData.clientId || ''} disabled />
                                         </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="uid">User ID (UID)</Label>
+                                        <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                            <Label htmlFor="uid" className="text-right">User ID (UID)</Label>
                                             <Input id="uid" value={authUser?.uid || ''} disabled />
                                         </div>
                                     </div>
@@ -590,16 +590,25 @@ export default function DashboardLayout({
                         <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
                     )}
 
-                    {user?.contractUrl && (
-                      <div className="pt-2">
-                          <Button asChild className="w-full">
-                              <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  View Contract
-                              </a>
-                          </Button>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                        {user?.contractUrl ? (
+                            <Button asChild className="w-full">
+                                <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    View Contract
+                                </a>
+                            </Button>
+                        ) : (
+                             <Button variant="outline" disabled className="w-full">
+                                <FileX className="mr-2 h-4 w-4" />
+                                Contract Not Available
+                            </Button>
+                        )}
+                         <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Change Plan
+                        </Button>
+                    </div>
 
                     <Card>
                         <CardHeader>
