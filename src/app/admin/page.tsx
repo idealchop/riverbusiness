@@ -100,7 +100,7 @@ export default function AdminPage() {
     const [userForContract, setUserForContract] = useState<AppUser | null>(null);
     
     const deliveriesQuery = useMemoFirebase(() => {
-        if (!firestore || !userForHistory) return null;
+        if (!firestore || !userForHistory?.id) return null;
         return collection(firestore, 'users', userForHistory.id, 'deliveries');
     }, [firestore, userForHistory]);
     const { data: userDeliveriesData } = useCollection<Delivery>(deliveriesQuery);
@@ -178,7 +178,7 @@ export default function AdminPage() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
         
-        setSelectedUser({ ...selectedUser, assignedWaterStationId: stationToAssign });
+        setSelectedUser(prev => prev ? { ...prev, assignedWaterStationId: stationToAssign } : null);
 
         toast({ title: 'Station Assigned', description: `A new water station has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
@@ -198,7 +198,7 @@ export default function AdminPage() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
         
-        setSelectedUser({ ...selectedUser, totalConsumptionLiters: newTotal });
+        setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: newTotal } : null);
 
         toast({
             title: `Liters Adjusted`,
@@ -221,7 +221,7 @@ export default function AdminPage() {
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
 
         if (selectedUser && selectedUser.id === userId) {
-            setSelectedUser({ ...selectedUser, totalConsumptionLiters: newTotal });
+            setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: newTotal } : null);
         }
 
         toast({
@@ -288,7 +288,7 @@ export default function AdminPage() {
             updateDocumentNonBlocking(userRef, { contractUrl: downloadURL });
 
             if (selectedUser && selectedUser.id === userForContract.id) {
-                setSelectedUser({ ...selectedUser, contractUrl: downloadURL });
+                 setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL } : null);
             }
             
             toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
@@ -357,9 +357,9 @@ export default function AdminPage() {
         setActiveTab('user-management');
     };
 
-    const getLatestDelivery = (userId: string): Delivery | undefined => {
-        if (!userDeliveriesData) return undefined;
-        return userDeliveriesData
+    const getLatestDelivery = (userId: string, allDeliveries: Delivery[] | null): Delivery | undefined => {
+        if (!allDeliveries) return undefined;
+        return allDeliveries
             .filter(d => d.userId === userId)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     };
@@ -399,7 +399,7 @@ export default function AdminPage() {
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
-    const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
+    const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id, userDeliveriesData) : null;
 
     const permitFields: { key: keyof WaterStation['permits'], label: string }[] = [
         { key: 'businessPermitUrl', label: 'Business / Mayor\'s Permit' },
@@ -970,7 +970,7 @@ export default function AdminPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredUsers.map((user) => {
-                                        const latestDelivery = getLatestDelivery(user.id);
+                                        const latestDelivery = getLatestDelivery(user.id, userDeliveriesData);
                                         return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
@@ -1192,3 +1192,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
