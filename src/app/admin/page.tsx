@@ -37,6 +37,7 @@ import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBl
 import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const newUserSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -472,7 +473,17 @@ export default function AdminPage() {
                      <div className="grid md:grid-cols-2 gap-8 py-4">
                         {/* Left Column: User Profile */}
                         <div className="space-y-4">
-                            <h4 className="font-semibold text-lg border-b pb-2">Client Profile</h4>
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-20 w-20">
+                                    <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
+                                    <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                                </div>
+                            </div>
+                            <Separator/>
                              <div className="space-y-3 text-sm">
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Client ID:</span>
@@ -491,6 +502,14 @@ export default function AdminPage() {
                                     <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
                                         {selectedUser.accountStatus}
                                     </Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Client Type:</span>
+                                    <span className="font-medium">{selectedUser.clientType || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Plan:</span>
+                                    <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Purchased Liters:</span>
@@ -1104,5 +1123,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
