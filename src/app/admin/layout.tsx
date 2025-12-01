@@ -2,14 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, User, LogOut } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import type { AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
 
 export default function AdminLayout({
   children,
@@ -18,6 +20,7 @@ export default function AdminLayout({
 }) {
   const { toast } = useToast();
   const router = useRouter();
+  const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +37,12 @@ export default function AdminLayout({
     }
   }, [user, isUserLoading, router]);
   
+  const handleLogout = () => {
+    signOut(auth).then(() => {
+      router.push('/login');
+    })
+  }
+
   const handleSearch = () => {
     if (!searchTerm || !appUsers) return;
 
@@ -58,6 +67,8 @@ export default function AdminLayout({
           handleSearch();
       }
   };
+
+  const adminUser = appUsers?.find(u => u.id === user?.uid);
 
 
   return (
@@ -99,6 +110,28 @@ export default function AdminLayout({
                         <Separator className="my-4" />
                     </PopoverContent>
                 </Popover>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="overflow-hidden rounded-full"
+                        >
+                            <User className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>
+                            <p className="font-semibold">{adminUser?.businessName}</p>
+                            <p className="text-xs text-muted-foreground font-normal">{adminUser?.email}</p>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Logout
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
