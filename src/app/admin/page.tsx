@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -473,7 +473,7 @@ export default function AdminPage() {
                                 <Separator/>
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="profile">Profile</TabsTrigger>
-                                    <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                                    <TabsTrigger value="invoices">Invoice History</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="profile">
                                     <div className="space-y-3 text-sm">
@@ -566,6 +566,10 @@ export default function AdminPage() {
                             <div className="space-y-4">
                                 <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
                                 <div className="flex flex-col gap-2">
+                                    <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
+                                        <History className="mr-2 h-4 w-4" />
+                                        View Delivery History
+                                    </Button>
                                     <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
                                         <Building className="mr-2 h-4 w-4" />
                                         Assign Station
@@ -833,34 +837,32 @@ export default function AdminPage() {
                 </DialogHeader>
                 <Form {...adjustConsumptionForm}>
                     <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4 py-4">
-                        <>
-                            <FormField
-                                control={adjustConsumptionForm.control}
-                                name="gallons"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Gallons</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="e.g., 5" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={adjustConsumptionForm.control}
-                                name="amount"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Liters to {adjustmentType}</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} readOnly={adjustmentType === 'deduct'} className={cn(adjustmentType === 'deduct' && "bg-muted")} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </>
+                         <FormField
+                            control={adjustConsumptionForm.control}
+                            name="gallons"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Gallons</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 5" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={adjustConsumptionForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Liters to {adjustmentType}</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} readOnly={adjustmentType === 'deduct'} className={cn(adjustmentType === 'deduct' && "bg-muted")} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <DialogFooter>
                             <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
                             <Button type="submit">{adjustmentType === 'deduct' ? 'Deduct' : 'Add'}</Button>
