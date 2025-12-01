@@ -186,6 +186,7 @@ export default function DashboardPage() {
     
     const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
     const remainingPercentage = totalLitersPurchased > 0 ? (remainingLiters / totalLitersPurchased) * 100 : 0;
+    const remainingLitersLastMonth = 1250; // Example placeholder data
 
     const getStatusInfo = (status: Delivery['status'] | undefined) => {
         if (!status) return { variant: 'outline', icon: null, label: 'No Deliveries' };
@@ -643,11 +644,11 @@ export default function DashboardPage() {
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                         Consumed Liters
-                        <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-center">
-                    <p className="text-3xl font-bold">{consumedLiters.toLocaleString()}</p>
+                <CardContent className="flex-1 space-y-2">
+                    <p className="text-3xl font-bold">{consumedLiters.toLocaleString()} L</p>
+                    <Progress value={consumedPercentage} className="h-2"/>
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0 self-start" onClick={() => setIsConsumptionHistoryOpen(true)}>
@@ -661,8 +662,12 @@ export default function DashboardPage() {
                         Remaining Liters
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-center">
-                    <p className="text-3xl font-bold">{remainingLiters.toLocaleString()}</p>
+                <CardContent className="flex-1 space-y-2">
+                    <p className="text-3xl font-bold">{remainingLiters.toLocaleString()} L</p>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                        {remainingLiters > remainingLitersLastMonth ? <ArrowUp className="h-4 w-4 text-green-500" /> : <ArrowDown className="h-4 w-4 text-red-500" />}
+                        <span>{Math.abs(remainingLiters - remainingLitersLastMonth).toLocaleString()} L vs last month</span>
+                    </div>
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>
