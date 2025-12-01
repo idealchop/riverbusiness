@@ -204,7 +204,7 @@ export default function AdminPage() {
         }
 
         toast({
-            title: `Consumption Adjusted`,
+            title: `Liters Adjusted`,
             description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
         });
         
@@ -591,11 +591,11 @@ export default function AdminPage() {
                                     </Button>
                                     <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
                                         <PlusCircle className="mr-2 h-4 w-4" />
-                                        Add Consumption
+                                        Add Liters
                                     </Button>
                                     <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
                                         <MinusCircle className="mr-2 h-4 w-4" />
-                                        Deduct Consumption
+                                        Deduct Liters
                                     </Button>
                                     <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
                                         <Upload className="mr-2 h-4 w-4" />
@@ -880,9 +880,9 @@ export default function AdminPage() {
         <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{adjustmentType === 'deduct' ? 'Deduct' : 'Add'} Consumption</DialogTitle>
+                    <DialogTitle>{adjustmentType === 'deduct' ? 'Deduct' : 'Add'} Liters</DialogTitle>
                     <DialogDescription>
-                        Manually {adjustmentType} water consumption for {selectedUser?.name}.
+                        Manually {adjustmentType} water liters for {selectedUser?.name}.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...adjustConsumptionForm}>
