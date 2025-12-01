@@ -327,7 +327,7 @@ export default function AdminPage() {
         };
 
         try {
-            await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+            setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             deliveryForm.reset();
             setIsCreateDeliveryOpen(false);
