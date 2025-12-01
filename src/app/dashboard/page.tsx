@@ -602,6 +602,12 @@ export default function DashboardPage() {
                             This amount will be cleared from your current balance and added to your purchased liters for next month, {format(new Date(), 'MMMM')}.
                         </p>
                     </div>
+                     <div className="p-4 border-l-4 border-blue-500 bg-blue-50 text-blue-800 rounded-r-lg">
+                        <h4 className="font-semibold text-sm mb-1">Did you know?</h4>
+                        <p className="text-xs">
+                            If your total saved liters equal or exceed your monthly purchased liters, your next month's bill will be free. It's our way of rewarding you for saving water!
+                        </p>
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
@@ -826,3 +832,4 @@ export default function DashboardPage() {
     </div>
     );
 }
+
