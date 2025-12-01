@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -15,7 +16,7 @@ const PredictFutureConsumptionInputSchema = z.object({
   pastUsageData: z
     .array(z.object({
       date: z.string().describe('Date of consumption data point (YYYY-MM-DD).'),
-      consumptionGallons: z.number().describe('Water consumption in gallons.'),
+      consumptionContainers: z.number().describe('Water consumption in containers.'),
     }))
     .describe('Historical water consumption data.'),
   externalConditions: z
@@ -37,7 +38,7 @@ const PredictFutureConsumptionOutputSchema = z.object({
   predictedConsumption: z
     .array(z.object({
       date: z.string().describe('Date of predicted consumption (YYYY-MM-DD).'),
-      predictedGallons: z.number().describe('Predicted water consumption in gallons.'),
+      predictedContainers: z.number().describe('Predicted water consumption in containers.'),
     }))
     .describe('Predicted future water consumption.'),
   feedback: z
@@ -62,7 +63,7 @@ const prompt = ai.definePrompt({
 
   Past Usage Data:
   {{#each pastUsageData}}
-  - Date: {{this.date}}, Consumption: {{this.consumptionGallons}} gallons
+  - Date: {{this.date}}, Consumption: {{this.consumptionContainers}} containers
   {{/each}}
 
   {{#if externalConditions}}
@@ -78,7 +79,7 @@ const prompt = ai.definePrompt({
   {{/if}}
 
   Based on this information, provide a prediction of future water consumption for the next 7 days,
-  formatted as an array of date and predicted consumption in gallons. Also, provide feedback to the
+  formatted as an array of date and predicted consumption in containers. Also, provide feedback to the
   user encouraging them to reduce their water consumption, be encouraging and kind.
 
   Ensure the output matches the required JSON schema.

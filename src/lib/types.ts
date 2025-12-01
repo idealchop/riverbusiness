@@ -3,20 +3,20 @@ import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
   date: string;
-  consumptionGallons: number;
+  consumptionContainers: number;
 }
 
 export interface Delivery {
   id: string;
   userId: string;
   date: string;
-  volumeGallons: number;
+  volumeContainers: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
   proofOfDeliveryUrl?: string;
 }
 
 export interface ComplianceReport {
-  id: string;
+  id:string;
   date: string;
   status: 'Compliant' | 'Non-compliant' | 'Pending Review';
   reportUrl: string;
@@ -126,5 +126,3 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
-
-    

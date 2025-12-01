@@ -48,14 +48,14 @@ type NewStationFormValues = z.infer<typeof newStationSchema>;
 
 const adjustConsumptionSchema = z.object({
     amount: z.coerce.number().min(0, 'Amount must be a positive number'),
-    gallons: z.coerce.number().optional(),
+    containers: z.coerce.number().optional(),
 });
 type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
 const newDeliverySchema = z.object({
     refId: z.string().min(1, 'Reference ID is required'),
     date: z.date({ required_error: 'Date is required.'}),
-    volumeGallons: z.coerce.number().min(1, 'Volume is required.'),
+    volumeContainers: z.coerce.number().min(1, 'Volume is required.'),
     status: z.enum(['Pending', 'In Transit', 'Delivered']),
     proofUrl: z.any().optional(),
 });
@@ -139,7 +139,7 @@ export default function AdminPage() {
 
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
-        defaultValues: { refId: '', volumeGallons: 0, status: 'Pending' },
+        defaultValues: { refId: '', volumeContainers: 0, status: 'Pending' },
     });
 
     useEffect(() => {
@@ -152,7 +152,7 @@ export default function AdminPage() {
 
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
-        defaultValues: { amount: 0, gallons: 0 },
+        defaultValues: { amount: 0, containers: 0 },
     });
 
     const handleSaveStation = (values: NewStationFormValues) => {
@@ -212,12 +212,12 @@ export default function AdminPage() {
         adjustConsumptionForm.reset();
     };
 
-    const handleDeductFromDelivery = (userId: string, gallons: number) => {
+    const handleDeductFromDelivery = (userId: string, containers: number) => {
         if (!firestore || !appUsers) return;
         const userToUpdate = appUsers.find(u => u.id === userId);
         if (!userToUpdate) return;
         
-        const litersToDeduct = gallons * 3.785;
+        const litersToDeduct = containers * 19.5;
         const newTotal = (userToUpdate.totalConsumptionLiters || 0) - litersToDeduct;
         
         const userRef = doc(firestore, 'users', userId);
@@ -321,7 +321,7 @@ export default function AdminPage() {
             id: values.refId,
             userId: userForHistory.id,
             date: values.date.toISOString(),
-            volumeGallons: values.volumeGallons,
+            volumeContainers: values.volumeContainers,
             status: values.status,
             proofOfDeliveryUrl: proofUrl,
         };
@@ -336,11 +336,11 @@ export default function AdminPage() {
         }
     };
 
-    const watchedGallons = adjustConsumptionForm.watch('gallons');
+    const watchedContainers = adjustConsumptionForm.watch('containers');
     useEffect(() => {
-        const liters = (watchedGallons || 0) * 3.785; // 1 gallon is approx 3.785 liters
+        const liters = (watchedContainers || 0) * 19.5;
         adjustConsumptionForm.setValue('amount', parseFloat(liters.toFixed(2)), { shouldValidate: true });
-    }, [watchedGallons, adjustConsumptionForm]);
+    }, [watchedContainers, adjustConsumptionForm]);
 
 
     const adminUser = appUsers?.find(user => user.role === 'Admin');
@@ -374,14 +374,14 @@ export default function AdminPage() {
     });
 
     const handleDownloadDeliveries = () => {
-        const headers = ["ID", "Date", "Volume (Gallons)", "Status", "Proof of Delivery URL"];
+        const headers = ["ID", "Date", "Volume (Containers)", "Status", "Proof of Delivery URL"];
         const csvRows = [headers.join(',')];
 
         filteredDeliveries.forEach(delivery => {
             const row = [
                 delivery.id,
                 format(new Date(delivery.date), 'PP'),
-                delivery.volumeGallons,
+                delivery.volumeContainers,
                 delivery.status,
                 delivery.proofOfDeliveryUrl || "N/A"
             ].join(',');
@@ -685,13 +685,12 @@ export default function AdminPage() {
                         </TableHeader>
                         <TableBody>
                             {filteredDeliveries.map(delivery => {
-                                const liters = delivery.volumeGallons * 3.785;
-                                const bottles = Math.round(liters / 19);
+                                const liters = delivery.volumeContainers * 19.5;
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {bottles} bottles</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
                                     <TableCell>
                                          <Badge>
                                             {delivery.status}
@@ -709,7 +708,7 @@ export default function AdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {delivery.status === 'Delivered' && userForHistory && (
-                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeGallons)} disabled={!isSuperAdmin}>
+                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeContainers)} disabled={!isSuperAdmin}>
                                                 Deduct
                                             </Button>
                                         )}
@@ -789,12 +788,12 @@ export default function AdminPage() {
                         />
                         <FormField
                             control={deliveryForm.control}
-                            name="volumeGallons"
+                            name="volumeContainers"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Volume (Gallons)</FormLabel>
+                                    <FormLabel>Volume (Containers)</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="e.g., 5000" {...field} />
+                                        <Input type="number" placeholder="e.g., 50" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -889,10 +888,10 @@ export default function AdminPage() {
                     <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4 py-4">
                          <FormField
                             control={adjustConsumptionForm.control}
-                            name="gallons"
+                            name="containers"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Gallons</FormLabel>
+                                    <FormLabel>Containers</FormLabel>
                                     <FormControl>
                                         <Input type="number" placeholder="e.g., 5" {...field} />
                                     </FormControl>
@@ -1188,5 +1187,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    

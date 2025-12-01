@@ -27,7 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-const gallonToLiter = (gallons: number) => gallons * 3.785;
+const containerToLiter = (containers: number) => containers * 19.5;
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -131,10 +131,10 @@ export default function DashboardPage() {
           const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
           return last7Days.map(date => {
               const deliveriesOnDay = sourceDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-              const totalGallons = deliveriesOnDay.reduce((sum, d) => sum + d.volumeGallons, 0);
+              const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
               return {
                   name: format(date, 'EEE').charAt(0),
-                  value: gallonToLiter(totalGallons)
+                  value: containerToLiter(totalContainers)
               };
           });
       } else { // monthly
@@ -153,7 +153,7 @@ export default function DashboardPage() {
               if (deliveryDate >= firstDay && deliveryDate <= lastDay) {
                   const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
                   if(weeklyData[weekOfMonth]) {
-                      weeklyData[weekOfMonth].value += gallonToLiter(d.volumeGallons);
+                      weeklyData[weekOfMonth].value += containerToLiter(d.volumeContainers);
                   }
               }
           });
@@ -192,17 +192,16 @@ export default function DashboardPage() {
     });
 
     const handleDownloadDeliveries = () => {
-        const headers = ["ID", "Date", "Volume (Liters)", "Bottles", "Status", "Proof of Delivery URL"];
+        const headers = ["ID", "Date", "Volume (Liters)", "Containers", "Status", "Proof of Delivery URL"];
         const csvRows = [headers.join(',')];
 
         filteredDeliveries.forEach(delivery => {
-            const liters = delivery.volumeGallons * 3.785;
-            const bottles = Math.round(liters / 19);
+            const liters = containerToLiter(delivery.volumeContainers);
             const row = [
                 delivery.id,
                 format(new Date(delivery.date), 'PP'),
                 liters.toFixed(2),
-                bottles,
+                delivery.volumeContainers,
                 delivery.status,
                 delivery.proofOfDeliveryUrl || "N/A"
             ].join(',');
@@ -445,13 +444,12 @@ export default function DashboardPage() {
                         <TableBody>
                             {filteredDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
-                                const liters = delivery.volumeGallons * 3.785;
-                                const bottles = Math.round(liters / 19);
+                                const liters = containerToLiter(delivery.volumeContainers);
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {bottles} bottles</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
                                     <TableCell>
                                          <Badge variant={statusInfo.variant} className={cn(
                                             statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
@@ -497,18 +495,17 @@ export default function DashboardPage() {
                             <TableRow>
                                 <TableHead>Date</TableHead>
                                 <TableHead className="text-right">Liters</TableHead>
-                                <TableHead className="text-right">Bottles</TableHead>
+                                <TableHead className="text-right">Containers</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {(deliveries || []).map(delivery => {
-                                const liters = gallonToLiter(delivery.volumeGallons);
-                                const bottles = Math.round(liters / 19);
+                                const liters = containerToLiter(delivery.volumeContainers);
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
                                     <TableCell className="text-right">{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}</TableCell>
-                                    <TableCell className="text-right">{bottles}</TableCell>
+                                    <TableCell className="text-right">{delivery.volumeContainers}</TableCell>
                                 </TableRow>
                                 );
                             })}

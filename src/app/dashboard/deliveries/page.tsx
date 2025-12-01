@@ -12,7 +12,7 @@ import type { Delivery } from '@/lib/types';
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
-const gallonToLiter = (gallons: number) => gallons * 19;
+const containerToLiter = (containers: number) => containers * 19.5;
 
 export default function DeliveriesPage() {
   const { user } = useUser();
@@ -95,7 +95,7 @@ export default function DeliveriesPage() {
         </TableHeader>
         <TableBody>
           {deliveries.map((delivery) => {
-            const volumeLiters = gallonToLiter(delivery.volumeGallons);
+            const volumeLiters = containerToLiter(delivery.volumeContainers);
             return (
               <TableRow key={delivery.id}>
                 <TableCell className="font-medium">{delivery.id}</TableCell>
