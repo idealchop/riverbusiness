@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,9 +22,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, differenceInMonths, addMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -102,6 +102,12 @@ export default function AdminPage() {
         return collection(firestore, 'users', userForHistory.id, 'deliveries');
     }, [firestore, userForHistory]);
     const { data: userDeliveriesData } = useCollection<Delivery>(deliveriesQuery);
+
+    const paymentsQuery = useMemoFirebase(() => {
+        if (!firestore || !selectedUser) return null;
+        return collection(firestore, 'users', selectedUser.id, 'payments');
+    }, [firestore, selectedUser]);
+    const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
 
 
     useEffect(() => {
@@ -393,6 +399,34 @@ export default function AdminPage() {
         { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
     ];
 
+    const generatedInvoices = React.useMemo(() => {
+        if (!selectedUser?.createdAt || !selectedUser.plan) return [];
+        
+        const invoices: Payment[] = [];
+        const now = new Date();
+        const createdAt = selectedUser.createdAt;
+        const startDate = typeof createdAt === 'string' ? new Date(createdAt) : createdAt.toDate();
+        const months = differenceInMonths(now, startDate);
+    
+        for (let i = 0; i <= months; i++) {
+          const invoiceDate = addMonths(startDate, i);
+          invoices.push({
+            id: `INV-${format(invoiceDate, 'yyyyMM')}`,
+            date: invoiceDate.toISOString(),
+            description: `${selectedUser.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
+            amount: selectedUser.plan.price,
+            status: 'Upcoming', 
+          });
+        }
+  
+        const mergedInvoices = invoices.map(inv => {
+          const dbInvoice = userPaymentsData?.find(p => p.id === inv.id);
+          return dbInvoice ? { ...inv, ...dbInvoice } : inv;
+        });
+  
+        return mergedInvoices.reverse();
+      }, [selectedUser, userPaymentsData]);
+
   if (isUserLoading || usersLoading || stationsLoading) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
   }
@@ -422,98 +456,141 @@ export default function AdminPage() {
                     </DialogDescription>
                 </DialogHeader>
                 {selectedUser && (
-                     <div className="grid md:grid-cols-2 gap-8 py-4">
-                        {/* Left Column: User Profile */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-20 w-20">
-                                    <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
-                                    <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
-                                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                    <Tabs defaultValue="profile">
+                        <div className="grid md:grid-cols-2 gap-8 py-4">
+                            {/* Left Column: User Profile */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-4">
+                                    <Avatar className="h-20 w-20">
+                                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
+                                        <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
+                                        <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                                    </div>
+                                </div>
+                                <Separator/>
+                                <TabsList className="grid w-full grid-cols-2">
+                                    <TabsTrigger value="profile">Profile</TabsTrigger>
+                                    <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="profile">
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Client ID:</span>
+                                            <span className="font-medium">{selectedUser.clientId}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Business Name:</span>
+                                            <span className="font-medium">{selectedUser.businessName}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Contact Person:</span>
+                                            <span className="font-medium">{selectedUser.name}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Account Status:</span>
+                                            <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
+                                                {selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}
+                                            </Badge>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Client Type:</span>
+                                            <span className="font-medium">{selectedUser.clientType || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Plan:</span>
+                                            <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Purchased Liters:</span>
+                                            <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Total Consumption:</span>
+                                            <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Assigned Station:</span>
+                                            <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Role:</span>
+                                            <span className="font-medium">{selectedUser.role}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Last Login:</span>
+                                            <span className="font-medium">{format(new Date(selectedUser.lastLogin), 'PPp')}</span>
+                                        </div>
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="invoices">
+                                    <ScrollArea className="h-72">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Invoice</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Amount</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {generatedInvoices.map((invoice) => (
+                                                <TableRow key={invoice.id}>
+                                                    <TableCell>
+                                                        <div className="font-medium">{invoice.id}</div>
+                                                        <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge
+                                                            variant={invoice.status === 'Paid' ? 'default' : (invoice.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                            className={invoice.status === 'Paid' ? 'bg-green-100 text-green-800' : invoice.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                        >{invoice.status}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {generatedInvoices.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={3} className="text-center">No invoices found.</TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                    </ScrollArea>
+                                </TabsContent>
+                            </div>
+
+                            {/* Right Column: Actions */}
+                            <div className="space-y-4">
+                                <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
+                                <div className="flex flex-col gap-2">
+                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
+                                        <Building className="mr-2 h-4 w-4" />
+                                        Assign Station
+                                    </Button>
+                                    <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Add Consumption
+                                    </Button>
+                                    <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
+                                        <MinusCircle className="mr-2 h-4 w-4" />
+                                        Deduct Consumption
+                                    </Button>
+                                    <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Upload Contract
+                                    </Button>
+                                    {selectedUser.contractUrl && (
+                                        <Button variant="link" asChild>
+                                            <a href={selectedUser.contractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
-                            <Separator/>
-                             <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Client ID:</span>
-                                    <span className="font-medium">{selectedUser.clientId}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Business Name:</span>
-                                    <span className="font-medium">{selectedUser.businessName}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Contact Person:</span>
-                                    <span className="font-medium">{selectedUser.name}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Account Status:</span>
-                                    <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
-                                        {selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}
-                                    </Badge>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Client Type:</span>
-                                    <span className="font-medium">{selectedUser.clientType || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Plan:</span>
-                                    <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Purchased Liters:</span>
-                                    <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Total Consumption:</span>
-                                    <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Assigned Station:</span>
-                                    <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Role:</span>
-                                    <span className="font-medium">{selectedUser.role}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Last Login:</span>
-                                    <span className="font-medium">{format(new Date(selectedUser.lastLogin), 'PPp')}</span>
-                                </div>
-                             </div>
                         </div>
-
-                        {/* Right Column: Actions */}
-                        <div className="space-y-4">
-                             <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
-                             <div className="flex flex-col gap-2">
-                                <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
-                                    <Building className="mr-2 h-4 w-4" />
-                                    Assign Station
-                                </Button>
-                                <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Add Consumption
-                                </Button>
-                                <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
-                                    <MinusCircle className="mr-2 h-4 w-4" />
-                                    Deduct Consumption
-                                </Button>
-                                <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Upload Contract
-                                </Button>
-                                {selectedUser.contractUrl && (
-                                     <Button variant="link" asChild>
-                                        <a href={selectedUser.contractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
-                                    </Button>
-                                )}
-                             </div>
-                        </div>
-                    </div>
+                    </Tabs>
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsUserDetailOpen(false)}>Close</Button>
