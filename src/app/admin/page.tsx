@@ -493,6 +493,10 @@ export default function AdminPage() {
                                     </Badge>
                                 </div>
                                 <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Purchased Liters:</span>
+                                    <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
+                                </div>
+                                <div className="flex justify-between">
                                     <span className="text-muted-foreground">Total Consumption:</span>
                                     <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
                                 </div>
