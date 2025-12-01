@@ -41,6 +41,7 @@ import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Notification = {
     id: string;
@@ -302,6 +303,25 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
+  const handleProfilePhotoUpload = async (file: File) => {
+    if (!authUser || !firestore) return;
+    const storage = getStorage();
+    const filePath = `users/${authUser.uid}/profile/${file.name}`;
+    const storageRef = ref(storage, filePath);
+
+    try {
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const userRef = doc(firestore, 'users', authUser.uid);
+      updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
+
+      toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+    }
+  };
+
     const planImage = useMemo(() => {
       if (!user?.clientType) return null;
       const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
@@ -475,7 +495,10 @@ export default function DashboardLayout({
             <DialogTrigger asChild>
               <div className="flex items-center gap-3 cursor-pointer">
                 <div className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
+                   <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.photoURL} alt={user?.name} />
+                        <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
                   <div className="hidden sm:flex flex-col items-start">
                     <p className="font-semibold text-sm">{user?.businessName}</p>
                   </div>
@@ -503,6 +526,26 @@ export default function DashboardLayout({
                         <CardContent className="pt-6">
                             {editableFormData ? (
                                 <div className="space-y-6">
+                                     <div>
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <Avatar className="h-20 w-20">
+                                                <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
+                                                <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="space-y-1">
+                                                <h4 className="font-semibold">Profile Photo</h4>
+                                                <p className="text-sm text-muted-foreground">Update your photo.</p>
+                                                <Button asChild variant="outline" size="sm">
+                                                    <Label>
+                                                        <Upload className="mr-2 h-4 w-4" />
+                                                        Upload Photo
+                                                        <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                                    </Label>
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Separator />
                                     <div>
                                         <div className="flex justify-between items-center mb-4">
                                           <h4 className="font-semibold">Your Details</h4>

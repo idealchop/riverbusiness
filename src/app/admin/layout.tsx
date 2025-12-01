@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { useUser, useCollection, useFirestore, useMemoFirebase, useAuth } from '
 import { collection } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default function AdminLayout({
   children,
@@ -112,12 +114,15 @@ export default function AdminLayout({
                 </Popover>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="outline"
+                         <Button
+                            variant="ghost"
                             size="icon"
                             className="overflow-hidden rounded-full"
                         >
-                            <User className="h-5 w-5" />
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={adminUser?.photoURL} alt={adminUser?.name} />
+                                <AvatarFallback>{adminUser?.name?.charAt(0) || <User className="h-4 w-4" />}</AvatarFallback>
+                            </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">

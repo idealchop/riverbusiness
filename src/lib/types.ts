@@ -79,6 +79,7 @@ export interface AppUser {
     clientType?: string | null;
     customPlanDetails?: any;
     contractUrl?: string;
+    photoURL?: string;
 }
 
 export interface LoginLog {
