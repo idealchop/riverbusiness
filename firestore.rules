@@ -12,10 +12,13 @@ service cloud.firestore {
 
     // Users can read/update their own profile. Admins can read/list all profiles.
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow read, list: if isAdmin();
-      // Allow user creation during onboarding
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow list: if isAdmin();
+      // Allow user to create their own document during onboarding
       allow create: if request.auth.uid == userId;
+      // Allow user to update their own data, but only admins can change roles.
+      // Users can update their own lastLogin and accountStatus for presence.
+      allow update: if request.auth.uid == userId && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
     }
 
     // Water stations are readable by any user, but only writable by admins.

@@ -500,7 +500,7 @@ export default function AdminPage() {
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Account Status:</span>
                                     <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
-                                        {selectedUser.accountStatus}
+                                        {selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}
                                     </Badge>
                                 </div>
                                 <div className="flex justify-between">
@@ -907,8 +907,8 @@ export default function AdminPage() {
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                             <TableCell>
-                                                <Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>
-                                                    {user.accountStatus}
+                                                <Badge variant={user.accountStatus === 'Active' ? 'default' : 'outline'} className={cn(user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
+                                                    {user.accountStatus === 'Active' ? 'Online' : 'Offline'}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>

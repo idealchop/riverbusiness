@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -154,6 +154,30 @@ export default function DashboardLayout({
       setEditableFormData(user);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!userDocRef) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        updateDocumentNonBlocking(userDocRef, { accountStatus: 'Inactive' });
+      } else {
+        updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
+      }
+    };
+
+    updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Consider setting to inactive on unmount, but visibilitychange is more reliable for tab closing.
+      if (auth.currentUser) {
+        updateDocumentNonBlocking(userDocRef, { accountStatus: 'Inactive' });
+      }
+    };
+  }, [userDocRef, auth]);
   
   React.useEffect(() => {
     if (!isPaymentDialogOpen) {
