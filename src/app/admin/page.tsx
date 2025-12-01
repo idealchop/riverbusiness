@@ -177,6 +177,9 @@ export default function AdminPage() {
 
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
+        if (selectedUser) {
+            setSelectedUser({ ...selectedUser, assignedWaterStationId: stationToAssign });
+        }
 
         toast({ title: 'Station Assigned', description: `A new water station has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
@@ -196,6 +199,10 @@ export default function AdminPage() {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
         
+        if (selectedUser) {
+            setSelectedUser({ ...selectedUser, totalConsumptionLiters: newTotal });
+        }
+
         toast({
             title: `Consumption Adjusted`,
             description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
@@ -215,6 +222,10 @@ export default function AdminPage() {
         
         const userRef = doc(firestore, 'users', userId);
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
+
+        if (selectedUser && selectedUser.id === userId) {
+            setSelectedUser({ ...selectedUser, totalConsumptionLiters: newTotal });
+        }
 
         toast({
             title: "Consumption Deducted",
@@ -278,6 +289,10 @@ export default function AdminPage() {
     
             const userRef = doc(firestore, 'users', userForContract.id);
             updateDocumentNonBlocking(userRef, { contractUrl: downloadURL });
+
+            if (selectedUser && selectedUser.id === userForContract.id) {
+                setSelectedUser({ ...selectedUser, contractUrl: downloadURL });
+            }
             
             toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
             setIsUploadContractOpen(false);
@@ -323,14 +338,15 @@ export default function AdminPage() {
 
     const watchedGallons = adjustConsumptionForm.watch('gallons');
     useEffect(() => {
-        const liters = (watchedGallons || 0) * 19.5;
-        adjustConsumptionForm.setValue('amount', liters, { shouldValidate: true });
+        const liters = (watchedGallons || 0) * 3.785; // 1 gallon is approx 3.785 liters
+        adjustConsumptionForm.setValue('amount', parseFloat(liters.toFixed(2)), { shouldValidate: true });
     }, [watchedGallons, adjustConsumptionForm]);
 
 
     const adminUser = appUsers?.find(user => user.role === 'Admin');
     
     const filteredUsers = appUsers?.filter(user => {
+        if (user.role === 'Admin') return false; // Exclude admin from the user list
         if (userFilter === 'all') return true;
         if (userFilter === 'active') return user.accountStatus === 'Active';
         if (userFilter === 'inactive') return user.accountStatus === 'Inactive';
@@ -403,7 +419,8 @@ export default function AdminPage() {
         const invoices: Payment[] = [];
         const now = new Date();
         const createdAt = selectedUser.createdAt;
-        const startDate = typeof createdAt === 'string' ? new Date(createdAt) : createdAt.toDate();
+        // Check if createdAt has toDate method, indicating a Firestore Timestamp
+        const startDate = typeof (createdAt as any)?.toDate === 'function' ? (createdAt as any).toDate() : new Date(createdAt);
         const months = differenceInMonths(now, startDate);
     
         for (let i = 0; i <= months; i++) {
@@ -489,7 +506,7 @@ export default function AdminPage() {
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Account Status:</span>
-                                            <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'}>
+                                            <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'} className={cn(selectedUser.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
                                                 {selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}
                                             </Badge>
                                         </div>
@@ -519,7 +536,7 @@ export default function AdminPage() {
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Last Login:</span>
-                                            <span className="font-medium">{format(new Date(selectedUser.lastLogin), 'PPp')}</span>
+                                            <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
                                         </div>
                                     </div>
                                 </TabsContent>
@@ -1171,9 +1188,5 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
-    
-
 
     
