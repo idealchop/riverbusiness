@@ -944,15 +944,6 @@ export default function AdminPage() {
                                                             <MinusCircle className="mr-2 h-4 w-4" />
                                                             Deduct Consumption
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { if(user) handleResetPassword(user.id); }} disabled={!isSuperAdmin}>
-                                                            <KeyRound className="mr-2 h-4 w-4" />
-                                                            Reset Password
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-red-600" disabled={!isSuperAdmin}>
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Delete User
-                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
