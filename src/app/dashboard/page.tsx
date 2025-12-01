@@ -63,10 +63,8 @@ export default function DashboardPage() {
     const firestore = useFirestore();
     const { user: authUser } = useAuthUser();
     
-    const isDemoUser = authUser?.email === 'testing@riverph.com';
-
     const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-    const { data: liveUser, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
+    const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
 
     const [greeting, setGreeting] = useState('');
     const [autoRefill, setAutoRefill] = useState(true);
@@ -84,87 +82,27 @@ export default function DashboardPage() {
     const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
     const [isSaveLitersDialogOpen, setIsSaveLitersDialogOpen] = useState(false);
 
-    const deliveriesQuery = useMemoFirebase(() => (firestore && liveUser) ? collection(firestore, 'users', liveUser.id, 'deliveries') : null, [firestore, liveUser]);
-    const { data: liveDeliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
+    const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+    const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
-    const stationDocRef = useMemoFirebase(() => (firestore && liveUser?.assignedWaterStationId) ? doc(firestore, 'waterStations', liveUser.assignedWaterStationId) : null, [firestore, liveUser]);
-    const { data: liveWaterStation } = useDoc<WaterStation>(stationDocRef);
+    const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
+    const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
 
     const complianceReportsQuery = useMemoFirebase(() => 
-        (firestore && liveUser?.assignedWaterStationId) 
-        ? collection(firestore, 'waterStations', liveUser.assignedWaterStationId, 'complianceReports') 
+        (firestore && user?.assignedWaterStationId) 
+        ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') 
         : null, 
-        [firestore, liveUser]
+        [firestore, user]
     );
-    const { data: liveComplianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
+    const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
 
     const sanitationVisitsQuery = useMemoFirebase(() => 
-        (firestore && liveUser?.assignedWaterStationId) 
-        ? collection(firestore, 'waterStations', liveUser.assignedWaterStationId, 'sanitationVisits') 
+        (firestore && user?.assignedWaterStationId) 
+        ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'sanitationVisits') 
         : null, 
-        [firestore, liveUser]
+        [firestore, user]
     );
-    const { data: liveSanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
-    
-    // --- Demo Data ---
-    const demoUser: AppUser = {
-        id: 'demo-user',
-        name: 'Demo User',
-        businessName: 'River Business Demo',
-        email: 'testing@riverph.com',
-        role: 'User',
-        totalConsumptionLiters: 1892.5,
-        accountStatus: 'Active',
-        lastLogin: new Date().toISOString(),
-        onboardingComplete: true,
-        createdAt: new Date(),
-        assignedWaterStationId: 'demo-station',
-        plan: { name: 'Custom Plan', price: 4500 },
-        customPlanDetails: {
-            litersPerMonth: 2500,
-            bonusLiters: 300,
-            deliveryFrequency: 'Weekly',
-            deliveryDay: 'Wednesday',
-            gallonQuantity: 10,
-            dispenserQuantity: 1,
-        }
-    };
-
-    const demoDeliveries: Delivery[] = Array.from({ length: 5 }).map((_, i) => ({
-        id: `DEL-00${i + 1}`,
-        userId: 'demo-user',
-        date: subDays(new Date(), i * 7).toISOString(),
-        volumeGallons: 100 + i * 10,
-        status: i % 3 === 0 ? 'Delivered' : i % 3 === 1 ? 'In Transit' : 'Pending',
-        proofOfDeliveryUrl: 'https://picsum.photos/seed/delivery-proof/400/600',
-    }));
-
-    const demoWaterStation: WaterStation = {
-        id: 'demo-station',
-        name: 'Aqua Pure Demo Station',
-        location: '123 Demo St, Mockville',
-        permits: {
-            businessPermitUrl: '#',
-            sanitationPermitUrl: '#',
-        },
-    };
-
-    const demoComplianceReports: ComplianceReport[] = [
-        { id: 'CR-001', date: subDays(new Date(), 30).toISOString(), status: 'Compliant', reportUrl: '#' },
-        { id: 'CR-002', date: subDays(new Date(), 60).toISOString(), status: 'Compliant', reportUrl: '#' },
-    ];
-    
-    const demoSanitationVisits: SanitationVisit[] = [
-        { id: 'SV-001', scheduledDate: subDays(new Date(), 15).toISOString(), status: 'Completed', assignedTo: 'John Doe', reportUrl: '#'},
-        { id: 'SV-002', scheduledDate: addDays(new Date(), 15).toISOString(), status: 'Scheduled', assignedTo: 'Jane Smith'},
-    ];
-    // --- End Demo Data ---
-
-    const user = isDemoUser ? demoUser : liveUser;
-    const deliveries = isDemoUser ? demoDeliveries : liveDeliveries;
-    const waterStation = isDemoUser ? demoWaterStation : liveWaterStation;
-    const complianceReports = isDemoUser ? demoComplianceReports : liveComplianceReports;
-    const sanitationVisits = isDemoUser ? demoSanitationVisits : liveSanitationVisits;
+    const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
@@ -188,23 +126,7 @@ export default function DashboardPage() {
 
     const consumptionChartData = React.useMemo(() => {
       const sourceDeliveries = deliveries || [];
-      // If there's no delivery data, show sample data.
-      if (sourceDeliveries.length === 0) {
-        if (analyticsFilter === 'weekly') {
-          const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
-          return last7Days.map(date => ({
-              name: format(date, 'EEE').charAt(0),
-              value: Math.floor(Math.random() * (200 - 50 + 1) + 50) // Random value between 50 and 200
-          }));
-        } else { // monthly
-            return Array.from({ length: 4 }, (_, i) => ({
-                name: `Week ${i + 1}`,
-                value: Math.floor(Math.random() * (1000 - 300 + 1) + 300) // Random value between 300 and 1000
-            }));
-        }
-      }
-
-      // If there IS delivery data, process it.
+      
       if (analyticsFilter === 'weekly') {
           const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
           return last7Days.map(date => {
