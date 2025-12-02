@@ -695,7 +695,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             src={selectedUserPlanImage.imageUrl}
                                             alt={selectedUser.clientType || ''}
                                             fill
-                                            className="object-cover"
+                                            className="object-contain"
                                             data-ai-hint={selectedUserPlanImage.imageHint}
                                         />
                                     </div>
@@ -1500,3 +1500,4 @@ export default function AdminPage() {
         </div>
     )
 }
+
