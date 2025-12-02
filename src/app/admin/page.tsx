@@ -537,7 +537,7 @@ export default function AdminPage() {
         const createdAt = selectedUser.createdAt;
         const startDate = typeof (createdAt as any)?.toDate === 'function' 
             ? (createdAt as any).toDate() 
-            : new Date(createdAt as string); // Ensure it's treated as a string
+            : new Date(createdAt as string);
         
         if (isNaN(startDate.getTime())) return [];
 
@@ -1227,15 +1227,14 @@ export default function AdminPage() {
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                             <TableCell>
-                                                <Badge className={cn(user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
-                                                    {user.accountStatus === 'Active' ? 'Online' : 'Offline'}
-                                                </Badge>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn("h-2 w-2 rounded-full", user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
+                                                    <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
-                                                <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
-                                                   {getDeliveryStatus(user)}
-                                                </div>
+                                                {getDeliveryStatus(user)}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -1450,5 +1449,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
