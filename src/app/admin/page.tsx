@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -67,12 +67,12 @@ export default function AdminPage() {
     const { user: authUser, isUserLoading } = useUser();
     const firestore = useFirestore();
 
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [isAdmin, setIsAdmin] = React.useState(false);
 
     const adminUserDocRef = useMemoFirebase(() => authUser ? doc(firestore, "users", authUser.uid) : null, [authUser, firestore]);
     const { data: adminUserData, isLoading: isAdminUserLoading } = useDoc<AppUser>(adminUserDocRef);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (!isAdminUserLoading && adminUserData) {
             setIsAdmin(adminUserData.role === 'Admin');
         }
@@ -87,28 +87,28 @@ export default function AdminPage() {
     const allDeliveriesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isAdmin]);
     const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
     
-    const [greeting, setGreeting] = useState('');
+    const [greeting, setGreeting] = React.useState('');
     
-    const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
-    const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-    const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
-    const [userForHistory, setUserForHistory] = useState<AppUser | null>(null);
-    const [activeTab, setActiveTab] = useState('user-management');
+    const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
+    const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
+    const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = React.useState(false);
+    const [userForHistory, setUserForHistory] = React.useState<AppUser | null>(null);
+    const [activeTab, setActiveTab] = React.useState('user-management');
     
-    const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
-    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
-    const [adjustmentType, setAdjustmentType] = useState<'add' | 'deduct'>('deduct');
-    const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
-    const [deliveryToUpdate, setDeliveryToUpdate] = useState<Delivery | null>(null);
+    const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
+    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = React.useState(false);
+    const [adjustmentType, setAdjustmentType] = React.useState<'add' | 'deduct'>('deduct');
+    const [selectedProofUrl, setSelectedProofUrl] = React.useState<string | null>(null);
+    const [deliveryToUpdate, setDeliveryToUpdate] = React.useState<Delivery | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
-    const [isStationProfileOpen, setIsStationProfileOpen] = useState(false);
-    const [isAssignStationOpen, setIsAssignStationOpen] = useState(false);
-    const [stationToAssign, setStationToAssign] = useState<string | undefined>();
-    const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = useState(false);
-    const [isUploadContractOpen, setIsUploadContractOpen] = useState(false);
-    const [userForContract, setUserForContract] = useState<AppUser | null>(null);
+    const [isStationProfileOpen, setIsStationProfileOpen] = React.useState(false);
+    const [isAssignStationOpen, setIsAssignStationOpen] = React.useState(false);
+    const [stationToAssign, setStationToAssign] = React.useState<string | undefined>();
+    const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = React.useState(false);
+    const [isUploadContractOpen, setIsUploadContractOpen] = React.useState(false);
+    const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
 
-    const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+    const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
     const [isEditingDetails, setIsEditingDetails] = React.useState(false);
     const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
@@ -133,7 +133,7 @@ export default function AdminPage() {
     const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
       const handleUserSearch = (event: Event) => {
         const customEvent = event as CustomEvent<string>;
         const searchTerm = customEvent.detail.toLowerCase();
@@ -167,14 +167,14 @@ export default function AdminPage() {
       };
     }, [appUsers, toast]);
 
-    useEffect(() => {
+    React.useEffect(() => {
         const hour = new Date().getHours();
         if (hour < 12) setGreeting('Good morning');
         else if (hour < 18) setGreeting('Good afternoon');
         else setGreeting('Good evening');
     }, []);
 
-    useEffect(() => {
+    React.useEffect(() => {
         if(adminUserData) {
           setEditableFormData(adminUserData);
         }
@@ -190,7 +190,7 @@ export default function AdminPage() {
         defaultValues: { refId: '', volumeContainers: 0, status: 'Pending' },
     });
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
             stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
         } else {
@@ -473,7 +473,7 @@ export default function AdminPage() {
     };
 
     const watchedContainers = adjustConsumptionForm.watch('containers');
-    useEffect(() => {
+    React.useEffect(() => {
         const liters = (watchedContainers || 0) * 19.5;
         adjustConsumptionForm.setValue('amount', parseFloat(liters.toFixed(2)), { shouldValidate: true });
     }, [watchedContainers, adjustConsumptionForm]);
@@ -535,7 +535,13 @@ export default function AdminPage() {
         const invoices: Payment[] = [];
         const now = new Date();
         const createdAt = selectedUser.createdAt;
-        const startDate = typeof (createdAt as any)?.toDate === 'function' ? (createdAt as any).toDate() : new Date(createdAt);
+        // Handle both Timestamp and string dates
+        const startDate = typeof (createdAt as any)?.toDate === 'function' 
+            ? (createdAt as any).toDate() 
+            : new Date(createdAt);
+        
+        if (isNaN(startDate.getTime())) return []; // Invalid date
+
         const months = differenceInMonths(now, startDate);
     
         for (let i = 0; i <= months; i++) {
