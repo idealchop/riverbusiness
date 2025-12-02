@@ -27,7 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-const containerToLiter = (containers: number) => containers * 19.5;
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Water Quality & Sanitation</DialogTitle>
+                        <DialogTitle>Water Quality &amp; Sanitation</DialogTitle>
                         <DialogDescription>
                             Compliance reports and sanitation visits for {waterStation?.name || 'your assigned station'}.
                         </DialogDescription>
@@ -498,16 +498,17 @@ export default function DashboardPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Volume</TableHead>
+                                <TableHead className="text-right">Liters / Containers</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {(deliveries || []).map(delivery => {
                                 const liters = containerToLiter(delivery.volumeContainers);
+                                const containers = delivery.volumeContainers || 0;
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell className="text-right">{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
+                                    <TableCell className="text-right">{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {containers} containers</TableCell>
                                 </TableRow>
                                 );
                             })}
@@ -820,4 +821,5 @@ export default function DashboardPage() {
         </div>
     </div>
     );
-}
+
+    
