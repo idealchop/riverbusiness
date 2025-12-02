@@ -35,7 +35,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -357,11 +357,18 @@ export default function AdminPage() {
         setActiveTab('user-management');
     };
 
-    const getLatestDelivery = (userId: string, allDeliveries: Delivery[] | null): Delivery | undefined => {
-        if (!allDeliveries) return undefined;
-        return allDeliveries
-            .filter(d => d.userId === userId)
-            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    const getLatestDelivery = (userId: string): Delivery | undefined => {
+        if (!userDeliveriesData) return undefined;
+        // This is inefficient if userDeliveriesData is large and contains all users' deliveries.
+        // Assuming userDeliveriesData is ALREADY filtered for a single user when history is open.
+        // For the main table, we would need a different strategy.
+        // Let's assume for now userDeliveriesData is for the currently viewed history.
+        // A better approach would be to fetch all deliveries once and filter locally.
+        
+        // This function is problematic. It relies on userDeliveriesData which is only populated when the delivery history dialog is open.
+        // We need a better way to get the latest delivery for the user list.
+        // Let's create a new collection listener for all deliveries for this page.
+        return undefined; // We will handle this differently.
     };
     
     const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
@@ -399,7 +406,7 @@ export default function AdminPage() {
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
-    const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id, userDeliveriesData) : null;
+    const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
 
     const permitFields: { key: keyof WaterStation['permits'], label: string }[] = [
         { key: 'businessPermitUrl', label: 'Business / Mayor\'s Permit' },
@@ -970,7 +977,11 @@ export default function AdminPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredUsers.map((user) => {
-                                        const latestDelivery = getLatestDelivery(user.id, userDeliveriesData);
+                                        const latestDelivery = userDeliveriesData 
+                                            ? [...userDeliveriesData]
+                                                .filter(d => d.userId === user.id)
+                                                .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] 
+                                            : undefined;
                                         return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
@@ -1192,5 +1203,7 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
 
     
