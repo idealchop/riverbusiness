@@ -434,7 +434,7 @@ export default function AdminPage() {
         return mergedInvoices.reverse();
       }, [selectedUser, userPaymentsData]);
 
-  if (isUserLoading || usersLoading || stationsLoading) {
+  if (isUserLoading || (isSuperAdmin && (usersLoading || stationsLoading || allDeliveriesLoading))) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
   }
 
@@ -1192,5 +1192,6 @@ export default function AdminPage() {
   );
 }
 
+    
     
     
