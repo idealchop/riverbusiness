@@ -1248,7 +1248,7 @@ export default function AdminPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
-                                                            <UserCog className="mr-2 h-4 w-4" />
+                                                            <Users2 className="mr-2 h-4 w-4" />
                                                             Client's Profile
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
