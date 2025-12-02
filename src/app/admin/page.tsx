@@ -75,18 +75,8 @@ export default function AdminPage() {
     const waterStationsQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isSuperAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const [allDeliveries, setAllDeliveries] = useState<Delivery[]>([]);
-    
-    useEffect(() => {
-        if (!firestore || !isSuperAdmin) return;
-        const fetchAllDeliveries = async () => {
-            const deliveriesGroup = collectionGroup(firestore, 'deliveries');
-            const querySnapshot = await getDocs(deliveriesGroup);
-            const deliveries = querySnapshot.docs.map(doc => doc.data() as Delivery);
-            setAllDeliveries(deliveries);
-        };
-        fetchAllDeliveries();
-    }, [firestore, isSuperAdmin]);
+    const allDeliveriesQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isSuperAdmin]);
+    const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
     
     const [greeting, setGreeting] = useState('');
     
@@ -115,7 +105,7 @@ export default function AdminPage() {
         return collection(firestore, 'users', userForHistory.id, 'deliveries');
     }, [firestore, userForHistory]);
 
-    const { data: userDeliveriesData } = useCollection<Delivery>(userDeliveriesQuery);
+    const { data: userDeliveriesData, isLoading: userDeliveriesLoading } = useCollection<Delivery>(userDeliveriesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
@@ -686,7 +676,11 @@ export default function AdminPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredDeliveries.map(delivery => {
+                            {userDeliveriesLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center">Loading history...</TableCell>
+                                </TableRow>
+                            ) : filteredDeliveries.map(delivery => {
                                 const liters = delivery.volumeContainers * 19.5;
                                 return (
                                 <TableRow key={delivery.id}>
@@ -717,7 +711,7 @@ export default function AdminPage() {
                                     </TableCell>
                                 </TableRow>
                             )})}
-                             {filteredDeliveries.length === 0 && (
+                             {filteredDeliveries.length === 0 && !userDeliveriesLoading && (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center">No delivery history found for the selected date range.</TableCell>
                                 </TableRow>
