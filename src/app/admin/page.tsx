@@ -534,13 +534,12 @@ export default function AdminPage() {
         
         const invoices: Payment[] = [];
         const now = new Date();
-        // Handle both Timestamp and string dates
         const createdAt = selectedUser.createdAt;
         const startDate = typeof (createdAt as any)?.toDate === 'function' 
             ? (createdAt as any).toDate() 
-            : new Date(createdAt);
+            : new Date(createdAt as string); // Ensure it's treated as a string
         
-        if (isNaN(startDate.getTime())) return []; // Invalid date
+        if (isNaN(startDate.getTime())) return [];
 
         const months = differenceInMonths(now, startDate);
     
