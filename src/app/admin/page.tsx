@@ -227,6 +227,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const userRef = doc(firestore, 'users', selectedUser.id);
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
         
+        // This local state update is important for immediate UI feedback.
+        // The real-time listener on the client's side will get the update from Firestore.
         setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: newTotal } : null);
 
         toast({
@@ -351,14 +353,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             proofOfDeliveryUrl: proofUrl,
         };
 
-        try {
-            setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
-            toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
-            deliveryForm.reset();
-            setIsCreateDeliveryOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the delivery record.' });
-        }
+        // This action will be picked up by the real-time listener on the client dashboard.
+        setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+
+        toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
+        deliveryForm.reset();
+        setIsCreateDeliveryOpen(false);
     };
 
     const handleLogout = () => {
@@ -376,7 +376,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleSaveChanges = () => {
-        if (!authUser) return;
+        if (!authUser || !firestore) return;
         const adminUserDocRef = doc(firestore, "users", authUser.uid)
         if (adminUserDocRef && editableFormData) {
             updateDocumentNonBlocking(adminUserDocRef, editableFormData);
@@ -1500,5 +1500,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
