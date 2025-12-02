@@ -19,16 +19,16 @@ export default function DeliveriesPage() {
   const firestore = useFirestore();
 
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
-  const { data: allDeliveries, isLoading } = useCollection<Delivery>(deliveriesQuery);
+  const { data: userDeliveries, isLoading } = useCollection<Delivery>(deliveriesQuery);
 
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (allDeliveries) {
-      setDeliveries(allDeliveries);
+    if (userDeliveries) {
+      setDeliveries(userDeliveries);
     }
-  }, [allDeliveries]);
+  }, [userDeliveries]);
 
   const getStatusBadgeVariant = (status: 'Delivered' | 'In Transit' | 'Pending'): 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -40,8 +40,8 @@ export default function DeliveriesPage() {
   };
 
   const handleSearch = () => {
-    if(!allDeliveries) return;
-    const filteredDeliveries = allDeliveries.filter(delivery => {
+    if(!userDeliveries) return;
+    const filteredDeliveries = userDeliveries.filter(delivery => {
       const searchLower = searchTerm.toLowerCase();
       return (
         delivery.id.toLowerCase().includes(searchLower) ||
@@ -55,8 +55,8 @@ export default function DeliveriesPage() {
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    if (term === '' && allDeliveries) {
-      setDeliveries(allDeliveries);
+    if (term === '' && userDeliveries) {
+      setDeliveries(userDeliveries);
     }
   };
 
