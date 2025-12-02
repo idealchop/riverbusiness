@@ -34,7 +34,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -75,8 +75,18 @@ export default function AdminPage() {
     const waterStationsQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isSuperAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const allDeliveriesQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isSuperAdmin]);
-    const { data: allDeliveries } = useCollection<Delivery>(allDeliveriesQuery);
+    const [allDeliveries, setAllDeliveries] = useState<Delivery[]>([]);
+    
+    useEffect(() => {
+        if (!firestore || !isSuperAdmin) return;
+        const fetchAllDeliveries = async () => {
+            const deliveriesGroup = collectionGroup(firestore, 'deliveries');
+            const querySnapshot = await getDocs(deliveriesGroup);
+            const deliveries = querySnapshot.docs.map(doc => doc.data() as Delivery);
+            setAllDeliveries(deliveries);
+        };
+        fetchAllDeliveries();
+    }, [firestore, isSuperAdmin]);
     
     const [greeting, setGreeting] = useState('');
     
@@ -99,11 +109,13 @@ export default function AdminPage() {
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = useState(false);
     const [isUploadContractOpen, setIsUploadContractOpen] = useState(false);
     const [userForContract, setUserForContract] = useState<AppUser | null>(null);
-    
-    const userDeliveriesData = useMemoFirebase(() => {
-        if (!userForHistory || !allDeliveries) return [];
-        return allDeliveries.filter(d => d.userId === userForHistory.id);
-    }, [userForHistory, allDeliveries]);
+
+    const userDeliveriesQuery = useMemoFirebase(() => {
+        if (!firestore || !userForHistory) return null;
+        return collection(firestore, 'users', userForHistory.id, 'deliveries');
+    }, [firestore, userForHistory]);
+
+    const { data: userDeliveriesData } = useCollection<Delivery>(userDeliveriesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
@@ -961,11 +973,9 @@ export default function AdminPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredUsers.map((user) => {
-                                        const latestDelivery = allDeliveries 
-                                            ? [...allDeliveries]
-                                                .filter(d => d.userId === user.id)
-                                                .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] 
-                                            : undefined;
+                                        const latestDelivery = allDeliveries
+                                            ?.filter(d => d.userId === user.id)
+                                            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                                         return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>

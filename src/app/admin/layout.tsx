@@ -67,6 +67,7 @@ export default function AdminLayout({
   }, [adminUser]);
   
   const handleLogout = () => {
+    if (!auth) return;
     signOut(auth).then(() => {
       router.push('/login');
     })
