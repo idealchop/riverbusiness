@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,7 +36,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const newStationSchema = z.object({
@@ -63,6 +63,7 @@ type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
 export default function AdminPage() {
     const { toast } = useToast();
+    const auth = useAuth();
     const { user: authUser, isUserLoading } = useUser();
     const firestore = useFirestore();
 
@@ -76,7 +77,6 @@ export default function AdminPage() {
             setIsAdmin(adminUserData.role === 'Admin');
         }
     }, [adminUserData, isAdminUserLoading]);
-
 
     const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'users') : null, [firestore, isAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
@@ -94,7 +94,6 @@ export default function AdminPage() {
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
     const [userForHistory, setUserForHistory] = useState<AppUser | null>(null);
     const [activeTab, setActiveTab] = useState('user-management');
-    const [userFilter, setUserFilter] = useState<'all' | 'active' | 'inactive'>('all');
     
     const [stationToUpdate, setStationToUpdate] = useState<WaterStation | null>(null);
     const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = useState(false);
@@ -108,6 +107,17 @@ export default function AdminPage() {
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = useState(false);
     const [isUploadContractOpen, setIsUploadContractOpen] = useState(false);
     const [userForContract, setUserForContract] = useState<AppUser | null>(null);
+
+    const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+    const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
+    const [isEditingDetails, setIsEditingDetails] = React.useState(false);
+    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+    const [showNewPassword, setShowNewPassword] = React.useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+    const [currentPassword, setCurrentPassword] = React.useState('');
+    const [newPassword, setNewPassword] = React.useState('');
+    const [confirmPassword, setConfirmPassword] = React.useState('');
 
     const userDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !userForHistory) return null;
@@ -145,11 +155,15 @@ export default function AdminPage() {
             });
         }
       };
+
+      const openAccountDialog = () => setIsAccountDialogOpen(true);
       
       window.addEventListener('admin-user-search-term', handleUserSearch);
+      window.addEventListener('admin-open-my-account', openAccountDialog);
   
       return () => {
         window.removeEventListener('admin-user-search-term', handleUserSearch);
+        window.removeEventListener('admin-open-my-account', openAccountDialog);
       };
     }, [appUsers, toast]);
 
@@ -159,6 +173,12 @@ export default function AdminPage() {
         else if (hour < 18) setGreeting('Good afternoon');
         else setGreeting('Good evening');
     }, []);
+
+    useEffect(() => {
+        if(adminUserData) {
+          setEditableFormData(adminUserData);
+        }
+    }, [adminUserData]);
 
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
@@ -211,10 +231,6 @@ export default function AdminPage() {
         toast({ title: 'Station Assigned', description: `A new water station has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
-    };
-
-    const handleResetPassword = (userId: string) => {
-        toast({ title: "Password Reset Triggered", description: `A password reset link has been sent to the user's email.` });
     };
 
     const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
@@ -273,7 +289,6 @@ export default function AdminPage() {
                 [`permits.${permitType}`]: downloadURL,
             });
             
-            // Optimistically update local state for UI responsiveness
             setStationToUpdate(prev => prev ? { ...prev, permits: { ...prev.permits, [permitType]: downloadURL } } : null);
 
             toast({ title: 'Permit Attached', description: `A new permit has been successfully attached to the station.` });
@@ -361,6 +376,102 @@ export default function AdminPage() {
         }
     };
 
+    const handleLogout = () => {
+        if (!auth) return;
+        signOut(auth).then(() => {
+          router.push('/login');
+        })
+    }
+
+    const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditableFormData({
+            ...editableFormData,
+            [e.target.name]: e.target.value
+        });
+    };
+    
+    const handleSaveChanges = () => {
+        if (adminUserDocRef && editableFormData) {
+            updateDocumentNonBlocking(adminUserDocRef, editableFormData);
+            setIsEditingDetails(false);
+            toast({
+                title: "Changes Saved",
+                description: "Your account details have been successfully updated.",
+            });
+        }
+    };
+
+    const handleCancelEdit = () => {
+        if (adminUserData) {
+            setEditableFormData(adminUserData);
+        }
+        setIsEditingDetails(false);
+    }
+    
+    const handlePasswordChange = async () => {
+        if (!authUser || !authUser.email) {
+          toast({ variant: "destructive", title: "Error", description: "You must be logged in to change your password." });
+          return;
+        }
+    
+        if (newPassword !== confirmPassword) {
+          toast({ variant: "destructive", title: "Error", description: "New passwords do not match." });
+          return;
+        }
+    
+        if (newPassword.length < 6) {
+          toast({ variant: "destructive", title: "Error", description: "Password must be at least 6 characters long." });
+          return;
+        }
+    
+        try {
+          const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
+          await reauthenticateWithCredential(authUser, credential);
+          await updatePassword(authUser, newPassword);
+          
+          toast({
+              title: "Password Updated",
+              description: "Your password has been changed successfully.",
+          });
+    
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setIsPasswordDialogOpen(false);
+        } catch (error: any) {
+            let description = 'An unexpected error occurred. Please try again.';
+            if (error.code === 'auth/wrong-password') {
+                description = 'The current password you entered is incorrect.';
+            } else if (error.code === 'auth/weak-password') {
+                description = 'The new password is too weak.';
+            }
+           toast({
+            variant: "destructive",
+            title: "Password Update Failed",
+            description: description,
+          });
+        }
+    }
+
+    const handleProfilePhotoUpload = async (file: File) => {
+        if (!authUser || !firestore) return;
+        const storage = getStorage();
+        const filePath = `users/${authUser.uid}/profile/${file.name}`;
+        const storageRef = ref(storage, filePath);
+    
+        try {
+          await uploadBytes(storageRef, file);
+          const downloadURL = await getDownloadURL(storageRef);
+    
+          const userRef = doc(firestore, 'users', authUser.uid);
+          updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
+    
+          toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+        } catch (error) {
+          toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+        }
+    };
+
     const watchedContainers = adjustConsumptionForm.watch('containers');
     useEffect(() => {
         const liters = (watchedContainers || 0) * 19.5;
@@ -370,19 +481,8 @@ export default function AdminPage() {
     const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
 
     
-    const filteredUsers = appUsers?.filter(user => {
-        if (user.role === 'Admin') return false; // Exclude admin from the user list
-        if (userFilter === 'all') return true;
-        if (userFilter === 'active') return user.accountStatus === 'Active';
-        if (userFilter === 'inactive') return user.accountStatus === 'Inactive';
-        return true;
-    }) || [];
+    const filteredUsers = appUsers?.filter(user => user.role !== 'Admin') || [];
 
-    const handleFilterClick = (filter: 'all' | 'active' | 'inactive') => {
-        setUserFilter(filter);
-        setActiveTab('user-management');
-    };
-    
     const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
         const fromDate = deliveryDateRange.from;
@@ -972,8 +1072,124 @@ export default function AdminPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-
         
+        <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+            <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle>My Account</DialogTitle>
+                <DialogDescription>
+                Manage your account details.
+                </DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh] w-full">
+                <div className="pr-6 py-4">
+                    {editableFormData ? (
+                        <div className="space-y-6">
+                            <div>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <Avatar className="h-20 w-20">
+                                        <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
+                                        <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="space-y-1">
+                                        <h4 className="font-semibold">Profile Photo</h4>
+                                        <p className="text-sm text-muted-foreground">Update your photo.</p>
+                                        <Button asChild variant="outline" size="sm">
+                                            <Label>
+                                                <Upload className="mr-2 h-4 w-4" />
+                                                Upload Photo
+                                                <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                            </Label>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                            <Separator />
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                <h4 className="font-semibold">Your Details</h4>
+                                {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                        <Label htmlFor="fullName" className="text-right">Full Name</Label>
+                                        <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                    </div>
+                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                        <Label htmlFor="email" className="text-right">Login Email</Label>
+                                        <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                    </div>
+                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                        <Label htmlFor="address" className="text-right">Address</Label>
+                                        <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                    </div>
+                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                        <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
+                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                    </div>
+                                </div>
+                                {isEditingDetails && (
+                                    <div className="flex justify-end gap-2 mt-4">
+                                        <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                                        <Button onClick={handleSaveChanges}>Save Changes</Button>
+                                    </div>
+                                )}
+                            </div>
+                            <Separator />
+                            <div>
+                                <h4 className="font-semibold mb-4">Security</h4>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : <p>No account information available.</p>}
+                </div>
+            </ScrollArea>
+            <DialogFooter className="pr-6 pt-4">
+                <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
+            </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Update Password</DialogTitle>
+                    <DialogDescription>
+                    Enter your current and new password to update.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-1 relative">
+                        <Label htmlFor="current-password">Current Password</Label>
+                        <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                        <div className="space-y-1 relative">
+                        <Label htmlFor="new-password">New Password</Label>
+                        <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowNewPassword(!showNewPassword)}>
+                            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                        <div className="space-y-1 relative">
+                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                        <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-6 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handlePasswordChange}>Change Password</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+
         <Card>
             <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
                 <CardHeader>
@@ -1034,9 +1250,14 @@ export default function AdminPage() {
                                             </TableCell>
                                         </TableRow>
                                     )})}
-                                    {filteredUsers.length === 0 && (
+                                    {filteredUsers.length === 0 && !usersLoading && (
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center">No users found.</TableCell>
+                                        </TableRow>
+                                    )}
+                                     {usersLoading && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center">Loading users...</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -1060,7 +1281,10 @@ export default function AdminPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {waterStations?.map((station) => (
+                                    {stationsLoading && (
+                                        <TableRow><TableCell colSpan={5} className="text-center">Loading stations...</TableCell></TableRow>
+                                    )}
+                                    {!stationsLoading && waterStations?.map((station) => (
                                         <TableRow key={station.id}>
                                             <TableCell>{station.id}</TableCell>
                                             <TableCell>{station.name}</TableCell>
