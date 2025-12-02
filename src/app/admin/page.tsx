@@ -34,7 +34,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -75,7 +75,8 @@ export default function AdminPage() {
     const waterStationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'waterStations') : null, [firestore]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+    const allDeliveriesQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'deliveries') : null, [firestore]);
+    const { data: allDeliveries } = useCollection<Delivery>(allDeliveriesQuery);
     
     const [greeting, setGreeting] = useState('');
     
@@ -99,11 +100,10 @@ export default function AdminPage() {
     const [isUploadContractOpen, setIsUploadContractOpen] = useState(false);
     const [userForContract, setUserForContract] = useState<AppUser | null>(null);
     
-    const deliveriesQuery = useMemoFirebase(() => {
-        if (!firestore || !userForHistory?.id) return null;
-        return collection(firestore, 'users', userForHistory.id, 'deliveries');
-    }, [firestore, userForHistory]);
-    const { data: userDeliveriesData } = useCollection<Delivery>(deliveriesQuery);
+    const userDeliveriesData = useMemoFirebase(() => {
+        if (!userForHistory || !allDeliveries) return [];
+        return allDeliveries.filter(d => d.userId === userForHistory.id);
+    }, [userForHistory, allDeliveries]);
 
     const paymentsQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
@@ -356,20 +356,6 @@ export default function AdminPage() {
         setUserFilter(filter);
         setActiveTab('user-management');
     };
-
-    const getLatestDelivery = (userId: string): Delivery | undefined => {
-        if (!userDeliveriesData) return undefined;
-        // This is inefficient if userDeliveriesData is large and contains all users' deliveries.
-        // Assuming userDeliveriesData is ALREADY filtered for a single user when history is open.
-        // For the main table, we would need a different strategy.
-        // Let's assume for now userDeliveriesData is for the currently viewed history.
-        // A better approach would be to fetch all deliveries once and filter locally.
-        
-        // This function is problematic. It relies on userDeliveriesData which is only populated when the delivery history dialog is open.
-        // We need a better way to get the latest delivery for the user list.
-        // Let's create a new collection listener for all deliveries for this page.
-        return undefined; // We will handle this differently.
-    };
     
     const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
@@ -405,8 +391,6 @@ export default function AdminPage() {
         document.body.removeChild(link);
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
-
-    const latestUserDelivery = selectedUser ? getLatestDelivery(selectedUser.id) : null;
 
     const permitFields: { key: keyof WaterStation['permits'], label: string }[] = [
         { key: 'businessPermitUrl', label: 'Business / Mayor\'s Permit' },
@@ -977,8 +961,8 @@ export default function AdminPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredUsers.map((user) => {
-                                        const latestDelivery = userDeliveriesData 
-                                            ? [...userDeliveriesData]
+                                        const latestDelivery = allDeliveries 
+                                            ? [...allDeliveries]
                                                 .filter(d => d.userId === user.id)
                                                 .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] 
                                             : undefined;
@@ -1203,7 +1187,5 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
 
     
