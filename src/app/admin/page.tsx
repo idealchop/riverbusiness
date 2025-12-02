@@ -38,6 +38,9 @@ import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, g
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useRouter } from 'next/navigation';
+import { clientTypes } from '@/lib/plans';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -61,33 +64,22 @@ const newDeliverySchema = z.object({
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
-export default function AdminPage() {
+
+function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
     const auth = useAuth();
-    const { user: authUser, isUserLoading } = useUser();
+    const { user: authUser } = useUser();
     const firestore = useFirestore();
-
-    const [isAdmin, setIsAdmin] = React.useState(false);
-
-    const adminUserDocRef = useMemoFirebase(() => authUser ? doc(firestore, "users", authUser.uid) : null, [authUser, firestore]);
-    const { data: adminUserData, isLoading: isAdminUserLoading } = useDoc<AppUser>(adminUserDocRef);
-
-    React.useEffect(() => {
-        if (!isAdminUserLoading && adminUserData) {
-            setIsAdmin(adminUserData.role === 'Admin');
-        }
-    }, [adminUserData, isAdminUserLoading]);
+    const router = useRouter();
 
     const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'users') : null, [firestore, isAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
-
+    
     const allDeliveriesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isAdmin]);
     const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
-    
-    const [greeting, setGreeting] = React.useState('');
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
@@ -156,7 +148,13 @@ export default function AdminPage() {
         }
       };
 
-      const openAccountDialog = () => setIsAccountDialogOpen(true);
+      const openAccountDialog = () => {
+        const adminUser = appUsers?.find(u => u.id === authUser?.uid);
+        if (adminUser) {
+            setEditableFormData(adminUser);
+        }
+        setIsAccountDialogOpen(true)
+      };
       
       window.addEventListener('admin-user-search-term', handleUserSearch);
       window.addEventListener('admin-open-my-account', openAccountDialog);
@@ -165,20 +163,7 @@ export default function AdminPage() {
         window.removeEventListener('admin-user-search-term', handleUserSearch);
         window.removeEventListener('admin-open-my-account', openAccountDialog);
       };
-    }, [appUsers, toast]);
-
-    React.useEffect(() => {
-        const hour = new Date().getHours();
-        if (hour < 12) setGreeting('Good morning');
-        else if (hour < 18) setGreeting('Good afternoon');
-        else setGreeting('Good evening');
-    }, []);
-
-    React.useEffect(() => {
-        if(adminUserData) {
-          setEditableFormData(adminUserData);
-        }
-    }, [adminUserData]);
+    }, [appUsers, toast, authUser]);
 
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
@@ -391,6 +376,8 @@ export default function AdminPage() {
     };
     
     const handleSaveChanges = () => {
+        if (!authUser) return;
+        const adminUserDocRef = doc(firestore, "users", authUser.uid)
         if (adminUserDocRef && editableFormData) {
             updateDocumentNonBlocking(adminUserDocRef, editableFormData);
             setIsEditingDetails(false);
@@ -402,8 +389,9 @@ export default function AdminPage() {
     };
 
     const handleCancelEdit = () => {
-        if (adminUserData) {
-            setEditableFormData(adminUserData);
+        const adminUser = appUsers?.find(u => u.id === authUser?.uid);
+        if (adminUser) {
+            setEditableFormData(adminUser);
         }
         setIsEditingDetails(false);
     }
@@ -574,28 +562,17 @@ export default function AdminPage() {
         }
         return userDeliveries[0].status;
     };
+    
+    const selectedUserPlanImage = React.useMemo(() => {
+        if (!selectedUser?.clientType) return null;
+        const clientTypeDetails = clientTypes.find(ct => ct.name === selectedUser.clientType);
+        if (!clientTypeDetails) return null;
+        return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
+    }, [selectedUser]);
 
-
-  if (isUserLoading || isAdminUserLoading) {
-    return <div className="flex items-center justify-center h-full">Loading...</div>;
-  }
-
-  if (!isAdmin) {
-    return (
-        <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center">
-            <ShieldX className="h-16 w-16 text-destructive mb-4" />
-            <h1 className="text-3xl font-bold">Access Denied</h1>
-            <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
-        </div>
-    );
-  }
 
   return (
-    <div className="flex flex-col gap-6 font-sans">
-        <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">{greeting}, {adminUserData?.businessName || 'Admin'}!</h1>
-        </div>
-
+    <>
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
@@ -609,15 +586,26 @@ export default function AdminPage() {
                         <div className="grid md:grid-cols-2 gap-8 py-4">
                             {/* Left Column: User Profile */}
                             <div className="space-y-4">
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-start gap-4">
                                     <Avatar className="h-20 w-20">
                                         <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
                                         <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
                                     </Avatar>
-                                    <div>
+                                    <div className="flex-1">
                                         <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
                                         <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                                     </div>
+                                    {selectedUserPlanImage && (
+                                      <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                                        <Image
+                                            src={selectedUserPlanImage.imageUrl}
+                                            alt={selectedUser.clientType || ''}
+                                            fill
+                                            className="object-cover"
+                                            data-ai-hint={selectedUserPlanImage.imageHint}
+                                        />
+                                      </div>
+                                    )}
                                 </div>
                                 <Separator/>
                                 <TabsList className="grid w-full grid-cols-2">
@@ -1234,7 +1222,7 @@ export default function AdminPage() {
                                             </TableCell>
                                             <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
-                                                {getDeliveryStatus(user)}
+                                                <Badge variant="outline">{getDeliveryStatus(user)}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <DropdownMenu>
@@ -1446,10 +1434,65 @@ export default function AdminPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-    </div>
+    </>
   );
 }
 
-    
+export default function AdminPage() {
+    const { isUserLoading } = useUser();
+    const firestore = useFirestore();
+    const { user: authUser } = useUser();
 
+    const [isAdmin, setIsAdmin] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(true);
     
+    React.useEffect(() => {
+        if (isUserLoading) return;
+        if (!authUser) {
+            setIsLoading(false);
+            return;
+        };
+
+        const checkAdmin = async () => {
+            const adminUserDocRef = doc(firestore, "users", authUser.uid);
+            const docSnap = await getDoc(adminUserDocRef);
+            if (docSnap.exists() && docSnap.data().role === 'Admin') {
+                setIsAdmin(true);
+            }
+            setIsLoading(false);
+        }
+        checkAdmin();
+
+    }, [authUser, isUserLoading, firestore]);
+    
+    const [greeting, setGreeting] = React.useState('');
+    React.useEffect(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) setGreeting('Good morning');
+        else if (hour < 18) setGreeting('Good afternoon');
+        else setGreeting('Good evening');
+    }, []);
+
+    if (isLoading || isUserLoading) {
+      return <div className="flex items-center justify-center h-full">Loading...</div>;
+    }
+
+    if (!isAdmin) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center">
+                <ShieldX className="h-16 w-16 text-destructive mb-4" />
+                <h1 className="text-3xl font-bold">Access Denied</h1>
+                <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="flex flex-col gap-6 font-sans">
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold">{greeting}, Admin!</h1>
+            </div>
+            <AdminDashboard isAdmin={isAdmin} />
+        </div>
+    )
+}
