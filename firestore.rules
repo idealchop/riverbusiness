@@ -15,6 +15,8 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, write: if isOwner(userId) || isAdmin();
+      // Prevent users from updating their own consumption, only admin (or cloud function)
+      allow update: if isAdmin() && !( 'totalConsumptionLiters' in request.resource.data);
     }
     
     match /users/{userId}/deliveries/{deliveryId} {
@@ -48,3 +50,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
