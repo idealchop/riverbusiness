@@ -72,10 +72,10 @@ export default function AdminPage() {
     const usersQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'users') : null, [firestore, isSuperAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
-    const waterStationsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'waterStations') : null, [firestore]);
+    const waterStationsQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isSuperAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const allDeliveriesQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'deliveries') : null, [firestore]);
+    const allDeliveriesQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isSuperAdmin]);
     const { data: allDeliveries } = useCollection<Delivery>(allDeliveriesQuery);
     
     const [greeting, setGreeting] = useState('');
