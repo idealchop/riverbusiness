@@ -19,7 +19,7 @@ import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useDoc, useFirestore, useUser as useAuthUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -61,7 +61,7 @@ const tips = [
 export default function DashboardPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { user: authUser } = useAuthUser();
+    const { user: authUser } = useUser();
     
     const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
@@ -440,7 +440,7 @@ export default function DashboardPage() {
                             <TableRow>
                                 <TableHead>Ref ID</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Volume</TableHead>
+                                <TableHead>Liters / Containers</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Proof of Delivery</TableHead>
                             </TableRow>
@@ -449,11 +449,12 @@ export default function DashboardPage() {
                             {filteredDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
                                 const liters = containerToLiter(delivery.volumeContainers);
+                                const containers = delivery.volumeContainers || 0;
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
+                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {containers} containers</TableCell>
                                     <TableCell>
                                          <Badge variant={statusInfo.variant} className={cn(
                                             statusInfo.variant === 'default' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
@@ -821,6 +822,8 @@ export default function DashboardPage() {
         </div>
     </div>
     );
+
+    
 
     
 
