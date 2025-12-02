@@ -33,7 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -63,19 +63,32 @@ type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
 export default function AdminPage() {
     const { toast } = useToast();
-    const auth = useAuth();
     const { user: authUser, isUserLoading } = useUser();
     const firestore = useFirestore();
 
-    const isSuperAdmin = authUser?.email === 'admin@riverph.com';
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isAdminLoading, setIsAdminLoading] = useState(true);
 
-    const usersQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'users') : null, [firestore, isSuperAdmin]);
+    const adminUserDocRef = useMemoFirebase(() => authUser ? doc(firestore, "users", authUser.uid) : null, [authUser, firestore]);
+    const { data: adminUserData, isLoading: isAdminUserLoading } = useDoc<AppUser>(adminUserDocRef);
+
+    useEffect(() => {
+        if (!isAdminUserLoading && adminUserData) {
+            setIsAdmin(adminUserData.role === 'Admin');
+        }
+        if (!isUserLoading && !isAdminUserLoading) {
+            setIsAdminLoading(false);
+        }
+    }, [adminUserData, isAdminUserLoading, isUserLoading]);
+
+
+    const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'users') : null, [firestore, isAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
-    const waterStationsQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isSuperAdmin]);
+    const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const allDeliveriesQuery = useMemoFirebase(() => (firestore && isSuperAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isSuperAdmin]);
+    const allDeliveriesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isAdmin]);
     const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
     
     const [greeting, setGreeting] = useState('');
@@ -344,7 +357,7 @@ export default function AdminPage() {
     const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
 
 
-    const adminUser = appUsers?.find(user => user.role === 'Admin');
+    const adminUser = appUsers?.find(user => user.id === authUser?.uid);
     
     const filteredUsers = appUsers?.filter(user => {
         if (user.role === 'Admin') return false; // Exclude admin from the user list
@@ -434,11 +447,11 @@ export default function AdminPage() {
         return mergedInvoices.reverse();
       }, [selectedUser, userPaymentsData]);
 
-  if (isUserLoading || (isSuperAdmin && (usersLoading || stationsLoading || allDeliveriesLoading))) {
+  if (isUserLoading || isAdminLoading) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
   }
 
-  if (!isSuperAdmin) {
+  if (!isAdmin) {
     return (
         <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center">
             <ShieldX className="h-16 w-16 text-destructive mb-4" />
@@ -577,19 +590,19 @@ export default function AdminPage() {
                                         <History className="mr-2 h-4 w-4" />
                                         Delivery History
                                     </Button>
-                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isSuperAdmin}>
+                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
                                         <Building className="mr-2 h-4 w-4" />
                                         Assign Station
                                     </Button>
-                                    <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
+                                    <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isAdmin}>
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                         Add Liters
                                     </Button>
-                                    <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isSuperAdmin}>
+                                    <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isAdmin}>
                                         <MinusCircle className="mr-2 h-4 w-4" />
                                         Deduct Liters
                                     </Button>
-                                    <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isSuperAdmin}>
+                                    <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin}>
                                         <Upload className="mr-2 h-4 w-4" />
                                         Upload Contract
                                     </Button>
@@ -658,7 +671,7 @@ export default function AdminPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Download CSV
                     </Button>
-                    <Button onClick={() => setIsCreateDeliveryOpen(true)} disabled={!isSuperAdmin}>
+                    <Button onClick={() => setIsCreateDeliveryOpen(true)} disabled={!isAdmin}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Create Delivery
                     </Button>
@@ -696,7 +709,7 @@ export default function AdminPage() {
                                         {delivery.proofOfDeliveryUrl ? (
                                              <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
                                         ) : (
-                                            <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isSuperAdmin}>
+                                            <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin}>
                                                 <Upload className="mr-2 h-3 w-3"/>
                                                 Upload
                                             </Button>
@@ -704,7 +717,7 @@ export default function AdminPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {delivery.status === 'Delivered' && userForHistory && (
-                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeContainers)} disabled={!isSuperAdmin}>
+                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeContainers)} disabled={!isAdmin}>
                                                 Deduct
                                             </Button>
                                         )}
@@ -1016,7 +1029,7 @@ export default function AdminPage() {
                     
                     <TabsContent value="water-stations">
                         <div className="flex justify-end mb-4">
-                           <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isSuperAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
+                           <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
                         </div>
                         <div className="overflow-x-auto">
                            <Table>
@@ -1106,7 +1119,7 @@ export default function AdminPage() {
                                     </FormItem>
                                 )}/>
                                 {stationToUpdate && (
-                                    <Button type="submit" size="sm" disabled={!isSuperAdmin}>Save Changes</Button>
+                                    <Button type="submit" size="sm" disabled={!isAdmin}>Save Changes</Button>
                                 )}
                             </form>
                         </Form>
@@ -1123,10 +1136,10 @@ export default function AdminPage() {
                                         {stationToUpdate?.permits?.[field.key] ? (
                                              <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
                                         ) : (
-                                            <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isSuperAdmin}>
-                                                <Label className={cn("flex items-center", isSuperAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
+                                            <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin}>
+                                                <Label className={cn("flex items-center", isAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
                                                     <Upload className="mr-2 h-4 w-4" /> Upload
-                                                    <Input type="file" className="hidden" disabled={!isSuperAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                    <Input type="file" className="hidden" disabled={!isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
                                                 </Label>
                                             </Button>
                                         )}
@@ -1158,10 +1171,10 @@ export default function AdminPage() {
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                 <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isSuperAdmin}>
-                                                    <Label className={cn("flex items-center", isSuperAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
+                                                 <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin}>
+                                                    <Label className={cn("flex items-center", isAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
                                                         <Upload className="mr-2 h-4 w-4" /> Upload
-                                                        <Input type="file" className="hidden" disabled={!isSuperAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                        <Input type="file" className="hidden" disabled={!isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
                                                     </Label>
                                                 </Button>
                                             </TableCell>
@@ -1174,7 +1187,7 @@ export default function AdminPage() {
                         <div>
                             <h3 className="font-semibold text-base mb-1">3. Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
-                            <Button variant="outline" disabled={!isSuperAdmin} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
+                            <Button variant="outline" disabled={!isAdmin} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
                         </div>
                     </div>
                 </ScrollArea>
@@ -1183,7 +1196,7 @@ export default function AdminPage() {
                         <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                     </DialogClose>
                     {!stationToUpdate && (
-                        <Button onClick={stationForm.handleSubmit(handleSaveStation)} disabled={!isSuperAdmin}>Create Station</Button>
+                        <Button onClick={stationForm.handleSubmit(handleSaveStation)} disabled={!isAdmin}>Create Station</Button>
                     )}
                 </DialogFooter>
             </DialogContent>
@@ -1191,7 +1204,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-    
-    
-    
