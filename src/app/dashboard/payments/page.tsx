@@ -55,32 +55,9 @@ export default function PaymentsPage() {
   const paymentsQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'payments') : null, [firestore, user]);
   const { data: paymentHistory, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
   
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
-
   const { toast } = useToast();
-  const [date, setDate] = React.useState<DateRange | undefined>()
-  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string | null>(null);
-
-  const handleSendInvoice = () => {
-    if (!selectedCustomerId || !date?.from || !date?.to) {
-      toast({
-        variant: "destructive",
-        title: "Invoice Creation Failed",
-        description: "Please select a customer and a date range to generate an invoice.",
-      });
-      return;
-    }
-    toast({
-      title: "Invoice Sent",
-      description: `An invoice has been successfully generated and sent.`,
-    });
-    
-    setDate(undefined);
-    setSelectedCustomerId(null);
-  };
   
-  if (paymentsLoading || usersLoading) {
+  if (paymentsLoading) {
     return <div>Loading payments...</div>
   }
 
@@ -183,85 +160,6 @@ export default function PaymentsPage() {
                 ))}
               </TableBody>
             </Table>
-             <div className="flex justify-end mt-4 gap-2">
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button className="bg-primary/90 hover:bg-primary">Create Invoice</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Invoice to Smart Refill</DialogTitle>
-                            <DialogDescription>
-                                Select a customer and date range to generate an invoice for their recurring billed amount.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="customer">Select a Customer</Label>
-                                <Select onValueChange={setSelectedCustomerId} value={selectedCustomerId || undefined}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a customer..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {appUsers?.map(user => (
-                                            <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="date-range">Select Date Range</Label>
-                                <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                    id="date-create"
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !date && "text-muted-foreground"
-                                    )}
-                                    >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {date?.from ? (
-                                        date.to ? (
-                                        <>
-                                            {format(date.from, "LLL dd, y")} -{" "}
-                                            {format(date.to, "LLL dd, y")}
-                                        </>
-                                        ) : (
-                                        format(date.from, "LLL dd, y")
-                                        )
-                                    ) : (
-                                        <span>Pick a date</span>
-                                    )}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={date?.from}
-                                    selected={date}
-                                    onSelect={setDate}
-                                    numberOfMonths={2}
-                                    />
-                                </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
-                        <DialogFooter className="grid grid-cols-2 gap-2">
-                            <DialogClose asChild>
-                                <Button type="button" variant="outline">
-                                Cancel
-                                </Button>
-                            </DialogClose>
-                            <DialogClose asChild>
-                                <Button type="button" onClick={handleSendInvoice}>Send Invoice to Smart Refill</Button>
-                            </DialogClose>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div>
           </CardContent>
         </Card>
     </div>
