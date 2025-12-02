@@ -1,11 +1,19 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TEMPORARY: Allows everyone to read (for debugging ONLY)
+
+    function isAdmin() {
+      // Check if the user's role is 'Admin' by reading their user document.
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
     match /{document=**} {
-      allow read: true;
-      allow write: if request.auth != null;
+      // Admins have full read/write access everywhere.
+      // For others, reads are open for debugging, and writes require authentication.
+      allow read: if isAdmin() || true; // Open read for debugging, but admins always have access.
+      allow write: if isAdmin() || request.auth != null;
     }
   }
 }

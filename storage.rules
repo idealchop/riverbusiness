@@ -3,11 +3,17 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow reads and writes for all authenticated users.
-    // This allows users and admins to upload and view files like permits and proofs of delivery.
-    // For higher security, you could restrict paths further, e.g., match /users/{userId}/{allPaths=**}
+    
+    function isAdmin() {
+      // Assumes user's role is stored in Firestore. This requires a Firestore read.
+      // Ensure your rules allow this read: match /users/{userId} { allow get: if request.auth != null; }
+      return request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      // Grant full access to admins.
+      // Other authenticated users can also read and write.
+      allow read, write: if isAdmin() || request.auth != null;
     }
   }
 }
