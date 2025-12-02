@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Separator } from '@/components/ui/separator';
 import type { AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useCollection, useFirestore, useMemoFirebase, useAuth, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useAuth, updateDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -33,14 +33,8 @@ export default function AdminLayout({
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const usersQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'users') : null),
-    [firestore]
-  );
-  const { data: appUsers } = useCollection<AppUser>(usersQuery);
-
-  const adminUser = appUsers?.find(u => u.id === authUser?.uid);
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const {data: adminUser, isLoading: isAdminUserLoading} = useDoc<AppUser>(userDocRef);
 
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
@@ -74,22 +68,12 @@ export default function AdminLayout({
   }
 
   const handleSearch = () => {
-    if (!searchTerm || !appUsers) return;
+    if (!searchTerm || !adminUser) return;
 
-    const foundUser = appUsers.find(user => 
-        user.clientId?.toLowerCase() === searchTerm.toLowerCase() || (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-
-    if (foundUser) {
-        const event = new CustomEvent('admin-user-search', { detail: foundUser });
-        window.dispatchEvent(event);
-    } else {
-        toast({
-            variant: "destructive",
-            title: "User not found",
-            description: `No user found with ID or name: ${searchTerm}`,
-        });
-    }
+    // The parent component `admin/page.tsx` will fetch all users.
+    // We fire an event that the page can listen to.
+    const event = new CustomEvent('admin-user-search-term', { detail: searchTerm });
+    window.dispatchEvent(event);
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -362,5 +346,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    

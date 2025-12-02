@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -124,17 +124,34 @@ export default function AdminPage() {
 
 
     useEffect(() => {
-      const handleUserSearch = (event: CustomEvent<AppUser>) => {
-        setSelectedUser(event.detail);
-        setIsUserDetailOpen(true);
+      const handleUserSearch = (event: Event) => {
+        const customEvent = event as CustomEvent<string>;
+        const searchTerm = customEvent.detail.toLowerCase();
+        
+        if (!appUsers) return;
+
+        const foundUser = appUsers.find(user => 
+            user.clientId?.toLowerCase() === searchTerm || (user.name && user.name.toLowerCase().includes(searchTerm))
+        );
+        
+        if (foundUser) {
+          setSelectedUser(foundUser);
+          setIsUserDetailOpen(true);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "User not found",
+                description: `No user found with ID or name: ${customEvent.detail}`,
+            });
+        }
       };
       
-      window.addEventListener('admin-user-search', handleUserSearch as EventListener);
+      window.addEventListener('admin-user-search-term', handleUserSearch);
   
       return () => {
-        window.removeEventListener('admin-user-search', handleUserSearch as EventListener);
+        window.removeEventListener('admin-user-search-term', handleUserSearch);
       };
-    }, []);
+    }, [appUsers, toast]);
 
     useEffect(() => {
         const hour = new Date().getHours();
@@ -352,8 +369,6 @@ export default function AdminPage() {
 
     const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
 
-
-    const adminUser = appUsers?.find(user => user.id === authUser?.uid);
     
     const filteredUsers = appUsers?.filter(user => {
         if (user.role === 'Admin') return false; // Exclude admin from the user list
@@ -440,7 +455,18 @@ export default function AdminPage() {
         });
   
         return mergedInvoices.reverse();
-      }, [selectedUser, userPaymentsData]);
+    }, [selectedUser, userPaymentsData]);
+      
+    const getDeliveryStatusBadge = (status: Delivery['status'] | undefined) => {
+        if (!status) return <Badge variant="outline">No Delivery</Badge>;
+        switch (status) {
+            case 'Delivered': return <Badge variant="default" className="bg-green-100 text-green-800"><PackageCheck className="mr-1 h-3 w-3"/>Delivered</Badge>;
+            case 'In Transit': return <Badge variant="secondary"><Truck className="mr-1 h-3 w-3"/>In Transit</Badge>;
+            case 'Pending': return <Badge variant="outline"><Package className="mr-1 h-3 w-3"/>Pending</Badge>;
+            default: return <Badge variant="outline">No Delivery</Badge>;
+        }
+    };
+
 
   if (isUserLoading || isAdminUserLoading) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
@@ -504,11 +530,12 @@ export default function AdminPage() {
                                             <span className="text-muted-foreground">Contact Person:</span>
                                             <span className="font-medium">{selectedUser.name}</span>
                                         </div>
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Account Status:</span>
-                                            <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'} className={cn(selectedUser.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
-                                                {selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}
-                                            </Badge>
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn("h-2 w-2 rounded-full", selectedUser.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
+                                                <span className="font-medium">{selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
+                                            </div>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Plan:</span>
@@ -979,16 +1006,15 @@ export default function AdminPage() {
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                             <TableCell>
-                                                <Badge variant={user.accountStatus === 'Active' ? 'default' : 'outline'} className={cn(user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
-                                                    {user.accountStatus === 'Active' ? 'Online' : 'Offline'}
-                                                </Badge>
+                                                <div className="flex items-center gap-2">
+                                                  <span className={cn("h-2 w-2 rounded-full", user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
+                                                  <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
-                                                    <Badge variant={latestDelivery?.status === 'Delivered' ? 'default' : latestDelivery?.status === 'In Transit' ? 'secondary' : 'outline'}>
-                                                        {latestDelivery?.status || 'No Delivery'}
-                                                    </Badge>
+                                                   {getDeliveryStatusBadge(latestDelivery?.status)}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
