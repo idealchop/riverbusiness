@@ -952,15 +952,15 @@ export default function AdminPage() {
         </Dialog>
 
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
-             <Card>
+        <Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
                 <CardHeader>
-                     <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
                         <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
                     </TabsList>
                 </CardHeader>
-                 <CardContent>
+                <CardContent>
                     <TabsContent value="user-management">
                          <div className="overflow-x-auto">
                             <Table className="min-w-full">
@@ -1062,8 +1062,9 @@ export default function AdminPage() {
                         </div>
                     </TabsContent>
                 </CardContent>
-            </Card>
-        </Tabs>
+            </Tabs>
+        </Card>
+
         <Dialog open={isAssignStationOpen} onOpenChange={setIsAssignStationOpen}>
             <DialogContent>
                 <DialogHeader>
@@ -1200,3 +1201,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
