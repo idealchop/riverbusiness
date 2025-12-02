@@ -1300,11 +1300,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <Card className="lg:col-span-3">
                 <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
                     <CardHeader>
-                        <TabsList className="grid w-full grid-cols-4">
+                        <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
                             <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
-                            <TabsTrigger value="global-schedule"><CalendarIcon className="mr-2 h-4 w-4" />Global Schedule</TabsTrigger>
-                            <TabsTrigger value="consumption-analytics"><BarChart className="mr-2 h-4 w-4" />Consumption Analytics</TabsTrigger>
                         </TabsList>
                     </CardHeader>
                     <CardContent>
@@ -1409,101 +1407,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </TableBody>
                                 </Table>
                             </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="global-schedule">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Global Delivery Schedule</CardTitle>
-                                    <CardDescription>Set the schedule for all users. This will be reflected on their dashboards in real-time.</CardDescription>
-                                </CardHeader>
-                                <Form {...scheduleForm}>
-                                    <form onSubmit={scheduleForm.handleSubmit(handleSaveSchedule)}>
-                                        <CardContent className="space-y-4">
-                                            <FormField
-                                                control={scheduleForm.control}
-                                                name="deliveryDate"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Delivery Date</FormLabel>
-                                                        <FormControl><Input type="date" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={scheduleForm.control}
-                                                name="cutOffTime"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Cut-off Time</FormLabel>
-                                                        <FormControl><Input type="time" {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <FormField
-                                                control={scheduleForm.control}
-                                                name="notes"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Notes</FormLabel>
-                                                        <FormControl><Textarea placeholder="e.g., Expected heavy rain, schedule may shift." {...field} /></FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </CardContent>
-                                        <CardFooter>
-                                            <Button type="submit"><Save className="mr-2 h-4 w-4" />Save Schedule</Button>
-                                        </CardFooter>
-                                    </form>
-                                </Form>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="consumption-analytics">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Consumption Analytics</CardTitle>
-                                    <CardDescription>Overall water consumption history across all users.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {consumptionHistoryLoading ? (
-                                        <p>Loading analytics...</p>
-                                    ) : (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>User</TableHead>
-                                                    <TableHead>Date</TableHead>
-                                                    <TableHead className="text-right">Amount</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {consumptionHistory?.map((entry, index) => {
-                                                    const pathParts = (entry as any)._path.segments;
-                                                    const userId = pathParts[1];
-                                                    const user = appUsers?.find(u => u.id === userId);
-
-                                                    return (
-                                                        <TableRow key={index}>
-                                                            <TableCell>{user?.name || userId}</TableCell>
-                                                            <TableCell>{format(new Date((entry.date as any).seconds * 1000), 'PPp')}</TableCell>
-                                                            <TableCell className="text-right">{entry.amountLiters} {entry.metric}</TableCell>
-                                                        </TableRow>
-                                                    );
-                                                })}
-                                                {(!consumptionHistory || consumptionHistory.length === 0) && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={3} className="text-center">No consumption data recorded yet.</TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    )}
-                                </CardContent>
-                            </Card>
                         </TabsContent>
                     </CardContent>
                 </Tabs>
@@ -1773,3 +1676,4 @@ export default function AdminPage() {
 }
 
     
+
