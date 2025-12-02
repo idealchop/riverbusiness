@@ -9,7 +9,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -19,8 +19,8 @@ import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -66,6 +66,9 @@ export default function DashboardPage() {
     const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
 
+    const scheduleDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'schedules', 'currentSchedule') : null, [firestore]);
+    const { data: schedule, isLoading: isScheduleLoading } = useDoc<Schedule>(scheduleDocRef);
+
     const [greeting, setGreeting] = useState('');
     
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
@@ -80,6 +83,9 @@ export default function DashboardPage() {
     const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
     const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
     const [isSaveLitersDialogOpen, setIsSaveLitersDialogOpen] = useState(false);
+    const [isLogConsumptionOpen, setIsLogConsumptionOpen] = useState(false);
+    const [consumptionAmount, setConsumptionAmount] = useState(0);
+    const [consumptionMetric, setConsumptionMetric] = useState<'liters' | 'gallons'>('liters');
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -263,8 +269,30 @@ export default function DashboardPage() {
         });
         setIsSaveLitersDialogOpen(false);
     };
+
+    const handleLogConsumption = () => {
+        if (!authUser || !firestore || consumptionAmount <= 0) {
+            toast({ variant: "destructive", title: "Invalid Input", description: "Please enter a valid amount." });
+            return;
+        }
+
+        const consumptionHistoryRef = collection(firestore, 'users', authUser.uid, 'consumptionHistory');
+        
+        const newLog: Omit<ConsumptionHistory, 'id'> = {
+            date: serverTimestamp(),
+            amountLiters: consumptionMetric === 'gallons' ? consumptionAmount * 3.78541 : consumptionAmount,
+            metric: consumptionMetric,
+        };
+
+        addDocumentNonBlocking(consumptionHistoryRef, newLog);
+        
+        toast({ title: "Consumption Logged", description: `${consumptionAmount} ${consumptionMetric} has been added to your history.` });
+        setIsLogConsumptionOpen(false);
+        setConsumptionAmount(0);
+        setConsumptionMetric('liters');
+    };
     
-    if (isUserLoading || areDeliveriesLoading) {
+    if (isUserLoading || areDeliveriesLoading || isScheduleLoading) {
       return <div>Loading dashboard...</div>
     }
 
@@ -416,6 +444,34 @@ export default function DashboardPage() {
                 </DialogContent>
             </Dialog>
         </div>
+        
+        <Card className="col-span-1 lg:col-span-4">
+             <CardHeader>
+                <CardTitle>Current Delivery Schedule</CardTitle>
+                <CardDescription>This is the global delivery schedule set by the administrator.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {schedule ? (
+                    <div className="grid md:grid-cols-3 gap-4 text-center">
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                            <p className="text-sm text-muted-foreground">Delivery Date</p>
+                            <p className="text-xl font-bold">{schedule.deliveryDate ? format(new Date(schedule.deliveryDate), 'PPP') : 'Not set'}</p>
+                        </div>
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                            <p className="text-sm text-muted-foreground">Cut-off Time</p>
+                            <p className="text-xl font-bold">{schedule.cutOffTime || 'Not set'}</p>
+                        </div>
+                        <div className="p-4 bg-muted/50 rounded-lg">
+                            <p className="text-sm text-muted-foreground">Notes</p>
+                            <p className="text-md">{schedule.notes || 'No notes from admin.'}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-center text-muted-foreground">No schedule has been set by the admin yet.</p>
+                )}
+            </CardContent>
+        </Card>
+
 
         <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
             <DialogContent className="sm:max-w-3xl">
@@ -529,6 +585,11 @@ export default function DashboardPage() {
                         </TableBody>
                     </Table>
                 </div>
+                 <DialogFooter>
+                    <Button onClick={() => setIsLogConsumptionOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Log Consumption
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
         
@@ -609,6 +670,45 @@ export default function DashboardPage() {
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button onClick={handleSaveLiters}>Confirm &amp; Save</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isLogConsumptionOpen} onOpenChange={setIsLogConsumptionOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Log Water Consumption</DialogTitle>
+                    <DialogDescription>
+                        Manually log your water consumption to keep your history accurate.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="consumption-amount">Amount</Label>
+                        <Input
+                            id="consumption-amount"
+                            type="number"
+                            value={consumptionAmount}
+                            onChange={(e) => setConsumptionAmount(Number(e.target.value))}
+                            placeholder="e.g., 50"
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="consumption-metric">Metric</Label>
+                        <Select onValueChange={(value) => setConsumptionMetric(value as 'liters' | 'gallons')} defaultValue={consumptionMetric}>
+                            <SelectTrigger id="consumption-metric">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="liters">Liters</SelectItem>
+                                <SelectItem value="gallons">Gallons</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleLogConsumption}>Log Consumption</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -831,5 +931,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    

@@ -2,12 +2,12 @@
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -24,7 +24,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -34,13 +34,14 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Textarea } from '@/components/ui/textarea';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -73,6 +74,13 @@ const newDeliverySchema = z.object({
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
+const scheduleSchema = z.object({
+    deliveryDate: z.string().min(1, "Delivery date is required"),
+    cutOffTime: z.string().min(1, "Cut-off time is required"),
+    notes: z.string().optional(),
+});
+type ScheduleFormValues = z.infer<typeof scheduleSchema>;
+
 
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
@@ -89,6 +97,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const allDeliveriesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isAdmin]);
     const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
+
+    const scheduleDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'schedules', 'currentSchedule') : null, [firestore]);
+    const { data: scheduleData } = useDoc<Schedule>(scheduleDocRef);
+
+    const allConsumptionHistoryQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'consumptionHistory') : null, [firestore]);
+    const { data: consumptionHistory, isLoading: consumptionHistoryLoading } = useCollection<ConsumptionHistory>(allConsumptionHistoryQuery);
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
@@ -198,6 +212,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(newSanitationVisitSchema),
         defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
     });
+    
+    const scheduleForm = useForm<ScheduleFormValues>({
+        resolver: zodResolver(scheduleSchema),
+        defaultValues: { deliveryDate: '', cutOffTime: '', notes: '' },
+    });
+
+    React.useEffect(() => {
+        if (scheduleData) {
+            scheduleForm.reset(scheduleData);
+        }
+    }, [scheduleData, scheduleForm]);
 
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
@@ -211,6 +236,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(adjustConsumptionSchema),
         defaultValues: { amount: 0, containers: 0 },
     });
+    
+    const handleSaveSchedule = (values: ScheduleFormValues) => {
+        if (!scheduleDocRef) return;
+        setDocumentNonBlocking(scheduleDocRef, values, { merge: true });
+        toast({ title: "Schedule Updated", description: "The global delivery schedule has been updated." });
+    };
 
     const handleSaveStation = (values: NewStationFormValues) => {
         if (!firestore) return;
@@ -1248,120 +1279,220 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         </Dialog>
 
 
-        <Card>
-            <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
-                <CardHeader>
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
-                        <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
-                    </TabsList>
-                </CardHeader>
-                <CardContent>
-                    <TabsContent value="user-management">
-                         <div className="overflow-x-auto">
-                            <Table className="min-w-full">
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Client ID</TableHead>
-                                        <TableHead>Business Name</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Assigned Station</TableHead>
-                                        <TableHead>Delivery Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredUsers.map((user) => {
-                                        return (
-                                        <TableRow key={user.id}>
-                                            <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
-                                            <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <span className={cn("h-2 w-2 rounded-full", user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
-                                                    <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">{getDeliveryStatus(user)}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-4 w-4" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-3">
+                <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
+                    <CardHeader>
+                        <TabsList className="grid w-full grid-cols-4">
+                            <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
+                            <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
+                            <TabsTrigger value="global-schedule"><CalendarIcon className="mr-2 h-4 w-4" />Global Schedule</TabsTrigger>
+                            <TabsTrigger value="consumption-analytics"><BarChart className="mr-2 h-4 w-4" />Consumption Analytics</TabsTrigger>
+                        </TabsList>
+                    </CardHeader>
+                    <CardContent>
+                        <TabsContent value="user-management">
+                             <div className="overflow-x-auto">
+                                <Table className="min-w-full">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Client ID</TableHead>
+                                            <TableHead>Business Name</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Assigned Station</TableHead>
+                                            <TableHead>Delivery Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredUsers.map((user) => {
+                                            return (
+                                            <TableRow key={user.id}>
+                                                <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={cn("h-2 w-2 rounded-full", user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
+                                                        <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">{getDeliveryStatus(user)}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
+                                                                <Users2 className="mr-2 h-4 w-4" />
+                                                                Client's Profile
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        )})}
+                                        {filteredUsers.length === 0 && !usersLoading && (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="text-center">No users found.</TableCell>
+                                            </TableRow>
+                                        )}
+                                         {usersLoading && (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="text-center">Loading users...</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                             </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="water-stations">
+                            <div className="flex justify-end mb-4">
+                               <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
+                            </div>
+                            <div className="overflow-x-auto">
+                               <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Station ID</TableHead>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Location</TableHead>
+                                            <TableHead>Permits</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {stationsLoading && (
+                                            <TableRow><TableCell colSpan={5} className="text-center">Loading stations...</TableCell></TableRow>
+                                        )}
+                                        {!stationsLoading && waterStations?.map((station) => (
+                                            <TableRow key={station.id}>
+                                                <TableCell>{station.id}</TableCell>
+                                                <TableCell>{station.name}</TableCell>
+                                                <TableCell>{station.location}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={complianceReports && complianceReports.length > 0 ? 'default' : 'outline'}>
+                                                        {complianceReports?.length || 0} Attached
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="outline" size="sm" onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
+                                                        <UserCog className="mr-2 h-4 w-4"/>
+                                                        Manage
                                                     </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
-                                                            <Users2 className="mr-2 h-4 w-4" />
-                                                            Client's Profile
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    )})}
-                                    {filteredUsers.length === 0 && !usersLoading && (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="text-center">No users found.</TableCell>
-                                        </TableRow>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </TabsContent>
+                        
+                        <TabsContent value="global-schedule">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Global Delivery Schedule</CardTitle>
+                                    <CardDescription>Set the schedule for all users. This will be reflected on their dashboards in real-time.</CardDescription>
+                                </CardHeader>
+                                <Form {...scheduleForm}>
+                                    <form onSubmit={scheduleForm.handleSubmit(handleSaveSchedule)}>
+                                        <CardContent className="space-y-4">
+                                            <FormField
+                                                control={scheduleForm.control}
+                                                name="deliveryDate"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Delivery Date</FormLabel>
+                                                        <FormControl><Input type="date" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={scheduleForm.control}
+                                                name="cutOffTime"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Cut-off Time</FormLabel>
+                                                        <FormControl><Input type="time" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={scheduleForm.control}
+                                                name="notes"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Notes</FormLabel>
+                                                        <FormControl><Textarea placeholder="e.g., Expected heavy rain, schedule may shift." {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </CardContent>
+                                        <CardFooter>
+                                            <Button type="submit"><Save className="mr-2 h-4 w-4" />Save Schedule</Button>
+                                        </CardFooter>
+                                    </form>
+                                </Form>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="consumption-analytics">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Consumption Analytics</CardTitle>
+                                    <CardDescription>Overall water consumption history across all users.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {consumptionHistoryLoading ? (
+                                        <p>Loading analytics...</p>
+                                    ) : (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead className="text-right">Amount</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {consumptionHistory?.map((entry, index) => {
+                                                    const pathParts = (entry as any)._path.segments;
+                                                    const userId = pathParts[1];
+                                                    const user = appUsers?.find(u => u.id === userId);
+
+                                                    return (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{user?.name || userId}</TableCell>
+                                                            <TableCell>{format(new Date((entry.date as any).seconds * 1000), 'PPp')}</TableCell>
+                                                            <TableCell className="text-right">{entry.amountLiters} {entry.metric}</TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                                {(!consumptionHistory || consumptionHistory.length === 0) && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={3} className="text-center">No consumption data recorded yet.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
                                     )}
-                                     {usersLoading && (
-                                        <TableRow>
-                                            <TableCell colSpan={7} className="text-center">Loading users...</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                         </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="water-stations">
-                        <div className="flex justify-end mb-4">
-                           <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
-                        </div>
-                        <div className="overflow-x-auto">
-                           <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Station ID</TableHead>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Location</TableHead>
-                                        <TableHead>Permits</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {stationsLoading && (
-                                        <TableRow><TableCell colSpan={5} className="text-center">Loading stations...</TableCell></TableRow>
-                                    )}
-                                    {!stationsLoading && waterStations?.map((station) => (
-                                        <TableRow key={station.id}>
-                                            <TableCell>{station.id}</TableCell>
-                                            <TableCell>{station.name}</TableCell>
-                                            <TableCell>{station.location}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={complianceReports && complianceReports.length > 0 ? 'default' : 'outline'}>
-                                                    {complianceReports?.length || 0} Attached
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="outline" size="sm" onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
-                                                    <UserCog className="mr-2 h-4 w-4"/>
-                                                    Manage
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </TabsContent>
-                </CardContent>
-            </Tabs>
-        </Card>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </CardContent>
+                </Tabs>
+            </Card>
+        </div>
+
 
         <Dialog open={isAssignStationOpen} onOpenChange={setIsAssignStationOpen}>
             <DialogContent>

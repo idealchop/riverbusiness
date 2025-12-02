@@ -127,3 +127,15 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
+
+export interface Schedule {
+  deliveryDate: string;
+  cutOffTime: string;
+  notes: string;
+}
+
+export interface ConsumptionHistory {
+  date: FieldValue;
+  amountLiters: number;
+  metric: 'liters' | 'gallons';
+}

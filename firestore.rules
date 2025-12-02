@@ -4,16 +4,39 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     function isAdmin() {
-      // Check if the user's role is 'Admin' by reading their user document.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    match /{document=**} {
-      // Admins have full read/write access everywhere.
-      // For others, reads are open for debugging, and writes require authentication.
-      allow read: if isAdmin() || true; // Open read for debugging, but admins always have access.
-      allow write: if isAdmin() || request.auth != null;
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    match /waterStations/{stationId}/{document=**} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
+    }
+
+    match /schedules/currentSchedule {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId}/consumptionHistory/{historyId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Admins can read consumption history across all users for analytics.
+    match /users/{userId}/consumptionHistory/{historyId} {
+      allow read: if isAdmin();
     }
   }
 }

@@ -108,6 +108,26 @@
         "reportUrl": { "type": "string", "format": "uri" }
       },
       "required": ["id", "scheduledDate", "status"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "type": "object",
+      "description": "Represents the global delivery schedule.",
+      "properties": {
+        "deliveryDate": { "type": "string", "format": "date" },
+        "cutOffTime": { "type": "string", "format": "time" },
+        "notes": { "type": "string" }
+      }
+    },
+    "ConsumptionHistory": {
+      "title": "ConsumptionHistory",
+      "type": "object",
+      "description": "Represents a single water consumption entry for a user.",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "amountLiters": { "type": "number" },
+        "metric": { "type": "string", "enum": ["liters", "gallons"] }
+      }
     }
   },
   "auth": {
@@ -126,6 +146,10 @@
       "schema": { "$ref": "#/entities/Payment" },
       "description": "Subcollection for a user's payment history."
     },
+    "/users/{userId}/consumptionHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/ConsumptionHistory" },
+      "description": "Subcollection for a user's consumption history."
+    },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
@@ -137,6 +161,10 @@
     "/waterStations/{stationId}/sanitationVisits/{visitId}": {
       "schema": { "$ref": "#/entities/SanitationVisit" },
       "description": "Subcollection for a station's sanitation visits."
+    },
+    "/schedules/currentSchedule": {
+      "schema": { "$ref": "#/entities/Schedule" },
+      "description": "A single document to hold the current global delivery schedule."
     }
   }
 }
