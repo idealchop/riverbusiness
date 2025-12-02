@@ -70,7 +70,7 @@ const newDeliverySchema = z.object({
     date: z.date({ required_error: 'Date is required.'}),
     volumeContainers: z.coerce.number().min(1, 'Volume is required.'),
     status: z.enum(['Pending', 'In Transit', 'Delivered']),
-    proofUrl: z.any().optional(),
+    proofOfDeliveryUrl: z.any().optional(),
     adminNotes: z.string().optional(),
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
@@ -206,7 +206,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
-        defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending' },
+        defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending', adminNotes: '' },
     });
 
     const sanitationVisitForm = useForm<NewSanitationVisitFormValues>({
@@ -423,14 +423,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleCreateDelivery = async (values: NewDeliveryFormValues) => {
         if (!userForHistory || !firestore) return;
     
-        let proofUrl = '';
-        if (values.proofUrl && values.proofUrl.length > 0) {
-            const file = values.proofUrl[0];
+        let proofOfDeliveryUrl = '';
+        if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
+            const file = values.proofOfDeliveryUrl[0];
             const storage = getStorage();
-            const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
+            const filePath = `proofsOfDelivery/${userForHistory.id}/${values.trackingNumber}-${file.name}`;
             const storageRef = ref(storage, filePath);
+            toast({ title: 'Uploading proof...', description: 'Please wait while the file is uploaded.' });
             await uploadBytes(storageRef, file);
-            proofUrl = await getDownloadURL(storageRef);
+            proofOfDeliveryUrl = await getDownloadURL(storageRef);
+            toast({ title: 'Upload complete!', description: 'Proof of delivery has been attached.' });
         }
     
         const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
@@ -441,11 +443,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             date: values.date.toISOString(),
             volumeContainers: values.volumeContainers,
             status: values.status,
-            proofOfDeliveryUrl: proofUrl,
+            proofOfDeliveryUrl: proofOfDeliveryUrl,
             adminNotes: values.adminNotes,
         };
 
-        // This action will be picked up by the real-time listener on the client dashboard.
         setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
 
         toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
@@ -1044,7 +1045,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         />
                          <FormField
                             control={deliveryForm.control}
-                            name="proofUrl"
+                            name="proofOfDeliveryUrl"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Proof of Delivery (Optional)</FormLabel>
@@ -1769,3 +1770,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

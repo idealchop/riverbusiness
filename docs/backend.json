@@ -66,7 +66,7 @@
         "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
         "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers." },
         "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },
-        "proofOfDeliveryUrl": { "type": "string", "format": "uri" },
+        "proofOfDeliveryUrl": { "type": "string", "format": "uri", "description": "URL to the proof of delivery image." },
         "adminNotes": { "type": "string", "description": "Notes from the admin about the delivery." }
       },
       "required": ["id", "userId", "date", "volumeContainers", "status"]
@@ -169,3 +169,5 @@
     }
   }
 }
+
+    

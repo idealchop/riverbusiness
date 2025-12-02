@@ -12,8 +12,8 @@ import type { Delivery } from '@/lib/types';
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { format } from 'date-fns';
 
 const containerToLiter = (containers: number) => containers * 19.5;
 
@@ -130,7 +130,7 @@ export default function DeliveriesPage() {
             return (
               <TableRow key={delivery.id}>
                 <TableCell className="font-medium">{delivery.id}</TableCell>
-                <TableCell>{new Date(delivery.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
                 <TableCell>{volumeLiters.toLocaleString(undefined, { maximumFractionDigits: 2 })}L / {delivery.volumeContainers} containers</TableCell>
                 <TableCell>
                   <Badge variant={getStatusBadgeVariant(delivery.status)}
@@ -178,3 +178,5 @@ export default function DeliveriesPage() {
     </div>
   );
 }
+
+    

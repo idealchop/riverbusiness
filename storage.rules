@@ -5,15 +5,35 @@ service firebase.storage {
   match /b/{bucket}/o {
     
     function isAdmin() {
-      // Assumes user's role is stored in Firestore. This requires a Firestore read.
-      // Ensure your rules allow this read: match /users/{userId} { allow get: if request.auth != null; }
+      // Assumes user's role is stored in Firestore.
       return request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
+    // Admins can read and write all files.
     match /{allPaths=**} {
-      // Grant full access to admins.
-      // Other authenticated users can also read and write.
-      allow read, write: if isAdmin() || request.auth != null;
+      allow read, write: if isAdmin();
     }
+
+    // Allow users to read their own profile pictures.
+    match /users/{userId}/profile/{fileName} {
+      allow read: if request.auth.uid == userId;
+    }
+
+    // Allow any authenticated user to write to their own folder for uploads.
+    // This is a broad rule, suitable for development. For production, you might want to be more specific.
+    match /users/{userId}/{allPaths=**} {
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // Rules for Proof of Delivery
+    match /proofsOfDelivery/{userId}/{deliveryRefId} {
+      // Admins can upload proofs for any user.
+      allow write: if isAdmin();
+      // Users can only read proofs that belong to them.
+      allow read: if request.auth.uid == userId;
+    }
+
   }
 }
+
+    
