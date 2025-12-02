@@ -13,6 +13,7 @@ export interface Delivery {
   volumeContainers: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
   proofOfDeliveryUrl?: string;
+  adminNotes?: string;
 }
 
 export interface ComplianceReport {

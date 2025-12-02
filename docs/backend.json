@@ -61,14 +61,15 @@
       "type": "object",
       "description": "Represents a water delivery record.",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the delivery." },
+        "id": { "type": "string", "description": "Unique identifier for the delivery, can be used as a tracking number." },
         "userId": { "type": "string", "description": "ID of the user receiving the delivery." },
         "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
-        "volumeGallons": { "type": "number", "description": "Volume of water delivered in gallons." },
+        "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers." },
         "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },
-        "proofOfDeliveryUrl": { "type": "string", "format": "uri" }
+        "proofOfDeliveryUrl": { "type": "string", "format": "uri" },
+        "adminNotes": { "type": "string", "description": "Notes from the admin about the delivery." }
       },
-      "required": ["id", "userId", "date", "volumeGallons", "status"]
+      "required": ["id", "userId", "date", "volumeContainers", "status"]
     },
     "Payment": {
       "title": "Payment",

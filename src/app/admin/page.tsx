@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -66,11 +66,12 @@ const adjustConsumptionSchema = z.object({
 type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
 const newDeliverySchema = z.object({
-    refId: z.string().min(1, 'Reference ID is required'),
+    trackingNumber: z.string().min(1, 'Tracking Number is required'),
     date: z.date({ required_error: 'Date is required.'}),
     volumeContainers: z.coerce.number().min(1, 'Volume is required.'),
     status: z.enum(['Pending', 'In Transit', 'Delivered']),
     proofUrl: z.any().optional(),
+    adminNotes: z.string().optional(),
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
@@ -205,7 +206,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
-        defaultValues: { refId: '', volumeContainers: 0, status: 'Pending' },
+        defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending' },
     });
 
     const sanitationVisitForm = useForm<NewSanitationVisitFormValues>({
@@ -426,21 +427,22 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (values.proofUrl && values.proofUrl.length > 0) {
             const file = values.proofUrl[0];
             const storage = getStorage();
-            const filePath = `users/${userForHistory.id}/deliveries/${values.refId}/${file.name}`;
+            const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
             const storageRef = ref(storage, filePath);
             await uploadBytes(storageRef, file);
             proofUrl = await getDownloadURL(storageRef);
         }
     
-        const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.refId);
+        const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
         
         const newDeliveryData: Delivery = {
-            id: values.refId,
+            id: values.trackingNumber,
             userId: userForHistory.id,
             date: values.date.toISOString(),
             volumeContainers: values.volumeContainers,
             status: values.status,
             proofOfDeliveryUrl: proofUrl,
+            adminNotes: values.adminNotes,
         };
 
         // This action will be picked up by the real-time listener on the client dashboard.
@@ -887,7 +889,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Ref ID</TableHead>
+                                <TableHead>Tracking No.</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Volume</TableHead>
                                 <TableHead>Status</TableHead>
@@ -952,10 +954,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
                         <FormField
                             control={deliveryForm.control}
-                            name="refId"
+                            name="trackingNumber"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Reference ID</FormLabel>
+                                    <FormLabel>Tracking Number</FormLabel>
                                     <FormControl>
                                         <Input placeholder="e.g., DEL-00123" {...field} />
                                     </FormControl>
@@ -1048,6 +1050,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <FormLabel>Proof of Delivery (Optional)</FormLabel>
                                     <FormControl>
                                        <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={deliveryForm.control}
+                            name="adminNotes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Admin Notes (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

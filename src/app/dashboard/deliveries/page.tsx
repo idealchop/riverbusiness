@@ -6,11 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Paperclip, Search, Truck } from 'lucide-react';
+import { MoreHorizontal, Paperclip, Search, Truck, StickyNote, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { Delivery } from '@/lib/types';
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import Image from 'next/image';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
 
 const containerToLiter = (containers: number) => containers * 19.5;
 
@@ -23,10 +26,13 @@ export default function DeliveriesPage() {
 
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+  const [selectedNotes, setSelectedNotes] = useState<string | null>(null);
 
   useEffect(() => {
     if (userDeliveries) {
-      setDeliveries(userDeliveries);
+      const sortedDeliveries = [...userDeliveries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setDeliveries(sortedDeliveries);
     }
   }, [userDeliveries]);
 
@@ -56,7 +62,8 @@ export default function DeliveriesPage() {
     const term = e.target.value;
     setSearchTerm(term);
     if (term === '' && userDeliveries) {
-      setDeliveries(userDeliveries);
+       const sortedDeliveries = [...userDeliveries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setDeliveries(sortedDeliveries);
     }
   };
 
@@ -70,9 +77,33 @@ export default function DeliveriesPage() {
 
   return (
     <div className="py-4 space-y-4">
+      <Dialog open={!!selectedProofUrl} onOpenChange={(open) => !open && setSelectedProofUrl(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Proof of Delivery</DialogTitle>
+            </DialogHeader>
+            {selectedProofUrl && (
+                <div className="py-4 flex justify-center">
+                    <Image src={selectedProofUrl} alt="Proof of delivery" width={400} height={600} className="rounded-md object-contain" />
+                </div>
+            )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!selectedNotes} onOpenChange={(open) => !open && setSelectedNotes(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Admin Notes</DialogTitle>
+                <DialogDescription>Notes from the administrator regarding this delivery.</DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm bg-muted p-4 rounded-md">{selectedNotes}</p>
+            </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-2">
         <Input 
-          placeholder="Search by ID, date, or status..."
+          placeholder="Search by Tracking No, date, or status..."
           value={searchTerm}
           onChange={handleSearchInputChange}
           onKeyDown={handleSearchKeyDown}
@@ -86,7 +117,7 @@ export default function DeliveriesPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Delivery ID</TableHead>
+            <TableHead>Tracking No.</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Volume</TableHead>
             <TableHead>Status</TableHead>
@@ -120,13 +151,21 @@ export default function DeliveriesPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                       {delivery.proofOfDeliveryUrl && (
+                        <DropdownMenuItem onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl!)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Proof
+                        </DropdownMenuItem>
+                      )}
+                      {delivery.adminNotes && (
+                        <DropdownMenuItem onClick={() => setSelectedNotes(delivery.adminNotes!)}>
+                          <StickyNote className="mr-2 h-4 w-4" />
+                          View Notes
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem>
                         <Truck className="mr-2 h-4 w-4" />
                         Track Delivery
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Paperclip className="mr-2 h-4 w-4" />
-                        View/Add Attachments
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
