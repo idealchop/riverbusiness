@@ -534,8 +534,8 @@ export default function AdminPage() {
         
         const invoices: Payment[] = [];
         const now = new Date();
-        const createdAt = selectedUser.createdAt;
         // Handle both Timestamp and string dates
+        const createdAt = selectedUser.createdAt;
         const startDate = typeof (createdAt as any)?.toDate === 'function' 
             ? (createdAt as any).toDate() 
             : new Date(createdAt);
@@ -563,14 +563,17 @@ export default function AdminPage() {
         return mergedInvoices.reverse();
     }, [selectedUser, userPaymentsData]);
       
-    const getDeliveryStatusBadge = (status: Delivery['status'] | undefined) => {
-        if (!status) return <Badge variant="outline">No Delivery</Badge>;
-        switch (status) {
-            case 'Delivered': return <Badge variant="default" className="bg-green-100 text-green-800"><PackageCheck className="mr-1 h-3 w-3"/>Delivered</Badge>;
-            case 'In Transit': return <Badge variant="secondary"><Truck className="mr-1 h-3 w-3"/>In Transit</Badge>;
-            case 'Pending': return <Badge variant="outline"><Package className="mr-1 h-3 w-3"/>Pending</Badge>;
-            default: return <Badge variant="outline">No Delivery</Badge>;
+    const getDeliveryStatus = (user: AppUser) => {
+        if (!allDeliveries) return 'No Delivery';
+        
+        const userDeliveries = allDeliveries
+            .filter(d => d.userId === user.id)
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        if (userDeliveries.length === 0) {
+            return 'No Delivery';
         }
+        return userDeliveries[0].status;
     };
 
 
@@ -1220,23 +1223,19 @@ export default function AdminPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredUsers.map((user) => {
-                                        const latestDelivery = allDeliveries
-                                            ?.filter(d => d.userId === user.id)
-                                            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                                         return (
                                         <TableRow key={user.id}>
                                             <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                             <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                  <span className={cn("h-2 w-2 rounded-full", user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
-                                                  <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
-                                                </div>
+                                                <Badge className={cn(user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
+                                                    {user.accountStatus === 'Active' ? 'Online' : 'Offline'}
+                                                </Badge>
                                             </TableCell>
                                             <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <div onClick={() => { setUserForHistory(user); setIsDeliveryHistoryOpen(true); }} className="cursor-pointer">
-                                                   {getDeliveryStatusBadge(latestDelivery?.status)}
+                                                   {getDeliveryStatus(user)}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
