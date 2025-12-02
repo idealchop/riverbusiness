@@ -464,7 +464,7 @@ export default function AdminPage() {
   return (
     <div className="flex flex-col gap-6 font-sans">
         <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">{greeting}, {adminUser?.businessName || 'Admin'}!</h1>
+            <h1 className="text-3xl font-bold">{greeting}, {adminUserData?.businessName || 'Admin'}!</h1>
         </div>
 
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
