@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -279,7 +279,7 @@ export default function DashboardPage() {
                 <DialogTrigger asChild>
                     <Button variant="outline" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
                         <ShieldCheck className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Water Quality Compliance</span>
+                        <span className="hidden sm:inline">Water Quality & Sanitation</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl">
@@ -292,7 +292,7 @@ export default function DashboardPage() {
                      <Tabs defaultValue="compliance" className="flex flex-col gap-4 pt-4">
                         <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto">
                             <TabsTrigger value="compliance">Compliance Reports</TabsTrigger>
-                            <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                            <TabsTrigger value="sanitation">Sanitation Visits</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="compliance">
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                                 <Table>
                                 <TableHeader>
                                     <TableRow>
-                                    <TableHead>Report ID</TableHead>
+                                    <TableHead>Report Name</TableHead>
                                     <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Attachment</TableHead>
@@ -318,7 +318,7 @@ export default function DashboardPage() {
                                         </TableRow>
                                     ) : complianceReports?.map((report) => (
                                     <TableRow key={report.id}>
-                                        <TableCell className="font-medium">{report.id}</TableCell>
+                                        <TableCell className="font-medium">{report.name}</TableCell>
                                         <TableCell>{new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                                         <TableCell>
                                         <Badge variant={report.status === 'Compliant' ? 'default' : 'destructive'}

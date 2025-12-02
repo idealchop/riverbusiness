@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -24,7 +24,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -48,6 +48,15 @@ const newStationSchema = z.object({
 });
 
 type NewStationFormValues = z.infer<typeof newStationSchema>;
+
+const newSanitationVisitSchema = z.object({
+    id: z.string().min(1, "Visit ID is required"),
+    scheduledDate: z.date({ required_error: 'Date is required.'}),
+    status: z.enum(['Completed', 'Scheduled', 'Cancelled']),
+    assignedTo: z.string().min(1, "Technician name is required"),
+    reportUrl: z.any().optional(),
+});
+type NewSanitationVisitFormValues = z.infer<typeof newSanitationVisitSchema>;
 
 const adjustConsumptionSchema = z.object({
     amount: z.coerce.number().min(0, 'Amount must be a positive number'),
@@ -110,6 +119,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [currentPassword, setCurrentPassword] = React.useState('');
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
+    const [isCreateSanitationVisitOpen, setIsCreateSanitationVisitOpen] = React.useState(false);
+
 
     const userDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !userForHistory) return null;
@@ -123,6 +134,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return collection(firestore, 'users', selectedUser.id, 'payments');
     }, [firestore, selectedUser]);
     const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
+
+    const complianceReportsQuery = useMemoFirebase(() => 
+        (firestore && stationToUpdate) 
+        ? collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports') 
+        : null, 
+        [firestore, stationToUpdate]
+    );
+    const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
 
     React.useEffect(() => {
@@ -173,6 +192,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const deliveryForm = useForm<NewDeliveryFormValues>({
         resolver: zodResolver(newDeliverySchema),
         defaultValues: { refId: '', volumeContainers: 0, status: 'Pending' },
+    });
+
+    const sanitationVisitForm = useForm<NewSanitationVisitFormValues>({
+        resolver: zodResolver(newSanitationVisitSchema),
+        defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
     });
 
     React.useEffect(() => {
@@ -261,27 +285,62 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         })
     };
 
-    const handleAttachPermit = async (permitType: keyof WaterStation['permits'], file: File) => {
+    const handleAttachPermit = async (permitType: string, file: File, label: string) => {
         if (!stationToUpdate || !firestore) return;
         const storage = getStorage();
-        const filePath = `stations/${stationToUpdate.id}/permits/${permitType}-${file.name}`;
+        const filePath = `stations/${stationToUpdate.id}/compliance/${permitType}-${file.name}`;
         const storageRef = ref(storage, filePath);
-
+    
         try {
+            toast({ title: 'Uploading...', description: `Attaching ${label} document.` });
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
-
-            const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
-            updateDocumentNonBlocking(stationRef, {
-                [`permits.${permitType}`]: downloadURL,
-            });
-            
-            setStationToUpdate(prev => prev ? { ...prev, permits: { ...prev.permits, [permitType]: downloadURL } } : null);
-
-            toast({ title: 'Permit Attached', description: `A new permit has been successfully attached to the station.` });
+    
+            // This is a compliance document, so create a new document in the subcollection.
+            const reportsRef = collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports');
+            const newReport: Omit<ComplianceReport, 'id'> = {
+                name: label,
+                date: new Date().toISOString(),
+                status: 'Compliant',
+                reportUrl: downloadURL,
+            };
+            await addDocumentNonBlocking(reportsRef, newReport);
+    
+            toast({ title: 'Compliance Document Attached', description: `${label} has been successfully uploaded and recorded.` });
         } catch (error) {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the permit. Please try again.' });
+            console.error("Upload error:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the compliance document. Please try again.' });
         }
+    };
+
+    const handleCreateSanitationVisit = async (values: NewSanitationVisitFormValues) => {
+        if (!stationToUpdate || !firestore) return;
+    
+        let reportUrl = '';
+        if (values.reportUrl && values.reportUrl.length > 0) {
+            const file = values.reportUrl[0];
+            const storage = getStorage();
+            const filePath = `stations/${stationToUpdate.id}/sanitation/${values.id}/${file.name}`;
+            const storageRef = ref(storage, filePath);
+            await uploadBytes(storageRef, file);
+            reportUrl = await getDownloadURL(storageRef);
+        }
+    
+        const visitDocRef = doc(firestore, 'waterStations', stationToUpdate.id, 'sanitationVisits', values.id);
+        
+        const newVisitData: SanitationVisit = {
+            id: values.id,
+            scheduledDate: values.scheduledDate.toISOString(),
+            status: values.status,
+            assignedTo: values.assignedTo,
+            reportUrl: reportUrl,
+        };
+
+        setDocumentNonBlocking(visitDocRef, newVisitData);
+
+        toast({ title: "Sanitation Visit Created", description: `A new sanitation visit has been scheduled.` });
+        sanitationVisitForm.reset();
+        setIsCreateSanitationVisitOpen(false);
     };
 
     const handleUploadProof = async (file: File) => {
@@ -583,7 +642,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogHeader>
                 {selectedUser && (
                     <Tabs defaultValue="profile">
-                        <div className="grid md:grid-cols-2 gap-8 py-4">
+                        <div className="grid md:grid-cols-2 gap-8 py-6">
                             {/* Left Column: User Profile */}
                             <div className="space-y-4">
                                 <div className="flex items-start gap-4">
@@ -1284,8 +1343,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableCell>{station.name}</TableCell>
                                             <TableCell>{station.location}</TableCell>
                                             <TableCell>
-                                                <Badge variant={station.permits && Object.values(station.permits).some(p => p) ? 'default' : 'outline'}>
-                                                    {station.permits ? Object.values(station.permits).filter(p => p).length : 0} / {permitFields.length + complianceFields.length} Attached
+                                                <Badge variant={complianceReports && complianceReports.length > 0 ? 'default' : 'outline'}>
+                                                    {complianceReports?.length || 0} Attached
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -1328,6 +1387,78 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isCreateSanitationVisitOpen} onOpenChange={setIsCreateSanitationVisitOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Schedule Sanitation Visit</DialogTitle>
+                    <DialogDescription>Schedule a new sanitation visit for {stationToUpdate?.name}.</DialogDescription>
+                </DialogHeader>
+                <Form {...sanitationVisitForm}>
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleCreateSanitationVisit)} className="space-y-4 py-4">
+                        <FormField control={sanitationVisitForm.control} name="id" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Visit ID</FormLabel>
+                                <FormControl><Input placeholder="e.g., SV-001" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Scheduled Date</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Assigned Technician</FormLabel>
+                                <FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Sanitation Report (Optional)</FormLabel>
+                                <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">Create Visit</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
          <Dialog open={isStationProfileOpen} onOpenChange={(open) => {if (!open) {setStationToUpdate(null); stationForm.reset();} setIsStationProfileOpen(open);}}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
@@ -1361,32 +1492,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </Form>
 
                         <Separator />
-
-                        <div>
-                            <h3 className="font-semibold text-base mb-1">1. Valid Business Permits</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Please upload the following required documents for a water refilling station to operate.</p>
-                            <div className="space-y-3">
-                                {permitFields.map(field => (
-                                    <div key={field.key} className="flex justify-between items-center text-sm p-3 border rounded-lg bg-background">
-                                        <span className="font-medium">{field.label}</span>
-                                        {stationToUpdate?.permits?.[field.key] ? (
-                                             <Badge variant="default" className="bg-green-100 text-green-800">Attached</Badge>
-                                        ) : (
-                                            <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin}>
-                                                <Label className={cn("flex items-center", isAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                    <Upload className="mr-2 h-4 w-4" /> Upload
-                                                    <Input type="file" className="hidden" disabled={!isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
-                                                </Label>
-                                            </Button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                         
                         <div>
-                             <h3 className="font-semibold text-base mb-1">2. Compliance</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Submit your latest water test results. All three tests are required for full partner verification.</p>
+                             <h3 className="font-semibold text-base mb-1">Compliance Documents</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Submit your latest water test results. All tests are required for full partner verification.</p>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -1396,11 +1505,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {complianceFields.map(field => (
+                                    {complianceFields.map(field => {
+                                        const isAttached = complianceReports?.some(report => report.name === field.label);
+                                        return (
                                         <TableRow key={field.key}>
                                             <TableCell className="font-medium">{field.label}</TableCell>
                                             <TableCell>
-                                                 {stationToUpdate?.permits?.[field.key] ? (
+                                                 {isAttached ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
                                                 ) : (
                                                     <Badge variant="destructive">Needs Compliance</Badge>
@@ -1410,18 +1521,30 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                  <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin}>
                                                     <Label className={cn("flex items-center", isAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
                                                         <Upload className="mr-2 h-4 w-4" /> Upload
-                                                        <Input type="file" className="hidden" disabled={!isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0])} />
+                                                        <Input type="file" className="hidden" disabled={!isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
                                                     </Label>
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )})}
                                 </TableBody>
                             </Table>
                         </div>
+
+                         <div>
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="font-semibold text-base">Sanitation Visits</h3>
+                                    <p className="text-sm text-muted-foreground">Schedule and manage sanitation visits.</p>
+                                </div>
+                                <Button size="sm" onClick={() => setIsCreateSanitationVisitOpen(true)} disabled={!stationToUpdate || !isAdmin}>
+                                    <Wrench className="mr-2 h-4 w-4" /> Schedule Visit
+                                </Button>
+                            </div>
+                        </div>
                         
                         <div>
-                            <h3 className="font-semibold text-base mb-1">3. Partnership Agreement</h3>
+                            <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
                             <Button variant="outline" disabled={!isAdmin} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
                         </div>
@@ -1500,4 +1623,3 @@ export default function AdminPage() {
         </div>
     )
 }
-

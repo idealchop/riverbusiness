@@ -17,6 +17,7 @@ export interface Delivery {
 
 export interface ComplianceReport {
   id:string;
+  name: string;
   date: string;
   status: 'Compliant' | 'Non-compliant' | 'Pending Review';
   reportUrl: string;
@@ -126,5 +127,3 @@ export type PaymentOption = {
         accountNumber: string;
     }
 }
-
-    
