@@ -67,7 +67,6 @@ export default function AdminPage() {
     const firestore = useFirestore();
 
     const [isAdmin, setIsAdmin] = useState(false);
-    const [isAdminLoading, setIsAdminLoading] = useState(true);
 
     const adminUserDocRef = useMemoFirebase(() => authUser ? doc(firestore, "users", authUser.uid) : null, [authUser, firestore]);
     const { data: adminUserData, isLoading: isAdminUserLoading } = useDoc<AppUser>(adminUserDocRef);
@@ -76,10 +75,7 @@ export default function AdminPage() {
         if (!isAdminUserLoading && adminUserData) {
             setIsAdmin(adminUserData.role === 'Admin');
         }
-        if (!isUserLoading && !isAdminUserLoading) {
-            setIsAdminLoading(false);
-        }
-    }, [adminUserData, isAdminUserLoading, isUserLoading]);
+    }, [adminUserData, isAdminUserLoading]);
 
 
     const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'users') : null, [firestore, isAdmin]);
@@ -447,7 +443,7 @@ export default function AdminPage() {
         return mergedInvoices.reverse();
       }, [selectedUser, userPaymentsData]);
 
-  if (isUserLoading || isAdminLoading) {
+  if (isUserLoading || isAdminUserLoading) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
   }
 
@@ -1204,3 +1200,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    
