@@ -595,17 +595,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
                                         <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                                     </div>
-                                    {selectedUserPlanImage && (
-                                      <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                                        <Image
-                                            src={selectedUserPlanImage.imageUrl}
-                                            alt={selectedUser.clientType || ''}
-                                            fill
-                                            className="object-cover"
-                                            data-ai-hint={selectedUserPlanImage.imageHint}
-                                        />
-                                      </div>
-                                    )}
                                 </div>
                                 <Separator/>
                                 <TabsList className="grid w-full grid-cols-2">
@@ -698,6 +687,20 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                             {/* Right Column: Actions */}
                             <div className="space-y-4">
+                                {selectedUserPlanImage && (
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-lg text-center">{selectedUser.clientType} Plan</h4>
+                                    <div className="relative w-full h-32 rounded-lg overflow-hidden">
+                                        <Image
+                                            src={selectedUserPlanImage.imageUrl}
+                                            alt={selectedUser.clientType || ''}
+                                            fill
+                                            className="object-cover"
+                                            data-ai-hint={selectedUserPlanImage.imageHint}
+                                        />
+                                    </div>
+                                  </div>
+                                )}
                                 <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
                                 <div className="flex flex-col gap-2">
                                     <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
@@ -1454,6 +1457,7 @@ export default function AdminPage() {
         };
 
         const checkAdmin = async () => {
+            if (!firestore) return;
             const adminUserDocRef = doc(firestore, "users", authUser.uid);
             const docSnap = await getDoc(adminUserDocRef);
             if (docSnap.exists() && docSnap.data().role === 'Admin') {
