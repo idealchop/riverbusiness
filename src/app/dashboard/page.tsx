@@ -91,7 +91,7 @@ export default function DashboardPage() {
         (firestore && user?.assignedWaterStationId) 
         ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') 
         : null, 
-        [firestore, user]
+        [firestore, user?.assignedWaterStationId]
     );
     const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
 
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         (firestore && user?.assignedWaterStationId) 
         ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'sanitationVisits') 
         : null, 
-        [firestore, user]
+        [firestore, user?.assignedWaterStationId]
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
@@ -822,9 +822,6 @@ export default function DashboardPage() {
         </div>
     </div>
     );
-
-    
-
-    
+}
 
     
