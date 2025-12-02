@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
@@ -284,44 +284,65 @@ export default function OnboardingPage() {
               )}
               
                 {currentStep === 3 && selectedPlan && customPlanDetails && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         <div className="flex items-center gap-2">
-                             <Button variant="ghost" size="icon" onClick={() => setCurrentStep(2)}><ArrowLeft className="h-4 w-4" /></Button>
-                             <h3 className="text-lg font-semibold">Step 3: Confirm Your Plan</h3>
+                            <Button variant="ghost" size="icon" onClick={() => setCurrentStep(2)}><ArrowLeft className="h-4 w-4" /></Button>
+                            <h3 className="text-lg font-semibold">Step 3: Confirm Your Plan</h3>
                         </div>
                         
-                        <div className="mt-4 border rounded-lg p-4 bg-accent/50 space-y-4">
-                            {selectedPlanImage && (
-                                <div className="relative h-40 w-full rounded-lg overflow-hidden mb-4">
-                                    <Image src={selectedPlanImage.imageUrl} alt={selectedClientType || 'Plan Image'} layout="fill" objectFit="cover" data-ai-hint={selectedPlanImage.imageHint} />
-                                </div>
-                            )}
-                            <div className="flex flex-col sm:flex-row items-center gap-4">
-                                <div className="flex-1">
-                                    <p className="font-bold text-xl">{selectedPlan.name} ({selectedClientType})</p>
-                                    <div className="text-sm text-muted-foreground mt-2 space-y-1">
-                                        <p><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()} ({customPlanDetails.litersPerMonth / 19.5} containers)</p>
-                                        <p><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</p>
-                                        <p><strong>Containers:</strong> {customPlanDetails.gallonQuantity}</p>
-                                        <p><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</p>
-                                        <p><strong>Subscription:</strong> ₱{selectedPlan.price.toLocaleString()}</p>
-                                        <p><strong>Delivery:</strong> {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}</p>
+                        <Card>
+                            <CardContent className="p-0">
+                                {selectedPlanImage && (
+                                    <div className="relative h-48 w-full">
+                                        <Image src={selectedPlanImage.imageUrl} alt={selectedClientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={selectedPlanImage.imageHint} />
+                                    </div>
+                                )}
+                                <div className="p-6">
+                                    <CardTitle className="text-xl">{selectedPlan.name} ({selectedClientType})</CardTitle>
+                                    <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString()}/month</CardDescription>
+                                    
+                                    <Separator className="my-4" />
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Plan Details</h4>
+                                            <ul className="space-y-1 text-muted-foreground">
+                                                <li><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()} ({Math.round(customPlanDetails.litersPerMonth / 19.5)} containers)</li>
+                                                <li><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Equipment</h4>
+                                            <ul className="space-y-1 text-muted-foreground">
+                                                <li><strong>Containers:</strong> {customPlanDetails.gallonQuantity}</li>
+                                                <li><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-4">
+                                        <h4 className="font-semibold mb-2">Delivery Schedule</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                            {customPlanDetails.deliveryFrequency} on {customPlanDetails.deliveryDay} at {customPlanDetails.deliveryTime}
+                                        </p>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="border-t pt-4">
-                                <h4 className="font-semibold mb-2">Your Details</h4>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                    <p><strong>Client ID:</strong> {form.getValues('clientId')}</p>
-                                    <p><strong>Business Name:</strong> {form.getValues('businessName')}</p>
-                                    <p><strong>Login Email:</strong> {authUser?.email}</p>
-                                    <p><strong>Business Email:</strong> {form.getValues('businessEmail')}</p>
-                                    <p><strong>Address:</strong> {form.getValues('address')}</p>
-                                    <p><strong>Contact:</strong> {form.getValues('contactNumber')}</p>
-                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <div>
+                            <h4 className="font-semibold mb-2">Your Details</h4>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground border rounded-lg p-4 bg-muted/50">
+                                <p><strong>Client ID:</strong> {form.getValues('clientId')}</p>
+                                <p><strong>Business Name:</strong> {form.getValues('businessName')}</p>
+                                <p><strong>Login Email:</strong> {authUser?.email}</p>
+                                <p><strong>Business Email:</strong> {form.getValues('businessEmail')}</p>
+                                <p><strong>Address:</strong> {form.getValues('address')}</p>
+                                <p><strong>Contact:</strong> {form.getValues('contactNumber')}</p>
                             </div>
                         </div>
-                         <div className="flex justify-end pt-8">
+
+                         <div className="flex justify-end pt-4">
                             <Button type="submit" className="w-full">Complete Onboarding</Button>
                         </div>
                     </div>
@@ -434,3 +455,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    
