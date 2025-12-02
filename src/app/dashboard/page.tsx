@@ -498,8 +498,7 @@ export default function DashboardPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Liters</TableHead>
-                                <TableHead className="text-right">Containers</TableHead>
+                                <TableHead className="text-right">Volume</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -508,14 +507,13 @@ export default function DashboardPage() {
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell className="text-right">{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}</TableCell>
-                                    <TableCell className="text-right">{delivery.volumeContainers}</TableCell>
+                                    <TableCell className="text-right">{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
                                 </TableRow>
                                 );
                             })}
                             {(deliveries || []).length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center">No consumption data available.</TableCell>
+                                    <TableCell colSpan={2} className="text-center">No consumption data available.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -823,5 +821,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    
