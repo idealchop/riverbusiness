@@ -420,7 +420,6 @@ export default function AdminPage() {
         const invoices: Payment[] = [];
         const now = new Date();
         const createdAt = selectedUser.createdAt;
-        // Check if createdAt has toDate method, indicating a Firestore Timestamp
         const startDate = typeof (createdAt as any)?.toDate === 'function' ? (createdAt as any).toDate() : new Date(createdAt);
         const months = differenceInMonths(now, startDate);
     
@@ -510,10 +509,6 @@ export default function AdminPage() {
                                             <Badge variant={selectedUser.accountStatus === 'Active' ? 'default' : 'destructive'} className={cn(selectedUser.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500', 'text-white')}>
                                                 {selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}
                                             </Badge>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Client Type:</span>
-                                            <span className="font-medium">{selectedUser.clientType || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Plan:</span>
