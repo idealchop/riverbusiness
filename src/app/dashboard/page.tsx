@@ -503,7 +503,7 @@ export default function DashboardPage() {
                         </TableHeader>
                         <TableBody>
                             {(deliveries || []).map(delivery => {
-                                const liters = containerToLiter(delivery.volumeContainers);
+                                const liters = containerToLiter(delivery.volumeContainers || 0);
                                 const containers = delivery.volumeContainers || 0;
                                 return (
                                 <TableRow key={delivery.id}>
@@ -821,5 +821,7 @@ export default function DashboardPage() {
         </div>
     </div>
     );
+
+    
 
     
