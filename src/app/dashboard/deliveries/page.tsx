@@ -21,7 +21,7 @@ export default function DeliveriesPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+  const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.uid, 'deliveries') : null, [firestore, user]);
   const { data: userDeliveries, isLoading } = useCollection<Delivery>(deliveriesQuery);
 
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
@@ -178,5 +178,3 @@ export default function DeliveriesPage() {
     </div>
   );
 }
-
-    
