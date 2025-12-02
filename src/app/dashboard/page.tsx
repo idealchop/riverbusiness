@@ -312,7 +312,11 @@ export default function DashboardPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {complianceReports?.map((report) => (
+                                    {complianceLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center">Loading reports...</TableCell>
+                                        </TableRow>
+                                    ) : complianceReports?.map((report) => (
                                     <TableRow key={report.id}>
                                         <TableCell className="font-medium">{report.id}</TableCell>
                                         <TableCell>{new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
@@ -336,7 +340,7 @@ export default function DashboardPage() {
                                         </TableCell>
                                     </TableRow>
                                     ))}
-                                    {(!complianceReports || complianceReports.length === 0) && (
+                                    {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
                                         <TableRow>
                                             <TableCell colSpan={4} className="text-center">No compliance reports found for your assigned station.</TableCell>
                                         </TableRow>
@@ -365,7 +369,11 @@ export default function DashboardPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {sanitationVisits?.map((visit) => (
+                                    {sanitationLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center">Loading visits...</TableCell>
+                                        </TableRow>
+                                    ) : sanitationVisits?.map((visit) => (
                                     <TableRow key={visit.id}>
                                         <TableCell className="font-medium">{visit.id}</TableCell>
                                         <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
@@ -394,7 +402,7 @@ export default function DashboardPage() {
                                         </TableCell>
                                     </TableRow>
                                     ))}
-                                    {(!sanitationVisits || sanitationVisits.length === 0) && (
+                                    {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
                                         <TableRow>
                                             <TableCell colSpan={5} className="text-center">No sanitation visit records found for your assigned station.</TableCell>
                                         </TableRow>

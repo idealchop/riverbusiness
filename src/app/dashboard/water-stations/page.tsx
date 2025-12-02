@@ -7,24 +7,32 @@ import { Button } from '@/components/ui/button';
 import { FileText, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import type { WaterStation, AppUser } from '@/lib/types';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 
-export default function WaterStationsPage({ user }: { user?: AppUser | null }) {
+export default function WaterStationsPage() {
     const firestore = useFirestore();
+    const { user } = useUser();
     
+    const userDocRef = useMemoFirebase(() => (firestore && user) ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
+    const { data: appUser, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
+
     const stationDocRef = useMemoFirebase(() => 
-        (firestore && user?.assignedWaterStationId) 
-            ? doc(firestore, 'waterStations', user.assignedWaterStationId) 
+        (firestore && appUser?.assignedWaterStationId) 
+            ? doc(firestore, 'waterStations', appUser.assignedWaterStationId) 
             : null, 
-        [firestore, user]
+        [firestore, appUser]
     );
     const { data: waterStation, isLoading: stationLoading } = useDoc<WaterStation>(stationDocRef);
     
     const allPermits = waterStation?.permits ? Object.entries(waterStation.permits).filter(([_, url]) => url) : [];
 
-    if (!user?.assignedWaterStationId) {
+    if (isUserLoading || stationLoading) {
+        return <div>Loading station details...</div>;
+    }
+
+    if (!appUser?.assignedWaterStationId) {
         return (
             <Card className="mt-4">
                 <CardHeader>
@@ -36,8 +44,6 @@ export default function WaterStationsPage({ user }: { user?: AppUser | null }) {
             </Card>
         )
     }
-
-    if(stationLoading) return <div>Loading station details...</div>
 
   return (
     <>
