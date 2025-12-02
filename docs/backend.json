@@ -14,7 +14,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters." },
+        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters. Represents the user's current inventory." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
@@ -26,7 +26,7 @@
         "contractUrl": { "type": "string", "format": "uri", "description": "URL to the user's contract document." },
         "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." }
       },
-      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId"]
+      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
     "WaterStation": {
       "title": "WaterStation",
@@ -64,7 +64,7 @@
         "id": { "type": "string", "description": "Unique identifier for the delivery, can be used as a tracking number." },
         "userId": { "type": "string", "description": "ID of the user receiving the delivery." },
         "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
-        "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers." },
+        "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers. This is used for deduction." },
         "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },
         "proofOfDeliveryUrl": { "type": "string", "format": "uri", "description": "URL to the proof of delivery image." },
         "adminNotes": { "type": "string", "description": "Notes from the admin about the delivery." }

@@ -35,7 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -278,19 +278,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
         if (!selectedUser || !firestore) return;
 
-        const amount = adjustmentType === 'deduct' ? -values.amount : values.amount;
-        const newTotal = (selectedUser.totalConsumptionLiters || 0) + amount;
-
+        const amount = adjustmentType === 'add' ? values.amount : -values.amount;
+        
         const userRef = doc(firestore, 'users', selectedUser.id);
-        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
+        // Use atomic increment for safer updates
+        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(amount) });
         
         // This local state update is important for immediate UI feedback.
         // The real-time listener on the client's side will get the update from Firestore.
-        setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: newTotal } : null);
+        setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) + amount } : null);
 
         toast({
             title: `Liters Adjusted`,
-            description: `${values.amount.toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
+            description: `${Math.abs(values.amount).toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
         });
         
         setIsAdjustConsumptionOpen(false);
@@ -298,18 +298,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleDeductFromDelivery = (userId: string, containers: number) => {
-        if (!firestore || !appUsers) return;
-        const userToUpdate = appUsers.find(u => u.id === userId);
-        if (!userToUpdate) return;
+        if (!firestore) return;
         
         const litersToDeduct = containers * 19.5;
-        const newTotal = (userToUpdate.totalConsumptionLiters || 0) - litersToDeduct;
-        
         const userRef = doc(firestore, 'users', userId);
-        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: newTotal });
+        
+        // Atomically deduct the delivered amount from the user's inventory
+        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
 
+        // The user's dashboard will update in real-time. We can also update the local state if needed.
         if (selectedUser && selectedUser.id === userId) {
-            setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: newTotal } : null);
+            setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) - litersToDeduct } : null);
         }
 
         toast({
@@ -329,7 +328,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
     
-            // This is a compliance document, so create a new document in the subcollection.
             const reportsRef = collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports');
             const newReport: Omit<ComplianceReport, 'id'> = {
                 name: label,
@@ -448,7 +446,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             adminNotes: values.adminNotes,
         };
 
-        setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+        await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+
+        // Atomic deduction from user's inventory
+        if (values.status === 'Delivered') {
+            const litersToDeduct = values.volumeContainers * 19.5;
+            const userRef = doc(firestore, 'users', userForHistory.id);
+            updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
+        }
+
 
         toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
         deliveryForm.reset();
@@ -725,7 +731,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Total Consumption:</span>
+                                            <span className="text-muted-foreground">Remaining Liters:</span>
                                             <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
                                         </div>
                                         <div className="flex justify-between">
@@ -1674,7 +1680,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
-
-
