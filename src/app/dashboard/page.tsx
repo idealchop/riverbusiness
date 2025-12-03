@@ -307,7 +307,7 @@ export default function DashboardPage() {
                 <DialogTrigger asChild>
                     <Button variant="outline" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
                         <ShieldCheck className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Water Quality & Sanitation</span>
+                        <span className="hidden sm:inline">Water Quality &amp; Sanitation</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl">
@@ -512,7 +512,7 @@ export default function DashboardPage() {
                         <TableBody>
                             {filteredDeliveries.map(delivery => {
                                 const statusInfo = getStatusInfo(delivery.status);
-                                const liters = containerToLiter(delivery.volumeContainers);
+                                const liters = containerToLiter(delivery.volumeContainers || 0);
                                 const containers = delivery.volumeContainers || 0;
                                 return (
                                 <TableRow key={delivery.id}>

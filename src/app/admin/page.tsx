@@ -370,7 +370,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         try {
             toast({ title: 'Uploading Contract...', description: 'Please wait.' });
-            await uploadBytes(storageRef, contractFile);
+            await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
     
             const userRef = doc(firestore, 'users', userForContract.id);
