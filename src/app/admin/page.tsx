@@ -358,7 +358,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
             updateDocumentNonBlocking(deliveryRef, { proofOfDeliveryUrl: downloadURL });
             
-            toast({ title: "Proof Uploaded", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
+            toast({ title: "Proof Attached", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
             setDeliveryToUpdate(null);
         } catch (error) {
              toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof. Please try again.' });
@@ -797,7 +797,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </Button>
                                     <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin}>
                                         <Upload className="mr-2 h-4 w-4" />
-                                        Upload Contract
+                                        Attach Contract
                                     </Button>
                                     {selectedUser.contractUrl && (
                                         <Button variant="link" asChild>
@@ -1145,7 +1145,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <Dialog open={isUploadContractOpen} onOpenChange={(open) => { if (!open) { setUserForContract(null); setContractFile(null); } setIsUploadContractOpen(open); }}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Upload Contract</DialogTitle>
+                    <DialogTitle>Attach Contract</DialogTitle>
                     <DialogDescription>Attach a contract for {userForContract?.name}.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
