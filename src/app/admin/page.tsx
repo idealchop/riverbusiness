@@ -215,22 +215,28 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { amount: 0, containers: 0 },
     });
     
-    const handleSaveStation = (values: NewStationFormValues) => {
+    const handleSaveStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
 
         if (stationToUpdate) {
+            // Update existing station
             const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
-            updateDocumentNonBlocking(stationRef, values);
+            await updateDocumentNonBlocking(stationRef, values);
             toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
+            setStationToUpdate(null);
         } else {
+            // Create new station
             const stationsRef = collection(firestore, 'waterStations');
-            addDocumentNonBlocking(stationsRef, values);
-            toast({ title: 'Water Station Created', description: `Station "${values.name}" has been created.` });
+            const newDocRef = await addDocumentNonBlocking(stationsRef, values);
+             if (newDocRef) {
+                setStationToUpdate({ ...values, id: newDocRef.id }); // Keep dialog open for permit upload
+                toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
+            } else {
+                toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
+            }
         }
-        stationForm.reset();
-        setStationToUpdate(null);
-        setIsStationProfileOpen(false);
     };
+
 
     const handleAssignStation = () => {
         if (!selectedUser || !stationToAssign || !firestore) return;
@@ -898,7 +904,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         ) : (
                                             <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin}>
                                                 <Upload className="mr-2 h-3 w-3"/>
-                                                Upload
+                                                Attach
                                             </Button>
                                         )}
                                     </TableCell>
@@ -1071,7 +1077,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => !open && setDeliveryToUpdate(null)}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Upload Proof of Delivery</DialogTitle>
+                    <DialogTitle>Attach Proof of Delivery</DialogTitle>
                     <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
@@ -1176,7 +1182,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <Button asChild variant="outline" size="sm">
                                             <Label>
                                                 <Upload className="mr-2 h-4 w-4" />
-                                                Upload Photo
+                                                Attach Photo
                                                 <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
                                             </Label>
                                         </Button>
@@ -1488,29 +1494,29 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <DialogHeader>
                     <DialogTitle>Partnership Requirements</DialogTitle>
                     <DialogDescription>
-                        Submit the following documents to become a verified Refill Partner.
+                        {stationToUpdate ? `Manage compliance for ${stationToUpdate.name}.` : "Submit documents to become a verified Refill Partner."}
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[70vh] p-1">
                     <div className="space-y-8 p-4">
                          <Form {...stationForm}>
-                            <form onSubmit={stationForm.handleSubmit(handleSaveStation)} className="space-y-4">
+                            <form className="space-y-4">
                                 <FormField control={stationForm.control} name="name" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Station Name</FormLabel>
-                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} /></FormControl>
+                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
                                 <FormField control={stationForm.control} name="location" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Location</FormLabel>
-                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} /></FormControl>
+                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={!!stationToUpdate}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
-                                {stationToUpdate && (
-                                    <Button type="submit" size="sm" disabled={!isAdmin}>Save Changes</Button>
+                                {!stationToUpdate && (
+                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save Station Details</Button>
                                 )}
                             </form>
                         </Form>
@@ -1543,9 +1549,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                  <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin}>
-                                                    <Label className={cn("flex items-center", isAdmin ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                        <Upload className="mr-2 h-4 w-4" /> Upload
-                                                        <Input type="file" className="hidden" disabled={!isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
+                                                    <Label className={cn("flex items-center", (stationToUpdate && isAdmin) ? "cursor-pointer" : "cursor-not-allowed")}>
+                                                        <Upload className="mr-2 h-4 w-4" /> Attach
+                                                        <Input type="file" className="hidden" disabled={!stationToUpdate || !isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
                                                     </Label>
                                                 </Button>
                                             </TableCell>
@@ -1578,8 +1584,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <DialogClose asChild>
                         <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                     </DialogClose>
-                    {!stationToUpdate && (
-                        <Button onClick={stationForm.handleSubmit(handleSaveStation)} disabled={!isAdmin}>Create Station</Button>
+                     {stationToUpdate && (
+                        <Button onClick={() => { setStationToUpdate(null); stationForm.reset(); setIsStationProfileOpen(false);}} disabled={!isAdmin}>Finish</Button>
                     )}
                 </DialogFooter>
             </DialogContent>
@@ -1647,3 +1653,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
