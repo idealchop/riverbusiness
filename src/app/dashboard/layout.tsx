@@ -384,7 +384,12 @@ export default function DashboardLayout({
       const invoices: Payment[] = [];
       const now = new Date();
       // Firestore serverTimestamp is an object, not a Date, so we check for 'toDate' method
-      const startDate = typeof user.createdAt.toDate === 'function' ? user.createdAt.toDate() : new Date();
+      const startDate = typeof (user.createdAt as any)?.toDate === 'function' 
+        ? (user.createdAt as any).toDate() 
+        : new Date(user.createdAt as string);
+      
+      if (isNaN(startDate.getTime())) return [];
+      
       const months = differenceInMonths(now, startDate);
   
       for (let i = 0; i <= months; i++) {
