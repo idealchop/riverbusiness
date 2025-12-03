@@ -417,7 +417,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
 
             if (selectedUser && selectedUser.id === userForContract.id) {
-                 setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL } : null);
+                 setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
             }
             
             toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
@@ -1183,7 +1183,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => { setIsUploadContractOpen(false); setUserForContract(null); setContractFile(null); }}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setIsUploadContractOpen(false)}>Cancel</Button>
                     <Button onClick={handleUploadContract} disabled={!contractFile}>Upload</Button>
                 </DialogFooter>
             </DialogContent>
