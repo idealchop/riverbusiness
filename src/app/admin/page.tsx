@@ -76,14 +76,6 @@ const newDeliverySchema = z.object({
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
 
-const scheduleSchema = z.object({
-    deliveryDate: z.string().min(1, "Delivery date is required"),
-    cutOffTime: z.string().min(1, "Cut-off time is required"),
-    notes: z.string().optional(),
-});
-type ScheduleFormValues = z.infer<typeof scheduleSchema>;
-
-
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
     const auth = useAuth();
@@ -99,12 +91,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const allDeliveriesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isAdmin]);
     const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
-
-    const scheduleDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'schedules', 'currentSchedule') : null, [firestore]);
-    const { data: scheduleData } = useDoc<Schedule>(scheduleDocRef);
-
-    const allConsumptionHistoryQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'consumptionHistory') : null, [firestore]);
-    const { data: consumptionHistory, isLoading: consumptionHistoryLoading } = useCollection<ConsumptionHistory>(allConsumptionHistoryQuery);
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
@@ -215,17 +201,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(newSanitationVisitSchema),
         defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
     });
-    
-    const scheduleForm = useForm<ScheduleFormValues>({
-        resolver: zodResolver(scheduleSchema),
-        defaultValues: { deliveryDate: '', cutOffTime: '', notes: '' },
-    });
-
-    React.useEffect(() => {
-        if (scheduleData) {
-            scheduleForm.reset(scheduleData);
-        }
-    }, [scheduleData, scheduleForm]);
 
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
@@ -240,12 +215,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { amount: 0, containers: 0 },
     });
     
-    const handleSaveSchedule = (values: ScheduleFormValues) => {
-        if (!scheduleDocRef) return;
-        setDocumentNonBlocking(scheduleDocRef, values, { merge: true });
-        toast({ title: "Schedule Updated", description: "The global delivery schedule has been updated." });
-    };
-
     const handleSaveStation = (values: NewStationFormValues) => {
         if (!firestore) return;
 
@@ -282,11 +251,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const amount = adjustmentType === 'add' ? values.amount : -values.amount;
         
         const userRef = doc(firestore, 'users', selectedUser.id);
-        // Use atomic increment for safer updates
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(amount) });
         
-        // This local state update is important for immediate UI feedback.
-        // The real-time listener on the client's side will get the update from Firestore.
         setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) + amount } : null);
 
         toast({
@@ -304,10 +270,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const litersToDeduct = containers * 19.5;
         const userRef = doc(firestore, 'users', userId);
         
-        // Atomically deduct the delivered amount from the user's inventory
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
 
-        // The user's dashboard will update in real-time. We can also update the local state if needed.
         if (selectedUser && selectedUser.id === userId) {
             setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) - litersToDeduct } : null);
         }
@@ -460,7 +424,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
         await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
 
-        // Atomic deduction from user's inventory
         if (values.status === 'Delivered') {
             const litersToDeduct = values.volumeContainers * 19.5;
             const userRef = doc(firestore, 'users', userForHistory.id);
@@ -1684,5 +1647,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    

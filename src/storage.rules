@@ -1,0 +1,36 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAdmin() {
+      // Assumes user's role is stored in Firestore.
+      return request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    match /users/{userId}/profile/{fileName} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /users/{userId}/contracts/{fileName} {
+      allow read, write: if isAdmin();
+      allow read: if request.auth.uid == userId;
+    }
+    
+    match /users/{userId}/deliveries/{deliveryId}/{fileName} {
+       allow read, write: if isAdmin();
+       allow read: if request.auth.uid == userId;
+    }
+    
+    match /stations/{stationId}/compliance/{fileName} {
+      allow read, write: if isAdmin();
+      allow read: if request.auth != null;
+    }
+
+    match /stations/{stationId}/sanitation/{visitId}/{fileName} {
+      allow read, write: if isAdmin();
+      allow read: if request.auth != null;
+    }
+  }
+}
