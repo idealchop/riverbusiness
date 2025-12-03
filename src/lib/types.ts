@@ -37,20 +37,6 @@ export interface WaterStation {
   id:string;
   name: string;
   location: string;
-  permits: {
-      businessPermitUrl?: string;
-      sanitationPermitUrl?: string;
-      engineersReportUrl?: string;
-      waterTestResultsUrl?: string;
-      cprUrl?: string;
-      lguPermitUrl?: string;
-      healthCertsUrl?: string;
-      pestControlContractUrl?: string;
-      bacteriologicalTestUrl?: string;
-      physicalChemicalTestUrl?: string;
-      annualMonitoringUrl?: string;
-      partnershipAgreementUrl?: string;
-  };
 }
 
 export type Permission = 

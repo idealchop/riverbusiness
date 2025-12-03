@@ -35,24 +35,7 @@
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the station." },
         "name": { "type": "string", "description": "Name of the station." },
-        "location": { "type": "string", "description": "Location of the station." },
-        "permits": {
-          "type": "object",
-          "properties": {
-            "businessPermitUrl": { "type": "string", "format": "uri" },
-            "sanitationPermitUrl": { "type": "string", "format": "uri" },
-            "engineersReportUrl": { "type": "string", "format": "uri" },
-            "waterTestResultsUrl": { "type": "string", "format": "uri" },
-            "cprUrl": { "type": "string", "format": "uri" },
-            "lguPermitUrl": { "type": "string", "format": "uri" },
-            "healthCertsUrl": { "type": "string", "format": "uri" },
-            "pestControlContractUrl": { "type": "string", "format": "uri" },
-            "bacteriologicalTestUrl": { "type": "string", "format": "uri" },
-            "physicalChemicalTestUrl": { "type": "string", "format": "uri" },
-            "annualMonitoringUrl": { "type": "string", "format": "uri" },
-            "partnershipAgreementUrl": { "type": "string", "format": "uri" }
-          }
-        }
+        "location": { "type": "string", "description": "Location of the station." }
       },
       "required": ["id", "name", "location"]
     },
@@ -80,7 +63,7 @@
         "date": { "type": "string", "format": "date-time" },
         "description": { "type": "string" },
         "amount": { "type": "number" },
-        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue"] },
+        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review"] },
         "proofOfPaymentUrl": { "type": "string", "format": "uri" }
       },
       "required": ["id", "date", "description", "amount", "status"]
@@ -91,11 +74,12 @@
       "description": "Represents a water quality compliance report.",
       "properties": {
         "id": { "type": "string" },
+        "name": { "type": "string", "description": "Name or type of the compliance document (e.g., 'Bacteriological Test')." },
         "date": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Compliant", "Non-compliant", "Pending Review"] },
         "reportUrl": { "type": "string", "format": "uri" }
       },
-      "required": ["id", "date", "status", "reportUrl"]
+      "required": ["id", "name", "date", "status", "reportUrl"]
     },
     "SanitationVisit": {
       "title": "SanitationVisit",

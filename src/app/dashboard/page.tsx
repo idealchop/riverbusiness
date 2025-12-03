@@ -170,8 +170,8 @@ export default function DashboardPage() {
     const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
     const fromLastMonthLiters = 0; // Placeholder for now
     const totalLitersPurchased = monthlyPlanLiters + bonusLiters + fromLastMonthLiters;
-    const consumedLiters = user?.totalConsumptionLiters || 0;
-    const remainingLiters = Math.max(0, totalLitersPurchased - consumedLiters);
+    const consumedLiters = totalLitersPurchased - (user?.totalConsumptionLiters || 0);
+    const remainingLiters = Math.max(0, user?.totalConsumptionLiters || 0);
     const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
     
     const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
@@ -758,6 +758,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()} L</p>
+                    <Progress value={remainingPercentage} className="h-2" />
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>

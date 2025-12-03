@@ -14,9 +14,11 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
-      // Prevent users from updating their own consumption, only admin (or cloud function)
-      allow update: if isAdmin() && !('totalConsumptionLiters' in request.resource.data.diff(resource.data));
+      allow read: if isOwner(userId) || isAdmin();
+      // Allow users to update their own info, but not fields controlled by admins.
+      allow write: if isOwner(userId) && !('totalConsumptionLiters' in request.resource.data.diff(resource.data)) && !('role' in request.resource.data.diff(resource.data));
+      // Allow admins to update anything except consumption, which is handled by delivery deductions.
+      allow write: if isAdmin() && !('totalConsumptionLiters' in request.resource.data.diff(resource.data));
     }
     
     match /users/{userId}/deliveries/{deliveryId} {
@@ -25,7 +27,8 @@ service cloud.firestore {
     }
 
     match /users/{userId}/payments/{paymentId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
     }
     
     match /users/{userId}/consumptionHistory/{historyId} {
