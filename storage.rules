@@ -15,6 +15,7 @@ service firebase.storage {
 
     match /users/{userId}/contracts/{fileName} {
       allow read, write: if isAdmin();
+      allow read: if request.auth.uid == userId;
     }
     
     match /users/{userId}/deliveries/{deliveryId}/{fileName} {
@@ -35,3 +36,5 @@ service firebase.storage {
     }
   }
 }
+
+    

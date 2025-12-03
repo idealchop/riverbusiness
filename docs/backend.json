@@ -24,7 +24,9 @@
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "contractUrl": { "type": "string", "format": "uri", "description": "URL to the user's contract document." },
-        "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." }
+        "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
+        "contractStatus": { "type": "string", "description": "Status of the user's contract." },
+        "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
@@ -153,3 +155,5 @@
     }
   }
 }
+
+    

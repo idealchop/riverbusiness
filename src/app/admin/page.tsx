@@ -124,6 +124,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = React.useState(false);
     const [isUploadContractOpen, setIsUploadContractOpen] = React.useState(false);
     const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
+    const [contractFile, setContractFile] = React.useState<File | null>(null);
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
@@ -394,19 +395,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     };
 
-    const handleUploadContract = async (file: File) => {
-        if (!userForContract || !firestore) return;
+    const handleUploadContract = async () => {
+        if (!userForContract || !contractFile || !firestore) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'No file selected or user context missing.' });
+            return;
+        };
         const storage = getStorage();
-        const filePath = `users/${userForContract.id}/contracts/${file.name}`;
+        const filePath = `users/${userForContract.id}/contracts/plan_contract_${Date.now()}.${contractFile.name.split('.').pop()}`;
         const storageRef = ref(storage, filePath);
     
         try {
             toast({ title: 'Uploading Contract...', description: 'Please wait.' });
-            await uploadBytes(storageRef, file);
+            await uploadBytes(storageRef, contractFile);
             const downloadURL = await getDownloadURL(storageRef);
     
             const userRef = doc(firestore, 'users', userForContract.id);
-            updateDocumentNonBlocking(userRef, { contractUrl: downloadURL });
+            updateDocumentNonBlocking(userRef, { 
+                contractUrl: downloadURL,
+                contractUploadedDate: serverTimestamp(),
+                contractStatus: "Active Contract",
+            });
 
             if (selectedUser && selectedUser.id === userForContract.id) {
                  setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL } : null);
@@ -414,10 +422,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
         } catch (error) {
+            console.error("Upload error:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract. Please try again.' });
         } finally {
             setIsUploadContractOpen(false);
             setUserForContract(null);
+            setContractFile(null);
         }
     };
 
@@ -1163,21 +1173,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isUploadContractOpen} onOpenChange={(open) => { if (!open) setUserForContract(null); setIsUploadContractOpen(open); }}>
+        <Dialog open={isUploadContractOpen} onOpenChange={(open) => { if (!open) { setUserForContract(null); setContractFile(null); } setIsUploadContractOpen(open); }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Upload Contract</DialogTitle>
                     <DialogDescription>Attach a contract for {userForContract?.name}.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <Input type="file" onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                            handleUploadContract(e.target.files[0]);
-                        }
-                    }}/>
+                    <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} />
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => { setIsUploadContractOpen(false); setUserForContract(null); }}>Cancel</Button>
+                    <Button variant="outline" onClick={() => { setIsUploadContractOpen(false); setUserForContract(null); setContractFile(null); }}>Cancel</Button>
+                    <Button onClick={handleUploadContract} disabled={!contractFile}>Upload</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1677,3 +1684,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
