@@ -606,12 +606,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
-    const permitFields: { key: keyof WaterStation['permits'], label: string }[] = [
-        { key: 'businessPermitUrl', label: 'Business / Mayor\'s Permit' },
-        { key: 'sanitationPermitUrl', label: 'Sanitary Permit' },
-    ];
-
-    const complianceFields: { key: keyof WaterStation['permits'], label: string }[] = [
+    const complianceFields: { key: string, label: string }[] = [
         { key: 'bacteriologicalTestUrl', label: 'Bacteriological' },
         { key: 'physicalChemicalTestUrl', label: 'Physical-Chemical' },
         { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
