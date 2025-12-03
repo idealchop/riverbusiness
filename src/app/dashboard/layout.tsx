@@ -696,10 +696,6 @@ export default function DashboardLayout({
                         )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                             <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Change Plan
-                            </Button>
                             {user?.contractUrl ? (
                                 <Button asChild className="w-full">
                                     <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
@@ -710,9 +706,13 @@ export default function DashboardLayout({
                             ) : (
                                  <Button variant="outline" disabled className="w-full">
                                     <FileX className="mr-2 h-4 w-4" />
-                                    Contract
+                                    Contract Not Available
                                 </Button>
                             )}
+                             <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Change Plan
+                            </Button>
                         </div>
 
                         <Card>
@@ -1070,5 +1070,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
