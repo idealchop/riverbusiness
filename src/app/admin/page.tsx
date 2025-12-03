@@ -401,6 +401,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const storageRef = ref(storage, filePath);
     
         try {
+            toast({ title: 'Uploading Contract...', description: 'Please wait.' });
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
     
@@ -412,10 +413,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
             
             toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
-            setIsUploadContractOpen(false);
-            setUserForContract(null);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract. Please try again.' });
+        } finally {
+            setIsUploadContractOpen(false);
+            setUserForContract(null);
         }
     };
 
@@ -426,7 +428,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
             const file = values.proofOfDeliveryUrl[0];
             const storage = getStorage();
-            const filePath = `proofsOfDelivery/${userForHistory.id}/${values.trackingNumber}-${file.name}`;
+            const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
             const storageRef = ref(storage, filePath);
             toast({ title: 'Uploading proof...', description: 'Please wait while the file is uploaded.' });
             await uploadBytes(storageRef, file);
@@ -1161,7 +1163,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isUploadContractOpen} onOpenChange={setIsUploadContractOpen}>
+        <Dialog open={isUploadContractOpen} onOpenChange={(open) => { if (!open) setUserForContract(null); setIsUploadContractOpen(open); }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Upload Contract</DialogTitle>
