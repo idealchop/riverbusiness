@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -936,14 +935,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Volume</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Proof of Delivery</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead className="text-right">Proof of Delivery</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {userDeliveriesLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center">Loading history...</TableCell>
+                                    <TableCell colSpan={5} className="text-center">Loading history...</TableCell>
                                 </TableRow>
                             ) : filteredDeliveries.map(delivery => {
                                 const liters = delivery.volumeContainers * 19.5;
@@ -958,9 +956,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             {delivery.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-right">
                                         {isUploading ? (
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <Progress value={uploadProgress[`proof-${delivery.id}`]} className="w-24 h-2" />
                                                 <span className="text-xs text-muted-foreground">{Math.round(uploadProgress[`proof-${delivery.id}`] || 0)}%</span>
                                             </div>
@@ -973,18 +971,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </Button>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        {delivery.status === 'Delivered' && userForHistory && (
-                                            <Button size="sm" onClick={() => handleDeductFromDelivery(userForHistory.id, delivery.volumeContainers)} disabled={!isAdmin}>
-                                                Deduct
-                                            </Button>
-                                        )}
-                                    </TableCell>
                                 </TableRow>
                             )})}
                              {filteredDeliveries.length === 0 && !userDeliveriesLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center">No delivery history found for the selected date range.</TableCell>
+                                    <TableCell colSpan={5} className="text-center">No delivery history found for the selected date range.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -1373,7 +1364,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Business Name</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Assigned Station</TableHead>
-                                            <TableHead>Delivery Status</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -1390,9 +1380,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="outline">{user.lastDeliveryStatus || 'No Delivery'}</Badge>
-                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -1757,3 +1744,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
