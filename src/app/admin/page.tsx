@@ -225,12 +225,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             await updateDocumentNonBlocking(stationRef, values);
             toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
         } else {
-            const stationsRef = collection(firestore, 'waterStations');
-            const newDocRef = await addDocumentNonBlocking(stationsRef, values);
-             if (newDocRef) {
-                setStationToUpdate({ ...values, id: newDocRef.id });
-                toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
-            } else {
+            try {
+                const stationsRef = collection(firestore, 'waterStations');
+                const newDocRef = await addDoc(stationsRef, values);
+                if (newDocRef) {
+                    const newStationData = { ...values, id: newDocRef.id };
+                    setStationToUpdate(newStationData); // This is the critical fix
+                    toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
+                }
+            } catch (error) {
+                console.error("Error creating station: ", error);
                 toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
             }
         }
@@ -1165,7 +1169,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             handleUploadProof(e.target.files[0]);
                         }
                     }}/>
-                    {uploadProgress[`proof-${deliveryToUpdate?.id}`] > 0 && (
+                    {deliveryToUpdate && uploadProgress[`proof-${deliveryToUpdate?.id}`] > 0 && (
                         <Progress value={uploadProgress[`proof-${deliveryToUpdate?.id}`]} />
                     )}
                 </div>
