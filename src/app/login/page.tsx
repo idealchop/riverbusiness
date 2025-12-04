@@ -50,20 +50,7 @@ export default function LoginPage() {
         toast({ title: "Login Successful", description: "Welcome back! Redirecting..." });
 
         // Special case for admin user
-        if (data.email === 'admin@riverph.com') {
-          const userDocRef = doc(firestore, "users", user.uid);
-           const { setDoc } = await import('firebase/firestore');
-           await setDoc(userDocRef, {
-                id: user.uid,
-                name: 'Admin',
-                email: user.email,
-                businessName: 'River Business Admin',
-                role: 'Admin',
-                accountStatus: 'Active',
-                onboardingComplete: true,
-                createdAt: new Date().toISOString(),
-                lastLogin: new Date().toISOString()
-           }, { merge: true });
+        if (user.email === 'admin@riverph.com') {
           router.push('/admin');
           return;
         }

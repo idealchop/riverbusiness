@@ -1679,10 +1679,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 }
 
 export default function AdminPage() {
-    const { isUserLoading } = useUser();
-    const firestore = useFirestore();
-    const { user: authUser } = useUser();
-
+    const { user: authUser, isUserLoading } = useUser();
     const [isAdmin, setIsAdmin] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(true);
     
@@ -1693,18 +1690,11 @@ export default function AdminPage() {
             return;
         };
 
-        const checkAdmin = async () => {
-            if (!firestore) return;
-            const adminUserDocRef = doc(firestore, "users", authUser.uid);
-            const docSnap = await getDoc(adminUserDocRef);
-            if (docSnap.exists() && docSnap.data().role === 'Admin') {
-                setIsAdmin(true);
-            }
-            setIsLoading(false);
+        if (authUser.email === 'admin@riverph.com') {
+            setIsAdmin(true);
         }
-        checkAdmin();
-
-    }, [authUser, isUserLoading, firestore]);
+        setIsLoading(false);
+    }, [authUser, isUserLoading]);
     
     const [greeting, setGreeting] = React.useState('');
     React.useEffect(() => {
