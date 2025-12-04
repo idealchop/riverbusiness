@@ -71,6 +71,7 @@ export interface AppUser {
     photoURL?: string;
     contractStatus?: string;
     contractUploadedDate?: any;
+    lastDeliveryStatus?: 'Delivered' | 'In Transit' | 'Pending' | 'No Delivery';
 }
 
 export interface LoginLog {
@@ -129,6 +130,3 @@ export interface ConsumptionHistory {
   amountLiters: number;
   metric: 'liters' | 'gallons';
 }
-
-
-

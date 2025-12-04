@@ -90,9 +90,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
     
-    const allDeliveriesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'deliveries') : null, [firestore, isAdmin]);
-    const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
-    
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = React.useState(false);
@@ -700,18 +697,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return mergedInvoices.reverse();
     }, [selectedUser, userPaymentsData]);
       
-    const getDeliveryStatus = (user: AppUser) => {
-        if (!allDeliveries) return 'No Delivery';
-        
-        const userDeliveries = allDeliveries
-            .filter(d => d.userId === user.id)
-            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
-        if (userDeliveries.length === 0) {
-            return 'No Delivery';
-        }
-        return userDeliveries[0].status;
-    };
     
     const selectedUserPlanImage = React.useMemo(() => {
         if (!selectedUser?.clientType) return null;
@@ -1406,7 +1391,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 </TableCell>
                                                 <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline">{getDeliveryStatus(user)}</Badge>
+                                                    <Badge variant="outline">{user.lastDeliveryStatus || 'No Delivery'}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
