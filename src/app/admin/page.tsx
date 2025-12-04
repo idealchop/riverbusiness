@@ -194,15 +194,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(newDeliverySchema),
         defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending', adminNotes: '' },
     });
-
-    const sanitationVisitForm = useForm<NewSanitationVisitFormValues>({
-        resolver: zodResolver(newSanitationVisitSchema),
-        defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
-    });
     
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
         defaultValues: { amount: 0, containers: 0 },
+    });
+
+    const sanitationVisitForm = useForm<NewSanitationVisitFormValues>({
+        resolver: zodResolver(newSanitationVisitSchema),
+        defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
     });
 
     React.useEffect(() => {
@@ -267,24 +267,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         setIsAdjustConsumptionOpen(false);
         adjustConsumptionForm.reset();
-    };
-
-    const handleDeductFromDelivery = (userId: string, containers: number) => {
-        if (!firestore) return;
-        
-        const litersToDeduct = containers * 19.5;
-        const userRef = doc(firestore, 'users', userId);
-        
-        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
-
-        if (selectedUser && selectedUser.id === userId) {
-            setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) - litersToDeduct } : null);
-        }
-
-        toast({
-            title: "Consumption Deducted",
-            description: `${litersToDeduct.toLocaleString(undefined, {maximumFractionDigits: 2})} liters have been deducted from the user's balance.`
-        })
     };
 
     const handleAttachPermit = (permitType: string, file: File, label: string) => {
@@ -967,7 +949,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             {delivery.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right flex items-center justify-end gap-2">
                                         {isUploading ? (
                                             <div className="flex items-center justify-end gap-2">
                                                 <Progress value={uploadProgress[`proof-${delivery.id}`]} className="w-24 h-2" />
@@ -1755,7 +1737,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
-
-    
