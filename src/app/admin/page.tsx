@@ -764,9 +764,28 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <span className="text-muted-foreground">Purchased Liters:</span>
                                             <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
                                         </div>
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Remaining Liters:</span>
-                                            <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                                            Add Liters
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
+                                                             <MinusCircle className="mr-2 h-4 w-4" />
+                                                            Deduct Liters
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Assigned Station:</span>
@@ -844,14 +863,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
                                         <Building className="mr-2 h-4 w-4" />
                                         Assign Station
-                                    </Button>
-                                    <Button variant="outline" onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }} disabled={!isAdmin}>
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Add Liters
-                                    </Button>
-                                    <Button variant="outline" onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }} disabled={!isAdmin}>
-                                        <MinusCircle className="mr-2 h-4 w-4" />
-                                        Deduct Liters
                                     </Button>
                                     <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin}>
                                         <Upload className="mr-2 h-4 w-4" />
@@ -1744,5 +1755,7 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
 
     
