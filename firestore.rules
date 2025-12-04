@@ -16,7 +16,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       // Allow users to update their own info, but not fields controlled by admins.
-      allow write: if isOwner(userId) && !('totalConsumptionLiters' in request.resource.data.diff(resource.data)) && !('role' in request.resource.data.diff(resource.data));
+      // Users can update their status and last login time.
+      allow write: if isOwner(userId) && (
+        !('totalConsumptionLiters' in request.resource.data.diff(resource.data)) &&
+        !('role' in request.resource.data.diff(resource.data))
+      );
       // Allow admins to update user documents, including contract details.
       allow write: if isAdmin() && !('totalConsumptionLiters' in request.resource.data.diff(resource.data));
     }
