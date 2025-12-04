@@ -141,7 +141,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
 
     const complianceReportsQuery = useMemoFirebase(() => 
-        (firestore && stationToUpdate) 
+        (firestore && stationToUpdate?.id) 
         ? collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports') 
         : null, 
         [firestore, stationToUpdate]
@@ -1409,8 +1409,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <TableCell>{station.name}</TableCell>
                                                 <TableCell>{station.location}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={complianceReports && complianceReports.length > 0 ? 'default' : 'outline'}>
-                                                        {complianceReports?.length || 0} Attached
+                                                    <Badge variant={'outline'}>
+                                                       View
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -1554,7 +1554,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </FormItem>
                                 )}/>
                                 {!stationToUpdate && (
-                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save and Continue</Button>
+                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save Station Details</Button>
                                 )}
                             </form>
                         </Form>
@@ -1579,7 +1579,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TableHeader>
                                 <TableBody>
                                     {complianceFields.map(field => {
-                                        const isAttached = complianceReports?.some(report => report.name === field.label);
+                                        const report = complianceReports?.find(r => r.name === field.label);
                                         const progress = uploadProgress[field.key] || 0;
                                         const isUploading = progress > 0 && progress < 100;
 
@@ -1587,7 +1587,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableRow key={field.key}>
                                             <TableCell className="font-medium">{field.label}</TableCell>
                                             <TableCell>
-                                                 {isAttached ? (
+                                                 {report ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
                                                 ) : isUploading ? (
                                                     <Badge variant="secondary">Uploading...</Badge>
@@ -1598,12 +1598,20 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     {isUploading && <Progress value={progress} className="w-24 h-2" />}
-                                                    <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin || isUploading}>
-                                                        <Label className={cn("flex items-center", (stationToUpdate && isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                            <Upload className="mr-2 h-4 w-4" /> Attach
-                                                            <Input type="file" className="hidden" disabled={!stationToUpdate || !isAdmin || isUploading} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
-                                                        </Label>
-                                                    </Button>
+                                                    {report ? (
+                                                        <Button asChild variant="outline" size="sm">
+                                                            <a href={report.reportUrl} target="_blank" rel="noopener noreferrer">
+                                                                <Eye className="mr-2 h-4 w-4" /> View
+                                                            </a>
+                                                        </Button>
+                                                    ) : (
+                                                        <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin || isUploading}>
+                                                            <Label className={cn("flex items-center", (stationToUpdate && isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
+                                                                <Upload className="mr-2 h-4 w-4" /> Attach
+                                                                <Input type="file" className="hidden" disabled={!stationToUpdate || !isAdmin || isUploading} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
+                                                            </Label>
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         </TableRow>
