@@ -223,7 +223,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
             await updateDocumentNonBlocking(stationRef, values);
             toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
-            setStationToUpdate(null);
         } else {
             // Create new station
             const stationsRef = collection(firestore, 'waterStations');
@@ -1516,16 +1515,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </FormItem>
                                 )}/>
                                 {!stationToUpdate && (
-                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save and Continue</Button>
+                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save Station Details</Button>
                                 )}
                             </form>
                         </Form>
 
                         <Separator />
                         
-                        <div>
-                             <h3 className="font-semibold text-base mb-1">Compliance Documents</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Submit your latest water test results. All tests are required for full partner verification.</p>
+                        <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
+                            <h3 className="font-semibold text-base mb-1">Compliance Documents</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                {!stationToUpdate 
+                                    ? "Please save the station details first to enable document uploads."
+                                    : "Submit your latest water test results. All tests are required for full partner verification."
+                                }
+                            </p>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -1561,7 +1565,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </Table>
                         </div>
 
-                         <div>
+                         <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
                             <div className="flex justify-between items-center mb-4">
                                 <div>
                                     <h3 className="font-semibold text-base">Sanitation Visits</h3>
@@ -1573,10 +1577,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </div>
                         </div>
                         
-                        <div>
+                        <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
                             <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
-                            <Button variant="outline" disabled={!isAdmin} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
+                            <Button variant="outline" disabled={!isAdmin || !stationToUpdate} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
                         </div>
                     </div>
                 </ScrollArea>
@@ -1653,7 +1657,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
-
-    
