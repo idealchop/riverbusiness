@@ -719,9 +719,9 @@ export default function DashboardLayout({
                         )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                             {user?.contractUrl ? (
+                             {user?.currentContractUrl ? (
                                 <Button asChild variant="outline" className="w-full">
-                                    <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
+                                    <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
                                         <FileText className="mr-2 h-4 w-4" />
                                         Contract
                                     </a>

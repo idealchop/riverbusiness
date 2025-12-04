@@ -13,7 +13,7 @@ service firebase.storage {
       allow read, write: if request.auth.uid == userId;
     }
 
-    match /users/{userId}/contracts/{fileName} {
+    match /userContracts/{userId}/{fileName} {
       allow read, write: if isAdmin();
       allow read: if request.auth.uid == userId;
     }

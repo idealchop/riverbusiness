@@ -67,7 +67,7 @@ export interface AppUser {
     plan?: any;
     clientType?: string | null;
     customPlanDetails?: any;
-    contractUrl?: string;
+    currentContractUrl?: string;
     photoURL?: string;
     contractStatus?: string;
     contractUploadedDate?: any;
@@ -129,5 +129,6 @@ export interface ConsumptionHistory {
   amountLiters: number;
   metric: 'liters' | 'gallons';
 }
+
 
 

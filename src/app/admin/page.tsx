@@ -219,7 +219,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const handleSaveStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
-
+    
         if (stationToUpdate) {
             const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
             await updateDocumentNonBlocking(stationRef, values);
@@ -227,10 +227,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         } else {
             try {
                 const stationsRef = collection(firestore, 'waterStations');
-                const newDocRef = await addDoc(stationsRef, values);
+                const newDocRef = await addDocumentNonBlocking(stationsRef, values);
                 if (newDocRef) {
                     const newStationData = { ...values, id: newDocRef.id };
-                    setStationToUpdate(newStationData); // This is the critical fix
+                    setStationToUpdate(newStationData); 
                     toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
                 }
             } catch (error) {
@@ -412,7 +412,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             return;
         };
         const storage = getStorage();
-        const filePath = `users/${userForContract.id}/contracts/plan_contract_${Date.now()}.${contractFile.name.split('.').pop()}`;
+        const filePath = `userContracts/${userForContract.id}/latest_plan_contract.pdf`;
         const storageRef = ref(storage, filePath);
     
         const uploadKey = `contract-${userForContract.id}`;
@@ -433,13 +433,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
                 const userRef = doc(firestore, 'users', userForContract.id);
                 updateDocumentNonBlocking(userRef, { 
-                    contractUrl: downloadURL,
+                    currentContractUrl: downloadURL,
                     contractUploadedDate: serverTimestamp(),
                     contractStatus: "Active Contract",
                 });
     
                 if (selectedUser && selectedUser.id === userForContract.id) {
-                     setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
+                     setSelectedUser(prev => prev ? { ...prev, currentContractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
                 }
                 
                 toast({ title: "Contract Attached", description: `A contract has been attached to ${userForContract.name}.` });
@@ -873,9 +873,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <Upload className="mr-2 h-4 w-4" />
                                         Attach Contract
                                     </Button>
-                                    {selectedUser.contractUrl && (
+                                    {selectedUser.currentContractUrl && (
                                         <Button variant="link" asChild>
-                                            <a href={selectedUser.contractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
+                                            <a href={selectedUser.currentContractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
                                         </Button>
                                     )}
                                 </div>

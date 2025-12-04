@@ -23,7 +23,7 @@
         "onboardingComplete": { "type": "boolean", "description": "Flag indicating if user has completed onboarding." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
-        "contractUrl": { "type": "string", "format": "uri", "description": "URL to the user's contract document." },
+        "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
         "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
         "contractStatus": { "type": "string", "description": "Status of the user's contract." },
         "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." }

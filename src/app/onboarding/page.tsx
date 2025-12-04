@@ -100,6 +100,7 @@ export default function OnboardingPage() {
         clientType: selectedClientType,
         onboardingComplete: true,
         totalConsumptionLiters: 0,
+        currentContractUrl: '', // Initialize as empty
     };
     
     const userDocRef = doc(firestore, 'users', authUser.uid);
@@ -455,5 +456,3 @@ export default function OnboardingPage() {
     </div>
   );
 }
-
-    
