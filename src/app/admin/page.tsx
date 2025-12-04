@@ -210,11 +210,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     }, [stationToUpdate, stationForm, isStationProfileOpen]);
 
-    const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
-        resolver: zodResolver(adjustConsumptionSchema),
-        defaultValues: { amount: 0, containers: 0 },
-    });
-    
     const handleSaveStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
 
@@ -1516,7 +1511,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </FormItem>
                                 )}/>
                                 {!stationToUpdate && (
-                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save Station Details</Button>
+                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save and Continue</Button>
                                 )}
                             </form>
                         </Form>
