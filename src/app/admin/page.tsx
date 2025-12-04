@@ -144,7 +144,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         (firestore && stationToUpdate?.id) 
         ? collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports') 
         : null, 
-        [firestore, stationToUpdate]
+        [firestore, stationToUpdate?.id]
     );
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
@@ -203,7 +203,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(newSanitationVisitSchema),
         defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
     });
-
+    
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
         resolver: zodResolver(adjustConsumptionSchema),
         defaultValues: { amount: 0, containers: 0 },
@@ -221,16 +221,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore) return;
 
         if (stationToUpdate) {
-            // Update existing station
             const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
             await updateDocumentNonBlocking(stationRef, values);
             toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
         } else {
-            // Create new station
             const stationsRef = collection(firestore, 'waterStations');
             const newDocRef = await addDocumentNonBlocking(stationsRef, values);
              if (newDocRef) {
-                setStationToUpdate({ ...values, id: newDocRef.id }); // Keep dialog open for permit upload
+                setStationToUpdate({ ...values, id: newDocRef.id });
                 toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
             } else {
                 toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
@@ -336,15 +334,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const storageRef = ref(storage, filePath);
             const uploadTask = uploadBytesResumable(storageRef, file);
             
+            const uploadKey = `sanitation-${values.id}`;
             await new Promise<void>((resolve, reject) => {
                 uploadTask.on('state_changed', 
-                    (snapshot) => { /* Optional: track progress */ },
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
+                    },
                     (error) => {
                         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload sanitation report.' });
+                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                         reject(error);
                     },
                     async () => {
                         reportUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                         resolve();
                     }
                 );
@@ -374,18 +378,28 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${file.name}`;
         const storageRef = ref(storage, filePath);
 
-        try {
-            await uploadBytesResumable(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
+        const uploadKey = `proof-${deliveryToUpdate.id}`;
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-            const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
-            updateDocumentNonBlocking(deliveryRef, { proofOfDeliveryUrl: downloadURL });
-            
-            toast({ title: "Proof Attached", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
-            setDeliveryToUpdate(null);
-        } catch (error) {
-             toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach proof. Please try again.' });
-        }
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
+            },
+            (error) => {
+                toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach proof. Please try again.' });
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
+                updateDocumentNonBlocking(deliveryRef, { proofOfDeliveryUrl: downloadURL });
+                
+                toast({ title: "Proof Attached", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                setDeliveryToUpdate(null);
+            }
+        );
     };
 
     const handleUploadContract = async () => {
@@ -397,15 +411,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const filePath = `users/${userForContract.id}/contracts/plan_contract_${Date.now()}.${contractFile.name.split('.').pop()}`;
         const storageRef = ref(storage, filePath);
     
+        const uploadKey = `contract-${userForContract.id}`;
         const uploadTask = uploadBytesResumable(storageRef, contractFile);
 
         uploadTask.on('state_changed',
             (snapshot) => {
-                // You can add progress logic here if you want
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({...prev, [uploadKey]: progress}));
             },
             (error) => {
                  console.error("Upload error:", error);
                  toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach contract. Please try again.' });
+                 setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             },
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -422,6 +439,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 }
                 
                 toast({ title: "Contract Attached", description: `A contract has been attached to ${userForContract.name}.` });
+                setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
                 setIsUploadContractOpen(false);
                 setUserForContract(null);
                 setContractFile(null);
@@ -438,18 +456,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const storage = getStorage();
             const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
             const storageRef = ref(storage, filePath);
-            toast({ title: 'Attaching proof...', description: 'Please wait while the file is attached.' });
             const uploadTask = uploadBytesResumable(storageRef, file);
+
+            const uploadKey = `delivery-${values.trackingNumber}`;
             await new Promise<void>((resolve, reject) => {
                 uploadTask.on('state_changed', 
-                    (snapshot) => {}, (error) => reject(error),
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
+                    }, 
+                    (error) => {
+                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                        reject(error);
+                    },
                     async () => {
                         proofOfDeliveryUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                         resolve();
                     }
                 );
             });
-            toast({ title: 'Attach complete!', description: 'Proof of delivery has been attached.' });
         }
     
         const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
@@ -564,17 +590,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const filePath = `users/${authUser.uid}/profile/${file.name}`;
         const storageRef = ref(storage, filePath);
     
+        const uploadKey = `profile-${authUser.uid}`;
         const uploadTask = uploadBytesResumable(storageRef, file);
         uploadTask.on('state_changed',
-            (snapshot) => {},
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({...prev, [uploadKey]: progress}));
+            },
             (error) => {
               toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach your photo. Please try again.' });
+              setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             },
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 const userRef = doc(firestore, 'users', authUser.uid);
                 updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
                 toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+                setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             }
         );
     };
@@ -926,6 +958,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TableRow>
                             ) : filteredDeliveries.map(delivery => {
                                 const liters = delivery.volumeContainers * 19.5;
+                                const isUploading = uploadProgress[`proof-${delivery.id}`] > 0 && uploadProgress[`proof-${delivery.id}`] < 100;
                                 return (
                                 <TableRow key={delivery.id}>
                                     <TableCell>{delivery.id}</TableCell>
@@ -937,7 +970,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        {delivery.proofOfDeliveryUrl ? (
+                                        {isUploading ? (
+                                            <div className="flex items-center gap-2">
+                                                <Progress value={uploadProgress[`proof-${delivery.id}`]} className="w-24 h-2" />
+                                                <span className="text-xs text-muted-foreground">{Math.round(uploadProgress[`proof-${delivery.id}`] || 0)}%</span>
+                                            </div>
+                                        ) : delivery.proofOfDeliveryUrl ? (
                                              <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
                                         ) : (
                                             <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin}>
@@ -1073,6 +1111,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <FormControl>
                                        <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
                                     </FormControl>
+                                    {uploadProgress[`delivery-${deliveryForm.watch('trackingNumber')}`] > 0 && (
+                                        <Progress value={uploadProgress[`delivery-${deliveryForm.watch('trackingNumber')}`]} className="mt-2" />
+                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -1118,12 +1159,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <DialogTitle>Attach Proof of Delivery</DialogTitle>
                     <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
+                <div className="py-4 space-y-2">
                     <Input type="file" onChange={(e) => {
                         if (e.target.files?.[0]) {
                             handleUploadProof(e.target.files[0]);
                         }
                     }}/>
+                    {uploadProgress[`proof-${deliveryToUpdate?.id}`] > 0 && (
+                        <Progress value={uploadProgress[`proof-${deliveryToUpdate?.id}`]} />
+                    )}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setDeliveryToUpdate(null)}>Cancel</Button>
@@ -1186,8 +1230,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <DialogTitle>Attach Contract</DialogTitle>
                     <DialogDescription>Attach a contract for {userForContract?.name}.</DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
+                <div className="py-4 space-y-2">
                     <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} />
+                     {userForContract && uploadProgress[`contract-${userForContract.id}`] > 0 && (
+                        <Progress value={uploadProgress[`contract-${userForContract.id}`]} />
+                    )}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsUploadContractOpen(false)}>Cancel</Button>
@@ -1217,13 +1264,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <div className="space-y-1">
                                         <h4 className="font-semibold">Profile Photo</h4>
                                         <p className="text-sm text-muted-foreground">Update your photo.</p>
-                                        <Button asChild variant="outline" size="sm">
-                                            <Label>
-                                                <Upload className="mr-2 h-4 w-4" />
-                                                Attach Photo
-                                                <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
-                                            </Label>
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Button asChild variant="outline" size="sm">
+                                                <Label>
+                                                    <Upload className="mr-2 h-4 w-4" />
+                                                    Attach Photo
+                                                    <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                                </Label>
+                                            </Button>
+                                            {authUser && uploadProgress[`profile-${authUser.uid}`] > 0 && (
+                                                <Progress value={uploadProgress[`profile-${authUser.uid}`]} className="w-24 h-2" />
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1515,6 +1567,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <FormItem>
                                 <FormLabel>Sanitation Report (Optional)</FormLabel>
                                 <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} /></FormControl>
+                                {uploadProgress[`sanitation-${sanitationVisitForm.watch('id')}`] > 0 && (
+                                    <Progress value={uploadProgress[`sanitation-${sanitationVisitForm.watch('id')}`]} className="mt-2" />
+                                )}
                                 <FormMessage />
                             </FormItem>
                         )}/>
@@ -1597,8 +1652,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {isUploading && <Progress value={progress} className="w-24 h-2" />}
-                                                    {report ? (
+                                                    {isUploading ? (
+                                                      <Progress value={progress} className="w-24 h-2" />
+                                                    ) : report ? (
                                                         <Button asChild variant="outline" size="sm">
                                                             <a href={report.reportUrl} target="_blank" rel="noopener noreferrer">
                                                                 <Eye className="mr-2 h-4 w-4" /> View
@@ -1712,5 +1768,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    

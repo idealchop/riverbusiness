@@ -40,9 +40,10 @@ import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWith
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 
 type Notification = {
     id: string;
@@ -139,6 +140,7 @@ export default function DashboardLayout({
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -203,31 +205,39 @@ export default function DashboardLayout({
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
     const storageRef = ref(storage, filePath);
   
-    try {
-      await uploadBytes(storageRef, paymentProofFile);
-      const downloadURL = await getDownloadURL(storageRef);
-  
-      const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-      
-      const paymentData: Payment = {
-        id: selectedInvoice.id,
-        date: selectedInvoice.date,
-        description: selectedInvoice.description,
-        amount: selectedInvoice.amount,
-        status: 'Pending Review',
-        proofOfPaymentUrl: downloadURL,
-      };
+    const uploadKey = `payment-${selectedInvoice.id}`;
+    const uploadTask = uploadBytesResumable(storageRef, paymentProofFile);
 
-      setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
-  
-      toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-      setIsPaymentDialogOpen(false);
-      setSelectedInvoice(null);
-      setPaymentProofFile(null);
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
-    }
+    uploadTask.on('state_changed', 
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({...prev, [uploadKey]: progress}));
+        },
+        (error) => {
+            console.error("Upload error:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
+            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+        },
+        async () => {
+            const downloadURL = await getDownloadURL(storageRef);
+            const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
+            const paymentData: Payment = {
+                id: selectedInvoice.id,
+                date: selectedInvoice.date,
+                description: selectedInvoice.description,
+                amount: selectedInvoice.amount,
+                status: 'Pending Review',
+                proofOfPaymentUrl: downloadURL,
+            };
+            setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
+            
+            toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
+            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+            setIsPaymentDialogOpen(false);
+            setSelectedInvoice(null);
+            setPaymentProofFile(null);
+        }
+    );
   };
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -338,17 +348,25 @@ export default function DashboardLayout({
     const filePath = `users/${authUser.uid}/profile/${file.name}`;
     const storageRef = ref(storage, filePath);
 
-    try {
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+    const uploadKey = `profile-${authUser.uid}`;
+    const uploadTask = uploadBytesResumable(storageRef, file);
 
-      const userRef = doc(firestore, 'users', authUser.uid);
-      updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
-
-      toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
-    }
+    uploadTask.on('state_changed',
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({...prev, [uploadKey]: progress}));
+        },
+        (error) => {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+        },
+        async () => {
+            const downloadURL = await getDownloadURL(storageRef);
+            updateDocumentNonBlocking(userDocRef!, { photoURL: downloadURL });
+            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+        }
+    );
   };
 
   const handleMessageSubmit = (messageContent: string) => {
@@ -593,13 +611,18 @@ export default function DashboardLayout({
                                             <div className="space-y-1">
                                                 <h4 className="font-semibold">Profile Photo</h4>
                                                 <p className="text-sm text-muted-foreground">Update your photo.</p>
-                                                <Button asChild variant="outline" size="sm">
-                                                    <Label>
-                                                        <Upload className="mr-2 h-4 w-4" />
-                                                        Upload Photo
-                                                        <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
-                                                    </Label>
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button asChild variant="outline" size="sm">
+                                                        <Label>
+                                                            <Upload className="mr-2 h-4 w-4" />
+                                                            Upload Photo
+                                                            <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                                        </Label>
+                                                    </Button>
+                                                    {authUser && uploadProgress[`profile-${authUser.uid}`] > 0 && (
+                                                        <Progress value={uploadProgress[`profile-${authUser.uid}`]} className="w-24 h-2" />
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -695,7 +718,20 @@ export default function DashboardLayout({
                             <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-1 gap-2 pt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                             {user?.contractUrl ? (
+                                <Button asChild variant="outline" className="w-full">
+                                    <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Contract
+                                    </a>
+                                </Button>
+                            ) : (
+                                <Button variant="outline" className="w-full" disabled>
+                                    <FileX className="mr-2 h-4 w-4" />
+                                    Contract Not Available
+                                </Button>
+                            )}
                              <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 Change Plan
@@ -861,7 +897,10 @@ export default function DashboardLayout({
                             <div className="grid gap-4">
                                 <Label htmlFor="payment-proof">Upload Screenshot or Document</Label>
                                 <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} />
-                                <Button onClick={handleProofUpload}>Submit for Verification</Button>
+                                {selectedInvoice && uploadProgress[`payment-${selectedInvoice.id}`] > 0 && (
+                                    <Progress value={uploadProgress[`payment-${selectedInvoice.id}`]} />
+                                )}
+                                <Button onClick={handleProofUpload} disabled={!paymentProofFile}>Submit for Verification</Button>
                             </div>
                         </TabsContent>
                     </Tabs>
