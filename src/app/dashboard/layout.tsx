@@ -695,20 +695,7 @@ export default function DashboardLayout({
                             <p className="text-center text-muted-foreground py-8">You have not selected a plan yet.</p>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                            {user?.contractUrl ? (
-                                <Button asChild className="w-full">
-                                    <a href={user.contractUrl} target="_blank" rel="noopener noreferrer">
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        Contract
-                                    </a>
-                                </Button>
-                            ) : (
-                                 <Button variant="outline" disabled className="w-full">
-                                    <FileX className="mr-2 h-4 w-4" />
-                                    Contract Not Available
-                                </Button>
-                            )}
+                        <div className="grid grid-cols-1 sm:grid-cols-1 gap-2 pt-2">
                              <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Coming Soon!', description: 'Plan changes will be available shortly.'})}>
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 Change Plan
