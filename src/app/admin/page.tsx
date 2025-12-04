@@ -36,13 +36,14 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -123,6 +124,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
     const [isCreateSanitationVisitOpen, setIsCreateSanitationVisitOpen] = React.useState(false);
+    const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
 
 
     const userDeliveriesQuery = useMemoFirebase(() => {
@@ -287,31 +289,40 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         })
     };
 
-    const handleAttachPermit = async (permitType: string, file: File, label: string) => {
+    const handleAttachPermit = (permitType: string, file: File, label: string) => {
         if (!stationToUpdate || !firestore) return;
         const storage = getStorage();
         const filePath = `stations/${stationToUpdate.id}/compliance/${permitType}-${file.name}`;
         const storageRef = ref(storage, filePath);
     
-        try {
-            toast({ title: 'Attaching...', description: `Attaching ${label} document.` });
-            await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
+        const uploadTask = uploadBytesResumable(storageRef, file);
     
-            const reportsRef = collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports');
-            const newReport: Omit<ComplianceReport, 'id'> = {
-                name: label,
-                date: new Date().toISOString(),
-                status: 'Compliant',
-                reportUrl: downloadURL,
-            };
-            await addDocumentNonBlocking(reportsRef, newReport);
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({ ...prev, [permitType]: progress }));
+            },
+            (error) => {
+                console.error("Upload error:", error);
+                toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach the compliance document. Please try again.' });
+                setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
     
-            toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
-        } catch (error) {
-            console.error("Upload error:", error);
-            toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach the compliance document. Please try again.' });
-        }
+                const reportsRef = collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports');
+                const newReport: Omit<ComplianceReport, 'id'> = {
+                    name: label,
+                    date: new Date().toISOString(),
+                    status: 'Compliant',
+                    reportUrl: downloadURL,
+                };
+                await addDocumentNonBlocking(reportsRef, newReport);
+    
+                toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
+                setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
+            }
+        );
     };
 
     const handleCreateSanitationVisit = async (values: NewSanitationVisitFormValues) => {
@@ -323,8 +334,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const storage = getStorage();
             const filePath = `stations/${stationToUpdate.id}/sanitation/${values.id}/${file.name}`;
             const storageRef = ref(storage, filePath);
-            await uploadBytes(storageRef, file);
-            reportUrl = await getDownloadURL(storageRef);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+            
+            await new Promise<void>((resolve, reject) => {
+                uploadTask.on('state_changed', 
+                    (snapshot) => { /* Optional: track progress */ },
+                    (error) => {
+                        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload sanitation report.' });
+                        reject(error);
+                    },
+                    async () => {
+                        reportUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                        resolve();
+                    }
+                );
+            });
         }
     
         const visitDocRef = doc(firestore, 'waterStations', stationToUpdate.id, 'sanitationVisits', values.id);
@@ -351,7 +375,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const storageRef = ref(storage, filePath);
 
         try {
-            await uploadBytes(storageRef, file);
+            await uploadBytesResumable(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
 
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
@@ -373,31 +397,36 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const filePath = `users/${userForContract.id}/contracts/plan_contract_${Date.now()}.${contractFile.name.split('.').pop()}`;
         const storageRef = ref(storage, filePath);
     
-        try {
-            toast({ title: 'Attaching Contract...', description: 'Please wait.' });
-            await uploadBytes(storageRef, contractFile);
-            const downloadURL = await getDownloadURL(storageRef);
-    
-            const userRef = doc(firestore, 'users', userForContract.id);
-            updateDocumentNonBlocking(userRef, { 
-                contractUrl: downloadURL,
-                contractUploadedDate: serverTimestamp(),
-                contractStatus: "Active Contract",
-            });
+        const uploadTask = uploadBytesResumable(storageRef, contractFile);
 
-            if (selectedUser && selectedUser.id === userForContract.id) {
-                 setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                // You can add progress logic here if you want
+            },
+            (error) => {
+                 console.error("Upload error:", error);
+                 toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach contract. Please try again.' });
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        
+                const userRef = doc(firestore, 'users', userForContract.id);
+                updateDocumentNonBlocking(userRef, { 
+                    contractUrl: downloadURL,
+                    contractUploadedDate: serverTimestamp(),
+                    contractStatus: "Active Contract",
+                });
+    
+                if (selectedUser && selectedUser.id === userForContract.id) {
+                     setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
+                }
+                
+                toast({ title: "Contract Attached", description: `A contract has been attached to ${userForContract.name}.` });
+                setIsUploadContractOpen(false);
+                setUserForContract(null);
+                setContractFile(null);
             }
-            
-            toast({ title: "Contract Attached", description: `A contract has been attached to ${userForContract.name}.` });
-        } catch (error) {
-            console.error("Upload error:", error);
-            toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach contract. Please try again.' });
-        } finally {
-            setIsUploadContractOpen(false);
-            setUserForContract(null);
-            setContractFile(null);
-        }
+        );
     };
 
     const handleCreateDelivery = async (values: NewDeliveryFormValues) => {
@@ -410,8 +439,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
             const storageRef = ref(storage, filePath);
             toast({ title: 'Attaching proof...', description: 'Please wait while the file is attached.' });
-            await uploadBytes(storageRef, file);
-            proofOfDeliveryUrl = await getDownloadURL(storageRef);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+            await new Promise<void>((resolve, reject) => {
+                uploadTask.on('state_changed', 
+                    (snapshot) => {}, (error) => reject(error),
+                    async () => {
+                        proofOfDeliveryUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                        resolve();
+                    }
+                );
+            });
             toast({ title: 'Attach complete!', description: 'Proof of delivery has been attached.' });
         }
     
@@ -527,17 +564,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const filePath = `users/${authUser.uid}/profile/${file.name}`;
         const storageRef = ref(storage, filePath);
     
-        try {
-          await uploadBytes(storageRef, file);
-          const downloadURL = await getDownloadURL(storageRef);
-    
-          const userRef = doc(firestore, 'users', authUser.uid);
-          updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
-    
-          toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-        } catch (error) {
-          toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach your photo. Please try again.' });
-        }
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        uploadTask.on('state_changed',
+            (snapshot) => {},
+            (error) => {
+              toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach your photo. Please try again.' });
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const userRef = doc(firestore, 'users', authUser.uid);
+                updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
+                toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+            }
+        );
     };
 
     const watchedContainers = adjustConsumptionForm.watch('containers');
@@ -1515,7 +1554,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </FormItem>
                                 )}/>
                                 {!stationToUpdate && (
-                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save Station Details</Button>
+                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save and Continue</Button>
                                 )}
                             </form>
                         </Form>
@@ -1541,23 +1580,31 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <TableBody>
                                     {complianceFields.map(field => {
                                         const isAttached = complianceReports?.some(report => report.name === field.label);
+                                        const progress = uploadProgress[field.key] || 0;
+                                        const isUploading = progress > 0 && progress < 100;
+
                                         return (
                                         <TableRow key={field.key}>
                                             <TableCell className="font-medium">{field.label}</TableCell>
                                             <TableCell>
                                                  {isAttached ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
+                                                ) : isUploading ? (
+                                                    <Badge variant="secondary">Uploading...</Badge>
                                                 ) : (
                                                     <Badge variant="destructive">Needs Compliance</Badge>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                 <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin}>
-                                                    <Label className={cn("flex items-center", (stationToUpdate && isAdmin) ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                        <Upload className="mr-2 h-4 w-4" /> Attach
-                                                        <Input type="file" className="hidden" disabled={!stationToUpdate || !isAdmin} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
-                                                    </Label>
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {isUploading && <Progress value={progress} className="w-24 h-2" />}
+                                                    <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin || isUploading}>
+                                                        <Label className={cn("flex items-center", (stationToUpdate && isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
+                                                            <Upload className="mr-2 h-4 w-4" /> Attach
+                                                            <Input type="file" className="hidden" disabled={!stationToUpdate || !isAdmin || isUploading} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
+                                                        </Label>
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     )})}
@@ -1657,3 +1704,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
