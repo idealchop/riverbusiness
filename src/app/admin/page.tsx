@@ -202,6 +202,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
     });
 
+    const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
+        resolver: zodResolver(adjustConsumptionSchema),
+        defaultValues: { amount: 0, containers: 0 },
+    });
+
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
             stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
@@ -290,7 +295,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const storageRef = ref(storage, filePath);
     
         try {
-            toast({ title: 'Uploading...', description: `Attaching ${label} document.` });
+            toast({ title: 'Attaching...', description: `Attaching ${label} document.` });
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
     
@@ -303,10 +308,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             };
             await addDocumentNonBlocking(reportsRef, newReport);
     
-            toast({ title: 'Compliance Document Attached', description: `${label} has been successfully uploaded and recorded.` });
+            toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
         } catch (error) {
             console.error("Upload error:", error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the compliance document. Please try again.' });
+            toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach the compliance document. Please try again.' });
         }
     };
 
@@ -356,13 +361,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ title: "Proof Attached", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
             setDeliveryToUpdate(null);
         } catch (error) {
-             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof. Please try again.' });
+             toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach proof. Please try again.' });
         }
     };
 
     const handleUploadContract = async () => {
         if (!userForContract || !contractFile || !firestore) {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'No file selected or user context missing.' });
+            toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or user context missing.' });
             return;
         };
         const storage = getStorage();
@@ -370,7 +375,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const storageRef = ref(storage, filePath);
     
         try {
-            toast({ title: 'Uploading Contract...', description: 'Please wait.' });
+            toast({ title: 'Attaching Contract...', description: 'Please wait.' });
             await uploadBytes(storageRef, contractFile);
             const downloadURL = await getDownloadURL(storageRef);
     
@@ -385,10 +390,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                  setSelectedUser(prev => prev ? { ...prev, contractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
             }
             
-            toast({ title: "Contract Uploaded", description: `A contract has been attached to ${userForContract.name}.` });
+            toast({ title: "Contract Attached", description: `A contract has been attached to ${userForContract.name}.` });
         } catch (error) {
             console.error("Upload error:", error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract. Please try again.' });
+            toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach contract. Please try again.' });
         } finally {
             setIsUploadContractOpen(false);
             setUserForContract(null);
@@ -405,10 +410,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const storage = getStorage();
             const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
             const storageRef = ref(storage, filePath);
-            toast({ title: 'Uploading proof...', description: 'Please wait while the file is uploaded.' });
+            toast({ title: 'Attaching proof...', description: 'Please wait while the file is attached.' });
             await uploadBytes(storageRef, file);
             proofOfDeliveryUrl = await getDownloadURL(storageRef);
-            toast({ title: 'Upload complete!', description: 'Proof of delivery has been attached.' });
+            toast({ title: 'Attach complete!', description: 'Proof of delivery has been attached.' });
         }
     
         const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
@@ -532,7 +537,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
           toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
         } catch (error) {
-          toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+          toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach your photo. Please try again.' });
         }
     };
 
@@ -1148,7 +1153,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsUploadContractOpen(false)}>Cancel</Button>
-                    <Button onClick={handleUploadContract} disabled={!contractFile}>Upload</Button>
+                    <Button onClick={handleUploadContract} disabled={!contractFile}>Attach</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1648,5 +1653,7 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
 
     
