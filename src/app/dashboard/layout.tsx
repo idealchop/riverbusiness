@@ -35,7 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, getDoc } from 'firebase/firestore';
 import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -147,10 +147,24 @@ export default function DashboardLayout({
   ]);
 
   React.useEffect(() => {
-    if (!isUserLoading && !authUser) {
+    if (isUserLoading) return;
+
+    if (!authUser) {
       router.push('/login');
+      return;
     }
-  }, [authUser, isUserLoading, router]);
+    
+    // Onboarding check moved here
+    const checkOnboarding = async () => {
+        if (!firestore) return;
+        const userDoc = await getDoc(doc(firestore, 'users', authUser.uid));
+        if (!userDoc.exists() || !userDoc.data()?.onboardingComplete) {
+            router.push('/onboarding');
+        }
+    }
+    checkOnboarding();
+
+  }, [authUser, isUserLoading, router, firestore]);
 
   React.useEffect(() => {
     if(user) {
@@ -283,8 +297,7 @@ export default function DashboardLayout({
 
     try {
       const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
-      await reauthenticateWithCredential(authUser, credential);
-      await updatePassword(authUser, newPassword);
+      await reauthenticateWithCredential(authUser, newPassword);
       
       toast({
           title: "Password Updated",
@@ -1096,4 +1109,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-

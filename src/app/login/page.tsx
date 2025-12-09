@@ -12,12 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { AppUser } from '@/lib/types';
-import { doc } from 'firebase/firestore';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -29,7 +27,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,24 +46,10 @@ export default function LoginPage() {
       if (user) {
         toast({ title: "Login Successful", description: "Welcome back! Redirecting..." });
 
-        // Special case for admin user
         if (user.email === 'admin@riverph.com') {
           router.push('/admin');
-          return;
-        }
-
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userSnap = await (await import('firebase/firestore')).getDoc(userDocRef);
-        
-        if (userSnap.exists()) {
-          const userData = userSnap.data() as AppUser;
-          if (userData.onboardingComplete) {
-            router.push('/dashboard');
-          } else {
-            router.push('/onboarding');
-          }
         } else {
-           router.push('/onboarding');
+          router.push('/dashboard');
         }
       }
 
