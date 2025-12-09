@@ -112,7 +112,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
-    const [isEditingDetails, setIsEditingDetails]_React.useState(false);
+    const [isEditingDetails, setIsEditingDetails] = React.useState(false);
     const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
     const [showNewPassword, setShowNewPassword] = React.useState(false);
@@ -122,6 +122,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [confirmPassword, setConfirmPassword] = React.useState('');
     const [isCreateSanitationVisitOpen, setIsCreateSanitationVisitOpen] = React.useState(false);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+    const [complianceRefresher, setComplianceRefresher] = React.useState(0);
 
 
     const userDeliveriesQuery = useMemoFirebase(() => {
@@ -141,7 +142,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         (firestore && stationToUpdate?.id) 
         ? collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports') 
         : null, 
-        [firestore, stationToUpdate?.id]
+        [firestore, stationToUpdate?.id, complianceRefresher]
     );
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
@@ -302,6 +303,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
                 toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
                 setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
+                setComplianceRefresher(c => c + 1); // Trigger a refresh
             }
         );
     };
@@ -1779,3 +1781,4 @@ export default function AdminPage() {
     
 
     
+
