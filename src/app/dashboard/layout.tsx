@@ -397,37 +397,37 @@ export default function DashboardLayout({
     }, [user]);
 
     const generatedInvoices = React.useMemo(() => {
-      if (!user?.createdAt || !user.plan) return [];
-      
-      const invoices: Payment[] = [];
-      const now = new Date();
-      // Firestore serverTimestamp is an object, not a Date, so we check for 'toDate' method
-      const startDate = typeof (user.createdAt as any)?.toDate === 'function' 
-        ? (user.createdAt as any).toDate() 
-        : new Date(user.createdAt as string);
-      
-      if (isNaN(startDate.getTime())) return [];
-      
-      const months = differenceInMonths(now, startDate);
-  
-      for (let i = 0; i <= months; i++) {
-        const invoiceDate = addMonths(startDate, i);
-        invoices.push({
-          id: `INV-${format(invoiceDate, 'yyyyMM')}`,
-          date: invoiceDate.toISOString(),
-          description: `${user.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
-          amount: user.plan.price,
-          status: 'Upcoming', // Default status, can be updated from DB
+        if (!user?.createdAt || !user.plan) return [];
+        
+        const invoices: Payment[] = [];
+        const now = new Date();
+        const createdAt = user.createdAt;
+        const startDate = typeof (createdAt as any)?.toDate === 'function' 
+            ? (createdAt as any).toDate() 
+            : new Date(createdAt as string);
+        
+        if (isNaN(startDate.getTime())) return [];
+        
+        const months = differenceInMonths(now, startDate);
+    
+        for (let i = 0; i <= months; i++) {
+            const invoiceDate = addMonths(startDate, i);
+            invoices.push({
+            id: `INV-${format(invoiceDate, 'yyyyMM')}`,
+            date: invoiceDate.toISOString(),
+            description: `${user.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
+            amount: user.plan.price,
+            status: 'Upcoming', // Default status, can be updated from DB
+            });
+        }
+
+        // Merge with DB payments
+        const mergedInvoices = invoices.map(inv => {
+            const dbInvoice = paymentHistoryFromDb?.find(p => p.id === inv.id);
+            return dbInvoice ? { ...inv, ...dbInvoice } : inv;
         });
-      }
 
-      // Merge with DB payments
-      const mergedInvoices = invoices.map(inv => {
-        const dbInvoice = paymentHistoryFromDb?.find(p => p.id === inv.id);
-        return dbInvoice ? { ...inv, ...dbInvoice } : inv;
-      });
-
-      return mergedInvoices.reverse();
+        return mergedInvoices.reverse();
     }, [user, paymentHistoryFromDb]);
 
 
@@ -1096,3 +1096,4 @@ export default function DashboardLayout({
       </div>
   );
 }
+

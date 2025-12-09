@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -124,9 +125,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     const userDeliveriesQuery = useMemoFirebase(() => {
-        if (!firestore || !userForHistory) return null;
-        return collection(firestore, 'users', userForHistory.id, 'deliveries');
-    }, [firestore, userForHistory]);
+        if (!firestore || !selectedUser) return null;
+        return collection(firestore, 'users', selectedUser.id, 'deliveries');
+    }, [firestore, selectedUser]);
 
     const { data: userDeliveriesData, isLoading: userDeliveriesLoading } = useCollection<Delivery>(userDeliveriesQuery);
 
@@ -608,6 +609,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const createdAt = typeof (selectedUser.createdAt as any)?.toDate === 'function'
             ? (selectedUser.createdAt as any).toDate()
             : new Date(selectedUser.createdAt as string);
+        
+        if (isNaN(createdAt.getTime())) return { monthlyRemainingLiters: 0 };
 
         let cycleStart;
         if (now.getDate() >= createdAt.getDate()) {
