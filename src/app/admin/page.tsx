@@ -686,6 +686,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const complianceFields: { key: string, label: string }[] = [
+        { key: 'dohPermitUrl', label: 'DOH Permit' },
+        { key: 'businessPermitUrl', label: 'Business Permit' },
         { key: 'bacteriologicalTestUrl', label: 'Bacteriological' },
         { key: 'physicalChemicalTestUrl', label: 'Physical-Chemical' },
         { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
@@ -1773,5 +1775,7 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
 
     
