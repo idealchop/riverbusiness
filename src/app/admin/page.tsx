@@ -593,6 +593,49 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         );
     };
 
+    const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+    const { monthlyRemainingLiters } = React.useMemo(() => {
+        if (!selectedUser || !selectedUser.plan || !selectedUser.createdAt) {
+            return { monthlyRemainingLiters: 0 };
+        }
+
+        const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
+        const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
+        const totalLitersPurchased = monthlyPlanLiters + bonusLiters;
+
+        const now = new Date();
+        const createdAt = typeof (selectedUser.createdAt as any)?.toDate === 'function'
+            ? (selectedUser.createdAt as any).toDate()
+            : new Date(selectedUser.createdAt as string);
+
+        let cycleStart;
+        if (now.getDate() >= createdAt.getDate()) {
+            cycleStart = new Date(now.getFullYear(), now.getMonth(), createdAt.getDate());
+        } else {
+            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, createdAt.getDate());
+        }
+
+        const cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleStart.getDate() - 1);
+
+        const deliveriesInCycle = (userDeliveriesData || []).filter(d => {
+            const deliveryDate = new Date(d.date);
+            return deliveryDate >= cycleStart && deliveryDate <= cycleEnd;
+        });
+
+        const consumedLitersInCycle = deliveriesInCycle.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+        
+        return { monthlyRemainingLiters: totalLitersPurchased - consumedLitersInCycle };
+
+    }, [selectedUser, userDeliveriesData]);
+    
+    React.useEffect(() => {
+        if(selectedUser) {
+            const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
+            // This will trigger a fetch, handled by useCollection
+        }
+    }, [selectedUser, firestore]);
+
     const watchedContainers = adjustConsumptionForm.watch('containers');
     React.useEffect(() => {
         const liters = (watchedContainers || 0) * 19.5;
@@ -747,9 +790,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Remaining Liters:</span>
+                                            <span className="text-muted-foreground">Remaining Liters (This Month):</span>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium">{(selectedUser.totalConsumptionLiters || 0).toLocaleString()} Liters</span>
+                                                <span className="font-medium">{monthlyRemainingLiters.toLocaleString()} Liters</span>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -1727,3 +1770,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

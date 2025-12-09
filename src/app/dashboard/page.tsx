@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, addDays } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, addDays, startOfToday, endOfToday } from 'date-fns';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
@@ -109,6 +109,62 @@ export default function DashboardPage() {
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
+    const {
+        totalLitersPurchased,
+        consumedLiters,
+        remainingLiters,
+        consumedPercentage,
+        remainingPercentage,
+    } = useMemo(() => {
+        if (!user || !user.plan || !user.createdAt) {
+            return {
+                totalLitersPurchased: 0,
+                consumedLiters: 0,
+                remainingLiters: 0,
+                consumedPercentage: 0,
+                remainingPercentage: 0,
+            };
+        }
+
+        const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
+        const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
+        const totalLitersPurchased = monthlyPlanLiters + bonusLiters;
+
+        const now = new Date();
+        const createdAt = typeof (user.createdAt as any)?.toDate === 'function'
+            ? (user.createdAt as any).toDate()
+            : new Date(user.createdAt as string);
+        
+        let cycleStart;
+        if (now.getDate() >= createdAt.getDate()) {
+            cycleStart = new Date(now.getFullYear(), now.getMonth(), createdAt.getDate());
+        } else {
+            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, createdAt.getDate());
+        }
+        
+        const cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleStart.getDate() -1);
+
+        const deliveriesInCycle = (deliveries || []).filter(d => {
+            const deliveryDate = new Date(d.date);
+            return deliveryDate >= cycleStart && deliveryDate <= cycleEnd;
+        });
+
+        const consumedLiters = deliveriesInCycle.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+        const remainingLiters = totalLitersPurchased - consumedLiters;
+        
+        const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
+        const remainingPercentage = totalLitersPurchased > 0 ? (Math.max(0, remainingLiters) / totalLitersPurchased) * 100 : 0;
+
+        return {
+            totalLitersPurchased,
+            consumedLiters,
+            remainingLiters,
+            consumedPercentage,
+            remainingPercentage,
+        };
+
+    }, [user, deliveries]);
+
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
         const tipIndex = dayOfYear % tips.length;
@@ -168,14 +224,8 @@ export default function DashboardPage() {
     
     const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
     const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
-    const fromLastMonthLiters = 0; // Placeholder for now
-    const totalLitersPurchased = monthlyPlanLiters + bonusLiters + fromLastMonthLiters;
-    const consumedLiters = totalLitersPurchased - (user?.totalConsumptionLiters || 0);
-    const remainingLiters = Math.max(0, user?.totalConsumptionLiters || 0);
     const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
     
-    const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
-    const remainingPercentage = totalLitersPurchased > 0 ? (remainingLiters / totalLitersPurchased) * 100 : 0;
     const autoRefill = user?.customPlanDetails?.autoRefillEnabled ?? true;
 
     const getStatusInfo = (status: Delivery['status'] | undefined) => {
@@ -727,7 +777,6 @@ export default function DashboardPage() {
                     <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex justify-between"><span>Monthly Plan:</span> <span>{monthlyPlanLiters.toLocaleString()} L</span></div>
                         <div className="flex justify-between"><span>Bonus Liters:</span> <span>{bonusLiters.toLocaleString()} L</span></div>
-                        <div className="flex justify-between"><span>From Last Month:</span> <span>{fromLastMonthLiters.toLocaleString()} L</span></div>
                     </div>
                 </CardContent>
                 <CardFooter className="pt-0">
@@ -932,5 +981,7 @@ export default function DashboardPage() {
     </div>
     );
 }
+
+    
 
     
