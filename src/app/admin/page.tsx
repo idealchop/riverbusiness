@@ -112,7 +112,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
-    const [isEditingDetails, setIsEditingDetails] = React.useState(false);
+    const [isEditingDetails, setIsEditingDetails]_React.useState(false);
     const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
     const [showNewPassword, setShowNewPassword] = React.useState(false);
@@ -1681,7 +1681,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin || isUploading}>
                                                             <Label className={cn("flex items-center", (stationToUpdate && isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
                                                                 <Upload className="mr-2 h-4 w-4" /> Attach
-                                                                <Input type="file" className="hidden" disabled={!stationToUpdate || !isAdmin || isUploading} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
+                                                                <Input type="file" accept="*/*" className="hidden" disabled={!stationToUpdate || !isAdmin || isUploading} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
                                                             </Label>
                                                         </Button>
                                                     )}
