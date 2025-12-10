@@ -1366,32 +1366,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    <div className="grid gap-2">
+                    <div className="relative">
                         <Label htmlFor="current-password">Current Password</Label>
-                        <div className="relative">
-                            <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                            <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                                {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                        </div>
+                        <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                     </div>
-                    <div className="grid gap-2">
+                    <div className="relative">
                         <Label htmlFor="new-password">New Password</Label>
-                        <div className="relative">
-                            <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                            <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowNewPassword(!showNewPassword)}>
-                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                        </div>
+                        <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowNewPassword(!showNewPassword)}>
+                            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                     </div>
-                    <div className="grid gap-2">
+                    <div className="relative">
                         <Label htmlFor="confirm-password">Confirm New Password</Label>
-                        <div className="relative">
-                            <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                            <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                        </div>
+                        <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                     </div>
                 </div>
                 <DialogFooter>
@@ -1419,7 +1413,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableRow>
                                             <TableHead>Client ID</TableHead>
                                             <TableHead>Business Name</TableHead>
-                                            <TableHead>Status</TableHead>
                                             <TableHead>Auto Refill</TableHead>
                                             <TableHead>Delivery Schedule</TableHead>
                                             <TableHead>Assigned Station</TableHead>
@@ -1436,12 +1429,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={cn("h-2 w-2 rounded-full", user.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
-                                                        <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
                                                     <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
                                                         {autoRefillEnabled ? (
                                                             <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
@@ -1456,12 +1443,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         )})}
                                         {filteredUsers.length === 0 && !usersLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center">No users found.</TableCell>
+                                                <TableCell colSpan={6} className="text-center">No users found.</TableCell>
                                             </TableRow>
                                         )}
                                          {usersLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={7} className="text-center">Loading users...</TableCell>
+                                                <TableCell colSpan={6} className="text-center">Loading users...</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
