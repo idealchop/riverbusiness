@@ -149,15 +149,15 @@ export default function DashboardPage() {
             return deliveryDate >= cycleStart && deliveryDate <= cycleEnd;
         });
 
-        const consumedLiters = deliveriesInCycle.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
-        const remainingLiters = totalLitersPurchased - consumedLiters;
+        const consumedLitersInCycle = deliveriesInCycle.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+        const remainingLiters = totalLitersPurchased - consumedLitersInCycle;
         
-        const consumedPercentage = totalLitersPurchased > 0 ? (consumedLiters / totalLitersPurchased) * 100 : 0;
+        const consumedPercentage = totalLitersPurchased > 0 ? (consumedLitersInCycle / totalLitersPurchased) * 100 : 0;
         const remainingPercentage = totalLitersPurchased > 0 ? (Math.max(0, remainingLiters) / totalLitersPurchased) * 100 : 0;
 
         return {
             totalLitersPurchased,
-            consumedLiters,
+            consumedLiters: consumedLitersInCycle,
             remainingLiters,
             consumedPercentage,
             remainingPercentage,
@@ -556,7 +556,7 @@ export default function DashboardPage() {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Liters / Containers</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Proof of Delivery</TableHead>
+                                <TableHead>Proof</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -584,7 +584,7 @@ export default function DashboardPage() {
                                                 View
                                             </Button>
                                         ) : (
-                                            <span className="text-muted-foreground text-xs">Not available</span>
+                                            <Badge variant="secondary">Upcoming</Badge>
                                         )}
                                     </TableCell>
                                 </TableRow>
@@ -807,7 +807,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">
                     <p className="text-3xl font-bold">{remainingLiters.toLocaleString()} L</p>
-                    <Progress value={remainingPercentage} className="h-2" />
+                    <Progress value={remainingLiters > 0 ? remainingPercentage : 0} className="h-2" />
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>
@@ -985,3 +985,4 @@ export default function DashboardPage() {
     
 
     
+
