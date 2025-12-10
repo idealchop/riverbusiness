@@ -598,42 +598,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-    const { monthlyRemainingLiters } = React.useMemo(() => {
-        if (!selectedUser || !selectedUser.plan || !selectedUser.createdAt) {
-            return { monthlyRemainingLiters: 0 };
-        }
-
-        const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
-        const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
-        const totalLitersPurchased = monthlyPlanLiters + bonusLiters;
-
-        const now = new Date();
-        const createdAt = typeof (selectedUser.createdAt as any)?.toDate === 'function'
-            ? (selectedUser.createdAt as any).toDate()
-            : new Date(selectedUser.createdAt as string);
-        
-        if (isNaN(createdAt.getTime())) return { monthlyRemainingLiters: 0 };
-
-        let cycleStart;
-        if (now.getDate() >= createdAt.getDate()) {
-            cycleStart = new Date(now.getFullYear(), now.getMonth(), createdAt.getDate());
-        } else {
-            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, createdAt.getDate());
-        }
-
-        const cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleStart.getDate() - 1);
-
-        const deliveriesInCycle = (userDeliveriesData || []).filter(d => {
-            const deliveryDate = new Date(d.date);
-            return deliveryDate >= cycleStart && deliveryDate <= cycleEnd;
-        });
-
-        const consumedLitersInCycle = deliveriesInCycle.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
-        
-        return { monthlyRemainingLiters: totalLitersPurchased - consumedLitersInCycle };
-
-    }, [selectedUser, userDeliveriesData]);
-    
     React.useEffect(() => {
         if(selectedUser) {
             const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
@@ -798,27 +762,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
                                         </div>
                                         <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Remaining Liters (This Month):</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium">{monthlyRemainingLiters.toLocaleString()} Liters</span>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-6 w-6">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
-                                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                                            Add Liters
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
-                                                             <MinusCircle className="mr-2 h-4 w-4" />
-                                                            Deduct Liters
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
+                                            <span className="text-muted-foreground">Remaining Liters (Balance):</span>
+                                            <span className="font-medium">{selectedUser.totalConsumptionLiters.toLocaleString()} Liters</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Assigned Station:</span>
@@ -901,6 +846,24 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <Upload className="mr-2 h-4 w-4" />
                                         Attach Contract
                                     </Button>
+                                     <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="outline">
+                                                <Repeat className="mr-2 h-4 w-4" />
+                                                Adjust Consumption
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                Add Liters
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
+                                                 <MinusCircle className="mr-2 h-4 w-4" />
+                                                Deduct Liters
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                     {selectedUser.currentContractUrl && (
                                         <Button variant="link" asChild>
                                             <a href={selectedUser.currentContractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
