@@ -17,7 +17,7 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin();
       // Admins can update any field. Users can only update a limited set of fields.
       allow write: if isAdmin() || 
-                   (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accountStatus', 'lastLogin', 'name', 'businessEmail', 'address', 'contactNumber', 'photoURL']));
+                   (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accountStatus', 'lastLogin', 'name', 'businessEmail', 'address', 'contactNumber', 'photoURL', 'customPlanDetails']));
     }
     
     match /users/{userId}/deliveries/{deliveryId} {
