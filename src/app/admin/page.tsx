@@ -19,6 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
@@ -33,7 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -110,6 +111,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = React.useState(false);
     const [isEditDeliveryOpen, setIsEditDeliveryOpen] = React.useState(false);
     const [deliveryToEdit, setDeliveryToEdit] = React.useState<Delivery | null>(null);
+    const [deliveryToDelete, setDeliveryToDelete] = React.useState<Delivery | null>(null);
     const [isUploadContractOpen, setIsUploadContractOpen] = React.useState(false);
     const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
     const [contractFile, setContractFile] = React.useState<File | null>(null);
@@ -152,38 +154,36 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             consumedLitersThisMonth: 0,
             currentBalance: selectedUser?.totalConsumptionLiters || 0,
         };
-
+    
         if (!selectedUser || !selectedUser.plan || !selectedUser.createdAt) {
             return emptyState;
         }
-
+    
         const createdAtDate = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
             ? (selectedUser.createdAt as any).toDate() 
             : new Date(selectedUser.createdAt as string);
-
+    
         if (isNaN(createdAtDate.getTime())) return emptyState;
-
+    
         const cycleDay = createdAtDate.getDate();
         let cycleStart, cycleEnd;
         
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth();
-
+    
         if (now.getDate() >= cycleDay) {
             cycleStart = new Date(currentYear, currentMonth, cycleDay);
-            cycleEnd = new Date(currentYear, currentMonth + 1, cycleDay - 1);
         } else {
             cycleStart = new Date(currentYear, currentMonth - 1, cycleDay);
-            cycleEnd = new Date(currentYear, currentMonth, cycleDay - 1);
         }
+        cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
         cycleEnd.setHours(23, 59, 59, 999);
-
-
+    
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => 
             d.status === 'Delivered' && isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
         );
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-
+    
         const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
@@ -191,25 +191,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         let lastCycleStart, lastCycleEnd;
         if (now.getDate() >= cycleDay) {
             lastCycleStart = subMonths(cycleStart, 1);
-            lastCycleEnd = subMonths(cycleEnd, 1);
         } else {
-            lastCycleStart = subMonths(cycleStart, 1);
-            lastCycleEnd = subMonths(cycleEnd, 1);
+            lastCycleStart = subMonths(cycleStart, 2);
         }
+        lastCycleEnd = subMonths(cycleEnd, 1);
         lastCycleEnd.setHours(23, 59, 59, 999);
-
+    
         const deliveriesLastCycle = (userDeliveriesData || []).filter(d => 
             d.status === 'Delivered' && isWithinInterval(new Date(d.date), { start: lastCycleStart, end: lastCycleEnd })
         );
         const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
         
-        // This is a proxy for what the balance would have been at the start of THIS cycle.
         const balanceAtStartOfCycle = (selectedUser.totalConsumptionLiters || 0) + consumedLitersThisMonth;
         const rolloverLiters = Math.max(0, balanceAtStartOfCycle - totalMonthlyAllocation);
-
+    
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
-
+    
         return {
             monthlyPlanLiters,
             bonusLiters,
@@ -637,18 +635,40 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         // Calculate consumption adjustment if status or volume changed
         const oldLiters = (deliveryToEdit.status === 'Delivered') ? containerToLiter(deliveryToEdit.volumeContainers) : 0;
         const newLiters = (values.status === 'Delivered') ? containerToLiter(values.volumeContainers) : 0;
-        const adjustment = newLiters - oldLiters;
+        const adjustment = oldLiters - newLiters; // Note: we reverse old and new to get the correct increment/decrement
     
         await updateDocumentNonBlocking(deliveryRef, updatedData);
     
         if (adjustment !== 0) {
             const userRef = doc(firestore, 'users', userForHistory.id);
-            await updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-adjustment) });
+            await updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(adjustment) });
         }
     
         toast({ title: "Delivery Updated", description: `Delivery ${deliveryToEdit.id} has been successfully updated.` });
         setIsEditDeliveryOpen(false);
         setDeliveryToEdit(null);
+    };
+
+    const handleDeleteDelivery = async () => {
+        if (!deliveryToDelete || !userForHistory || !firestore) return;
+    
+        const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToDelete.id);
+    
+        // If the delivery was already completed, we need to add the liters back.
+        if (deliveryToDelete.status === 'Delivered') {
+            const litersToRestore = containerToLiter(deliveryToDelete.volumeContainers);
+            const userRef = doc(firestore, 'users', userForHistory.id);
+            updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(litersToRestore) });
+        }
+    
+        deleteDocumentNonBlocking(deliveryRef);
+    
+        toast({
+            title: "Delivery Deleted",
+            description: `Delivery record ${deliveryToDelete.id} has been removed.`,
+        });
+    
+        setDeliveryToDelete(null);
     };
 
     const handleLogout = () => {
@@ -1141,6 +1161,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             {isUploading ? 'Uploading...' : 'Attach Proof'}
                                                         </DropdownMenuItem>
                                                     )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => setDeliveryToDelete(delivery)} disabled={!isAdmin} className="text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete Delivery
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
@@ -1156,6 +1181,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </div>
             </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deliveryToDelete} onOpenChange={(open) => !open && setDeliveryToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the delivery record for ID: <span className="font-semibold">{deliveryToDelete?.id}</span> and restore the consumed liters if applicable.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeliveryToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
             <DialogContent>
@@ -2017,3 +2057,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
