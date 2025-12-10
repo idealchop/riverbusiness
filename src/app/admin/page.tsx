@@ -1434,7 +1434,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => { if (!open) { setDeliveryToUpdate(null); setDeliveryProofFile(null); } }}>
+        <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => { if (!open && !isUploading) { setDeliveryToUpdate(null); setDeliveryProofFile(null); } }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Attach Proof of Delivery</DialogTitle>
@@ -2052,3 +2052,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
