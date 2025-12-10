@@ -155,55 +155,37 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             currentBalance: selectedUser?.totalConsumptionLiters || 0,
         };
     
-        if (!selectedUser || !selectedUser.plan || !selectedUser.createdAt) {
+        if (!selectedUser || !selectedUser.plan || !userDeliveriesData) {
             return emptyState;
         }
-    
-        const createdAtDate = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
-            ? (selectedUser.createdAt as any).toDate() 
-            : new Date(selectedUser.createdAt as string);
-    
-        if (isNaN(createdAtDate.getTime())) return emptyState;
-    
-        const cycleDay = createdAtDate.getDate();
-        let cycleStart, cycleEnd;
+
+        // --- New Calendar Month Logic ---
+        const cycleStart = startOfMonth(now);
+        const cycleEnd = endOfMonth(now);
         
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-    
-        if (now.getDate() >= cycleDay) {
-            cycleStart = new Date(currentYear, currentMonth, cycleDay);
-        } else {
-            cycleStart = new Date(currentYear, currentMonth - 1, cycleDay);
-        }
-        cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
-        cycleEnd.setHours(23, 59, 59, 999);
-    
-        const deliveriesThisCycle = (userDeliveriesData || []).filter(d => 
-            d.status === 'Delivered' && isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
-        );
+        const lastMonth = subMonths(now, 1);
+        const lastCycleStart = startOfMonth(lastMonth);
+        const lastCycleEnd = endOfMonth(lastMonth);
+        // --- End New Logic ---
+
+        const deliveriesThisCycle = userDeliveriesData.filter(d => {
+            const deliveryDate = new Date(d.date);
+            return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
+        });
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
         const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
         
-        let lastCycleStart, lastCycleEnd;
-        if (now.getDate() >= cycleDay) {
-            lastCycleStart = subMonths(cycleStart, 1);
-        } else {
-            lastCycleStart = subMonths(cycleStart, 2);
-        }
-        lastCycleEnd = subMonths(cycleEnd, 1);
-        lastCycleEnd.setHours(23, 59, 59, 999);
-    
-        const deliveriesLastCycle = (userDeliveriesData || []).filter(d => 
-            d.status === 'Delivered' && isWithinInterval(new Date(d.date), { start: lastCycleStart, end: lastCycleEnd })
-        );
+        const deliveriesLastCycle = userDeliveriesData.filter(d => {
+            const deliveryDate = new Date(d.date);
+            return isWithinInterval(deliveryDate, { start: lastCycleStart, end: lastCycleEnd });
+        });
         const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
         
-        const balanceAtStartOfCycle = (selectedUser.totalConsumptionLiters || 0) + consumedLitersThisMonth;
-        const rolloverLiters = Math.max(0, balanceAtStartOfCycle - totalMonthlyAllocation);
+        // Rollover is the total allocation from last month minus what was consumed last month.
+        const rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
     
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
@@ -2057,5 +2039,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    

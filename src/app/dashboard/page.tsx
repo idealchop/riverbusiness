@@ -120,38 +120,37 @@ export default function DashboardPage() {
             remainingPercentage: 100,
         };
 
-        if (!user || !user.plan || !user.createdAt) {
+        if (!user || !user.plan || !deliveries) {
             return emptyState;
         }
     
-        const createdAt = typeof (user.createdAt as any)?.toDate === 'function' 
-            ? (user.createdAt as any).toDate() 
-            : new Date(user.createdAt as string);
-    
-        if (isNaN(createdAt.getTime())) return emptyState;
-    
-        const cycleDay = createdAt.getDate();
-        let cycleStart, cycleEnd;
+        // --- New Calendar Month Logic ---
+        const cycleStart = startOfMonth(now);
+        const cycleEnd = endOfMonth(now);
         
-        if (now.getDate() >= cycleDay) {
-            cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
-        } else {
-            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
-        }
-        cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
-        cycleEnd.setHours(23, 59, 59, 999);
-    
-        const deliveriesThisCycle = (deliveries || []).filter(d => 
-            isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
-        );
+        const lastMonth = subMonths(now, 1);
+        const lastCycleStart = startOfMonth(lastMonth);
+        const lastCycleEnd = endOfMonth(lastMonth);
+        // --- End New Logic ---
+
+        const deliveriesThisCycle = deliveries.filter(d => {
+            const deliveryDate = new Date(d.date);
+            return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
+        });
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-    
+
         const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
     
-        // Rollover is what was left from the PREVIOUS cycle.
-        const rolloverLiters = Math.max(0, (user.totalConsumptionLiters || 0) + consumedLitersThisMonth - totalMonthlyAllocation);
+        const deliveriesLastCycle = deliveries.filter(d => {
+            const deliveryDate = new Date(d.date);
+            return isWithinInterval(deliveryDate, { start: lastCycleStart, end: lastCycleEnd });
+        });
+        const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        
+        // Rollover is the total allocation from last month minus what was consumed last month.
+        const rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
     
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
@@ -970,6 +969,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    
-
