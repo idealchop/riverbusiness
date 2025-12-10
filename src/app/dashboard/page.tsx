@@ -19,7 +19,7 @@ import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -75,6 +75,9 @@ export default function DashboardPage() {
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
     
     const [isUpdateScheduleOpen, setIsUpdateScheduleOpen] = useState(false);
+    const [isScheduleOneTimeDeliveryOpen, setIsScheduleOneTimeDeliveryOpen] = useState(false);
+    const [oneTimeDeliveryDate, setOneTimeDeliveryDate] = useState<Date | undefined>();
+    const [oneTimeDeliveryContainers, setOneTimeDeliveryContainers] = useState<number>(1);
     const [newDeliveryDay, setNewDeliveryDay] = useState<string>('');
     const [newDeliveryTime, setNewDeliveryTime] = useState<string>('');
     const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
@@ -307,6 +310,31 @@ export default function DashboardPage() {
 
         toast({ title: "Schedule Updated", description: "Your delivery schedule has been updated successfully." });
         setIsUpdateScheduleOpen(false);
+    };
+
+    const handleScheduleOneTimeDelivery = () => {
+        if (!authUser || !firestore || !oneTimeDeliveryDate || oneTimeDeliveryContainers <= 0) {
+            toast({ variant: "destructive", title: "Scheduling Failed", description: "Please select a date and enter a valid container quantity." });
+            return;
+        }
+
+        const trackingNumber = `MANUAL-${Date.now()}`;
+        const deliveryRef = doc(firestore, 'users', authUser.uid, 'deliveries', trackingNumber);
+
+        const newDelivery: Delivery = {
+            id: trackingNumber,
+            userId: authUser.uid,
+            date: oneTimeDeliveryDate.toISOString(),
+            volumeContainers: oneTimeDeliveryContainers,
+            status: 'Pending',
+        };
+
+        setDocumentNonBlocking(deliveryRef, newDelivery);
+
+        toast({ title: "Delivery Scheduled", description: `A delivery of ${oneTimeDeliveryContainers} containers has been scheduled for ${format(oneTimeDeliveryDate, 'PPP')}.` });
+        setIsScheduleOneTimeDeliveryOpen(false);
+        setOneTimeDeliveryDate(undefined);
+        setOneTimeDeliveryContainers(1);
     };
 
     const handleSaveLiters = () => {
@@ -663,6 +691,44 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
 
+         <Dialog open={isScheduleOneTimeDeliveryOpen} onOpenChange={setIsScheduleOneTimeDeliveryOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Schedule a One-Time Delivery</DialogTitle>
+                    <DialogDescription>
+                        Select a date and quantity for your delivery.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="flex justify-center">
+                        <Calendar
+                            mode="single"
+                            selected={oneTimeDeliveryDate}
+                            onSelect={setOneTimeDeliveryDate}
+                            disabled={(date) => date < new Date()}
+                            initialFocus
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="oneTimeContainers">Number of Containers</Label>
+                        <Input 
+                            id="oneTimeContainers" 
+                            type="number" 
+                            value={oneTimeDeliveryContainers} 
+                            onChange={(e) => setOneTimeDeliveryContainers(Number(e.target.value))} 
+                            min="1"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleScheduleOneTimeDelivery} disabled={!oneTimeDeliveryDate}>Confirm Delivery</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <Dialog open={isSaveLitersDialogOpen} onOpenChange={setIsSaveLitersDialogOpen}>
             <DialogContent>
                 <DialogHeader>
@@ -798,21 +864,30 @@ export default function DashboardPage() {
                         <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
                     </div>
                      <p className="text-xs text-muted-foreground">
-                        System will auto-schedule based on set schedule delivery
+                        {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
                     </p>
                     <div className="border-t pt-3 space-y-2">
-                         <div>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>
-                            <p className="font-semibold text-sm">Next {nextRefillDay}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
-                            <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
-                        </div>
-                        <Button variant="outline" size="sm" className="w-full" onClick={() => setIsUpdateScheduleOpen(true)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Update Schedule
-                        </Button>
+                        {autoRefill ? (
+                             <>
+                                <div>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>
+                                    <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
+                                    <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
+                                </div>
+                                <Button variant="outline" size="sm" className="w-full" onClick={() => setIsUpdateScheduleOpen(true)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Update Schedule
+                                </Button>
+                             </>
+                        ) : (
+                            <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                Schedule Delivery
+                            </Button>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -952,12 +1027,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    
-
-    
-
-
-
-
-    
