@@ -9,12 +9,12 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, ConsumptionHistory } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, addDays, startOfToday, endOfToday } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth } from 'date-fns';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
@@ -361,7 +361,7 @@ export default function DashboardPage() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Water Quality &amp; Sanitation</DialogTitle>
+                        <DialogTitle>Water Quality & Sanitation</DialogTitle>
                         <DialogDescription>
                             Compliance reports and sanitation visits for {waterStation?.name || 'your assigned station'}.
                         </DialogDescription>
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                                     ))}
                                     {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center">No compliance reports found for your assigned station.</TableCell>
+                                            <TableCell colSpan={4} className="text-center text-muted-foreground">No upcoming reports scheduled.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -474,14 +474,14 @@ export default function DashboardPage() {
                                             </a>
                                             </Button>
                                         ) : (
-                                            <span className="text-muted-foreground text-sm">N/A</span>
+                                            <span className="text-muted-foreground text-sm">Upcoming</span>
                                         )}
                                         </TableCell>
                                     </TableRow>
                                     ))}
                                     {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center">No sanitation visit records found for your assigned station.</TableCell>
+                                            <TableCell colSpan={5} className="text-center text-muted-foreground">No upcoming visits scheduled.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
