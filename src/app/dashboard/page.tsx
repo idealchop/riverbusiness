@@ -131,15 +131,15 @@ export default function DashboardPage() {
         if (isNaN(createdAt.getTime())) return emptyState;
     
         const cycleDay = createdAt.getDate();
-        let cycleStart;
+        let cycleStart, cycleEnd;
+        
         if (now.getDate() >= cycleDay) {
             cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
         } else {
             cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
         }
-        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
+        cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
         cycleEnd.setHours(23, 59, 59, 999);
-
     
         const deliveriesThisCycle = (deliveries || []).filter(d => 
             isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
@@ -151,14 +151,13 @@ export default function DashboardPage() {
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
     
         // Rollover is what was left from the PREVIOUS cycle.
-        // It's the current DB balance PLUS what was consumed this month, MINUS this month's new allocation.
         const rolloverLiters = Math.max(0, (user.totalConsumptionLiters || 0) + consumedLitersThisMonth - totalMonthlyAllocation);
     
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
 
         const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
-        const remainingPercentage = totalLitersForMonth > 0 ? (currentBalance / totalLitersForMonth) * 100 : 0;
+        const remainingPercentage = 100 - consumedPercentage;
     
         return {
             monthlyPlanLiters,
@@ -973,3 +972,4 @@ export default function DashboardPage() {
 }
 
     
+

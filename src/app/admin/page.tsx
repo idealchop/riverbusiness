@@ -161,13 +161,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (isNaN(createdAt.getTime())) return emptyState;
 
         const cycleDay = createdAt.getDate();
-        let cycleStart;
+        let cycleStart, cycleEnd;
+        
         if (now.getDate() >= cycleDay) {
             cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
         } else {
             cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
         }
-        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
+        cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
         cycleEnd.setHours(23, 59, 59, 999);
 
 
@@ -1848,3 +1849,4 @@ export default function AdminPage() {
 }
 
     
+
