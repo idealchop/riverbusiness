@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
@@ -107,18 +107,15 @@ export default function DashboardPage() {
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
-    const {
-        totalLitersPurchased,
-        consumedLiters,
-        remainingLiters,
-        consumedPercentage,
-        remainingPercentage,
-    } = useMemo(() => {
-        if (!user || !user.plan) {
+    const consumptionDetails = useMemo(() => {
+        if (!user || !user.plan || !user.createdAt) {
             return {
-                totalLitersPurchased: 0,
-                consumedLiters: 0,
-                remainingLiters: 0,
+                monthlyPlanLiters: 0,
+                bonusLiters: 0,
+                rolloverLiters: 0,
+                totalLitersForMonth: 0,
+                consumedLitersThisMonth: 0,
+                currentBalance: user?.totalConsumptionLiters || 0,
                 consumedPercentage: 0,
                 remainingPercentage: 0,
             };
@@ -126,22 +123,49 @@ export default function DashboardPage() {
 
         const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
-        const totalLitersPurchased = monthlyPlanLiters + bonusLiters;
-
-        const totalConsumedLiters = (deliveries || []).reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+        const currentBalance = user.totalConsumptionLiters;
         
-        const remainingLiters = totalLitersPurchased - totalConsumedLiters;
+        const now = new Date();
+        const createdAt = typeof (user.createdAt as any)?.toDate === 'function' 
+            ? (user.createdAt as any).toDate() 
+            : new Date(user.createdAt as string);
         
-        const consumedPercentage = totalLitersPurchased > 0 ? (totalConsumedLiters / totalLitersPurchased) * 100 : 0;
-        const remainingPercentage = totalLitersPurchased > 0 ? (Math.max(0, remainingLiters) / totalLitersPurchased) * 100 : 0;
+        if (isNaN(createdAt.getTime())) {
+            return {
+                monthlyPlanLiters, bonusLiters, rolloverLiters: 0, totalLitersForMonth: monthlyPlanLiters + bonusLiters, consumedLitersThisMonth: 0, currentBalance, consumedPercentage: 0, remainingPercentage: 100
+            };
+        }
 
+        const cycleDay = createdAt.getDate();
+        let cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
+        if (now < cycleStart) {
+            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
+        }
+        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay -1);
+        cycleEnd.setHours(23, 59, 59, 999);
+
+
+        const deliveriesThisCycle = (deliveries || []).filter(d => 
+            isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
+        );
+        const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+
+        const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+        const rolloverLiters = Math.max(0, currentBalance + consumedLitersThisMonth - totalMonthlyAllocation);
+        const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
+        
+        const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
+        const remainingPercentage = totalLitersForMonth > 0 ? (currentBalance / totalLitersForMonth) * 100 : 0;
 
         return {
-            totalLitersPurchased,
-            consumedLiters: totalConsumedLiters,
-            remainingLiters,
+            monthlyPlanLiters,
+            bonusLiters,
+            rolloverLiters,
+            totalLitersForMonth,
+            consumedLitersThisMonth,
+            currentBalance,
             consumedPercentage,
-            remainingPercentage,
+            remainingPercentage
         };
 
     }, [user, deliveries]);
@@ -203,8 +227,6 @@ export default function DashboardPage() {
       }
     }, [deliveries, analyticsFilter]);
     
-    const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
-    const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
     const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
     const weeklyContainers = user?.customPlanDetails?.gallonQuantity || 0;
     const estimatedWeeklyLiters = containerToLiter(weeklyContainers);
@@ -323,7 +345,7 @@ export default function DashboardPage() {
         // For now, we'll just show a toast notification as a placeholder.
         toast({
             title: "Liters Saved!",
-            description: `${remainingLiters.toLocaleString()} liters will be added to your next month's balance.`,
+            description: `${consumptionDetails.currentBalance.toLocaleString()} liters will be added to your next month's balance.`,
         });
         setIsSaveLitersDialogOpen(false);
     };
@@ -694,7 +716,7 @@ export default function DashboardPage() {
                 <div className="py-4 space-y-4">
                     <div className="p-4 border rounded-lg bg-muted/50">
                         <p className="text-sm text-muted-foreground">You are about to save:</p>
-                        <p className="text-2xl font-bold">{remainingLiters.toLocaleString()} Liters</p>
+                        <p className="text-2xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} Liters</p>
                         <p className="text-xs text-muted-foreground mt-2">
                             This amount will be cleared from your current balance and added to your purchased liters for next month, {format(new Date(), 'MMMM')}.
                         </p>
@@ -720,15 +742,16 @@ export default function DashboardPage() {
             <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Total Purchased
+                        Total for this Month
                         <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
-                    <p className="text-3xl font-bold mb-2">{totalLitersPurchased.toLocaleString()} L</p>
+                    <p className="text-3xl font-bold mb-2">{consumptionDetails.totalLitersForMonth.toLocaleString()} L</p>
                     <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex justify-between"><span>Monthly Plan:</span> <span>{monthlyPlanLiters.toLocaleString()} L</span></div>
-                        <div className="flex justify-between"><span>Bonus Liters:</span> <span>{bonusLiters.toLocaleString()} L</span></div>
+                        <div className="flex justify-between"><span>Monthly Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
+                        <div className="flex justify-between"><span>Bonus Liters:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
+                        <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
                     </div>
                 </CardContent>
                 <CardFooter className="pt-0">
@@ -738,12 +761,12 @@ export default function DashboardPage() {
             <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Consumed Liters
+                        Consumed This Month
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">
-                    <p className="text-3xl font-bold">{consumedLiters.toLocaleString()} L</p>
-                    <Progress value={consumedPercentage} className="h-2"/>
+                    <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
+                    <Progress value={consumptionDetails.consumedPercentage} className="h-2"/>
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsConsumptionHistoryOpen(true)}>
@@ -754,12 +777,12 @@ export default function DashboardPage() {
             <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Remaining Liters
+                        Current Balance
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">
-                    <p className="text-3xl font-bold">{remainingLiters.toLocaleString()} L</p>
-                    <Progress value={remainingLiters > 0 ? remainingPercentage : 0} className="h-2" />
+                    <p className="text-3xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} L</p>
+                    <Progress value={consumptionDetails.remainingPercentage} className="h-2" />
                 </CardContent>
                 <CardFooter>
                     <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>

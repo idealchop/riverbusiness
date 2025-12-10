@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInMonths, addMonths } from 'date-fns';
+import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
@@ -129,14 +129,68 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore || !selectedUser) return null;
         return collection(firestore, 'users', selectedUser.id, 'deliveries');
     }, [firestore, selectedUser]);
-
-    const { data: userDeliveriesData, isLoading: userDeliveriesLoading } = useCollection<Delivery>(userDeliveriesQuery);
+    const { data: userDeliveriesData } = useCollection<Delivery>(userDeliveriesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
         return collection(firestore, 'users', selectedUser.id, 'payments');
     }, [firestore, selectedUser]);
     const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
+    
+    const consumptionDetails = React.useMemo(() => {
+        if (!selectedUser || !selectedUser.plan || !selectedUser.createdAt) {
+            return {
+                monthlyPlanLiters: 0,
+                bonusLiters: 0,
+                rolloverLiters: 0,
+                totalLitersForMonth: 0,
+                consumedLitersThisMonth: 0,
+                currentBalance: selectedUser?.totalConsumptionLiters || 0,
+            };
+        }
+
+        const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
+        const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
+        const currentBalance = selectedUser.totalConsumptionLiters;
+        
+        const now = new Date();
+        const createdAt = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
+            ? (selectedUser.createdAt as any).toDate() 
+            : new Date(selectedUser.createdAt as string);
+
+        if (isNaN(createdAt.getTime())) return {
+             monthlyPlanLiters, bonusLiters, rolloverLiters: 0, totalLitersForMonth: monthlyPlanLiters + bonusLiters, consumedLitersThisMonth: 0, currentBalance
+        };
+
+        const cycleDay = createdAt.getDate();
+        let cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
+        if (now < cycleStart) {
+            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
+        }
+        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay -1);
+        cycleEnd.setHours(23, 59, 59, 999);
+
+
+        const deliveriesThisCycle = (userDeliveriesData || []).filter(d => 
+            isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
+        );
+        const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + (d.volumeContainers * 19.5), 0);
+
+        const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+        const rolloverLiters = Math.max(0, currentBalance + consumedLitersThisMonth - totalMonthlyAllocation);
+        const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
+
+        return {
+            monthlyPlanLiters,
+            bonusLiters,
+            rolloverLiters,
+            totalLitersForMonth,
+            consumedLitersThisMonth,
+            currentBalance,
+        };
+
+    }, [selectedUser, userDeliveriesData]);
+
 
     const complianceReportsQuery = useMemoFirebase(() => 
         (firestore && stationToUpdate?.id) 
@@ -769,7 +823,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                         <div>
                                             <h4 className="font-semibold mb-2">Consumption Details</h4>
-                                            <div className="space-y-1 rounded-md border p-4">
+                                             <div className="space-y-2 rounded-md border p-4 text-sm">
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Auto Refill:</span>
                                                     {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
@@ -778,17 +832,31 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <Badge variant="destructive">Disabled</Badge>
                                                     )}
                                                 </div>
+                                                <Separator/>
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Purchased Liters:</span>
-                                                    <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} L/mo</span>
+                                                    <span className="text-muted-foreground">Monthly Plan Liters:</span>
+                                                    <span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span>
                                                 </div>
-                                                 <div className="flex justify-between">
+                                                <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Bonus Liters:</span>
-                                                    <span className="font-medium">{(selectedUser.customPlanDetails?.bonusLiters || 0).toLocaleString()} L</span>
+                                                    <span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span>
                                                 </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-muted-foreground">Remaining Liters (Balance):</span>
-                                                    <span className="font-medium">{selectedUser.totalConsumptionLiters.toLocaleString()} L</span>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Rollover from Last Month:</span>
+                                                    <span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
+                                                </div>
+                                                <div className="flex justify-between font-semibold border-t pt-2 mt-1">
+                                                    <span className="text-foreground">Total for this Month:</span>
+                                                    <span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span>
+                                                </div>
+                                                 <Separator/>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Consumed this Month:</span>
+                                                    <span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                                                </div>
+                                                <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
+                                                    <span className="text-foreground">Current Balance:</span>
+                                                    <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -961,43 +1029,40 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {userDeliveriesLoading ? (
+                            {userDeliveriesData && userDeliveriesData.length > 0 ? (
+                                filteredDeliveries.map(delivery => {
+                                    const liters = delivery.volumeContainers * 19.5;
+                                    const isUploading = uploadProgress[`proof-${delivery.id}`] > 0 && uploadProgress[`proof-${delivery.id}`] < 100;
+                                    return (
+                                    <TableRow key={delivery.id}>
+                                        <TableCell>{delivery.id}</TableCell>
+                                        <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
+                                        <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
+                                        <TableCell>
+                                            <Badge>
+                                                {delivery.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right flex items-center justify-end gap-2">
+                                            {isUploading ? (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Progress value={uploadProgress[`proof-${delivery.id}`]} className="w-24 h-2" />
+                                                    <span className="text-xs text-muted-foreground">{Math.round(uploadProgress[`proof-${delivery.id}`] || 0)}%</span>
+                                                </div>
+                                            ) : delivery.proofOfDeliveryUrl ? (
+                                                <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
+                                            ) : (
+                                                <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin}>
+                                                    <Upload className="mr-2 h-3 w-3"/>
+                                                    Attach
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                )})
+                            ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center">Loading history...</TableCell>
-                                </TableRow>
-                            ) : filteredDeliveries.map(delivery => {
-                                const liters = delivery.volumeContainers * 19.5;
-                                const isUploading = uploadProgress[`proof-${delivery.id}`] > 0 && uploadProgress[`proof-${delivery.id}`] < 100;
-                                return (
-                                <TableRow key={delivery.id}>
-                                    <TableCell>{delivery.id}</TableCell>
-                                    <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                                    <TableCell>{liters.toLocaleString(undefined, {maximumFractionDigits: 0})}L / {delivery.volumeContainers} containers</TableCell>
-                                    <TableCell>
-                                         <Badge>
-                                            {delivery.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right flex items-center justify-end gap-2">
-                                        {isUploading ? (
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Progress value={uploadProgress[`proof-${delivery.id}`]} className="w-24 h-2" />
-                                                <span className="text-xs text-muted-foreground">{Math.round(uploadProgress[`proof-${delivery.id}`] || 0)}%</span>
-                                            </div>
-                                        ) : delivery.proofOfDeliveryUrl ? (
-                                             <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
-                                        ) : (
-                                            <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin}>
-                                                <Upload className="mr-2 h-3 w-3"/>
-                                                Attach
-                                            </Button>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            )})}
-                             {filteredDeliveries.length === 0 && !userDeliveriesLoading && (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center">No delivery history found for the selected date range.</TableCell>
+                                    <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
