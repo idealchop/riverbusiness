@@ -514,7 +514,7 @@ export default function DashboardPage() {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Liters / Containers</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Proof</TableHead>
+                                <TableHead>Attachment</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -945,4 +945,5 @@ export default function DashboardPage() {
     </div>
     );
 }
+
 
