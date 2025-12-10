@@ -222,6 +222,8 @@ export default function DashboardPage() {
     const monthlyPlanLiters = user?.customPlanDetails?.litersPerMonth || 0;
     const bonusLiters = user?.customPlanDetails?.bonusLiters || 0;
     const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
+    const weeklyContainers = user?.customPlanDetails?.gallonQuantity || 0;
+    const estimatedWeeklyLiters = containerToLiter(weeklyContainers);
     
     const autoRefill = user?.customPlanDetails?.autoRefillEnabled ?? true;
 
@@ -805,7 +807,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
-                            <p className="font-semibold text-sm">{user?.customPlanDetails?.litersPerMonth?.toLocaleString() || '0'} Liters</p>
+                            <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
                         </div>
                         <Button variant="outline" size="sm" className="w-full" onClick={() => setIsUpdateScheduleOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" />
@@ -956,3 +958,6 @@ export default function DashboardPage() {
     
 
 
+
+
+    
