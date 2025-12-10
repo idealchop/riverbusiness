@@ -297,7 +297,8 @@ export default function DashboardLayout({
 
     try {
       const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
-      await reauthenticateWithCredential(authUser, newPassword);
+      await reauthenticateWithCredential(authUser, credential);
+      await updatePassword(authUser, newPassword);
       
       toast({
           title: "Password Updated",
