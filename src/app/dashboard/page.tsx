@@ -130,34 +130,17 @@ export default function DashboardPage() {
         const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
         const totalLitersPurchased = monthlyPlanLiters + bonusLiters;
 
-        const now = new Date();
-        const createdAt = typeof (user.createdAt as any)?.toDate === 'function'
-            ? (user.createdAt as any).toDate()
-            : new Date(user.createdAt as string);
+        const totalConsumedLiters = (deliveries || []).reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
         
-        let cycleStart;
-        if (now.getDate() >= createdAt.getDate()) {
-            cycleStart = new Date(now.getFullYear(), now.getMonth(), createdAt.getDate());
-        } else {
-            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, createdAt.getDate());
-        }
+        const remainingLiters = totalLitersPurchased - totalConsumedLiters;
         
-        const cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleStart.getDate() -1);
-
-        const deliveriesInCycle = (deliveries || []).filter(d => {
-            const deliveryDate = new Date(d.date);
-            return deliveryDate >= cycleStart && deliveryDate <= cycleEnd;
-        });
-
-        const consumedLitersInCycle = deliveriesInCycle.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
-        const remainingLiters = totalLitersPurchased - consumedLitersInCycle;
-        
-        const consumedPercentage = totalLitersPurchased > 0 ? (consumedLitersInCycle / totalLitersPurchased) * 100 : 0;
+        const consumedPercentage = totalLitersPurchased > 0 ? (totalConsumedLiters / totalLitersPurchased) * 100 : 0;
         const remainingPercentage = totalLitersPurchased > 0 ? (Math.max(0, remainingLiters) / totalLitersPurchased) * 100 : 0;
+
 
         return {
             totalLitersPurchased,
-            consumedLiters: consumedLitersInCycle,
+            consumedLiters: totalConsumedLiters,
             remainingLiters,
             consumedPercentage,
             remainingPercentage,
