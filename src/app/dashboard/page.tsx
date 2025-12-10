@@ -114,7 +114,7 @@ export default function DashboardPage() {
         consumedPercentage,
         remainingPercentage,
     } = useMemo(() => {
-        if (!user || !user.plan || !user.createdAt) {
+        if (!user || !user.plan) {
             return {
                 totalLitersPurchased: 0,
                 consumedLiters: 0,
@@ -130,9 +130,9 @@ export default function DashboardPage() {
 
         const totalConsumedLiters = (deliveries || []).reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
         
-        const remainingLiters = user.totalConsumptionLiters; // Use the value from the document directly
+        const remainingLiters = totalLitersPurchased - totalConsumedLiters;
         
-        const consumedPercentage = totalLitersPurchased > 0 ? ((totalLitersPurchased - remainingLiters) / totalLitersPurchased) * 100 : 0;
+        const consumedPercentage = totalLitersPurchased > 0 ? (totalConsumedLiters / totalLitersPurchased) * 100 : 0;
         const remainingPercentage = totalLitersPurchased > 0 ? (Math.max(0, remainingLiters) / totalLitersPurchased) * 100 : 0;
 
 
@@ -945,3 +945,4 @@ export default function DashboardPage() {
     </div>
     );
 }
+
