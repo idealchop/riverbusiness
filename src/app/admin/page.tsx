@@ -393,6 +393,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const handleAttachPermit = (permitType: string, file: File, label: string) => {
         if (!stationToUpdate || !firestore) return;
+        setIsUploading(true);
         const storage = getStorage();
         const filePath = `stations/${stationToUpdate.id}/compliance/${permitType}-${file.name}`;
         const storageRef = ref(storage, filePath);
@@ -408,6 +409,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 console.error("Upload error:", error);
                 toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach the compliance document. Please try again.' });
                 setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
+                setIsUploading(false);
             },
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -424,13 +426,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
                 setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
                 setComplianceRefresher(c => c + 1); // Trigger a refresh
+                setIsUploading(false);
             }
         );
     };
 
     const handleCreateSanitationVisit = async (values: NewSanitationVisitFormValues) => {
         if (!stationToUpdate || !firestore) return;
-    
+        setIsUploading(true);
         let reportUrl = '';
         if (values.reportUrl && values.reportUrl.length > 0) {
             const file = values.reportUrl[0];
@@ -449,6 +452,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     (error) => {
                         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload sanitation report.' });
                         setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                        setIsUploading(false);
                         reject(error);
                     },
                     async () => {
@@ -475,6 +479,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Sanitation Visit Created", description: `A new sanitation visit has been scheduled.` });
         sanitationVisitForm.reset();
         setIsCreateSanitationVisitOpen(false);
+        setIsUploading(false);
     };
 
     const handleUploadProof = async () => {
@@ -496,6 +501,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
             },
             (error) => {
+                console.error("Upload error:", error);
                 toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach proof. Please try again.' });
                 setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                 setIsUploading(false);
@@ -519,6 +525,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or user context missing.' });
             return;
         };
+        setIsUploading(true);
         const storage = getStorage();
         const filePath = `userContracts/${userForContract.id}/latest_plan_contract.pdf`;
         const storageRef = ref(storage, filePath);
@@ -535,6 +542,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                  console.error("Upload error:", error);
                  toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach contract. Please try again.' });
                  setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+                 setIsUploading(false);
             },
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -555,6 +563,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 setIsUploadContractOpen(false);
                 setUserForContract(null);
                 setContractFile(null);
+                setIsUploading(false);
             }
         );
     };
@@ -562,6 +571,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
         if (!userForHistory || !firestore) return;
     
+        setIsUploading(true);
         let proofOfDeliveryUrl = '';
         if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
             const file = values.proofOfDeliveryUrl[0];
@@ -579,6 +589,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     }, 
                     (error) => {
                         setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                        setIsUploading(false);
                         reject(error);
                     },
                     async () => {
@@ -614,6 +625,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
         deliveryForm.reset();
         setIsCreateDeliveryOpen(false);
+        setIsUploading(false);
     };
 
     const handleUpdateDelivery = async (values: DeliveryFormValues) => {
@@ -749,6 +761,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const handleProfilePhotoUpload = async (file: File) => {
         if (!authUser || !firestore) return;
+        setIsUploading(true);
         const storage = getStorage();
         const filePath = `users/${authUser.uid}/profile/${file.name}`;
         const storageRef = ref(storage, filePath);
@@ -763,6 +776,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             (error) => {
               toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach your photo. Please try again.' });
               setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+              setIsUploading(false);
             },
             async () => {
                 const downloadURL = await getDownloadURL(storageRef);
@@ -770,6 +784,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
                 toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
                 setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+                setIsUploading(false);
             }
         );
     };
@@ -1193,7 +1208,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
+        <Dialog open={isCreateDeliveryOpen} onOpenChange={isCreateDeliveryOpen}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Create Manual Delivery</DialogTitle>
@@ -1208,7 +1223,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Tracking Number</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., DEL-00123" {...field} />
+                                        <Input placeholder="e.g., DEL-00123" {...field} disabled={isUploading} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -1229,6 +1244,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         "w-full text-left font-normal",
                                                         !field.value && "text-muted-foreground"
                                                     )}
+                                                    disabled={isUploading}
                                                 >
                                                     {field.value ? (
                                                         format(field.value, "PPP")
@@ -1260,7 +1276,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Volume (Containers)</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="e.g., 50" {...field} />
+                                        <Input type="number" placeholder="e.g., 50" {...field} disabled={isUploading} />
                                     </FormControl>
                                     <FormDescription>
                                         1 container = 19.5 liters. Total: { (watchedDeliveryContainers * 19.5).toLocaleString() } liters.
@@ -1275,7 +1291,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUploading}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a status" />
@@ -1298,7 +1314,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Proof of Delivery (Optional)</FormLabel>
                                     <FormControl>
-                                       <Input type="file" onChange={(e) => field.onChange(e.target.files)} />
+                                       <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isUploading} />
                                     </FormControl>
                                     {uploadProgress[`delivery-${deliveryForm.watch('trackingNumber')}`] > 0 && (
                                         <Progress value={uploadProgress[`delivery-${deliveryForm.watch('trackingNumber')}`]} className="mt-2" />
@@ -1314,15 +1330,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Admin Notes (Optional)</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} />
+                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} disabled={isUploading} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                            <Button type="submit">Create Delivery</Button>
+                            <DialogClose asChild><Button variant="secondary" disabled={isUploading}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isUploading}>
+                                {isUploading ? "Creating..." : "Create Delivery"}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -1511,14 +1529,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <DialogDescription>Attach a contract for {userForContract?.name}.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
-                    <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} />
+                    <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} disabled={isUploading} />
                      {userForContract && uploadProgress[`contract-${userForContract.id}`] > 0 && (
                         <Progress value={uploadProgress[`contract-${userForContract.id}`]} />
                     )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsUploadContractOpen(false)}>Cancel</Button>
-                    <Button onClick={handleUploadContract} disabled={!contractFile}>Attach</Button>
+                    <Button variant="outline" onClick={() => setIsUploadContractOpen(false)} disabled={isUploading}>Cancel</Button>
+                    <Button onClick={handleUploadContract} disabled={!contractFile || isUploading}>
+                        {isUploading ? 'Uploading...' : 'Attach'}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1545,7 +1565,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <h4 className="font-semibold">Profile Photo</h4>
                                         <p className="text-sm text-muted-foreground">Update your photo.</p>
                                         <div className="flex items-center gap-2">
-                                            <Button asChild variant="outline" size="sm">
+                                            <Button asChild variant="outline" size="sm" disabled={isUploading}>
                                                 <Label>
                                                     <Upload className="mr-2 h-4 w-4" />
                                                     Attach Photo
@@ -1813,7 +1833,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <FormField control={sanitationVisitForm.control} name="id" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Visit ID</FormLabel>
-                                <FormControl><Input placeholder="e.g., SV-001" {...field} /></FormControl>
+                                <FormControl><Input placeholder="e.g., SV-001" {...field} disabled={isUploading}/></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}/>
@@ -1823,7 +1843,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            <Button variant={"outline"} className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")} disabled={isUploading}>
                                                 {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                             </Button>
@@ -1839,14 +1859,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Assigned Technician</FormLabel>
-                                <FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl>
+                                <FormControl><Input placeholder="e.g., John Doe" {...field} disabled={isUploading}/></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}/>
                         <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUploading}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         <SelectItem value="Scheduled">Scheduled</SelectItem>
@@ -1860,7 +1880,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Sanitation Report (Optional)</FormLabel>
-                                <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} /></FormControl>
+                                <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isUploading}/></FormControl>
                                 {uploadProgress[`sanitation-${sanitationVisitForm.watch('id')}`] > 0 && (
                                     <Progress value={uploadProgress[`sanitation-${sanitationVisitForm.watch('id')}`]} className="mt-2" />
                                 )}
@@ -1868,8 +1888,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </FormItem>
                         )}/>
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                            <Button type="submit">Create Visit</Button>
+                            <DialogClose asChild><Button variant="secondary" disabled={isUploading}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isUploading}>{isUploading ? 'Creating...' : 'Create Visit'}</Button>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -1930,7 +1950,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     {complianceFields.map(field => {
                                         const report = complianceReports?.find(r => r.name === field.label);
                                         const progress = uploadProgress[field.key] || 0;
-                                        const isUploading = progress > 0 && progress < 100;
+                                        const isUploadingFile = progress > 0 && progress < 100;
 
                                         return (
                                         <TableRow key={field.key}>
@@ -1938,7 +1958,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableCell>
                                                  {report ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
-                                                ) : isUploading ? (
+                                                ) : isUploadingFile ? (
                                                     <Badge variant="secondary">Uploading...</Badge>
                                                 ) : (
                                                     <Badge variant="destructive">Needs Compliance</Badge>
@@ -1946,7 +1966,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    {isUploading ? (
+                                                    {isUploadingFile ? (
                                                       <Progress value={progress} className="w-24 h-2" />
                                                     ) : report ? (
                                                         <Button asChild variant="outline" size="sm">

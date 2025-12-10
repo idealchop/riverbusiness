@@ -141,6 +141,7 @@ export default function DashboardLayout({
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [isUploading, setIsUploading] = React.useState(false);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -215,6 +216,7 @@ export default function DashboardLayout({
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select an invoice and a file to upload.' });
       return;
     }
+    setIsUploading(true);
     const storage = getStorage();
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
     const storageRef = ref(storage, filePath);
@@ -231,6 +233,7 @@ export default function DashboardLayout({
             console.error("Upload error:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
             setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+            setIsUploading(false);
         },
         async () => {
             const downloadURL = await getDownloadURL(storageRef);
@@ -250,6 +253,7 @@ export default function DashboardLayout({
             setIsPaymentDialogOpen(false);
             setSelectedInvoice(null);
             setPaymentProofFile(null);
+            setIsUploading(false);
         }
     );
   };
@@ -357,7 +361,8 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async (file: File) => {
-    if (!authUser || !firestore) return;
+    if (!authUser || !firestore || !userDocRef) return;
+    setIsUploading(true);
     const storage = getStorage();
     const filePath = `users/${authUser.uid}/profile/${file.name}`;
     const storageRef = ref(storage, filePath);
@@ -373,12 +378,14 @@ export default function DashboardLayout({
         (error) => {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
             setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+            setIsUploading(false);
         },
         async () => {
             const downloadURL = await getDownloadURL(storageRef);
-            updateDocumentNonBlocking(userDocRef!, { photoURL: downloadURL });
+            updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
             toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
             setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
+            setIsUploading(false);
         }
     );
   };
@@ -626,7 +633,7 @@ export default function DashboardLayout({
                                                 <h4 className="font-semibold">Profile Photo</h4>
                                                 <p className="text-sm text-muted-foreground">Update your photo.</p>
                                                 <div className="flex items-center gap-2">
-                                                    <Button asChild variant="outline" size="sm">
+                                                    <Button asChild variant="outline" size="sm" disabled={isUploading}>
                                                         <Label>
                                                             <Upload className="mr-2 h-4 w-4" />
                                                             Upload Photo
@@ -910,11 +917,13 @@ export default function DashboardLayout({
                         <TabsContent value="upload" className="py-4">
                             <div className="grid gap-4">
                                 <Label htmlFor="payment-proof">Upload Screenshot or Document</Label>
-                                <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} />
+                                <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isUploading} />
                                 {selectedInvoice && uploadProgress[`payment-${selectedInvoice.id}`] > 0 && (
                                     <Progress value={uploadProgress[`payment-${selectedInvoice.id}`]} />
                                 )}
-                                <Button onClick={handleProofUpload} disabled={!paymentProofFile}>Submit for Verification</Button>
+                                <Button onClick={handleProofUpload} disabled={!paymentProofFile || isUploading}>
+                                    {isUploading ? 'Submitting...' : 'Submit for Verification'}
+                                </Button>
                             </div>
                         </TabsContent>
                     </Tabs>

@@ -14,15 +14,19 @@ service firebase.storage {
     }
 
     match /userContracts/{userId}/{fileName} {
-      allow read, write: if isAdmin();
-      allow read: if request.auth.uid == userId;
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow write: if isAdmin();
     }
     
     match /users/{userId}/deliveries/{deliveryId}/{fileName} {
-       allow read, write: if isAdmin();
-       allow read: if request.auth.uid == userId;
+       allow read: if request.auth.uid == userId || isAdmin();
+       allow write: if isAdmin();
     }
     
+    match /users/{userId}/payments/{paymentId}/{fileName} {
+       allow read, write: if request.auth.uid == userId;
+    }
+
     match /stations/{stationId}/compliance/{fileName} {
       allow read, write: if isAdmin();
       allow read: if request.auth != null;
