@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -586,7 +586,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
               setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             },
             async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const downloadURL = await getDownloadURL(storageRef);
                 const userRef = doc(firestore, 'users', authUser.uid);
                 updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
                 toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
@@ -790,6 +790,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Plan:</span>
                                             <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Auto Refill:</span>
+                                            {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
+                                                <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                            ) : (
+                                                <Badge variant="destructive">Disabled</Badge>
+                                            )}
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Purchased Liters:</span>
