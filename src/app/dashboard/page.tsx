@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
@@ -108,54 +108,54 @@ export default function DashboardPage() {
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
     const consumptionDetails = useMemo(() => {
-        if (!user || !user.plan || !user.createdAt) {
-            return {
-                monthlyPlanLiters: 0,
-                bonusLiters: 0,
-                rolloverLiters: 0,
-                totalLitersForMonth: 0,
-                consumedLitersThisMonth: 0,
-                currentBalance: user?.totalConsumptionLiters || 0,
-                consumedPercentage: 0,
-                remainingPercentage: 100,
-            };
-        }
-
-        const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
-        const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
-        const currentBalance = user.totalConsumptionLiters;
-        
         const now = new Date();
+        const emptyState = {
+            monthlyPlanLiters: 0,
+            bonusLiters: 0,
+            rolloverLiters: 0,
+            totalLitersForMonth: 0,
+            consumedLitersThisMonth: 0,
+            currentBalance: user?.totalConsumptionLiters || 0,
+            consumedPercentage: 0,
+            remainingPercentage: 100,
+        };
+
+        if (!user || !user.plan || !user.createdAt) {
+            return emptyState;
+        }
+    
         const createdAt = typeof (user.createdAt as any)?.toDate === 'function' 
             ? (user.createdAt as any).toDate() 
             : new Date(user.createdAt as string);
-
-        if (isNaN(createdAt.getTime())) return {
-             monthlyPlanLiters, bonusLiters, rolloverLiters: 0, totalLitersForMonth: monthlyPlanLiters + bonusLiters, consumedLitersThisMonth: 0, currentBalance, consumedPercentage: 0, remainingPercentage: 100
-        };
-
+    
+        if (isNaN(createdAt.getTime())) return emptyState;
+    
         const cycleDay = createdAt.getDate();
         let cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
         if (now < cycleStart) {
-            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
+            cycleStart = subMonths(cycleStart, 1);
         }
-        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay -1);
-        cycleEnd.setHours(23, 59, 59, 999);
-
-
+        let cycleEnd = endOfMonth(cycleStart);
+    
         const deliveriesThisCycle = (deliveries || []).filter(d => 
             isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
         );
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-
+    
+        const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
+        const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
-        // This calculation is a UI representation of what rollover should be.
-        const rolloverLiters = Math.max(0, currentBalance + consumedLitersThisMonth - totalMonthlyAllocation);
+    
+        // Rollover is what was left from the PREVIOUS cycle.
+        // It's the current DB balance PLUS what was consumed this month, MINUS this month's new allocation.
+        const rolloverLiters = Math.max(0, (user.totalConsumptionLiters || 0) + consumedLitersThisMonth - totalMonthlyAllocation);
+    
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
-        
+        const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
+
         const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
         const remainingPercentage = totalLitersForMonth > 0 ? (currentBalance / totalLitersForMonth) * 100 : 0;
-
+    
         return {
             monthlyPlanLiters,
             bonusLiters,
@@ -164,9 +164,8 @@ export default function DashboardPage() {
             consumedLitersThisMonth,
             currentBalance,
             consumedPercentage,
-            remainingPercentage
+            remainingPercentage,
         };
-
     }, [user, deliveries]);
 
     useEffect(() => {
@@ -968,6 +967,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-    
-    

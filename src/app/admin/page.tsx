@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
@@ -75,6 +75,8 @@ const newDeliverySchema = z.object({
     adminNotes: z.string().optional(),
 });
 type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
+
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
@@ -138,47 +140,48 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
     
     const consumptionDetails = React.useMemo(() => {
+        const now = new Date();
+        const emptyState = {
+            monthlyPlanLiters: 0,
+            bonusLiters: 0,
+            rolloverLiters: 0,
+            totalLitersForMonth: 0,
+            consumedLitersThisMonth: 0,
+            currentBalance: selectedUser?.totalConsumptionLiters || 0,
+        };
+
         if (!selectedUser || !selectedUser.plan || !selectedUser.createdAt) {
-            return {
-                monthlyPlanLiters: 0,
-                bonusLiters: 0,
-                rolloverLiters: 0,
-                totalLitersForMonth: 0,
-                consumedLitersThisMonth: 0,
-                currentBalance: selectedUser?.totalConsumptionLiters || 0,
-            };
+            return emptyState;
         }
 
-        const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
-        const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
-        const currentBalance = selectedUser.totalConsumptionLiters;
-        
-        const now = new Date();
         const createdAt = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
             ? (selectedUser.createdAt as any).toDate() 
             : new Date(selectedUser.createdAt as string);
 
-        if (isNaN(createdAt.getTime())) return {
-             monthlyPlanLiters, bonusLiters, rolloverLiters: 0, totalLitersForMonth: monthlyPlanLiters + bonusLiters, consumedLitersThisMonth: 0, currentBalance
-        };
+        if (isNaN(createdAt.getTime())) return emptyState;
 
         const cycleDay = createdAt.getDate();
         let cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
         if (now < cycleStart) {
-            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
+            cycleStart = subMonths(cycleStart, 1);
         }
-        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay -1);
-        cycleEnd.setHours(23, 59, 59, 999);
-
+        let cycleEnd = endOfMonth(cycleStart);
 
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => 
             isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
         );
-        const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + (d.volumeContainers * 19.5), 0);
+        const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
 
+        const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
+        const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
-        const rolloverLiters = Math.max(0, currentBalance + consumedLitersThisMonth - totalMonthlyAllocation);
+
+        // Rollover is what was left from the PREVIOUS cycle.
+        // It's the current DB balance PLUS what was consumed this month, MINUS this month's new allocation.
+        const rolloverLiters = Math.max(0, (selectedUser.totalConsumptionLiters || 0) + consumedLitersThisMonth - totalMonthlyAllocation);
+
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
+        const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
 
         return {
             monthlyPlanLiters,
@@ -188,7 +191,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             consumedLitersThisMonth,
             currentBalance,
         };
-
     }, [selectedUser, userDeliveriesData]);
 
 
@@ -200,6 +202,39 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     );
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
+
+    const generatedInvoices = React.useMemo(() => {
+        if (!selectedUser?.createdAt || !selectedUser.plan) return [];
+        
+        const invoices: Payment[] = [];
+        const now = new Date();
+        const createdAt = selectedUser.createdAt;
+        const startDate = typeof (createdAt as any)?.toDate === 'function' 
+            ? (createdAt as any).toDate() 
+            : new Date(createdAt as string);
+        
+        if (isNaN(startDate.getTime())) return [];
+
+        const months = differenceInMonths(now, startDate);
+    
+        for (let i = 0; i <= months; i++) {
+          const invoiceDate = addMonths(startDate, i);
+          invoices.push({
+            id: `INV-${format(invoiceDate, 'yyyyMM')}`,
+            date: invoiceDate.toISOString(),
+            description: `${selectedUser.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
+            amount: selectedUser.plan.price,
+            status: 'Upcoming', 
+          });
+        }
+  
+        const mergedInvoices = invoices.map(inv => {
+          const dbInvoice = userPaymentsData?.find(p => p.id === inv.id);
+          return dbInvoice ? { ...inv, ...dbInvoice } : inv;
+        });
+  
+        return mergedInvoices.reverse();
+    }, [selectedUser, userPaymentsData]);
 
     React.useEffect(() => {
       const handleUserSearch = (event: Event) => {
@@ -650,8 +685,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         );
     };
 
-    const containerToLiter = (containers: number) => (containers || 0) * 19.5;
-
     React.useEffect(() => {
         if(selectedUser) {
             const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
@@ -712,41 +745,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         { key: 'physicalChemicalTestUrl', label: 'Physical-Chemical' },
         { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
     ];
-
-    const generatedInvoices = React.useMemo(() => {
-        if (!selectedUser?.createdAt || !selectedUser.plan) return [];
-        
-        const invoices: Payment[] = [];
-        const now = new Date();
-        const createdAt = selectedUser.createdAt;
-        const startDate = typeof (createdAt as any)?.toDate === 'function' 
-            ? (createdAt as any).toDate() 
-            : new Date(createdAt as string);
-        
-        if (isNaN(startDate.getTime())) return [];
-
-        const months = differenceInMonths(now, startDate);
-    
-        for (let i = 0; i <= months; i++) {
-          const invoiceDate = addMonths(startDate, i);
-          invoices.push({
-            id: `INV-${format(invoiceDate, 'yyyyMM')}`,
-            date: invoiceDate.toISOString(),
-            description: `${selectedUser.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
-            amount: selectedUser.plan.price,
-            status: 'Upcoming', 
-          });
-        }
-  
-        const mergedInvoices = invoices.map(inv => {
-          const dbInvoice = userPaymentsData?.find(p => p.id === inv.id);
-          return dbInvoice ? { ...inv, ...dbInvoice } : inv;
-        });
-  
-        return mergedInvoices.reverse();
-    }, [selectedUser, userPaymentsData]);
       
-    
     const selectedUserPlanImage = React.useMemo(() => {
         if (!selectedUser?.clientType) return null;
         const clientTypeDetails = clientTypes.find(ct => ct.name === selectedUser.clientType);
@@ -787,9 +786,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TabsList>
                                 <TabsContent value="profile">
                                     <div className="space-y-4 text-sm">
-                                        <div>
-                                            <h4 className="font-semibold mb-2">User Profile</h4>
-                                            <div className="space-y-1 rounded-md border p-4">
+                                        <Card>
+                                            <CardHeader className="pb-2">
+                                                <CardTitle className="text-base">User Profile</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-1 text-sm pt-0">
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Client ID:</span>
                                                     <span className="font-medium">{selectedUser.clientId}</span>
@@ -818,12 +819,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <span className="text-muted-foreground">Last Login:</span>
                                                     <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
                                                 </div>
-                                            </div>
-                                        </div>
+                                            </CardContent>
+                                        </Card>
 
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Consumption Details</h4>
-                                             <div className="space-y-2 rounded-md border p-4 text-sm">
+                                        <Card>
+                                            <CardHeader className="pb-2">
+                                                <CardTitle className="text-base">Consumption Details</CardTitle>
+                                            </CardHeader>
+                                             <CardContent className="space-y-2 text-sm pt-0">
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Auto Refill:</span>
                                                     {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
@@ -858,8 +861,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <span className="text-foreground">Current Balance:</span>
                                                     <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
                                                 </div>
-                                            </div>
-                                        </div>
+                                            </CardContent>
+                                        </Card>
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="invoices">
