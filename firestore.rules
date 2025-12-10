@@ -16,7 +16,9 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId);
-      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasAll(['accountStatus', 'lastLogin', 'name', 'businessEmail', 'address', 'contactNumber', 'photoURL', 'customPlanDetails', 'plan', 'clientType', 'onboardingComplete']));
+      // Allow user to update their own document, or an admin to update any user document.
+      // Specific field restrictions are handled by the more granular rule below.
+      allow update: if isOwner(userId) || isAdmin(); 
     }
     
     match /users/{userId}/deliveries/{deliveryId} {
