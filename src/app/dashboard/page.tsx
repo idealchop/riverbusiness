@@ -843,6 +843,7 @@ export default function DashboardPage() {
                                     borderRadius: 'var(--radius)',
                                 }}
                                 labelStyle={{color: 'hsl(var(--foreground))'}}
+                                formatter={(value: number, name: string) => [`${value.toLocaleString()} Liters`, 'Consumption']}
                             />
                             <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
                         </BarChart>
@@ -945,5 +946,6 @@ export default function DashboardPage() {
     </div>
     );
 }
+
 
 
