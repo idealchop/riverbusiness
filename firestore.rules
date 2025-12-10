@@ -15,10 +15,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      // Allow user to update their own document, or an admin to update any user document.
-      // Specific field restrictions are handled by the more granular rule below.
-      allow update: if isOwner(userId) || isAdmin(); 
+      // Allow a user to create and update their own document.
+      // This single rule handles both onboarding (create) and subsequent logins (update).
+      allow write: if isOwner(userId);
     }
     
     match /users/{userId}/deliveries/{deliveryId} {
