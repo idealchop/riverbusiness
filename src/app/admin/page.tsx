@@ -122,7 +122,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isCreateSanitationVisitOpen, setIsCreateSanitationVisitOpen] = React.useState(false);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
     const [complianceRefresher, setComplianceRefresher] = React.useState(0);
-
+    const [isScheduleDialogOpen, setIsScheduleDialogOpen] = React.useState(false);
+    const [userForSchedule, setUserForSchedule] = React.useState<AppUser | null>(null);
 
     const userDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
@@ -1429,6 +1430,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
                                                 ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
                                                 : 'N/A';
+                                            const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
                                             return (
                                             <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                                 <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
@@ -1440,11 +1442,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {user.customPlanDetails?.autoRefillEnabled ?? true ? (
-                                                        <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive">Disabled</Badge>
-                                                    )}
+                                                    <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
+                                                        {autoRefillEnabled ? (
+                                                            <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                        ) : (
+                                                            <Badge variant="destructive">Disabled</Badge>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap">{schedule}</TableCell>
                                                 <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
@@ -1533,6 +1537,31 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <DialogFooter>
                     <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
                     <Button onClick={handleAssignStation}>Assign</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delivery Schedule for {userForSchedule?.businessName}</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                    {userForSchedule?.customPlanDetails?.autoRefillEnabled ?? true ? (
+                        <div>
+                            <DialogDescription>Auto-refill is enabled. The recurring delivery is scheduled for:</DialogDescription>
+                            <p className="font-bold text-lg mt-2">
+                                {userForSchedule?.customPlanDetails?.deliveryDay}, {userForSchedule?.customPlanDetails?.deliveryTime}
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <DialogDescription>Auto-refill is disabled. Deliveries are scheduled manually by the user.</DialogDescription>
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsScheduleDialogOpen(false)}>Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
