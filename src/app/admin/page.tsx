@@ -1419,11 +1419,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Client ID</TableHead>
                                             <TableHead>Business Name</TableHead>
                                             <TableHead>Status</TableHead>
+                                            <TableHead>Auto Refill</TableHead>
+                                            <TableHead>Delivery Schedule</TableHead>
                                             <TableHead>Assigned Station</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredUsers.map((user) => {
+                                            const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
+                                                ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
+                                                : 'N/A';
                                             return (
                                             <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                                 <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
@@ -1434,6 +1439,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <span>{user.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
                                                     </div>
                                                 </TableCell>
+                                                <TableCell>
+                                                    {user.customPlanDetails?.autoRefillEnabled ?? true ? (
+                                                        <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive">Disabled</Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">{schedule}</TableCell>
                                                 <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                             </TableRow>
                                         )})}
