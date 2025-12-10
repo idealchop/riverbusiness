@@ -482,7 +482,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsUploading(false);
     };
 
-    const handleUploadProof = async () => {
+    const handleUploadProof = () => {
         if (!deliveryToUpdate || !userForHistory || !firestore || !deliveryProofFile) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
             return;
@@ -1029,7 +1029,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <History className="mr-2 h-4 w-4" />
                                         Delivery History
                                     </Button>
-                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
+                                    <Button onClick={()={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
                                         <Building className="mr-2 h-4 w-4" />
                                         Assign Station
                                     </Button>
@@ -1465,7 +1465,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => { setDeliveryToUpdate(null); setDeliveryProofFile(null); }} disabled={isUploading}>Cancel</Button>
+                    <Button variant="outline" onClick={()={() => { setDeliveryToUpdate(null); setDeliveryProofFile(null); }} disabled={isUploading}>Cancel</Button>
                     <Button onClick={handleUploadProof} disabled={!deliveryProofFile || isUploading}>
                         {isUploading ? "Uploading..." : "Attach"}
                     </Button>
@@ -1645,7 +1645,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <div className="relative">
                         <Label htmlFor="new-password">New Password</Label>
                         <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowNewPassword(!showNewPassword)}>
+                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={()={() => setShowNewPassword(!showNewPassword)}>
                             {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -1694,7 +1694,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 : 'N/A';
                                             const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
                                             return (
-                                            <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
+                                            <TableRow key={user.id} onClick={()={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                                 <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                 <TableCell>
@@ -1727,7 +1727,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         
                         <TabsContent value="water-stations">
                             <div className="flex justify-end mb-4">
-                               <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
+                               <Button onClick={()={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
                             </div>
                             <div className="overflow-x-auto">
                                <Table>
@@ -1755,7 +1755,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="outline" size="sm" onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
+                                                    <Button variant="outline" size="sm" onClick={()={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
                                                         <UserCog className="mr-2 h-4 w-4"/>
                                                         Manage
                                                     </Button>
