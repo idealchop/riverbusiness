@@ -15,15 +15,14 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      // Admins can update any field. Users can only update a limited set of fields.
-      allow write: if isAdmin() || 
-                   (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accountStatus', 'lastLogin', 'name', 'businessEmail', 'address', 'contactNumber', 'photoURL', 'customPlanDetails']));
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasAll(['accountStatus', 'lastLogin', 'name', 'businessEmail', 'address', 'contactNumber', 'photoURL', 'customPlanDetails', 'plan', 'clientType', 'onboardingComplete']));
     }
     
     match /users/{userId}/deliveries/{deliveryId} {
       allow read, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId); // Allow users to create their own deliveries
-      allow update, delete: if isAdmin(); // Only admins can update/delete
+      allow create: if isOwner(userId) || isAdmin(); 
+      allow update, delete: if isAdmin();
     }
 
     match /users/{userId}/payments/{paymentId} {
