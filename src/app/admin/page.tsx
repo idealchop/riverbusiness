@@ -66,7 +66,7 @@ const adjustConsumptionSchema = z.object({
 });
 type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
 
-const newDeliverySchema = z.object({
+const deliveryFormSchema = z.object({
     trackingNumber: z.string().min(1, 'Tracking Number is required'),
     date: z.date({ required_error: 'Date is required.'}),
     volumeContainers: z.coerce.number().min(1, 'Volume is required.'),
@@ -74,7 +74,8 @@ const newDeliverySchema = z.object({
     proofOfDeliveryUrl: z.any().optional(),
     adminNotes: z.string().optional(),
 });
-type NewDeliveryFormValues = z.infer<typeof newDeliverySchema>;
+type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
+
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -107,6 +108,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isAssignStationOpen, setIsAssignStationOpen] = React.useState(false);
     const [stationToAssign, setStationToAssign] = React.useState<string | undefined>();
     const [isCreateDeliveryOpen, setIsCreateDeliveryOpen] = React.useState(false);
+    const [isEditDeliveryOpen, setIsEditDeliveryOpen] = React.useState(false);
+    const [deliveryToEdit, setDeliveryToEdit] = React.useState<Delivery | null>(null);
     const [isUploadContractOpen, setIsUploadContractOpen] = React.useState(false);
     const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
     const [contractFile, setContractFile] = React.useState<File | null>(null);
@@ -154,36 +157,55 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             return emptyState;
         }
 
-        const createdAt = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
+        const createdAtDate = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
             ? (selectedUser.createdAt as any).toDate() 
             : new Date(selectedUser.createdAt as string);
 
-        if (isNaN(createdAt.getTime())) return emptyState;
+        if (isNaN(createdAtDate.getTime())) return emptyState;
 
-        const cycleDay = createdAt.getDate();
+        const cycleDay = createdAtDate.getDate();
         let cycleStart, cycleEnd;
         
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
         if (now.getDate() >= cycleDay) {
-            cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
+            cycleStart = new Date(currentYear, currentMonth, cycleDay);
+            cycleEnd = new Date(currentYear, currentMonth + 1, cycleDay - 1);
         } else {
-            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
+            cycleStart = new Date(currentYear, currentMonth - 1, cycleDay);
+            cycleEnd = new Date(currentYear, currentMonth, cycleDay - 1);
         }
-        cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
         cycleEnd.setHours(23, 59, 59, 999);
 
 
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => 
-            isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
+            d.status === 'Delivered' && isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
         );
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
 
         const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+        
+        let lastCycleStart, lastCycleEnd;
+        if (now.getDate() >= cycleDay) {
+            lastCycleStart = subMonths(cycleStart, 1);
+            lastCycleEnd = subMonths(cycleEnd, 1);
+        } else {
+            lastCycleStart = subMonths(cycleStart, 1);
+            lastCycleEnd = subMonths(cycleEnd, 1);
+        }
+        lastCycleEnd.setHours(23, 59, 59, 999);
 
-        // Rollover is what was left from the PREVIOUS cycle.
-        // It's the current DB balance PLUS what was consumed this month, MINUS this month's new allocation.
-        const rolloverLiters = Math.max(0, (selectedUser.totalConsumptionLiters || 0) + consumedLitersThisMonth - totalMonthlyAllocation);
+        const deliveriesLastCycle = (userDeliveriesData || []).filter(d => 
+            d.status === 'Delivered' && isWithinInterval(new Date(d.date), { start: lastCycleStart, end: lastCycleEnd })
+        );
+        const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        
+        // This is a proxy for what the balance would have been at the start of THIS cycle.
+        const balanceAtStartOfCycle = (selectedUser.totalConsumptionLiters || 0) + consumedLitersThisMonth;
+        const rolloverLiters = Math.max(0, balanceAtStartOfCycle - totalMonthlyAllocation);
 
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
@@ -286,9 +308,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { name: '', location: '' },
     });
 
-    const deliveryForm = useForm<NewDeliveryFormValues>({
-        resolver: zodResolver(newDeliverySchema),
+    const deliveryForm = useForm<DeliveryFormValues>({
+        resolver: zodResolver(deliveryFormSchema),
         defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending', adminNotes: '' },
+    });
+
+    const editDeliveryForm = useForm<DeliveryFormValues>({
+        resolver: zodResolver(deliveryFormSchema),
     });
     
     const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
@@ -308,6 +334,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             stationForm.reset({ name: '', location: '' });
         }
     }, [stationToUpdate, stationForm, isStationProfileOpen]);
+    
+    React.useEffect(() => {
+        if (deliveryToEdit) {
+            editDeliveryForm.reset({
+                trackingNumber: deliveryToEdit.id,
+                date: new Date(deliveryToEdit.date),
+                volumeContainers: deliveryToEdit.volumeContainers,
+                status: deliveryToEdit.status,
+                adminNotes: deliveryToEdit.adminNotes || '',
+            });
+            setIsEditDeliveryOpen(true);
+        }
+    }, [deliveryToEdit, editDeliveryForm]);
 
     const handleSaveStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
@@ -526,7 +565,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         );
     };
 
-    const handleCreateDelivery = async (values: NewDeliveryFormValues) => {
+    const handleCreateDelivery = async (values: DeliveryFormValues) => {
         if (!userForHistory || !firestore) return;
     
         let proofOfDeliveryUrl = '';
@@ -581,6 +620,35 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
         deliveryForm.reset();
         setIsCreateDeliveryOpen(false);
+    };
+
+    const handleUpdateDelivery = async (values: DeliveryFormValues) => {
+        if (!deliveryToEdit || !userForHistory || !firestore) return;
+    
+        const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToEdit.id);
+        
+        const updatedData = {
+            date: values.date.toISOString(),
+            volumeContainers: values.volumeContainers,
+            status: values.status,
+            adminNotes: values.adminNotes || '',
+        };
+    
+        // Calculate consumption adjustment if status or volume changed
+        const oldLiters = (deliveryToEdit.status === 'Delivered') ? containerToLiter(deliveryToEdit.volumeContainers) : 0;
+        const newLiters = (values.status === 'Delivered') ? containerToLiter(values.volumeContainers) : 0;
+        const adjustment = newLiters - oldLiters;
+    
+        await updateDocumentNonBlocking(deliveryRef, updatedData);
+    
+        if (adjustment !== 0) {
+            const userRef = doc(firestore, 'users', userForHistory.id);
+            await updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-adjustment) });
+        }
+    
+        toast({ title: "Delivery Updated", description: `Delivery ${deliveryToEdit.id} has been successfully updated.` });
+        setIsEditDeliveryOpen(false);
+        setDeliveryToEdit(null);
     };
 
     const handleLogout = () => {
@@ -704,6 +772,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [watchedContainers, adjustConsumptionForm]);
 
     const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
+    const watchedEditDeliveryContainers = editDeliveryForm.watch('volumeContainers');
 
     
     const filteredUsers = appUsers?.filter(user => user.role !== 'Admin') || [];
@@ -1033,7 +1102,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Volume</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Proof of Delivery</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1051,20 +1120,29 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 {delivery.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right flex items-center justify-end gap-2">
-                                            {isUploading ? (
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Progress value={uploadProgress[`proof-${delivery.id}`]} className="w-24 h-2" />
-                                                    <span className="text-xs text-muted-foreground">{Math.round(uploadProgress[`proof-${delivery.id}`] || 0)}%</span>
-                                                </div>
-                                            ) : delivery.proofOfDeliveryUrl ? (
-                                                <Button variant="link" size="sm" onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>View</Button>
-                                            ) : (
-                                                <Button variant="outline" size="sm" onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin}>
-                                                    <Upload className="mr-2 h-3 w-3"/>
-                                                    Attach
-                                                </Button>
-                                            )}
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => setDeliveryToEdit(delivery)} disabled={!isAdmin}>
+                                                        <Edit className="mr-2 h-4 w-4" />
+                                                        Edit Delivery
+                                                    </DropdownMenuItem>
+                                                    {delivery.proofOfDeliveryUrl ? (
+                                                         <DropdownMenuItem onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View Proof
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <DropdownMenuItem onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin || isUploading}>
+                                                            <Upload className="mr-2 h-4 w-4" />
+                                                            {isUploading ? 'Uploading...' : 'Attach Proof'}
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 )})
@@ -1214,6 +1292,98 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </Form>
             </DialogContent>
         </Dialog>
+        
+        <Dialog open={isEditDeliveryOpen} onOpenChange={setIsEditDeliveryOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Edit Delivery</DialogTitle>
+                    <DialogDescription>Update the details for delivery ID: {deliveryToEdit?.id}</DialogDescription>
+                </DialogHeader>
+                <Form {...editDeliveryForm}>
+                    <form onSubmit={editDeliveryForm.handleSubmit(handleUpdateDelivery)} className="space-y-4 py-4">
+                         <FormField
+                            control={editDeliveryForm.control}
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Delivery Date</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button variant={"outline"} className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={editDeliveryForm.control}
+                            name="volumeContainers"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Volume (Containers)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                        1 container = 19.5 liters. Total: { (watchedEditDeliveryContainers * 19.5).toLocaleString() } liters.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={editDeliveryForm.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a status" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Pending">Pending</SelectItem>
+                                            <SelectItem value="In Transit">In Transit</SelectItem>
+                                            <SelectItem value="Delivered">Delivered</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={editDeliveryForm.control}
+                            name="adminNotes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Admin Notes (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="Update notes for this delivery..." {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                             <Button variant="secondary" onClick={() => setIsEditDeliveryOpen(false)}>Cancel</Button>
+                            <Button type="submit">Save Changes</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
 
         <Dialog open={!!selectedProofUrl} onOpenChange={(open) => !open && setSelectedProofUrl(null)}>
             <DialogContent>
@@ -1847,6 +2017,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
-
