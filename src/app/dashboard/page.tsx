@@ -38,8 +38,9 @@ const perks = [
         image: "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPartners%2FNewBreed.png?alt=media&token=51a87e73-21f0-448c-9596-cc4a7016ad27",
         subtitle: "6 locations currently and continuously growing",
         discounts: [
-            "20% membership discounts",
-            "1 monthly free session"
+            { title: "50% membership discounts" },
+            { title: "1 monthly free session (free)" },
+            { title: "1 Structured Class in the office", description: "physical activity for better engagement and productivity" }
         ],
         websiteUrl: "https://www.newbreed.com",
         mapUrl: "https://www.google.com/maps/search/?api=1&query=New+Breed+Fitness"
@@ -137,7 +138,7 @@ export default function DashboardPage() {
 
         return {
             totalLitersPurchased,
-            consumedLiters: totalLitersPurchased - remainingLiters,
+            consumedLiters: totalConsumedLiters,
             remainingLiters,
             consumedPercentage,
             remainingPercentage,
@@ -875,7 +876,7 @@ export default function DashboardPage() {
                             {perks.map((perk, index) => (
                                 <Card key={index} className="overflow-hidden">
                                     <div className="relative h-40 w-full">
-                                        <Image src={perk.image} alt={perk.brand} fill objectFit="cover" />
+                                        <Image src={perk.image} alt={perk.brand} fill style={{ objectFit: 'cover' }} />
                                     </div>
                                     <CardHeader>
                                         <CardTitle>{perk.brand}</CardTitle>
@@ -886,7 +887,10 @@ export default function DashboardPage() {
                                             {perk.discounts.map((discount, i) => (
                                                 <li key={i} className="flex items-start">
                                                     <CheckCircle className="h-4 w-4 mr-2 mt-1 shrink-0 text-green-500" />
-                                                    <span>{discount}</span>
+                                                    <div>
+                                                        <span className="font-medium">{discount.title}</span>
+                                                        {discount.description && <p className="text-xs text-muted-foreground">{discount.description}</p>}
+                                                    </div>
                                                 </li>
                                             ))}
                                         </ul>
