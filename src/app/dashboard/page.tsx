@@ -66,9 +66,6 @@ export default function DashboardPage() {
     const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
 
-    const scheduleDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'schedules', 'currentSchedule') : null, [firestore]);
-    const { data: schedule, isLoading: isScheduleLoading } = useDoc<Schedule>(scheduleDocRef);
-
     const [greeting, setGreeting] = useState('');
     
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = useState(false);
@@ -342,7 +339,7 @@ export default function DashboardPage() {
         setConsumptionMetric('liters');
     };
     
-    if (isUserLoading || areDeliveriesLoading || isScheduleLoading) {
+    if (isUserLoading || areDeliveriesLoading) {
       return <div>Loading dashboard...</div>
     }
 
@@ -495,34 +492,6 @@ export default function DashboardPage() {
             </Dialog>
         </div>
         
-        <Card className="col-span-1 lg:col-span-4">
-             <CardHeader>
-                <CardTitle>Current Delivery Schedule</CardTitle>
-                <CardDescription>This is the global delivery schedule set by the administrator.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {schedule ? (
-                    <div className="grid md:grid-cols-3 gap-4 text-center">
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Delivery Date</p>
-                            <p className="text-xl font-bold">{schedule.deliveryDate ? format(new Date(schedule.deliveryDate), 'PPP') : 'Not set'}</p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Cut-off Time</p>
-                            <p className="text-xl font-bold">{schedule.cutOffTime || 'Not set'}</p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Notes</p>
-                            <p className="text-md">{schedule.notes || 'No notes from admin.'}</p>
-                        </div>
-                    </div>
-                ) : (
-                    <p className="text-center text-muted-foreground">No schedule has been set by the admin yet.</p>
-                )}
-            </CardContent>
-        </Card>
-
-
         <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
@@ -985,4 +954,5 @@ export default function DashboardPage() {
     
 
     
+
 
