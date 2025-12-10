@@ -131,11 +131,15 @@ export default function DashboardPage() {
         if (isNaN(createdAt.getTime())) return emptyState;
     
         const cycleDay = createdAt.getDate();
-        let cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
-        if (now < cycleStart) {
-            cycleStart = subMonths(cycleStart, 1);
+        let cycleStart;
+        if (now.getDate() >= cycleDay) {
+            cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
+        } else {
+            cycleStart = new Date(now.getFullYear(), now.getMonth() - 1, cycleDay);
         }
-        let cycleEnd = endOfMonth(cycleStart);
+        let cycleEnd = new Date(cycleStart.getFullYear(), cycleStart.getMonth() + 1, cycleDay - 1);
+        cycleEnd.setHours(23, 59, 59, 999);
+
     
         const deliveriesThisCycle = (deliveries || []).filter(d => 
             isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd })
@@ -967,3 +971,5 @@ export default function DashboardPage() {
     </div>
     );
 }
+
+    
