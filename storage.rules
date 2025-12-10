@@ -19,22 +19,20 @@ service firebase.storage {
     }
     
     match /users/{userId}/deliveries/{deliveryId}/{fileName} {
-       allow write: if isAdmin();
+       // Admins can upload and view. The specific user can also view.
+       allow read, write: if isAdmin();
+       allow read: if request.auth.uid == userId;
     }
     
     match /stations/{stationId}/compliance/{fileName} {
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
+      allow read: if request.auth != null;
     }
 
     match /stations/{stationId}/sanitation/{visitId}/{fileName} {
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
+      allow read: if request.auth != null;
     }
 
-    // Admins can read all files. This is a broad rule.
-    match /{allPaths=**} {
-      allow read: if isAdmin();
-    }
   }
 }
-
-    
