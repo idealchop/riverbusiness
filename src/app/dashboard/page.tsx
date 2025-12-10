@@ -149,6 +149,7 @@ export default function DashboardPage() {
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
 
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+        // This calculation is a UI representation of what rollover should be.
         const rolloverLiters = Math.max(0, currentBalance + consumedLitersThisMonth - totalMonthlyAllocation);
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         
@@ -968,4 +969,5 @@ export default function DashboardPage() {
     );
 }
 
+    
     
