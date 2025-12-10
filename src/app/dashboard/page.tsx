@@ -38,9 +38,9 @@ const perks = [
         image: "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPartners%2FNewBreed.png?alt=media&token=51a87e73-21f0-448c-9596-cc4a7016ad27",
         subtitle: "6 locations currently and continuously growing",
         discounts: [
-            { title: "50% membership discounts" },
-            { title: "1 monthly free session (free)" },
-            { title: "1 Structured Class in the office", description: "physical activity for better engagement and productivity" }
+            { title: "50% Membership Discount" },
+            { title: "1 Free Monthly Session" },
+            { title: "On-site Structured Class", description: "Boost team wellness with a guided physical activity session at your office." }
         ],
         websiteUrl: "https://www.newbreed.com",
         mapUrl: "https://www.google.com/maps/search/?api=1&query=New+Breed+Fitness"
