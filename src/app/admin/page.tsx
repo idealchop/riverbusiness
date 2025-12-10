@@ -104,6 +104,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [adjustmentType, setAdjustmentType] = React.useState<'add' | 'deduct'>('deduct');
     const [selectedProofUrl, setSelectedProofUrl] = React.useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = React.useState<Delivery | null>(null);
+    const [deliveryProofFile, setDeliveryProofFile] = React.useState<File | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
     const [isStationProfileOpen, setIsStationProfileOpen] = React.useState(false);
     const [isAssignStationOpen, setIsAssignStationOpen] = React.useState(false);
@@ -477,14 +478,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsCreateSanitationVisitOpen(false);
     };
 
-    const handleUploadProof = async (file: File) => {
-        if (!deliveryToUpdate || !userForHistory || !firestore) return;
+    const handleUploadProof = async () => {
+        if (!deliveryToUpdate || !userForHistory || !firestore || !deliveryProofFile) {
+            toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
+            return;
+        }
         const storage = getStorage();
-        const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${file.name}`;
+        const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${deliveryProofFile.name}`;
         const storageRef = ref(storage, filePath);
 
         const uploadKey = `proof-${deliveryToUpdate.id}`;
-        const uploadTask = uploadBytesResumable(storageRef, file);
+        const uploadTask = uploadBytesResumable(storageRef, deliveryProofFile);
 
         uploadTask.on('state_changed',
             (snapshot) => {
@@ -503,6 +507,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 toast({ title: "Proof Attached", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
                 setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                 setDeliveryToUpdate(null);
+                setDeliveryProofFile(null);
             }
         );
     };
@@ -1427,24 +1432,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => !open && setDeliveryToUpdate(null)}>
+        <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => { if (!open) { setDeliveryToUpdate(null); setDeliveryProofFile(null); } }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Attach Proof of Delivery</DialogTitle>
                     <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
-                    <Input type="file" onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                            handleUploadProof(e.target.files[0]);
-                        }
-                    }}/>
-                    {deliveryToUpdate && uploadProgress[`proof-${deliveryToUpdate?.id}`] > 0 && (
-                        <Progress value={uploadProgress[`proof-${deliveryToUpdate?.id}`]} />
+                    <Input type="file" onChange={(e) => setDeliveryProofFile(e.target.files?.[0] || null)} />
+                    {deliveryToUpdate && uploadProgress[`proof-${deliveryToUpdate.id}`] > 0 && (
+                        <Progress value={uploadProgress[`proof-${deliveryToUpdate.id}`]} />
                     )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setDeliveryToUpdate(null)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => { setDeliveryToUpdate(null); setDeliveryProofFile(null); }}>Cancel</Button>
+                    <Button onClick={handleUploadProof} disabled={!deliveryProofFile}>Attach</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
