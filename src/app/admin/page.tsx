@@ -1420,13 +1420,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Business Name</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Assigned Station</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredUsers.map((user) => {
                                             return (
-                                            <TableRow key={user.id}>
+                                            <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                                 <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                                 <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                 <TableCell>
@@ -1436,21 +1435,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}}>
-                                                                <Users2 className="mr-2 h-4 w-4" />
-                                                                Client's Profile
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
                                             </TableRow>
                                         )})}
                                         {filteredUsers.length === 0 && !usersLoading && (
