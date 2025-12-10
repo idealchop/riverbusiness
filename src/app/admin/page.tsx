@@ -726,56 +726,71 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                                     </div>
                                 </div>
-                                <Separator/>
+                                
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="profile">Profile</TabsTrigger>
                                     <TabsTrigger value="invoices">Invoice History</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="profile">
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Client ID:</span>
-                                            <span className="font-medium">{selectedUser.clientId}</span>
+                                    <div className="space-y-4 text-sm">
+                                        <div>
+                                            <h4 className="font-semibold mb-2">User Profile</h4>
+                                            <div className="space-y-1 rounded-md border p-4">
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Client ID:</span>
+                                                    <span className="font-medium">{selectedUser.clientId}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Business Name:</span>
+                                                    <span className="font-medium">{selectedUser.businessName}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Contact Person:</span>
+                                                    <span className="font-medium">{selectedUser.name}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Plan:</span>
+                                                    <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
+                                                </div>
+                                                 <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Role:</span>
+                                                    <span className="font-medium">{selectedUser.role}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Assigned Station:</span>
+                                                    <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Last Login:</span>
+                                                    <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Business Name:</span>
-                                            <span className="font-medium">{selectedUser.businessName}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Contact Person:</span>
-                                            <span className="font-medium">{selectedUser.name}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Plan:</span>
-                                            <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Auto Refill:</span>
-                                            {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
-                                                <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                            ) : (
-                                                <Badge variant="destructive">Disabled</Badge>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Purchased Liters:</span>
-                                            <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} Liters/Month</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Remaining Liters (Balance):</span>
-                                            <span className="font-medium">{selectedUser.totalConsumptionLiters.toLocaleString()} Liters</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Assigned Station:</span>
-                                            <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Role:</span>
-                                            <span className="font-medium">{selectedUser.role}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Last Login:</span>
-                                            <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
+
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Consumption Details</h4>
+                                            <div className="space-y-1 rounded-md border p-4">
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Auto Refill:</span>
+                                                    {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
+                                                        <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive">Disabled</Badge>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Purchased Liters:</span>
+                                                    <span className="font-medium">{(selectedUser.customPlanDetails?.litersPerMonth || 0).toLocaleString()} L/mo</span>
+                                                </div>
+                                                 <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Bonus Liters:</span>
+                                                    <span className="font-medium">{(selectedUser.customPlanDetails?.bonusLiters || 0).toLocaleString()} L</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground">Remaining Liters (Balance):</span>
+                                                    <span className="font-medium">{selectedUser.totalConsumptionLiters.toLocaleString()} L</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </TabsContent>
