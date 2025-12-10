@@ -117,7 +117,7 @@ export default function DashboardPage() {
                 consumedLitersThisMonth: 0,
                 currentBalance: user?.totalConsumptionLiters || 0,
                 consumedPercentage: 0,
-                remainingPercentage: 0,
+                remainingPercentage: 100,
             };
         }
 
@@ -129,12 +129,10 @@ export default function DashboardPage() {
         const createdAt = typeof (user.createdAt as any)?.toDate === 'function' 
             ? (user.createdAt as any).toDate() 
             : new Date(user.createdAt as string);
-        
-        if (isNaN(createdAt.getTime())) {
-            return {
-                monthlyPlanLiters, bonusLiters, rolloverLiters: 0, totalLitersForMonth: monthlyPlanLiters + bonusLiters, consumedLitersThisMonth: 0, currentBalance, consumedPercentage: 0, remainingPercentage: 100
-            };
-        }
+
+        if (isNaN(createdAt.getTime())) return {
+             monthlyPlanLiters, bonusLiters, rolloverLiters: 0, totalLitersForMonth: monthlyPlanLiters + bonusLiters, consumedLitersThisMonth: 0, currentBalance, consumedPercentage: 0, remainingPercentage: 100
+        };
 
         const cycleDay = createdAt.getDate();
         let cycleStart = new Date(now.getFullYear(), now.getMonth(), cycleDay);
