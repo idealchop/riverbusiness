@@ -132,6 +132,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [complianceRefresher, setComplianceRefresher] = React.useState(0);
     const [isScheduleDialogOpen, setIsScheduleDialogOpen] = React.useState(false);
     const [userForSchedule, setUserForSchedule] = React.useState<AppUser | null>(null);
+    const [isUploading, setIsUploading] = React.useState(false);
 
     const userDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
@@ -183,7 +184,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         let rolloverLiters = 0;
         
-        // Calculate rollover only if the user was created before the start of the previous month
         if (createdAtDate < lastCycleStart) {
             const deliveriesLastCycle = userDeliveriesData.filter(d => {
                 const deliveryDate = new Date(d.date);
@@ -191,7 +191,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
             const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
             
-            // Rollover is the total allocation from last month minus what was consumed last month. Cannot be negative.
             rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
         }
     
@@ -483,6 +482,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
             return;
         }
+        setIsUploading(true);
         const storage = getStorage();
         const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${deliveryProofFile.name}`;
         const storageRef = ref(storage, filePath);
@@ -498,6 +498,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             (error) => {
                 toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach proof. Please try again.' });
                 setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                setIsUploading(false);
             },
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
@@ -508,6 +509,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                 setDeliveryToUpdate(null);
                 setDeliveryProofFile(null);
+                setIsUploading(false);
             }
         );
     };
@@ -1123,7 +1125,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             {userDeliveriesData && userDeliveriesData.length > 0 ? (
                                 filteredDeliveries.map(delivery => {
                                     const liters = delivery.volumeContainers * 19.5;
-                                    const isUploading = uploadProgress[`proof-${delivery.id}`] > 0 && uploadProgress[`proof-${delivery.id}`] < 100;
+                                    const isUploadingProof = uploadProgress[`proof-${delivery.id}`] > 0 && uploadProgress[`proof-${delivery.id}`] < 100;
                                     return (
                                     <TableRow key={delivery.id}>
                                         <TableCell>{delivery.id}</TableCell>
@@ -1150,9 +1152,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             View Proof
                                                         </DropdownMenuItem>
                                                     ) : (
-                                                        <DropdownMenuItem onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin || isUploading}>
+                                                        <DropdownMenuItem onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin || isUploadingProof}>
                                                             <Upload className="mr-2 h-4 w-4" />
-                                                            {isUploading ? 'Uploading...' : 'Attach Proof'}
+                                                            {isUploadingProof ? 'Uploading...' : 'Attach Proof'}
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuSeparator />
@@ -1439,14 +1441,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
-                    <Input type="file" onChange={(e) => setDeliveryProofFile(e.target.files?.[0] || null)} />
+                    <Input type="file" onChange={(e) => setDeliveryProofFile(e.target.files?.[0] || null)} disabled={isUploading} />
                     {deliveryToUpdate && uploadProgress[`proof-${deliveryToUpdate.id}`] > 0 && (
                         <Progress value={uploadProgress[`proof-${deliveryToUpdate.id}`]} />
                     )}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => { setDeliveryToUpdate(null); setDeliveryProofFile(null); }}>Cancel</Button>
-                    <Button onClick={handleUploadProof} disabled={!deliveryProofFile}>Attach</Button>
+                    <Button variant="outline" onClick={() => { setDeliveryToUpdate(null); setDeliveryProofFile(null); }} disabled={isUploading}>Cancel</Button>
+                    <Button onClick={handleUploadProof} disabled={!deliveryProofFile || isUploading}>
+                        {isUploading ? "Uploading..." : "Attach"}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
