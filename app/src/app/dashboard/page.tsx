@@ -784,7 +784,7 @@ export default function DashboardPage() {
             <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Current Consumables
+                        Available Liters
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">
