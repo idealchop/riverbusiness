@@ -781,13 +781,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <span className="text-muted-foreground">Contact Person:</span>
                                             <span className="font-medium">{selectedUser.name}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Account Status:</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn("h-2 w-2 rounded-full", selectedUser.accountStatus === 'Active' ? 'bg-green-500' : 'bg-gray-500')} />
-                                                <span className="font-medium">{selectedUser.accountStatus === 'Active' ? 'Online' : 'Offline'}</span>
-                                            </div>
-                                        </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Plan:</span>
                                             <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
@@ -1443,12 +1436,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         )})}
                                         {filteredUsers.length === 0 && !usersLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center">No users found.</TableCell>
+                                                <TableCell colSpan={5} className="text-center">No users found.</TableCell>
                                             </TableRow>
                                         )}
                                          {usersLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center">Loading users...</TableCell>
+                                                <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
