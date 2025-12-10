@@ -39,7 +39,7 @@ const perks = [
         subtitle: "6 locations currently and continuously growing",
         discounts: [
             { title: "50% Membership Discount" },
-            { title: "1 Free Monthly Session" },
+            { title: "1 Free Pass" },
             { title: "On-site Structured Class", description: "Boost team wellness with a guided physical activity session at your office." }
         ],
         websiteUrl: "https://www.newbreed.com",
