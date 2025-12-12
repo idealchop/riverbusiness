@@ -5,7 +5,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { Message } from '@vercel/ai';
+import type { Message } from '@vercel/ai';
 
 const ChatbotInputSchema = z.object({
   messages: z.array(z.custom<Message>()),
