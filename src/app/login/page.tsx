@@ -40,6 +40,10 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
+      if (!auth) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Authentication service not available.' });
+        return;
+      }
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
