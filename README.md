@@ -127,3 +127,7 @@ Open [http://localhost:9002](http://localhost:9002) in your browser to see the a
 - **Password**: (You will need to create this user in your Firebase Authentication console)
 
 Any other registered user will be treated as a client and redirected to the user dashboard.
+
+---
+
+© 2024 River Tech Inc. All rights reserved.
