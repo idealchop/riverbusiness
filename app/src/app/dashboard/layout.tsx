@@ -619,7 +619,7 @@ export default function DashboardLayout({
                 <div className="flex items-center gap-3 cursor-pointer">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.photoURL || null} alt={user?.name || ''} />
+                          <AvatarImage src={user?.photoURL ?? undefined} alt={user?.name || ''} />
                           <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                     <div className="hidden sm:flex flex-col items-start">
@@ -655,7 +655,7 @@ export default function DashboardLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={editableFormData.photoURL || null} alt={editableFormData.name || ''} />
+                                                              <AvatarImage src={editableFormData.photoURL ?? undefined} alt={editableFormData.name || ''} />
                                                               <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           {isUploading ? (

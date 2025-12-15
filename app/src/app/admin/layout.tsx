@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import type { AppUser } from '@/lib/types';
@@ -249,7 +249,7 @@ export default function AdminLayout({
                           className="overflow-hidden rounded-full"
                       >
                           <Avatar className="h-8 w-8">
-                              <AvatarImage src={adminUser?.photoURL || null} alt="Admin" />
+                              <AvatarImage src={adminUser?.photoURL ?? undefined} alt="Admin" />
                               <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                           </Avatar>
                       </Button>
@@ -271,7 +271,7 @@ export default function AdminLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={editableFormData.photoURL || null} alt={editableFormData.name || ''} />
+                                                              <AvatarImage src={editableFormData.photoURL ?? undefined} alt={editableFormData.name || ''} />
                                                               <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           {isUploading ? (
