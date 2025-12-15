@@ -138,7 +138,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'refillRequests') : null, [firestore, isAdmin]);
+    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'refillRequests')) : null, [firestore, isAdmin]);
     const { data: refillRequests, isLoading: refillRequestsLoading } = useCollection<RefillRequest>(refillRequestsQuery);
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
@@ -939,7 +939,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <div className="space-y-4">
                                 <div className="flex items-start gap-4">
                                     <Avatar className="h-20 w-20">
-                                        <AvatarImage src={selectedUser.photoURL} alt={selectedUser.name} />
+                                        <AvatarImage src={selectedUser.photoURL || undefined} alt={selectedUser.name} />
                                         <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">
@@ -1621,7 +1621,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <div>
                                 <div className="flex items-center gap-4 mb-4">
                                     <Avatar className="h-20 w-20">
-                                        <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
+                                        <AvatarImage src={editableFormData.photoURL || undefined} alt={editableFormData.name || ''} />
                                         <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-1">
@@ -1732,10 +1732,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <Card className="lg:col-span-3">
                 <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
                     <CardHeader>
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
-                            <TabsTrigger value="refill-requests" className="relative">
-                                <BellRing className="mr-2 h-4 w-4"/>Refill Requests
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="user-management" className="relative">
+                                <Users className="mr-2 h-4 w-4"/>User Management
                                 {pendingRefillRequests.length > 0 && (
                                     <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{pendingRefillRequests.length}</Badge>
                                 )}
@@ -1744,7 +1743,45 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </TabsList>
                     </CardHeader>
                     <CardContent>
-                        <TabsContent value="user-management">
+                        <TabsContent value="user-management" className="space-y-6">
+                            {pendingRefillRequests.length > 0 && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2"><BellRing className="h-5 w-5 text-primary"/> Pending Refill Requests</CardTitle>
+                                        <CardDescription>Users who have requested a one-time refill.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Client ID</TableHead>
+                                                    <TableHead>Business Name</TableHead>
+                                                    <TableHead>Requested</TableHead>
+                                                    <TableHead className="text-right">Action</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {refillRequestsLoading ? (
+                                                    <TableRow><TableCell colSpan={4} className="text-center">Loading requests...</TableCell></TableRow>
+                                                ) : pendingRefillRequests.map((request) => (
+                                                    <TableRow key={request.id}>
+                                                        <TableCell>{request.clientId}</TableCell>
+                                                        <TableCell>{request.businessName}</TableCell>
+                                                        <TableCell>
+                                                            {request.requestedAt ? formatDistanceToNow(new Date(request.requestedAt.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
+                                                                Mark as Complete
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            )}
                              <div className="overflow-x-auto">
                                 <Table className="min-w-full">
                                     <TableHeader>
@@ -1792,48 +1829,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </TableBody>
                                 </Table>
                              </div>
-                        </TabsContent>
-                        <TabsContent value="refill-requests">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Pending Refill Requests</CardTitle>
-                                    <CardDescription>Users who have requested a one-time refill.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Client ID</TableHead>
-                                                <TableHead>Business Name</TableHead>
-                                                <TableHead>Requested</TableHead>
-                                                <TableHead className="text-right">Action</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {refillRequestsLoading && (
-                                                <TableRow><TableCell colSpan={4} className="text-center">Loading requests...</TableCell></TableRow>
-                                            )}
-                                            {!refillRequestsLoading && pendingRefillRequests.length === 0 && (
-                                                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No pending requests.</TableCell></TableRow>
-                                            )}
-                                            {!refillRequestsLoading && pendingRefillRequests.map((request) => (
-                                                <TableRow key={request.id}>
-                                                    <TableCell>{request.clientId}</TableCell>
-                                                    <TableCell>{request.businessName}</TableCell>
-                                                    <TableCell>
-                                                        {request.requestedAt ? formatDistanceToNow((request.requestedAt as any).toDate(), { addSuffix: true }) : 'Just now'}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
-                                                            Mark as Complete
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
                         </TabsContent>
                         <TabsContent value="water-stations">
                             <div className="flex justify-end mb-4">
@@ -2186,5 +2181,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
