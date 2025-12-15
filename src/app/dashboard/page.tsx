@@ -25,6 +25,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -58,6 +59,46 @@ const tips = [
     { title: "The Sanitizing Soak", description: "For a deep clean, fill your bottle with a mix of equal parts white vinegar and water and let it sit for 30 minutes. Rinse thoroughly afterward." },
     { title: "⭐ Hydration Tip", description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!" }
 ];
+
+function DashboardSkeleton() {
+    return (
+        <div className="flex flex-col gap-8">
+            <div className="flex items-center justify-between">
+                <div>
+                    <Skeleton className="h-9 w-48" />
+                    <Skeleton className="h-5 w-80 mt-2" />
+                </div>
+                <Skeleton className="h-10 w-48" />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <Card><CardHeader><Skeleton className="h-5 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-32 mb-2" /><Skeleton className="h-4 w-full" /></CardContent><CardFooter><Skeleton className="h-2 w-full" /></CardFooter></Card>
+                <Card><CardHeader><Skeleton className="h-5 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-32 mb-2" /><Skeleton className="h-2 w-full" /></CardContent><CardFooter><Skeleton className="h-5 w-20" /></CardFooter></Card>
+                <Card><CardHeader><Skeleton className="h-5 w-24" /></CardHeader><CardContent><Skeleton className="h-8 w-32 mb-2" /><Skeleton className="h-2 w-full" /></CardContent><CardFooter><Skeleton className="h-5 w-20" /></CardFooter></Card>
+                <Card><CardHeader><Skeleton className="h-5 w-24" /></CardHeader><CardContent className="flex flex-col gap-3"><Skeleton className="h-8 w-full" /><Skeleton className="h-4 w-full" /><Skeleton className="h-10 w-full mt-2" /></CardContent></Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <Skeleton className="h-6 w-48" />
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-36" />
+                            <Skeleton className="h-10 w-24" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                        <Skeleton className="h-full w-full" />
+                    </CardContent>
+                </Card>
+                <div className="space-y-6">
+                    <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader><CardContent><Skeleton className="h-5 w-24" /></CardContent></Card>
+                    <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader><CardContent><Skeleton className="h-5 w-40" /><Skeleton className="h-4 w-full mt-2" /></CardContent></Card>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function DashboardPage() {
     const { toast } = useToast();
@@ -358,7 +399,7 @@ export default function DashboardPage() {
     };
     
     if (isUserLoading || areDeliveriesLoading) {
-      return <div>Loading dashboard...</div>
+      return <DashboardSkeleton />
     }
 
     return (
@@ -784,7 +825,7 @@ export default function DashboardPage() {
             <Card className="flex flex-col">
                 <CardHeader>
                     <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Current Balance
+                        Available Liters
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-2">

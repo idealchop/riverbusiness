@@ -44,6 +44,7 @@ import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -79,6 +80,50 @@ type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+function AdminDashboardSkeleton() {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex justify-between items-center">
+            <Skeleton className="h-9 w-64" />
+        </div>
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <div className="grid w-full grid-cols-2 h-10 rounded-md bg-muted p-1">
+                <Skeleton className="h-full w-full" />
+                <Skeleton className="h-full w-full" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                    <TableHead><Skeleton className="h-5 w-40" /></TableHead>
+                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
@@ -858,6 +903,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [selectedUser]);
 
+
+    if (usersLoading || stationsLoading) {
+        return <AdminDashboardSkeleton />;
+    }
 
   return (
     <>
@@ -2050,7 +2099,11 @@ export default function AdminPage() {
     }, []);
 
     if (isLoading || isUserLoading) {
-      return <div className="flex items-center justify-center h-full">Loading...</div>;
+      return (
+        <div className="flex flex-col gap-6 font-sans">
+            <AdminDashboardSkeleton />
+        </div>
+      );
     }
 
     if (!isAdmin) {
