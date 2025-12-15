@@ -1,5 +1,4 @@
 
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -44,6 +43,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable, del
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type Notification = {
     id: string;
@@ -393,11 +393,6 @@ export default function DashboardLayout({
    const handleProfilePhotoDelete = async () => {
     if (!authUser || !userDocRef || !user?.photoURL) return;
 
-    // Optional: Ask for confirmation first
-    if (!window.confirm("Are you sure you want to delete your profile photo?")) {
-      return;
-    }
-
     const storage = getStorage();
     const photoRef = ref(storage, user.photoURL);
 
@@ -658,25 +653,38 @@ export default function DashboardLayout({
                                 <div className="space-y-6">
                                      <div>
                                         <div className="flex items-center gap-4 mb-4">
-                                            <div className="relative group">
-                                                <Avatar className="h-20 w-20">
-                                                    <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
-                                                    <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Label htmlFor="photo-upload-input" className="cursor-pointer">
-                                                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-                                                            <Pencil className="h-5 w-5" />
-                                                        </Button>
-                                                    </Label>
-                                                    <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button className="relative group">
+                                                        <Avatar className="h-20 w-20">
+                                                            <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
+                                                            <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Pencil className="h-6 w-6 text-white" />
+                                                        </div>
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start">
+                                                    <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem asChild>
+                                                        <Label htmlFor="photo-upload-input" className="w-full cursor-pointer">
+                                                            <Upload className="mr-2 h-4 w-4" />
+                                                            Upload new photo
+                                                        </Label>
+                                                    </DropdownMenuItem>
                                                     {editableFormData.photoURL && (
-                                                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleProfilePhotoDelete}>
-                                                        <Trash2 className="h-5 w-5" />
-                                                      </Button>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remove photo
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
                                                     )}
-                                                </div>
-                                            </div>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
                                             <div className="space-y-1">
                                                 <h4 className="font-semibold">Profile Photo</h4>
                                                 <p className="text-sm text-muted-foreground">Update your photo.</p>
@@ -1149,6 +1157,20 @@ export default function DashboardLayout({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <AlertDialog>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently remove your profile photo.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleProfilePhotoDelete}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             <div className="container mx-auto">
