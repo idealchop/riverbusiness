@@ -104,10 +104,10 @@ function DashboardSkeleton() {
 export default function DashboardPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
-    const { user: authUser } = useUser();
+    const { user: authUser, isUserLoading: isAuthLoading } = useUser();
     
     const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-    const { data: user, isLoading: isUserLoading } = useDoc<AppUser>(userDocRef);
+    const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
     const [greeting, setGreeting] = useState('');
     
@@ -435,7 +435,7 @@ export default function DashboardPage() {
         setIsSaveLitersDialogOpen(false);
     };
     
-    if (isUserLoading || areDeliveriesLoading) {
+    if (isAuthLoading || isUserDocLoading) {
       return <DashboardSkeleton />
     }
 
