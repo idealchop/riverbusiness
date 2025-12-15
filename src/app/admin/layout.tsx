@@ -248,7 +248,7 @@ export default function AdminLayout({
                           className="overflow-hidden rounded-full"
                       >
                           <Avatar className="h-8 w-8">
-                              <AvatarImage src={adminUser?.photoURL} alt="Admin" />
+                              <AvatarImage src={adminUser?.photoURL || null} alt="Admin" />
                               <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                           </Avatar>
                       </Button>
@@ -270,7 +270,7 @@ export default function AdminLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <button className="relative group">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
+                                                              <AvatarImage src={editableFormData.photoURL || null} alt={editableFormData.name || ''} />
                                                               <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
