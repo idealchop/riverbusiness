@@ -20,6 +20,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } f
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { CircularProgress } from '@/components/ui/circular-progress';
 
 
 export default function AdminLayout({
@@ -184,7 +185,7 @@ export default function AdminLayout({
 
     try {
       await deleteObject(photoRef);
-      updateDocumentNonBlocking(adminUserDocRef, { photoURL: '' });
+      updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
       toast({
         title: 'Profile Photo Deleted',
         description: 'Your profile photo has been removed.',
@@ -268,15 +269,21 @@ export default function AdminLayout({
                                           <div className="flex items-center gap-4 mb-4">
                                               <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
-                                                      <button className="relative group">
+                                                      <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
                                                               <AvatarImage src={editableFormData.photoURL || null} alt={editableFormData.name || ''} />
                                                               <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                              <Pencil className="h-6 w-6 text-white" />
-                                                          </div>
-                                                      </button>
+                                                          {isUploading ? (
+                                                            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                                                                <CircularProgress value={uploadProgress} />
+                                                            </div>
+                                                          ) : (
+                                                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <Pencil className="h-6 w-6 text-white" />
+                                                            </div>
+                                                          )}
+                                                      </div>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="start">
                                                       <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
@@ -300,11 +307,8 @@ export default function AdminLayout({
                                               <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
 
                                               <div className="space-y-1">
-                                                  <h4 className="font-semibold">Profile Photo</h4>
-                                                  <p className="text-sm text-muted-foreground">Update your photo.</p>
-                                                  {isUploading && (
-                                                      <Progress value={uploadProgress} className="w-24 h-2" />
-                                                  )}
+                                                  <h4 className="font-semibold">{editableFormData.name}</h4>
+                                                  <p className="text-sm text-muted-foreground">Update your account details.</p>
                                               </div>
                                           </div>
                                       </div>

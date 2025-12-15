@@ -44,6 +44,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { CircularProgress } from '@/components/ui/circular-progress';
 
 type Notification = {
     id: string;
@@ -140,7 +141,7 @@ export default function DashboardLayout({
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -217,43 +218,39 @@ export default function DashboardLayout({
       return;
     }
     setIsUploading(true);
+    setUploadProgress(0);
     const storage = getStorage();
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
     const storageRef = ref(storage, filePath);
   
-    const uploadKey = `payment-${selectedInvoice.id}`;
-    const uploadTask = uploadBytesResumable(storageRef, filePath);
+    const uploadTask = uploadBytesResumable(storageRef, paymentProofFile);
 
     uploadTask.on('state_changed', 
         (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(prev => ({...prev, [uploadKey]: progress}));
+            setUploadProgress(progress);
         },
         (error) => {
             console.error("Upload error:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
-            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             setIsUploading(false);
+            setUploadProgress(0);
         },
         async () => {
             const downloadURL = await getDownloadURL(storageRef);
             const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-            const paymentData: Payment = {
-                id: selectedInvoice.id,
-                date: selectedInvoice.date,
-                description: selectedInvoice.description,
-                amount: selectedInvoice.amount,
+            const paymentData: Partial<Payment> = {
                 status: 'Pending Review',
                 proofOfPaymentUrl: downloadURL,
             };
             setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
             
             toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             setIsPaymentDialogOpen(false);
             setSelectedInvoice(null);
             setPaymentProofFile(null);
             setIsUploading(false);
+            setUploadProgress(0);
         }
     );
   };
@@ -363,29 +360,29 @@ export default function DashboardLayout({
   const handleProfilePhotoUpload = async (file: File) => {
     if (!authUser || !firestore || !userDocRef) return;
     setIsUploading(true);
+    setUploadProgress(0);
     const storage = getStorage();
     const filePath = `users/${authUser.uid}/profile/${file.name}`;
     const storageRef = ref(storage, filePath);
 
-    const uploadKey = `profile-${authUser.uid}`;
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     uploadTask.on('state_changed',
         (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(prev => ({...prev, [uploadKey]: progress}));
+            setUploadProgress(progress);
         },
         (error) => {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
-            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             setIsUploading(false);
+            setUploadProgress(0);
         },
         async () => {
             const downloadURL = await getDownloadURL(storageRef);
             updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
             toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-            setUploadProgress(prev => ({...prev, [uploadKey]: 0}));
             setIsUploading(false);
+            setUploadProgress(0);
         }
     );
   };
@@ -401,7 +398,7 @@ export default function DashboardLayout({
       await deleteObject(photoRef);
       
       // Remove the URL from the user's document in Firestore
-      updateDocumentNonBlocking(userDocRef, { photoURL: '' });
+      updateDocumentNonBlocking(userDocRef, { photoURL: null });
 
       toast({
         title: 'Profile Photo Deleted',
@@ -656,15 +653,21 @@ export default function DashboardLayout({
                                           <div className="flex items-center gap-4 mb-4">
                                               <DropdownMenu>
                                                   <DropdownMenuTrigger asChild>
-                                                      <button className="relative group">
+                                                      <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
                                                               <AvatarImage src={editableFormData.photoURL || null} alt={editableFormData.name || ''} />
                                                               <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                              <Pencil className="h-6 w-6 text-white" />
-                                                          </div>
-                                                      </button>
+                                                          {isUploading ? (
+                                                              <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                                                                  <CircularProgress value={uploadProgress} />
+                                                              </div>
+                                                          ) : (
+                                                              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                  <Pencil className="h-6 w-6 text-white" />
+                                                              </div>
+                                                          )}
+                                                      </div>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="start">
                                                       <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
@@ -687,11 +690,8 @@ export default function DashboardLayout({
                                               </DropdownMenu>
                                               <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
                                               <div className="space-y-1">
-                                                  <h4 className="font-semibold">Profile Photo</h4>
-                                                  <p className="text-sm text-muted-foreground">Update your photo.</p>
-                                                  {authUser && uploadProgress[`profile-${authUser.uid}`] > 0 && (
-                                                      <Progress value={uploadProgress[`profile-${authUser.uid}`]} className="w-24 h-2" />
-                                                  )}
+                                                  <h4 className="font-semibold">{editableFormData.name}</h4>
+                                                  <p className="text-sm text-muted-foreground">Update your account details.</p>
                                               </div>
                                           </div>
                                       </div>
