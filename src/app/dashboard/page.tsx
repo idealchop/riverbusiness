@@ -3,13 +3,13 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, ConsumptionHistory } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, ConsumptionHistory, RefillRequest } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -125,6 +126,7 @@ export default function DashboardPage() {
     const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
     const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
     const [isSaveLitersDialogOpen, setIsSaveLitersDialogOpen] = useState(false);
+    const [isRefillRequesting, setIsRefillRequesting] = useState(false);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -387,6 +389,41 @@ export default function DashboardPage() {
         setOneTimeDeliveryDate(undefined);
         setOneTimeDeliveryContainers(1);
     };
+
+    const handleRequestRefill = async () => {
+        if (!user || !firestore) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot process request. Please try again later." });
+            return;
+        }
+
+        setIsRefillRequesting(true);
+        const refillRef = collection(firestore, 'refillRequests');
+        const newRequest: Omit<RefillRequest, 'id'> = {
+            userId: user.id,
+            userName: user.name,
+            businessName: user.businessName,
+            clientId: user.clientId || '',
+            requestedAt: serverTimestamp(),
+            status: 'Pending'
+        };
+
+        try {
+            await addDocumentNonBlocking(refillRef, newRequest);
+            toast({
+                title: "Refill Request Sent",
+                description: "The admin team has been notified. We will process your request shortly.",
+            });
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Request Failed",
+                description: "There was an issue sending your request. Please try again.",
+            });
+        } finally {
+            setIsRefillRequesting(false);
+        }
+    };
+
 
     const handleSaveLiters = () => {
         // Here you would typically have backend logic to handle this.
@@ -869,10 +906,32 @@ export default function DashboardPage() {
                                 </Button>
                              </>
                         ) : (
-                            <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                Schedule Delivery
-                            </Button>
+                            <div className="flex flex-col gap-2">
+                                <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    Schedule Delivery
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="secondary" size="sm" className="w-full" disabled={isRefillRequesting}>
+                                            <BellRing className="mr-2 h-4 w-4" />
+                                            {isRefillRequesting ? "Requesting..." : "Request One-Time Refill"}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will notify the admin team that you require an immediate one-time refill. Are you sure you want to proceed?
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleRequestRefill}>Yes, Send Request</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         )}
                     </div>
                 </CardContent>

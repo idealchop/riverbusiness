@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,9 +23,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory, RefillRequest } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -137,6 +137,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
+
+    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'refillRequests') : null, [firestore, isAdmin]);
+    const { data: refillRequests, isLoading: refillRequestsLoading } = useCollection<RefillRequest>(refillRequestsQuery);
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
@@ -887,6 +890,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         document.body.removeChild(link);
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
+
+    const handleCompleteRefillRequest = (requestId: string) => {
+        if (!firestore) return;
+        const requestRef = doc(firestore, 'refillRequests', requestId);
+        updateDocumentNonBlocking(requestRef, { status: 'Completed' });
+        toast({ title: 'Request Completed', description: 'The refill request has been marked as completed.' });
+    };
+
+    const pendingRefillRequests = React.useMemo(() => {
+        return refillRequests?.filter(req => req.status === 'Pending') || [];
+    }, [refillRequests]);
 
     const complianceFields: { key: string, label: string }[] = [
         { key: 'dohPermitUrl', label: 'DOH Permit' },
@@ -1718,8 +1732,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <Card className="lg:col-span-3">
                 <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
                     <CardHeader>
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
+                            <TabsTrigger value="refill-requests" className="relative">
+                                <BellRing className="mr-2 h-4 w-4"/>Refill Requests
+                                {pendingRefillRequests.length > 0 && (
+                                    <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{pendingRefillRequests.length}</Badge>
+                                )}
+                            </TabsTrigger>
                             <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
                         </TabsList>
                     </CardHeader>
@@ -1773,7 +1793,48 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </Table>
                              </div>
                         </TabsContent>
-                        
+                        <TabsContent value="refill-requests">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Pending Refill Requests</CardTitle>
+                                    <CardDescription>Users who have requested a one-time refill.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Client ID</TableHead>
+                                                <TableHead>Business Name</TableHead>
+                                                <TableHead>Requested</TableHead>
+                                                <TableHead className="text-right">Action</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {refillRequestsLoading && (
+                                                <TableRow><TableCell colSpan={4} className="text-center">Loading requests...</TableCell></TableRow>
+                                            )}
+                                            {!refillRequestsLoading && pendingRefillRequests.length === 0 && (
+                                                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No pending requests.</TableCell></TableRow>
+                                            )}
+                                            {!refillRequestsLoading && pendingRefillRequests.map((request) => (
+                                                <TableRow key={request.id}>
+                                                    <TableCell>{request.clientId}</TableCell>
+                                                    <TableCell>{request.businessName}</TableCell>
+                                                    <TableCell>
+                                                        {request.requestedAt ? formatDistanceToNow((request.requestedAt as any).toDate(), { addSuffix: true }) : 'Just now'}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
+                                                            Mark as Complete
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
                         <TabsContent value="water-stations">
                             <div className="flex justify-end mb-4">
                                <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>

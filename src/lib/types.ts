@@ -130,3 +130,13 @@ export interface ConsumptionHistory {
   amountLiters: number;
   metric: 'liters' | 'gallons';
 }
+
+export interface RefillRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  businessName: string;
+  clientId: string;
+  requestedAt: FieldValue | Timestamp;
+  status: 'Pending' | 'Completed';
+}
