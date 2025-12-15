@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle, FileX, RefreshCw } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle, FileX, RefreshCw, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,7 @@ import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWith
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -222,7 +222,7 @@ export default function DashboardLayout({
     const storageRef = ref(storage, filePath);
   
     const uploadKey = `payment-${selectedInvoice.id}`;
-    const uploadTask = uploadBytesResumable(storageRef, paymentProofFile);
+    const uploadTask = uploadBytesResumable(storageRef, filePath);
 
     uploadTask.on('state_changed', 
         (snapshot) => {
@@ -389,6 +389,39 @@ export default function DashboardLayout({
         }
     );
   };
+
+   const handleProfilePhotoDelete = async () => {
+    if (!authUser || !userDocRef || !user?.photoURL) return;
+
+    // Optional: Ask for confirmation first
+    if (!window.confirm("Are you sure you want to delete your profile photo?")) {
+      return;
+    }
+
+    const storage = getStorage();
+    const photoRef = ref(storage, user.photoURL);
+
+    try {
+      // Delete the file from Storage
+      await deleteObject(photoRef);
+      
+      // Remove the URL from the user's document in Firestore
+      updateDocumentNonBlocking(userDocRef, { photoURL: '' });
+
+      toast({
+        title: 'Profile Photo Deleted',
+        description: 'Your profile photo has been removed.',
+      });
+    } catch (error) {
+      console.error("Error deleting profile photo: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'Could not delete the photo. Please try again.',
+      });
+    }
+  };
+
 
   const handleMessageSubmit = (messageContent: string) => {
     const newUserMessage: ChatMessage = {
@@ -625,25 +658,31 @@ export default function DashboardLayout({
                                 <div className="space-y-6">
                                      <div>
                                         <div className="flex items-center gap-4 mb-4">
-                                            <Avatar className="h-20 w-20">
-                                                <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
-                                                <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
-                                            </Avatar>
+                                            <div className="relative group">
+                                                <Avatar className="h-20 w-20">
+                                                    <AvatarImage src={editableFormData.photoURL} alt={editableFormData.name} />
+                                                    <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Label htmlFor="photo-upload-input" className="cursor-pointer">
+                                                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                                                            <Pencil className="h-5 w-5" />
+                                                        </Button>
+                                                    </Label>
+                                                    <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                                    {editableFormData.photoURL && (
+                                                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleProfilePhotoDelete}>
+                                                        <Trash2 className="h-5 w-5" />
+                                                      </Button>
+                                                    )}
+                                                </div>
+                                            </div>
                                             <div className="space-y-1">
                                                 <h4 className="font-semibold">Profile Photo</h4>
                                                 <p className="text-sm text-muted-foreground">Update your photo.</p>
-                                                <div className="flex items-center gap-2">
-                                                    <Button asChild variant="outline" size="sm" disabled={isUploading}>
-                                                        <Label>
-                                                            <Upload className="mr-2 h-4 w-4" />
-                                                            Upload Photo
-                                                            <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
-                                                        </Label>
-                                                    </Button>
-                                                    {authUser && uploadProgress[`profile-${authUser.uid}`] > 0 && (
-                                                        <Progress value={uploadProgress[`profile-${authUser.uid}`]} className="w-24 h-2" />
-                                                    )}
-                                                </div>
+                                                 {authUser && uploadProgress[`profile-${authUser.uid}`] > 0 && (
+                                                    <Progress value={uploadProgress[`profile-${authUser.uid}`]} className="w-24 h-2" />
+                                                )}
                                             </div>
                                         </div>
                                     </div>
