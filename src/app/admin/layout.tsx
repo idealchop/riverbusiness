@@ -51,7 +51,6 @@ export default function AdminLayout({
   
   const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
   const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -153,7 +152,6 @@ export default function AdminLayout({
     if (!authUser || !adminUserDocRef) return;
 
     const uploadKey = `profile-${authUser.uid}`;
-    setIsSubmitting(true);
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
 
     try {
@@ -187,7 +185,6 @@ export default function AdminLayout({
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
-      setIsSubmitting(false);
       setUploadingFiles(prev => {
         const newUploadingFiles = { ...prev };
         delete newUploadingFiles[uploadKey];
@@ -234,6 +231,7 @@ export default function AdminLayout({
 
   const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : 0;
   const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
+  const isProfilePhotoActionRunning = isUploadingProfilePhoto;
 
   return (
       <div className="flex flex-col h-screen">
@@ -325,7 +323,7 @@ export default function AdminLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isSubmitting}/>
+                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isProfilePhotoActionRunning}/>
 
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{adminUser.name}</h4>

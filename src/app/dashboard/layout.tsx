@@ -147,7 +147,6 @@ export default function DashboardLayout({
   
   const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
   const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -229,7 +228,6 @@ export default function DashboardLayout({
     }
     const uploadKey = `payment-${selectedInvoice.id}`;
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
-    setIsSubmitting(true);
 
     try {
         const storage = getStorage();
@@ -267,7 +265,6 @@ export default function DashboardLayout({
     } catch(error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
     } finally {
-        setIsSubmitting(false);
         setUploadingFiles(prev => {
             const newUploadingFiles = { ...prev };
             delete newUploadingFiles[uploadKey];
@@ -382,7 +379,6 @@ export default function DashboardLayout({
     if (!authUser || !userDocRef) return;
     
     const uploadKey = `profile-${authUser.uid}`;
-    setIsSubmitting(true);
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
     try {
@@ -413,7 +409,6 @@ export default function DashboardLayout({
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
-      setIsSubmitting(false);
       setUploadingFiles(prev => {
         const newUploadingFiles = { ...prev };
         delete newUploadingFiles[uploadKey];
@@ -512,9 +507,11 @@ export default function DashboardLayout({
 
   const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : 0;
   const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
+  const isProfilePhotoActionRunning = isUploadingProfilePhoto;
 
   const paymentUploadProgress = selectedInvoice ? uploadingFiles[`payment-${selectedInvoice.id}`] : 0;
   const isUploadingPayment = paymentUploadProgress > 0 && paymentUploadProgress <= 100;
+  const isPaymentActionRunning = isUploadingPayment;
 
   return (
       <div className="flex flex-col h-full">
@@ -722,7 +719,7 @@ export default function DashboardLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isSubmitting}/>
+                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isProfilePhotoActionRunning}/>
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{user.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>
@@ -1023,7 +1020,7 @@ export default function DashboardLayout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="payment-proof-upload">Proof of Payment</Label>
-                        <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmitting} />
+                        <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isPaymentActionRunning} />
                         {isUploadingPayment && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Progress value={paymentUploadProgress} className="w-full" />
@@ -1031,8 +1028,8 @@ export default function DashboardLayout({
                           </div>
                         )}
                       </div>
-                      <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmitting} className="w-full">
-                        {isSubmitting ? 'Submitting...' : 'Submit for Verification'}
+                      <Button onClick={handleProofUpload} disabled={!paymentProofFile || isPaymentActionRunning} className="w-full">
+                        {isPaymentActionRunning ? 'Submitting...' : 'Submit for Verification'}
                       </Button>
                     </div>
                   </div>
