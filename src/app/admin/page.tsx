@@ -36,7 +36,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { getStorage, ref, getDownloadURL, uploadBytesResumable, UploadTask } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, UploadTask } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -441,142 +441,136 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
             return;
         }
-
+    
         const uploadKey = `proof-${deliveryToUpdate.id}`;
         setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
         setIsSubmitting(true);
-
+    
         const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${deliveryProofFile.name}`;
         const storage = getStorage();
         const storageRef = ref(storage, filePath);
-        const uploadTask = uploadBytesResumable(storageRef, deliveryProofFile);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-            },
-            (error) => {
-                console.error("Upload error:", error);
-                toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-                setIsSubmitting(false);
-                setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToUpdate.id);
-                await updateDocumentNonBlocking(deliveryRef, { proofOfDeliveryUrl: downloadURL });
-                
-                toast({ title: "Proof Attached", description: `Proof for delivery ${deliveryToUpdate.id} has been attached.` });
-                setDeliveryToUpdate(null);
-                setDeliveryProofFile(null);
-                setIsSubmitting(false);
-                setUploadingFiles(prev => {
-                    const newUploadingFiles = { ...prev };
-                    delete newUploadingFiles[uploadKey];
-                    return newUploadingFiles;
-                });
-            }
-        );
+        const metadata = { contentType: deliveryProofFile.type };
+        const uploadTask = uploadBytesResumable(storageRef, deliveryProofFile, metadata);
+    
+        return new Promise<void>((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+                },
+                (error) => {
+                    console.error("Upload error:", error);
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+                    setIsSubmitting(false);
+                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
+                    reject(error);
+                },
+                () => {
+                    // This function now only handles client-side state cleanup.
+                    // The Firestore update is handled by a Cloud Function.
+                    toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
+                    setDeliveryToUpdate(null);
+                    setDeliveryProofFile(null);
+                    setIsSubmitting(false);
+                    setUploadingFiles(prev => {
+                        const newUploadingFiles = { ...prev };
+                        delete newUploadingFiles[uploadKey];
+                        return newUploadingFiles;
+                    });
+                    resolve();
+                }
+            );
+        });
     };
 
 
     const handleUploadContract = async () => {
-        if (!userForContract || !contractFile || !firestore) {
+        if (!userForContract || !contractFile) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or user context missing.' });
             return;
-        };
-        
+        }
+    
         const uploadKey = `contract-${userForContract.id}`;
-        setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
+        setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
         setIsSubmitting(true);
-        
+    
+        // A Cloud Function should trigger on this path to update the user's document
         const filePath = `userContracts/${userForContract.id}/latest_plan_contract.pdf`;
         const storage = getStorage();
         const storageRef = ref(storage, filePath);
-        const uploadTask = uploadBytesResumable(storageRef, contractFile);
-
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-            },
-            (error) => {
-                toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-                setIsSubmitting(false);
-                setUploadingFiles(prev => ({...prev, [uploadKey]: -1}));
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const userRef = doc(firestore, 'users', userForContract.id);
-                await updateDocumentNonBlocking(userRef, { 
-                    currentContractUrl: downloadURL,
-                    contractUploadedDate: serverTimestamp(),
-                    contractStatus: "Active Contract",
-                });
+        const metadata = { contentType: contractFile.type };
+        const uploadTask = uploadBytesResumable(storageRef, contractFile, metadata);
     
-                if (selectedUser && selectedUser.id === userForContract.id) {
-                        setSelectedUser(prev => prev ? { ...prev, currentContractUrl: downloadURL, contractStatus: 'Active Contract' } : null);
+        return new Promise<void>((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+                },
+                (error) => {
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+                    setIsSubmitting(false);
+                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
+                    reject(error);
+                },
+                () => {
+                    // Client-side is done, Cloud Function takes over.
+                    toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
+                    setIsUploadContractOpen(false);
+                    setUserForContract(null);
+                    setContractFile(null);
+                    setIsSubmitting(false);
+                    setUploadingFiles(prev => {
+                        const newUploadingFiles = { ...prev };
+                        delete newUploadingFiles[uploadKey];
+                        return newUploadingFiles;
+                    });
+                    resolve();
                 }
-                
-                toast({ title: "Contract Attached", description: `A contract has been attached to ${userForContract.name}.` });
-                setIsUploadContractOpen(false);
-                setUserForContract(null);
-                setContractFile(null);
-                setIsSubmitting(false);
-                setUploadingFiles(prev => {
-                    const newUploadingFiles = { ...prev };
-                    delete newUploadingFiles[uploadKey];
-                    return newUploadingFiles;
-                });
-            }
-        );
+            );
+        });
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
         if (!userForHistory || !firestore) return;
         setIsSubmitting(true);
-
+    
         try {
-            let proofOfDeliveryUrl = '';
-            if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
-                const file = values.proofOfDeliveryUrl[0];
-                const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
-                
-                const uploadKey = `delivery-${values.trackingNumber}`;
-                setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
-
-                const storage = getStorage();
-                const storageRef = ref(storage, filePath);
-                const uploadTask = uploadBytesResumable(storageRef, file);
-
-                await new Promise<void>((resolve, reject) => {
-                    uploadTask.on('state_changed',
-                        (snapshot) => {
-                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                            setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-                        },
-                        (error) => reject(error),
-                        async () => {
-                            proofOfDeliveryUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                            resolve();
-                        }
-                    );
-                });
-            }
-        
             const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
+    
             const newDeliveryData: Delivery = {
                 id: values.trackingNumber,
                 userId: userForHistory.id,
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
-                proofOfDeliveryUrl: proofOfDeliveryUrl,
                 adminNotes: values.adminNotes,
+                // proofOfDeliveryUrl is omitted, will be added by a Cloud Function if a file is uploaded.
             };
     
+            // Set the initial delivery document
             await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+    
+            // If there's a proof file, upload it. The Cloud Function will handle linking it.
+            if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
+                const file = values.proofOfDeliveryUrl[0];
+                const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
+                const uploadKey = `delivery-${values.trackingNumber}`;
+                
+                const storage = getStorage();
+                const storageRef = ref(storage, filePath);
+                const metadata = { contentType: file.type };
+                const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+    
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+                    }
+                );
+    
+                // We don't await the upload here. The client's job is to create the record and start the upload.
+            }
     
             if (values.status === 'Delivered') {
                 const litersToDeduct = values.volumeContainers * 19.5;
@@ -587,18 +581,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             deliveryForm.reset();
             setIsCreateDeliveryOpen(false);
-
+    
         } catch (error) {
             console.error("Delivery creation failed:", error);
             toast({ variant: 'destructive', title: "Creation Failed", description: 'Could not create delivery record.' });
         } finally {
             setIsSubmitting(false);
-            const uploadKey = `delivery-${values.trackingNumber}`;
-            setUploadingFiles(prev => {
-                const newUploadingFiles = { ...prev };
-                delete newUploadingFiles[uploadKey];
-                return newUploadingFiles;
-            });
+            setUploadingFiles({});
         }
     };
 
@@ -837,37 +826,39 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         })
     }
     
-    const handleFileUpload = async (
-      file: File,
-      path: string,
-      onProgress: (progress: number) => void
-    ): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const storage = getStorage();
-        const storageRef = ref(storage, path);
-        const uploadTask = uploadBytesResumable(storageRef, file);
+    const handleFileUpload = (
+        file: File,
+        path: string,
+        docKey: string,
+      ): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          const storage = getStorage();
+          const storageRef = ref(storage, path);
+          const metadata = { contentType: file.type };
+          const uploadTask = uploadBytesResumable(storageRef, file, metadata);
       
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            onProgress(progress);
-          },
-          (error) => {
-            console.error("Upload error:", error);
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(downloadURL);
-            } catch (error) {
-              console.error("URL retrieval error:", error);
-              reject(error as Error);
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadingFiles(prev => ({ ...prev, [docKey]: progress }));
+            },
+            (error) => {
+              console.error(`Upload error for ${docKey}:`, error);
+              setUploadingFiles(prev => ({ ...prev, [docKey]: -1 }));
+              reject(error);
+            },
+            () => {
+              setUploadingFiles(prev => {
+                const newUploadingFiles = { ...prev };
+                delete newUploadingFiles[docKey];
+                return newUploadingFiles;
+              });
+              resolve();
             }
-          }
-        );
-      });
-    };
+          );
+        });
+      };
 
     const handleCreateStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
@@ -875,71 +866,40 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setUploadingFiles({});
     
         try {
+            // First, create the station document to get an ID.
             const newStationRef = await addDoc(collection(firestore, "waterStations"), {
                 ...values,
-                partnershipAgreementUrl: ""
+                partnershipAgreementUrl: "" // Initialize as empty
             });
             const stationId = newStationRef.id;
-    
+            
             const uploadPromises: Promise<any>[] = [];
-    
-            const uploadFilePromise = (file: File, path: string, docKey: string): Promise<{ key: string, url: string, type: 'compliance' | 'agreement' }> => {
-                return new Promise(async (resolve, reject) => {
-                    try {
-                        const downloadURL = await handleFileUpload(
-                            file,
-                            path,
-                            (progress) => setUploadingFiles(prev => ({ ...prev, [docKey]: progress }))
-                        );
-                        resolve({ key: docKey, url: downloadURL, type: docKey === 'agreement' ? 'agreement' : 'compliance' });
-                    } catch (error) {
-                        reject(error);
-                    }
-                });
-            };
     
             if (agreementFile) {
                 const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                uploadPromises.push(uploadFilePromise(agreementFile, path, 'agreement'));
+                uploadPromises.push(handleFileUpload(agreementFile, path, 'agreement'));
             }
     
             for (const [key, file] of Object.entries(complianceFiles)) {
                 const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                uploadPromises.push(uploadFilePromise(file, path, key));
+                uploadPromises.push(handleFileUpload(file, path, key));
             }
     
-            const uploadedFiles = await Promise.all(uploadPromises);
+            // Wait for all uploads to complete on the client side.
+            await Promise.all(uploadPromises);
     
-            const firestorePromises: Promise<any>[] = [];
-            for (const uploaded of uploadedFiles) {
-                if (uploaded.type === 'agreement') {
-                    firestorePromises.push(updateDoc(newStationRef, { partnershipAgreementUrl: uploaded.url }));
-                } else if (uploaded.type === 'compliance') {
-                    const field = complianceFields.find(f => f.key === uploaded.key);
-                    if (field) {
-                        firestorePromises.push(addDoc(collection(firestore, 'waterStations', stationId, 'complianceReports'), {
-                            name: field.label,
-                            date: new Date().toISOString(),
-                            status: 'Compliant',
-                            reportUrl: uploaded.url
-                        }));
-                    }
-                }
-            }
-    
-            await Promise.all(firestorePromises);
-    
-            toast({ title: 'Station Created', description: `Station "${values.name}" created successfully with all documents.` });
+            // The client's job is done. Cloud Functions will handle linking the URLs.
+            toast({ title: 'Station Created', description: `Station "${values.name}" created and documents are being processed.` });
             
             stationForm.reset();
             setComplianceFiles({});
             setAgreementFile(null);
             setIsStationProfileOpen(false);
-            setComplianceRefresher(c => c + 1);
+            setComplianceRefresher(c => c + 1); // Refresh data if needed
     
         } catch (error) {
-             console.error("Error creating station with documents: ", error);
-             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station and upload documents.' });
+             console.error("Error creating station or uploading documents: ", error);
+             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station. Please check uploads.' });
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});
@@ -947,23 +907,20 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleProfilePhotoUpload = async (file: File) => {
-        if (!authUser || !firestore) return;
+        if (!authUser) return;
         
         const uploadKey = `profile-${authUser.uid}`;
         setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
         setIsSubmitting(true);
     
         try {
-            const downloadURL = await handleFileUpload(
+            // The Cloud Function will trigger on this path
+            await handleFileUpload(
                 file,
                 `users/${authUser.uid}/profile/${file.name}`,
-                (progress) => {
-                    setUploadingFiles(prev => ({...prev, [uploadKey]: progress}))
-                }
+                uploadKey
             );
-            const userRef = doc(firestore, 'users', authUser.uid);
-            await updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
-            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+            toast({ title: 'Profile Photo Uploaded', description: 'Your new photo is being processed.' });
         } catch (error) {
             console.error("Profile photo upload failed: ", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo.'});
@@ -2081,31 +2038,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const isUploadingFile = progress > 0 && progress < 100;
                                         
                                         const onUpload = async (fileToUpload: File) => {
-                                            if (!stationToUpdate || !firestore) return;
+                                            if (!stationToUpdate) return;
                                             const docKey = field.key;
-                                            
+                                            const path = `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`;
                                             try {
-                                                const url = await handleFileUpload(
-                                                    fileToUpload,
-                                                    `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`,
-                                                    (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
-                                                );
-                                                
-                                                await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), {
-                                                    name: field.label,
-                                                    date: new Date().toISOString(),
-                                                    status: 'Compliant',
-                                                    reportUrl: url,
-                                                });
-                                                
-                                                toast({ title: 'Document Uploaded', description: `${field.label} has been uploaded.` });
+                                                await handleFileUpload(fileToUpload, path, docKey);
+                                                toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
                                             } catch (err: any) {
                                                 toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
-                                                setUploadingFiles(prev => ({...prev, [docKey]: -1}));
-                                            } finally {
-                                                 setUploadingFiles(prev => { const next = {...prev}; delete next[docKey]; return next; });
                                             }
                                         };
 
@@ -2159,24 +2101,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {(() => {
                                     const onUpload = async () => {
-                                        if (!agreementFile || !stationToUpdate || !firestore) return;
+                                        if (!agreementFile || !stationToUpdate) return;
                                         const docKey = 'agreement';
-                                        
+                                        const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
                                         try {
-                                            const url = await handleFileUpload(
-                                                agreementFile,
-                                                `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`,
-                                                (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
-                                            );
-                                            await updateDoc(doc(firestore, 'waterStations', stationToUpdate.id), { partnershipAgreementUrl: url });
-                                            setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: url } : null);
-                                            toast({ title: 'Agreement Uploaded', description: 'Partnership agreement has been uploaded.' });
+                                            await handleFileUpload(agreementFile, path, docKey);
+                                            toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err: any) {
                                             toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
-                                            setUploadingFiles(prev => ({...prev, [docKey]: -1}));
-                                        } finally {
-                                             setUploadingFiles(prev => { const next = {...prev}; delete next[docKey]; return next; });
                                         }
                                     };
                                     
@@ -2305,3 +2238,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

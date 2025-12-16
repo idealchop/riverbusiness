@@ -228,53 +228,49 @@ export default function DashboardLayout({
 
   const handleProofUpload = async () => {
     if (!authUser || !firestore || !paymentProofFile || !selectedInvoice) {
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select an invoice and a file to upload.' });
-      return;
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select an invoice and a file to upload.' });
+        return;
     }
-    const uploadKey = `payment-${selectedInvoice.id}`;
+
     setIsUploading(true);
     setUploadProgress(0);
 
-    try {
-        const storage = getStorage();
-        const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
-        const storageRef = ref(storage, filePath);
-        const uploadTask = uploadBytesResumable(storageRef, paymentProofFile);
+    // The Cloud Function will trigger on this path
+    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
+    const storage = getStorage();
+    const storageRef = ref(storage, filePath);
+    const metadata = { contentType: paymentProofFile.type };
+    const uploadTask = uploadBytesResumable(storageRef, paymentProofFile, metadata);
 
-        await new Promise<void>((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadProgress(progress);
-                },
-                (error) => reject(error),
-                async () => {
-                    try {
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-                        const paymentData: Partial<Payment> = {
-                            status: 'Pending Review',
-                            proofOfPaymentUrl: downloadURL,
-                        };
-                        setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
-                        toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-                        setIsPaymentDialogOpen(false);
-                        setSelectedInvoice(null);
-                        setPaymentProofFile(null);
-                        resolve();
-                    } catch(e) {
-                        reject(e);
-                    }
-                }
-            );
-        });
-    } catch(error) {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
-    } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
-    }
-  };
+    return new Promise<void>((resolve, reject) => {
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(progress);
+            },
+            (error) => {
+                toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
+                setIsUploading(false);
+                setUploadProgress(0);
+                reject(error);
+            },
+            () => {
+                // Client-side is done. Cloud Function will update Firestore.
+                // We just need to update the local state to show "Pending Review".
+                const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
+                setDocumentNonBlocking(paymentRef, { status: 'Pending Review' }, { merge: true });
+
+                toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
+                setIsPaymentDialogOpen(false);
+                setSelectedInvoice(null);
+                setPaymentProofFile(null);
+                setIsUploading(false);
+                setUploadProgress(0);
+                resolve();
+            }
+        );
+    });
+};
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditableFormData({
@@ -380,59 +376,57 @@ export default function DashboardLayout({
 
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile || !authUser) return;
-
+  
     setIsUploading(true);
     setUploadProgress(0);
-
+  
     const storage = getStorage();
-    // Using a consistent file name for simplicity. Cloud Function can be triggered on this specific file path.
-    const filePath = `users/${authUser.uid}/profile/profile_photo`;
+    // A Cloud Function will trigger on this specific path
+    const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`; 
     const storageRef = ref(storage, filePath);
     const metadata = { contentType: profilePhotoFile.type };
-
-    try {
-        const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-
-        await new Promise<void>((resolve, reject) => {
-            uploadTask.on(
-                'state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadProgress(progress);
-                },
-                (error) => {
-                    reject(error);
-                },
-                () => {
-                    // Upload completed successfully on the client.
-                    // The client's job is done for the upload.
-                    // A Cloud Function is now expected to handle the Firestore update.
-                    toast({
-                        title: 'Upload Complete!',
-                        description: 'Your new photo is being processed and will appear shortly.',
-                    });
-                    setIsPhotoPreviewOpen(false); // Close the dialog on success
-                    resolve();
-                }
-            );
-        });
-    } catch (error: any) {
-        toast({
+  
+    const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
+  
+    return new Promise<void>((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          toast({
             variant: 'destructive',
             title: 'Upload Failed',
             description: error.message || 'Could not upload your photo. Please try again.'
-        });
-    } finally {
-        // Reset state regardless of outcome
-        setIsUploading(false);
-        setUploadProgress(0);
-        setProfilePhotoFile(null);
-        if (profilePhotoPreview) {
-            URL.revokeObjectURL(profilePhotoPreview);
+          });
+          setIsUploading(false);
+          setUploadProgress(0);
+          // Do not close the dialog on failure
+          reject(error);
+        },
+        () => {
+          // Upload completed successfully on the client.
+          // The client's job is done for the upload.
+          // A Cloud Function is now expected to handle the Firestore update.
+          toast({
+            title: 'Upload Complete!',
+            description: 'Your new photo is being processed and will appear shortly.',
+          });
+          setIsPhotoPreviewOpen(false); // Close the dialog on success
+          setIsUploading(false);
+          setUploadProgress(0);
+          setProfilePhotoFile(null);
+          if (profilePhotoPreview) {
+              URL.revokeObjectURL(profilePhotoPreview);
+          }
+          setProfilePhotoPreview(null);
+          resolve();
         }
-        setProfilePhotoPreview(null);
-    }
-};
+      );
+    });
+  };
 
   const handleCancelUpload = () => {
     setIsPhotoPreviewOpen(false);
@@ -1223,3 +1217,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    

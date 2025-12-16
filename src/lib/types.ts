@@ -1,5 +1,4 @@
 
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -37,6 +36,7 @@ export interface WaterStation {
   id:string;
   name: string;
   location: string;
+  partnershipAgreementUrl?: string;
 }
 
 export type Permission = 
@@ -140,3 +140,5 @@ export interface RefillRequest {
   requestedAt: FieldValue | Timestamp;
   status: 'Pending' | 'Completed';
 }
+
+    
