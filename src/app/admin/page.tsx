@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -430,11 +430,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         adjustConsumptionForm.reset();
     };
 
-    const handleAttachPermit = (permitType: string, file: File, label: string) => {
-        if (!stationToUpdate || !firestore) return;
+    const handleUploadComplianceDoc = (fieldKey: string, file: File, stationId: string, label: string) => {
+        if (!firestore) return;
         setIsUploading(true);
         const storage = getStorage();
-        const filePath = `stations/${stationToUpdate.id}/compliance/${permitType}-${file.name}`;
+        const filePath = `stations/${stationId}/compliance/${fieldKey}-${file.name}`;
         const storageRef = ref(storage, filePath);
     
         const uploadTask = uploadBytesResumable(storageRef, file);
@@ -442,18 +442,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         uploadTask.on('state_changed',
             (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(prev => ({ ...prev, [permitType]: progress }));
+                setUploadProgress(prev => ({ ...prev, [fieldKey]: progress }));
             },
             (error) => {
                 console.error("Upload error:", error);
                 toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach the compliance document. Please try again.' });
-                setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
+                setUploadProgress(prev => ({ ...prev, [fieldKey]: 0 }));
                 setIsUploading(false);
             },
             async () => {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
     
-                const reportsRef = collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports');
+                const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
                 const newReport: Omit<ComplianceReport, 'id'> = {
                     name: label,
                     date: new Date().toISOString(),
@@ -463,20 +463,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 await addDocumentNonBlocking(reportsRef, newReport);
     
                 toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
-                setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
+                setUploadProgress(prev => ({ ...prev, [fieldKey]: 0 }));
                 setComplianceRefresher(c => c + 1); // Trigger a refresh
                 setIsUploading(false);
+                handleComplianceFileSelect(fieldKey, null); // Clear staged file
             }
         );
     };
 
-    const handleAgreementUpload = (file: File) => {
-        if (!stationToUpdate || !firestore) return;
+    const handleAgreementUpload = (file: File, stationId: string) => {
+        if (!firestore) return;
         setIsUploading(true);
         const storage = getStorage();
-        const filePath = `stations/${stationToUpdate.id}/agreement/${file.name}`;
+        const filePath = `stations/${stationId}/agreement/${file.name}`;
         const storageRef = ref(storage, filePath);
-        const uploadKey = `agreement-${stationToUpdate.id}`;
+        const uploadKey = `agreement-${stationId}`;
 
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -493,12 +494,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             async () => {
                 try {
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+                    const stationRef = doc(firestore, 'waterStations', stationId);
                     await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
     
                     setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: downloadURL } as WaterStation : null);
     
                     toast({ title: 'Agreement Uploaded', description: 'The partnership agreement has been attached successfully.' });
+                    setAgreementFile(null); // Clear staged file
                 } catch (e) {
                     console.error("Error updating station document:", e);
                     toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save the agreement URL.' });
@@ -916,16 +918,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore) return;
         setIsUploading(true);
         setUploadProgress({});
+        let stationId: string;
     
         try {
+            // 1. Create the station document to get an ID
             const stationsRef = collection(firestore, 'waterStations');
-            const newDocRef = await addDoc(stationsRef, values);
-            const stationId = newDocRef.id;
-    
-            const storage = getStorage();
+            const newDocRef = await addDocumentNonBlocking(stationsRef, values);
+            stationId = newDocRef.id;
+
+            // 2. Prepare upload promises
             const filesToUpload = { ...complianceFiles, ...(agreementFile && { agreement: agreementFile }) };
             const uploadPromises = Object.entries(filesToUpload).map(([key, file]) => {
-                if (!file) return Promise.resolve();
+                if (!file) return Promise.resolve({key, url: ''});
     
                 const isComplianceDoc = complianceFields.some(f => f.key === key);
                 const filePath = isComplianceDoc
@@ -935,7 +939,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const storageRef = ref(storage, filePath);
                 const uploadTask = uploadBytesResumable(storageRef, file);
     
-                return new Promise<void>((resolve, reject) => {
+                return new Promise<{key: string, url: string}>((resolve, reject) => {
                     uploadTask.on('state_changed',
                         (snapshot) => {
                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -943,25 +947,32 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         },
                         (error) => reject(error),
                         async () => {
-                            try {
-                                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                                if (isComplianceDoc) {
-                                    const field = complianceFields.find(f => f.key === key);
-                                    const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
-                                    await addDocumentNonBlocking(reportsRef, { name: field!.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: downloadURL });
-                                } else { // It's the agreement
-                                    await updateDocumentNonBlocking(newDocRef, { partnershipAgreementUrl: downloadURL });
-                                }
-                                resolve();
-                            } catch(e) {
-                                reject(e);
-                            }
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            resolve({ key, url: downloadURL });
                         }
                     );
                 });
             });
     
-            await Promise.all(uploadPromises);
+            // 3. Execute all uploads
+            const uploadedFiles = await Promise.all(uploadPromises);
+
+            // 4. Update Firestore document with all URLs
+            const stationDoc = doc(firestore, 'waterStations', stationId);
+            const agreementUrl = uploadedFiles.find(f => f.key === 'agreement')?.url || '';
+            if (agreementUrl) {
+                await updateDocumentNonBlocking(stationDoc, { partnershipAgreementUrl: agreementUrl });
+            }
+
+            const complianceReportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
+            for (const file of uploadedFiles) {
+                if (file.url && file.key !== 'agreement') {
+                    const field = complianceFields.find(f => f.key === file.key);
+                    if (field) {
+                        await addDocumentNonBlocking(complianceReportsRef, { name: field.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: file.url });
+                    }
+                }
+            }
     
             toast({ title: 'Station Created', description: `Station "${values.name}" created successfully with all documents.` });
             stationForm.reset();
@@ -1902,31 +1913,22 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Station ID</TableHead>
                                             <TableHead>Station Name</TableHead>
                                             <TableHead>Location</TableHead>
-                                            <TableHead>Compliance Status</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {stationsLoading && (
-                                            <TableRow><TableCell colSpan={4} className="text-center">Loading stations...</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={3} className="text-center">Loading stations...</TableCell></TableRow>
                                         )}
                                         {!stationsLoading && waterStations?.map((station) => (
                                             <TableRow key={station.id} onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }} className="cursor-pointer">
                                                 <TableCell className="font-mono text-xs">{station.id}</TableCell>
                                                 <TableCell className="font-medium">{station.name}</TableCell>
                                                 <TableCell>{station.location}</TableCell>
-                                                <TableCell>
-                                                    <Badge 
-                                                        variant={'outline'} 
-                                                        className="cursor-pointer hover:bg-muted"
-                                                    >
-                                                       View
-                                                    </Badge>
-                                                </TableCell>
                                             </TableRow>
                                         ))}
                                          {!stationsLoading && waterStations?.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center">No water stations found.</TableCell>
+                                                <TableCell colSpan={3} className="text-center">No water stations found.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -2054,6 +2056,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <TableBody>
                                     {complianceFields.map(field => {
                                         const report = complianceReports?.find(r => r.name === field.label);
+                                        const stagedFile = complianceFiles[field.key];
                                         const progress = uploadProgress[field.key] || 0;
                                         const isUploadingFile = progress > 0 && progress < 100;
 
@@ -2061,14 +2064,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableRow key={field.key}>
                                             <TableCell className="font-medium">{field.label}</TableCell>
                                             <TableCell>
-                                                 {report ? (
+                                                {report ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
                                                 ) : isUploadingFile ? (
                                                     <Badge variant="secondary">Uploading...</Badge>
-                                                ) : stationToUpdate ? (
-                                                    <Badge variant="destructive">Needs Compliance</Badge>
+                                                ) : stagedFile ? (
+                                                    <Badge variant="outline">File Staged</Badge>
                                                 ) : (
-                                                    <Badge variant="outline">{complianceFiles[field.key] ? 'File Selected' : 'Not Attached'}</Badge>
+                                                    <Badge variant="destructive">Needs Compliance</Badge>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -2081,19 +2084,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 <Eye className="mr-2 h-4 w-4" /> View
                                                             </a>
                                                         </Button>
+                                                    ) : stagedFile ? (
+                                                        <>
+                                                        <span className="text-sm text-muted-foreground truncate max-w-[120px]">{stagedFile.name}</span>
+                                                            <Button size="sm" onClick={() => handleUploadComplianceDoc(field.key, stagedFile, stationToUpdate!.id, field.label)} disabled={!stationToUpdate || isUploading}>
+                                                                <Upload className="mr-2 h-4 w-4" /> Upload
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" onClick={() => handleComplianceFileSelect(field.key, null)}>
+                                                                <X className="h-4 w-4"/>
+                                                            </Button>
+                                                        </>
                                                     ) : (
                                                         <Button asChild type="button" variant="outline" size="sm" disabled={!isAdmin || isUploading}>
                                                             <Label className={cn("flex items-center", (isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                                <Upload className="mr-2 h-4 w-4" /> Attach
+                                                                <Paperclip className="mr-2 h-4 w-4" /> Attach
                                                                 <Input type="file" accept="*/*" className="hidden" disabled={!isAdmin || isUploading} onChange={(e) => {
                                                                     const file = e.target.files?.[0];
-                                                                    if (file) {
-                                                                        if(stationToUpdate) {
-                                                                            handleAttachPermit(field.key, file, field.label)
-                                                                        } else {
-                                                                            handleComplianceFileSelect(field.key, file)
-                                                                        }
-                                                                    }
+                                                                    if (file) handleComplianceFileSelect(field.key, file);
                                                                 }} />
                                                             </Label>
                                                         </Button>
@@ -2111,47 +2118,51 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <div>
                             <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {stationToUpdate?.partnershipAgreementUrl ? (
                                     <>
+                                        <FileText className="h-6 w-6 text-muted-foreground" />
+                                        <div className="flex-1">
+                                            <p className="font-medium">Agreement on File</p>
+                                            <p className="text-xs text-muted-foreground">Last updated: {stationToUpdate.partnershipAgreementUrl ? 'N/A' : 'N/A'}</p>
+                                        </div>
                                         <Button asChild variant="outline">
                                             <a href={stationToUpdate.partnershipAgreementUrl} target="_blank" rel="noopener noreferrer">
-                                                <Eye className="mr-2 h-4 w-4" /> View Agreement
+                                                <Eye className="mr-2 h-4 w-4" /> View
                                             </a>
                                         </Button>
-                                        <Button asChild variant="secondary" size="sm" disabled={isUploading}>
-                                            <Label className={isUploading ? "cursor-not-allowed" : "cursor-pointer"}>
-                                                <Upload className="mr-2 h-4 w-4" /> Replace
-                                                <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => e.target.files?.[0] && handleAgreementUpload(e.target.files[0])} />
+                                    </>
+                                ) : agreementFile ? (
+                                    <>
+                                        <FileText className="h-6 w-6 text-muted-foreground" />
+                                        <div className="flex-1">
+                                            <p className="font-medium truncate">{agreementFile.name}</p>
+                                            <p className="text-xs text-muted-foreground">Ready to upload</p>
+                                        </div>
+                                        {stationToUpdate && (
+                                            <Button onClick={() => handleAgreementUpload(agreementFile, stationToUpdate.id)} disabled={isUploading}>
+                                                <Upload className="mr-2 h-4 w-4"/> Upload
+                                            </Button>
+                                        )}
+                                        <Button size="icon" variant="ghost" onClick={() => setAgreementFile(null)}><X className="h-4 w-4"/></Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileText className="h-6 w-6 text-muted-foreground" />
+                                        <div className="flex-1">
+                                            <p className="font-medium">No Agreement Attached</p>
+                                            <p className="text-xs text-muted-foreground">Please attach the signed agreement.</p>
+                                        </div>
+                                         <Button asChild variant="outline" disabled={isUploading}>
+                                            <Label className={cn("flex items-center", !isUploading ? "cursor-pointer" : "cursor-not-allowed")}>
+                                                <Paperclip className="mr-2 h-4 w-4" /> Attach
+                                                <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if(file) setAgreementFile(file);
+                                                }} />
                                             </Label>
                                         </Button>
                                     </>
-                                ) : (
-                                    <Button asChild variant="outline" disabled={isUploading}>
-                                        <Label className={cn("flex items-center", isUploading ? "cursor-not-allowed" : "cursor-pointer")}>
-                                            <Upload className="mr-2 h-4 w-4" /> {agreementFile ? `Selected: ${agreementFile.name}`: 'Attach Agreement'}
-                                            <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if(file) {
-                                                    if (stationToUpdate) {
-                                                        handleAgreementUpload(file)
-                                                    } else {
-                                                        setAgreementFile(file)
-                                                    }
-                                                }
-                                            }} />
-                                        </Label>
-                                    </Button>
-                                )}
-                                {isUploading && stationToUpdate && uploadProgress[`agreement-${stationToUpdate.id}`] > 0 && (
-                                    <div className="w-32">
-                                        <Progress value={uploadProgress[`agreement-${stationToUpdate.id}`]} />
-                                    </div>
-                                )}
-                                {isUploading && !stationToUpdate && uploadProgress['agreement'] > 0 && (
-                                    <div className="w-32">
-                                        <Progress value={uploadProgress['agreement']} />
-                                    </div>
                                 )}
                             </div>
                         </div>
@@ -2234,3 +2245,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
