@@ -189,11 +189,9 @@ export default function AdminLayout({
         );
       });
 
-      // Update Firestore with the new URL
       await updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
       toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
 
-      // After successful upload and Firestore update, delete the old photo
       if (oldPhotoURL) {
         try {
           const oldPhotoRef = ref(storage, oldPhotoURL);
@@ -225,33 +223,21 @@ export default function AdminLayout({
     if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
 
     const storage = getStorage();
-    try {
-        const photoRef = ref(storage, adminUser.photoURL);
-        await deleteObject(photoRef);
-    } catch (error: any) {
-        if (error.code !== 'storage/object-not-found') {
-            console.error("Error deleting profile photo from storage: ", error);
-            toast({
-                variant: 'destructive',
-                title: 'Delete Failed',
-                description: 'Could not delete the old photo from storage. Please try again.',
-            });
-            return; 
-        }
-    }
+    const photoRef = ref(storage, adminUser.photoURL);
 
     try {
+        await deleteObject(photoRef);
         await updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
         toast({
             title: 'Profile Photo Removed',
             description: 'Your profile photo has been removed.',
         });
-    } catch (error) {
-        console.error("Error updating Firestore after photo delete: ", error);
+    } catch (error: any) {
+        console.error("Error removing profile photo: ", error);
         toast({
             variant: 'destructive',
-            title: 'Update Failed',
-            description: 'Could not update your profile. Please try again.',
+            title: 'Delete Failed',
+            description: 'Could not remove your profile photo. Please try again.',
         });
     }
   };
@@ -506,3 +492,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    
