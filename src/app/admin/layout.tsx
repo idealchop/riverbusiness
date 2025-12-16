@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Bell, Search, User, Edit, KeyRound, EyeOff, Eye, Upload, LogOut, Pencil, Trash2 } from 'lucide-react';
+import { Bell, User, Edit, KeyRound, EyeOff, Eye, Upload, LogOut, Pencil, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useAuth, deleteDocumentNonBlocking } from '@/firebase';
@@ -438,5 +438,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    
