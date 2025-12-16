@@ -381,40 +381,34 @@ export default function DashboardLayout({
 
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile || !authUser || !userDocRef) {
-        toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context or file is missing.' });
-        return;
+      toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context or file is missing.' });
+      return;
     }
 
     setIsUploading(true);
     setUploadProgress(0);
     const oldPhotoURL = user?.photoURL;
-  
+
     try {
       const storage = getStorage();
       const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
       const storageRef = ref(storage, filePath);
       const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
-  
-      const downloadURL = await new Promise<string>((resolve, reject) => {
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-          },
-          (error) => reject(error),
-          async () => {
-            try {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(url);
-            } catch (error) {
-              reject(error);
-            }
-          }
-        );
-      });
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        }
+      );
+
+      await uploadTask;
+
+      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
       await updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
       toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+      
       setIsPhotoPreviewOpen(false);
 
       if (oldPhotoURL) {
@@ -429,15 +423,16 @@ export default function DashboardLayout({
       }
 
     } catch (error) {
+      console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
-        setProfilePhotoFile(null);
-        if (profilePhotoPreview) {
-          URL.revokeObjectURL(profilePhotoPreview);
-        }
-        setProfilePhotoPreview(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setProfilePhotoFile(null);
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview);
+      }
+      setProfilePhotoPreview(null);
     }
   };
 
@@ -1193,7 +1188,7 @@ export default function DashboardLayout({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="low">Low - Just exploring options</SelectItem>
-                            <SelectItem value="medium">Medium - I have some concerns</SelectItem>
+                            <SelectItem value="medium">I have some concerns</SelectItem>
                             <SelectItem value="high">High - Urgent issue, need to switch ASAP</SelectItem>
                         </SelectContent>
                     </Select>
