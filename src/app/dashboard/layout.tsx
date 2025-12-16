@@ -619,7 +619,7 @@ export default function DashboardLayout({
                 <div className="flex items-center gap-3 cursor-pointer">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.photoURL || null} alt={user?.name || ''} />
+                          <AvatarImage src={user?.photoURL ?? undefined} alt={user?.name || ''} />
                           <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                     <div className="hidden sm:flex flex-col items-start">
@@ -647,7 +647,7 @@ export default function DashboardLayout({
                       <TabsContent value="accounts" className="py-4">
                         <Card>
                           <CardContent className="pt-6">
-                              {editableFormData ? (
+                              {user && editableFormData ? (
                                   <div className="space-y-6">
                                       <div>
                                           <div className="flex items-center gap-4 mb-4">
@@ -655,8 +655,8 @@ export default function DashboardLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={editableFormData.photoURL || null} alt={editableFormData.name || ''} />
-                                                              <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
+                                                              <AvatarImage src={user.photoURL ?? undefined} alt={user.name || ''} />
+                                                              <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           {isUploading ? (
                                                               <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
@@ -678,7 +678,7 @@ export default function DashboardLayout({
                                                               Upload new photo
                                                           </Label>
                                                       </DropdownMenuItem>
-                                                      {editableFormData.photoURL && (
+                                                      {user.photoURL && (
                                                           <AlertDialogTrigger asChild>
                                                               <DropdownMenuItem className="text-destructive focus:text-destructive">
                                                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -690,7 +690,7 @@ export default function DashboardLayout({
                                               </DropdownMenu>
                                               <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
                                               <div className="space-y-1">
-                                                  <h4 className="font-semibold">{editableFormData.name}</h4>
+                                                  <h4 className="font-semibold">{user.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>
                                               </div>
                                           </div>
@@ -699,7 +699,7 @@ export default function DashboardLayout({
                                       <div>
                                           <div className="flex justify-between items-center mb-4">
                                             <h4 className="font-semibold">Your Details</h4>
-                                            {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                                            {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => { setIsEditingDetails(true); setEditableFormData(user); }}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
                                           </div>
                                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                                               <div className="grid grid-cols-[100px_1fr] items-center gap-4">
@@ -906,7 +906,7 @@ export default function DashboardLayout({
                     </Tabs>
                   </div>
                 </ScrollArea>
-                <DialogFooter className="pr-6 pt-4">
+                <DialogFooter className="pr-6 pt-4 border-t">
                     <Button variant="outline" onClick={handleLogout}>Logout</Button>
                 </DialogFooter>
               </DialogContent>
@@ -939,5 +939,7 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
 
     

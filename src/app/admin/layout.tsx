@@ -271,7 +271,7 @@ export default function AdminLayout({
                       </DialogHeader>
                       <ScrollArea className="max-h-[70vh] w-full">
                           <div className="pr-6 py-4">
-                              {editableFormData ? (
+                              {adminUser && editableFormData ? (
                                   <div className="space-y-6">
                                       <div>
                                           <div className="flex items-center gap-4 mb-4">
@@ -279,8 +279,8 @@ export default function AdminLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={editableFormData.photoURL ?? undefined} alt={editableFormData.name || ''} />
-                                                              <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
+                                                              <AvatarImage src={adminUser.photoURL ?? undefined} alt={adminUser.name || ''} />
+                                                              <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           {isUploading ? (
                                                             <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
@@ -302,7 +302,7 @@ export default function AdminLayout({
                                                               Upload new photo
                                                           </Label>
                                                       </DropdownMenuItem>
-                                                      {editableFormData.photoURL && (
+                                                      {adminUser.photoURL && (
                                                           <AlertDialogTrigger asChild>
                                                               <DropdownMenuItem className="text-destructive focus:text-destructive">
                                                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -315,7 +315,7 @@ export default function AdminLayout({
                                               <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
 
                                               <div className="space-y-1">
-                                                  <h4 className="font-semibold">{editableFormData.name}</h4>
+                                                  <h4 className="font-semibold">{adminUser.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>
                                               </div>
                                           </div>
@@ -324,7 +324,7 @@ export default function AdminLayout({
                                       <div>
                                           <div className="flex justify-between items-center mb-4">
                                           <h4 className="font-semibold">Your Details</h4>
-                                          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                                          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => { setIsEditingDetails(true); setEditableFormData(adminUser); }}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
                                           </div>
                                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                                               <div className="grid grid-cols-[100px_1fr] items-center gap-4">
@@ -362,7 +362,7 @@ export default function AdminLayout({
                               ) : <p>No account information available.</p>}
                           </div>
                       </ScrollArea>
-                      <DialogFooter className="pr-6 pt-4">
+                      <DialogFooter className="pr-6 pt-4 border-t">
                         <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
                       </DialogFooter>
                     </DialogContent>
@@ -425,3 +425,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    
