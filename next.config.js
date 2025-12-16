@@ -1,4 +1,6 @@
+
 /** @type {import('next').NextConfig} */
+// This configuration correctly uses the src/app directory by default.
 const nextConfig = {
   /* config options here */
   typescript: {
@@ -22,7 +24,7 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https://picsum.photos',
         hostname: 'picsum.photos',
         port: '',
         pathname: '/**',
