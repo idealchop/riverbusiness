@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, ConsumptionHistory, RefillRequest } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -78,39 +78,42 @@ function AdminDashboardSkeleton() {
         <div className="flex justify-between items-center">
             <Skeleton className="h-9 w-64" />
         </div>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <div className="grid w-full grid-cols-2 h-10 rounded-md bg-muted p-1">
-                <Skeleton className="h-full w-full" />
-                <Skeleton className="h-full w-full" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-                    <TableHead><Skeleton className="h-5 w-40" /></TableHead>
-                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64 mt-1" />
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="h-10 w-full mb-4" />
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-40" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <TableRow key={i}>
+                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                 <div className="flex items-center justify-end space-x-2 py-4">
+                    <Skeleton className="h-9 w-24" />
+                    <Skeleton className="h-9 w-24" />
+                </div>
+            </CardContent>
         </Card>
       </div>
     );
@@ -175,6 +178,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isScheduleDialogOpen, setIsScheduleDialogOpen] = React.useState(false);
     const [userForSchedule, setUserForSchedule] = React.useState<AppUser | null>(null);
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [localSearchTerm, setLocalSearchTerm] = React.useState('');
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const ITEMS_PER_PAGE = 20;
 
     const userDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
@@ -741,8 +747,24 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
     const watchedEditDeliveryContainers = editDeliveryForm.watch('volumeContainers');
 
-    
-    const filteredUsers = appUsers?.filter(user => user.role !== 'Admin') || [];
+    const filteredUsers = React.useMemo(() => {
+        const allUsers = appUsers?.filter(user => user.role !== 'Admin') || [];
+        if (!localSearchTerm) {
+            return allUsers;
+        }
+        return allUsers.filter(user =>
+            user.clientId?.toLowerCase().includes(localSearchTerm.toLowerCase()) ||
+            user.businessName?.toLowerCase().includes(localSearchTerm.toLowerCase())
+        );
+    }, [appUsers, localSearchTerm]);
+
+    const paginatedUsers = React.useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return filteredUsers.slice(startIndex, endIndex);
+    }, [filteredUsers, currentPage]);
+
+    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
 
     const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
@@ -815,36 +837,36 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         })
     }
     
-    const handleFileUpload = (
+    const handleFileUpload = async (
       file: File,
       path: string,
-      onProgress: (progress: number) => void,
-      onComplete: (downloadURL: string, task: UploadTask) => void,
-      onError: (error: Error) => void
-    ) => {
-      const storage = getStorage();
-      const storageRef = ref(storage, path);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-    
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          onProgress(progress);
-        },
-        (error) => {
-          console.error("Upload error:", error);
-          onError(error);
-        },
-        async () => {
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            onComplete(downloadURL, task);
-          } catch (error) {
-            console.error("URL retrieval error:", error);
-            onError(error as Error);
+      onProgress: (progress: number) => void
+    ): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const storage = getStorage();
+        const storageRef = ref(storage, path);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+      
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            onProgress(progress);
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(downloadURL);
+            } catch (error) {
+              console.error("URL retrieval error:", error);
+              reject(error as Error);
+            }
           }
-        }
-      );
+        );
+      });
     };
 
     const handleCreateStation = async (values: NewStationFormValues) => {
@@ -862,14 +884,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const uploadPromises: Promise<any>[] = [];
     
             const uploadFilePromise = (file: File, path: string, docKey: string): Promise<{ key: string, url: string, type: 'compliance' | 'agreement' }> => {
-                return new Promise((resolve, reject) => {
-                    handleFileUpload(
-                        file,
-                        path,
-                        (progress) => setUploadingFiles(prev => ({ ...prev, [docKey]: progress })),
-                        (downloadURL) => resolve({ key: docKey, url: downloadURL, type: docKey === 'agreement' ? 'agreement' : 'compliance' }),
-                        (error) => reject(error)
-                    );
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const downloadURL = await handleFileUpload(
+                            file,
+                            path,
+                            (progress) => setUploadingFiles(prev => ({ ...prev, [docKey]: progress }))
+                        );
+                        resolve({ key: docKey, url: downloadURL, type: docKey === 'agreement' ? 'agreement' : 'compliance' });
+                    } catch (error) {
+                        reject(error);
+                    }
                 });
             };
     
@@ -928,30 +953,28 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
         setIsSubmitting(true);
     
-        handleFileUpload(
-            file,
-            `users/${authUser.uid}/profile/${file.name}`,
-            (progress) => {
-                setUploadingFiles(prev => ({...prev, [uploadKey]: progress}))
-            },
-            async (downloadURL) => {
-                const userRef = doc(firestore, 'users', authUser.uid);
-                await updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
-                toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-                setIsSubmitting(false);
-                setUploadingFiles(prev => {
-                    const next = {...prev};
-                    delete next[uploadKey];
-                    return next;
-                });
-            },
-            (error) => {
-                console.error("Profile photo upload failed: ", error);
-                toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo.'});
-                setIsSubmitting(false);
-                setUploadingFiles(prev => ({...prev, [uploadKey]: -1}));
-            }
-        );
+        try {
+            const downloadURL = await handleFileUpload(
+                file,
+                `users/${authUser.uid}/profile/${file.name}`,
+                (progress) => {
+                    setUploadingFiles(prev => ({...prev, [uploadKey]: progress}))
+                }
+            );
+            const userRef = doc(firestore, 'users', authUser.uid);
+            await updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
+            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+        } catch (error) {
+            console.error("Profile photo upload failed: ", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo.'});
+        } finally {
+            setIsSubmitting(false);
+            setUploadingFiles(prev => {
+                const next = {...prev};
+                delete next[uploadKey];
+                return next;
+            });
+        }
     };
 
 
@@ -1815,6 +1838,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </CardContent>
                         </Card>
                     )}
+                    <div className="flex items-center gap-2">
+                        <Input
+                            placeholder="Search by Client ID or Business Name..."
+                            value={localSearchTerm}
+                            onChange={(e) => {
+                                setLocalSearchTerm(e.target.value);
+                                setCurrentPage(1); // Reset to first page on new search
+                            }}
+                            className="max-w-sm"
+                        />
+                    </div>
                     <div className="overflow-x-auto">
                         <Table className="min-w-full">
                             <TableHeader>
@@ -1827,7 +1861,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredUsers.map((user) => {
+                                {paginatedUsers.map((user) => {
                                     const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
                                         ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
                                         : 'N/A';
@@ -1849,7 +1883,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                     </TableRow>
                                 )})}
-                                {filteredUsers.length === 0 && !usersLoading && (
+                                {paginatedUsers.length === 0 && !usersLoading && (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center">No users found.</TableCell>
                                     </TableRow>
@@ -1862,6 +1896,27 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </TableBody>
                         </Table>
                      </div>
+                     <div className="flex items-center justify-end space-x-2 py-4">
+                        <span className="text-sm text-muted-foreground">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -2025,31 +2080,33 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const progress = uploadingFiles[field.key] || 0;
                                         const isUploadingFile = progress > 0 && progress < 100;
                                         
-                                        const onUpload = () => {
+                                        const onUpload = async () => {
                                             if (!stagedFile || !stationToUpdate || !firestore) return;
                                             const docKey = field.key;
                                             
-                                            handleFileUpload(
-                                                stagedFile,
-                                                `stations/${stationToUpdate.id}/compliance/${docKey}-${stagedFile.name}`,
-                                                (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
-                                                async (url) => {
-                                                    await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), {
-                                                        name: field.label,
-                                                        date: new Date().toISOString(),
-                                                        status: 'Compliant',
-                                                        reportUrl: url,
-                                                    });
-                                                    toast({ title: 'Document Uploaded', description: `${field.label} has been uploaded.` });
-                                                    setComplianceRefresher(c => c + 1);
-                                                    setUploadingFiles(prev => { const next = {...prev}; delete next[docKey]; return next; });
-                                                    handleComplianceFileSelect(docKey, null);
-                                                },
-                                                (err) => {
-                                                    toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
-                                                    setUploadingFiles(prev => ({...prev, [docKey]: -1}));
-                                                }
-                                            );
+                                            try {
+                                                const url = await handleFileUpload(
+                                                    stagedFile,
+                                                    `stations/${stationToUpdate.id}/compliance/${docKey}-${stagedFile.name}`,
+                                                    (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
+                                                );
+                                                
+                                                await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), {
+                                                    name: field.label,
+                                                    date: new Date().toISOString(),
+                                                    status: 'Compliant',
+                                                    reportUrl: url,
+                                                });
+                                                
+                                                toast({ title: 'Document Uploaded', description: `${field.label} has been uploaded.` });
+                                                setComplianceRefresher(c => c + 1);
+                                                handleComplianceFileSelect(docKey, null);
+                                            } catch (err: any) {
+                                                toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
+                                                setUploadingFiles(prev => ({...prev, [docKey]: -1}));
+                                            } finally {
+                                                 setUploadingFiles(prev => { const next = {...prev}; delete next[docKey]; return next; });
+                                            }
                                         };
 
                                         return (
@@ -2101,26 +2158,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
                             <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {(() => {
-                                    const onUpload = () => {
+                                    const onUpload = async () => {
                                         if (!agreementFile || !stationToUpdate || !firestore) return;
                                         const docKey = 'agreement';
-
-                                        handleFileUpload(
-                                            agreementFile,
-                                            `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`,
-                                            (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
-                                            async (url) => {
-                                                await updateDoc(doc(firestore, 'waterStations', stationToUpdate.id), { partnershipAgreementUrl: url });
-                                                setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: url } : null);
-                                                toast({ title: 'Agreement Uploaded', description: 'Partnership agreement has been uploaded.' });
-                                                setAgreementFile(null);
-                                                setUploadingFiles(prev => { const next = {...prev}; delete next[docKey]; return next; });
-                                            },
-                                            (err) => {
-                                                toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
-                                                setUploadingFiles(prev => ({...prev, [docKey]: -1}));
-                                            }
-                                        );
+                                        
+                                        try {
+                                            const url = await handleFileUpload(
+                                                agreementFile,
+                                                `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`,
+                                                (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
+                                            );
+                                            await updateDoc(doc(firestore, 'waterStations', stationToUpdate.id), { partnershipAgreementUrl: url });
+                                            setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: url } : null);
+                                            toast({ title: 'Agreement Uploaded', description: 'Partnership agreement has been uploaded.' });
+                                            setAgreementFile(null);
+                                        } catch (err: any) {
+                                            toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
+                                            setUploadingFiles(prev => ({...prev, [docKey]: -1}));
+                                        } finally {
+                                             setUploadingFiles(prev => { const next = {...prev}; delete next[docKey]; return next; });
+                                        }
                                     };
                                     
                                     const progress = uploadingFiles['agreement'];
@@ -2248,7 +2305,5 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
 
     
