@@ -156,6 +156,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isUploadContractOpen, setIsUploadContractOpen] = React.useState(false);
     const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
     const [contractFile, setContractFile] = React.useState<File | null>(null);
+    const [agreementFile, setAgreementFile] = React.useState<File | null>(null);
+    const [complianceFiles, setComplianceFiles] = React.useState<Record<string, File>>({});
+
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
@@ -353,6 +356,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
         } else {
             stationForm.reset({ name: '', location: '' });
+            setAgreementFile(null);
+            setComplianceFiles({});
         }
     }, [stationToUpdate, stationForm, isStationProfileOpen]);
     
@@ -370,26 +375,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [deliveryToEdit, editDeliveryForm]);
 
     const handleSaveStation = async (values: NewStationFormValues) => {
-        if (!firestore) return;
+        if (!firestore || !stationToUpdate) return;
     
-        if (stationToUpdate) {
-            const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
-            await updateDocumentNonBlocking(stationRef, values);
-            toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
-        } else {
-            try {
-                const stationsRef = collection(firestore, 'waterStations');
-                const newDocRef = await addDocumentNonBlocking(stationsRef, values);
-                if (newDocRef) {
-                    const newStationData = { ...values, id: newDocRef.id };
-                    setStationToUpdate(newStationData as WaterStation); 
-                    toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
-                }
-            } catch (error) {
-                console.error("Error creating station: ", error);
-                toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
-            }
-        }
+        const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+        await updateDocumentNonBlocking(stationRef, values);
+        toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
     };
 
     const handleDeleteStation = async () => {
@@ -893,9 +883,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [refillRequests]);
 
     const complianceFields: { key: string, label: string }[] = [
-        { key: 'businessPermitUrl', label: 'Business Permit' },
-        { key: 'dohPermitUrl', label: 'DOH Permit' },
-        { key: 'sanitaryPermitUrl', label: 'Sanitary Permit' },
+        { key: 'businessPermit', label: 'Business Permit' },
+        { key: 'dohPermit', label: 'DOH Permit' },
+        { key: 'sanitaryPermit', label: 'Sanitary Permit' },
     ];
       
     const selectedUserPlanImage = React.useMemo(() => {
@@ -904,6 +894,96 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!clientTypeDetails) return null;
         return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [selectedUser]);
+
+    const handleComplianceFileSelect = (key: string, file: File | null) => {
+        setComplianceFiles(prev => {
+            const newState = {...prev};
+            if (file) {
+                newState[key] = file;
+            } else {
+                delete newState[key];
+            }
+            return newState;
+        })
+    }
+
+    const handleCreateStation = async (values: NewStationFormValues) => {
+        if (!firestore) return;
+        setIsUploading(true);
+
+        try {
+            // 1. Create station document to get ID
+            const stationsRef = collection(firestore, 'waterStations');
+            const newDocRef = await addDocumentNonBlocking(stationsRef, values);
+            if (!newDocRef) throw new Error("Failed to create station document.");
+            const stationId = newDocRef.id;
+
+            const storage = getStorage();
+            const uploadPromises = [];
+
+            // 2. Upload compliance documents
+            for (const key in complianceFiles) {
+                const file = complianceFiles[key];
+                const field = complianceFields.find(f => f.key === key);
+                if (file && field) {
+                    const filePath = `stations/${stationId}/compliance/${key}-${file.name}`;
+                    const storageRef = ref(storage, filePath);
+                    const uploadTask = uploadBytesResumable(storageRef, file);
+                    uploadPromises.push(new Promise<void>((resolve, reject) => {
+                         uploadTask.on('state_changed', 
+                            (snapshot) => {
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                setUploadProgress(prev => ({ ...prev, [key]: progress }));
+                            },
+                            (error) => reject(error),
+                            async () => {
+                                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                                const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
+                                const newReport: Omit<ComplianceReport, 'id'> = { name: field.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: downloadURL };
+                                await addDocumentNonBlocking(reportsRef, newReport);
+                                resolve();
+                            }
+                        )
+                    }));
+                }
+            }
+
+             // 3. Upload partnership agreement
+            if (agreementFile) {
+                const filePath = `stations/${stationId}/agreement/${agreementFile.name}`;
+                const storageRef = ref(storage, filePath);
+                const uploadTask = uploadBytesResumable(storageRef, agreementFile);
+                uploadPromises.push(new Promise<void>((resolve, reject) => {
+                    uploadTask.on('state_changed', 
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            setUploadProgress(prev => ({ ...prev, agreement: progress }));
+                        },
+                        (error) => reject(error),
+                        async () => {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            const stationRef = doc(firestore, 'waterStations', stationId);
+                            await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
+                            resolve();
+                        }
+                    )
+                }));
+            }
+
+            await Promise.all(uploadPromises);
+
+            toast({ title: 'Station Created', description: `Station "${values.name}" created successfully with all documents.` });
+            setIsStationProfileOpen(false);
+
+        } catch (error) {
+             console.error("Error creating station with documents: ", error);
+             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station and upload documents.' });
+        } finally {
+            setIsUploading(false);
+            setUploadProgress({});
+        }
+    };
+
 
 
     if (usersLoading || stationsLoading) {
@@ -1946,32 +2026,29 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormField control={stationForm.control} name="name" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Station Name</FormLabel>
-                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate || isUploading}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
                                 <FormField control={stationForm.control} name="location" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Location</FormLabel>
-                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={!!stationToUpdate}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={!!stationToUpdate || isUploading}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
-                                {!stationToUpdate && (
-                                    <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm">Save Station Details</Button>
+                                {stationToUpdate && (
+                                     <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm" disabled={isUploading}>Save Station Details</Button>
                                 )}
                             </form>
                         </Form>
 
                         <Separator />
                         
-                        <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
+                        <div>
                             <h3 className="font-semibold text-base mb-1">Compliance Documents</h3>
                             <p className="text-sm text-muted-foreground mb-4">
-                                {!stationToUpdate 
-                                    ? "Please save the station details first to enable document uploads."
-                                    : "Submit your latest permits. All documents are required for full partner verification."
-                                }
+                                Submit your latest permits. All documents are required for full partner verification.
                             </p>
                             <Table>
                                 <TableHeader>
@@ -1995,8 +2072,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Compliant</Badge>
                                                 ) : isUploadingFile ? (
                                                     <Badge variant="secondary">Uploading...</Badge>
-                                                ) : (
+                                                ) : stationToUpdate ? (
                                                     <Badge variant="destructive">Needs Compliance</Badge>
+                                                ) : (
+                                                    <Badge variant="outline">{complianceFiles[field.key] ? 'File Selected' : 'Not Attached'}</Badge>
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -2010,10 +2089,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             </a>
                                                         </Button>
                                                     ) : (
-                                                        <Button asChild type="button" variant="outline" size="sm" disabled={!stationToUpdate || !isAdmin || isUploading}>
-                                                            <Label className={cn("flex items-center", (stationToUpdate && isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
+                                                        <Button asChild type="button" variant="outline" size="sm" disabled={!isAdmin || isUploading}>
+                                                            <Label className={cn("flex items-center", (isAdmin && !isUploading) ? "cursor-pointer" : "cursor-not-allowed")}>
                                                                 <Upload className="mr-2 h-4 w-4" /> Attach
-                                                                <Input type="file" accept="*/*" className="hidden" disabled={!stationToUpdate || !isAdmin || isUploading} onChange={(e) => e.target.files?.[0] && handleAttachPermit(field.key, e.target.files[0], field.label)} />
+                                                                <Input type="file" accept="*/*" className="hidden" disabled={!isAdmin || isUploading} onChange={(e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) {
+                                                                        if(stationToUpdate) {
+                                                                            handleAttachPermit(field.key, file, field.label)
+                                                                        } else {
+                                                                            handleComplianceFileSelect(field.key, file)
+                                                                        }
+                                                                    }
+                                                                }} />
                                                             </Label>
                                                         </Button>
                                                     )}
@@ -2027,7 +2115,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         
                         <Separator />
 
-                        <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
+                        <div>
                             <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
                             <div className="flex items-center gap-4">
@@ -2048,14 +2136,28 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 ) : (
                                     <Button asChild variant="outline" disabled={isUploading}>
                                         <Label className={isUploading ? "cursor-not-allowed" : "cursor-pointer"}>
-                                            <Upload className="mr-2 h-4 w-4" /> Attach Agreement
-                                            <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => e.target.files?.[0] && handleAgreementUpload(e.target.files[0])} />
+                                            <Upload className="mr-2 h-4 w-4" /> {agreementFile ? `Selected: ${agreementFile.name}`: 'Attach Agreement'}
+                                            <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if(file) {
+                                                    if (stationToUpdate) {
+                                                        handleAgreementUpload(file)
+                                                    } else {
+                                                        setAgreementFile(file)
+                                                    }
+                                                }
+                                            }} />
                                         </Label>
                                     </Button>
                                 )}
                                 {isUploading && stationToUpdate && uploadProgress[`agreement-${stationToUpdate.id}`] > 0 && (
                                     <div className="w-32">
                                         <Progress value={uploadProgress[`agreement-${stationToUpdate.id}`]} />
+                                    </div>
+                                )}
+                                {isUploading && !stationToUpdate && uploadProgress['agreement'] > 0 && (
+                                    <div className="w-32">
+                                        <Progress value={uploadProgress['agreement']} />
                                     </div>
                                 )}
                             </div>
@@ -2065,7 +2167,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <DialogFooter className="mt-4 pt-4 border-t flex justify-between w-full">
                      <div>
                         {stationToUpdate && (
-                             <Button variant="destructive" onClick={() => setStationToDelete(stationToUpdate)} disabled={!isAdmin}>
+                             <Button variant="destructive" onClick={() => setStationToDelete(stationToUpdate)} disabled={!isAdmin || isUploading}>
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete Station
                              </Button>
@@ -2075,8 +2177,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogClose asChild>
                             <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                         </DialogClose>
-                        {stationToUpdate && (
-                            <Button onClick={() => { setStationToUpdate(null); stationForm.reset(); setIsStationProfileOpen(false);}} disabled={!isAdmin}>Finish</Button>
+                        {stationToUpdate ? (
+                            <Button onClick={() => { setStationToUpdate(null); stationForm.reset(); setIsStationProfileOpen(false);}} disabled={isUploading}>Finish</Button>
+                        ) : (
+                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isUploading}>{isUploading ? "Creating..." : "Create Station"}</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -2139,3 +2243,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
