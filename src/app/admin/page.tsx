@@ -35,7 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -910,69 +910,64 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleCreateStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
         setIsUploading(true);
+        setUploadProgress({});
 
         try {
             // 1. Create station document to get ID
             const stationsRef = collection(firestore, 'waterStations');
-            const newDocRef = await addDocumentNonBlocking(stationsRef, values);
-            if (!newDocRef) throw new Error("Failed to create station document.");
+            const newDocRef = await addDoc(stationsRef, values);
             const stationId = newDocRef.id;
 
             const storage = getStorage();
             const uploadPromises = [];
-
-            // 2. Upload compliance documents
-            for (const key in complianceFiles) {
-                const file = complianceFiles[key];
-                const field = complianceFields.find(f => f.key === key);
-                if (file && field) {
-                    const filePath = `stations/${stationId}/compliance/${key}-${file.name}`;
-                    const storageRef = ref(storage, filePath);
-                    const uploadTask = uploadBytesResumable(storageRef, file);
-                    uploadPromises.push(new Promise<void>((resolve, reject) => {
-                         uploadTask.on('state_changed', 
-                            (snapshot) => {
-                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                setUploadProgress(prev => ({ ...prev, [key]: progress }));
-                            },
-                            (error) => reject(error),
-                            async () => {
-                                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                                const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
-                                const newReport: Omit<ComplianceReport, 'id'> = { name: field.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: downloadURL };
-                                await addDocumentNonBlocking(reportsRef, newReport);
-                                resolve();
-                            }
-                        )
-                    }));
-                }
+            const filesToUpload = { ...complianceFiles };
+            if (agreementFile) {
+                filesToUpload.agreement = agreementFile;
             }
 
-             // 3. Upload partnership agreement
-            if (agreementFile) {
-                const filePath = `stations/${stationId}/agreement/${agreementFile.name}`;
+            // 2. Upload all documents in parallel
+            for (const key in filesToUpload) {
+                const file = filesToUpload[key as keyof typeof filesToUpload];
+                if (!file) continue;
+                
+                const isComplianceDoc = complianceFields.some(f => f.key === key);
+                const filePath = isComplianceDoc
+                    ? `stations/${stationId}/compliance/${key}-${file.name}`
+                    : `stations/${stationId}/agreement/${file.name}`;
+                
                 const storageRef = ref(storage, filePath);
-                const uploadTask = uploadBytesResumable(storageRef, agreementFile);
+                const uploadTask = uploadBytesResumable(storageRef, file);
+
                 uploadPromises.push(new Promise<void>((resolve, reject) => {
-                    uploadTask.on('state_changed', 
+                    uploadTask.on('state_changed',
                         (snapshot) => {
                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                            setUploadProgress(prev => ({ ...prev, agreement: progress }));
+                            setUploadProgress(prev => ({ ...prev, [key]: progress }));
                         },
                         (error) => reject(error),
                         async () => {
                             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                            const stationRef = doc(firestore, 'waterStations', stationId);
-                            await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
+                            if (isComplianceDoc) {
+                                const field = complianceFields.find(f => f.key === key);
+                                const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
+                                const newReport: Omit<ComplianceReport, 'id'> = { name: field!.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: downloadURL };
+                                await addDocumentNonBlocking(reportsRef, newReport);
+                            } else { // It's the agreement
+                                const stationRef = doc(firestore, 'waterStations', stationId);
+                                await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
+                            }
                             resolve();
                         }
-                    )
+                    );
                 }));
             }
 
             await Promise.all(uploadPromises);
 
             toast({ title: 'Station Created', description: `Station "${values.name}" created successfully with all documents.` });
+            stationForm.reset();
+            setComplianceFiles({});
+            setAgreementFile(null);
             setIsStationProfileOpen(false);
 
         } catch (error) {
@@ -2135,7 +2130,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </>
                                 ) : (
                                     <Button asChild variant="outline" disabled={isUploading}>
-                                        <Label className={isUploading ? "cursor-not-allowed" : "cursor-pointer"}>
+                                        <Label className={cn("flex items-center", isUploading ? "cursor-not-allowed" : "cursor-pointer")}>
                                             <Upload className="mr-2 h-4 w-4" /> {agreementFile ? `Selected: ${agreementFile.name}`: 'Attach Agreement'}
                                             <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => {
                                                 const file = e.target.files?.[0];
@@ -2177,10 +2172,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogClose asChild>
                             <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                         </DialogClose>
-                        {stationToUpdate ? (
-                            <Button onClick={() => { setStationToUpdate(null); stationForm.reset(); setIsStationProfileOpen(false);}} disabled={isUploading}>Finish</Button>
-                        ) : (
-                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isUploading}>{isUploading ? "Creating..." : "Create Station"}</Button>
+                        {!stationToUpdate && (
+                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isUploading || stationForm.formState.isSubmitting}>{isUploading ? "Creating..." : "Create Station"}</Button>
                         )}
                     </div>
                 </DialogFooter>
