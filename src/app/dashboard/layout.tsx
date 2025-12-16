@@ -149,6 +149,7 @@ export default function DashboardLayout({
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
+  const [optimisticPhotoUrl, setOptimisticPhotoUrl] = useState<string | null>(null);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -176,6 +177,9 @@ export default function DashboardLayout({
   React.useEffect(() => {
     if(user) {
       setEditableFormData(user);
+      if (user.photoURL) {
+        setOptimisticPhotoUrl(user.photoURL);
+      }
     }
   }, [user]);
   
@@ -235,7 +239,6 @@ export default function DashboardLayout({
     setIsUploading(true);
     setUploadProgress(0);
 
-    // The Cloud Function will trigger on this path
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
     const storage = getStorage();
     const storageRef = ref(storage, filePath);
@@ -255,8 +258,6 @@ export default function DashboardLayout({
                 reject(error);
             },
             () => {
-                // Client-side is done. Cloud Function will update Firestore.
-                // We just need to update the local state to show "Pending Review".
                 const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
                 setDocumentNonBlocking(paymentRef, { status: 'Pending Review' }, { merge: true });
 
@@ -375,57 +376,53 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser) return;
+    if (!profilePhotoFile || !authUser || !profilePhotoPreview) return;
   
     setIsUploading(true);
     setUploadProgress(0);
   
     const storage = getStorage();
-    // A Cloud Function will trigger on this specific path
-    const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`; 
+    const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
     const storageRef = ref(storage, filePath);
     const metadata = { contentType: profilePhotoFile.type };
   
-    const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
+    try {
+      setOptimisticPhotoUrl(profilePhotoPreview);
+      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
   
-    return new Promise<void>((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        },
-        (error) => {
-          toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: error.message || 'Could not upload your photo. Please try again.'
-          });
-          setIsUploading(false);
-          setUploadProgress(0);
-          // Do not close the dialog on failure
-          reject(error);
-        },
-        () => {
-          // Upload completed successfully on the client.
-          // The client's job is done for the upload.
-          // A Cloud Function is now expected to handle the Firestore update.
-          toast({
-            title: 'Upload Complete!',
-            description: 'Your new photo is being processed and will appear shortly.',
-          });
-          setIsPhotoPreviewOpen(false); // Close the dialog on success
-          setIsUploading(false);
-          setUploadProgress(0);
-          setProfilePhotoFile(null);
-          if (profilePhotoPreview) {
-              URL.revokeObjectURL(profilePhotoPreview);
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+          },
+          (error) => {
+            setOptimisticPhotoUrl(user?.photoURL || null);
+            reject(error);
+          },
+          () => {
+            toast({
+              title: 'Upload Complete!',
+              description: 'Your new profile photo is being processed and will appear shortly.',
+            });
+            setIsPhotoPreviewOpen(false);
+            resolve();
           }
-          setProfilePhotoPreview(null);
-          resolve();
-        }
-      );
-    });
+        );
+      });
+    } catch (error: any) {
+      setOptimisticPhotoUrl(user?.photoURL || null);
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: error.message || 'Could not upload your photo. Please try again.'
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setProfilePhotoFile(null);
+    }
   };
 
   const handleCancelUpload = () => {
@@ -442,27 +439,19 @@ export default function DashboardLayout({
    const handleProfilePhotoDelete = async () => {
     if (!authUser || !userDocRef || !user?.photoURL) return;
 
-    // The client's job is to delete the object from storage.
-    // It assumes a Cloud Function will listen for this deletion event 
-    // to clear the `photoURL` from the Firestore document.
     const storage = getStorage();
-    const photoRef = ref(storage, user.photoURL);
-
     try {
+        setOptimisticPhotoUrl(null);
+        const photoRef = ref(storage, user.photoURL);
         await deleteObject(photoRef);
         toast({
             title: 'Delete Request Sent',
             description: 'Your profile photo will be removed shortly.',
         });
     } catch (error: any) {
+        setOptimisticPhotoUrl(user.photoURL);
         console.error("Error removing profile photo: ", error);
-        if (error.code === 'storage/object-not-found') {
-             // If the file is already gone, that's fine. Assume the function will handle the DB.
-             toast({
-                title: 'Delete Request Sent',
-                description: 'Your profile photo will be removed shortly.',
-            });
-        } else {
+        if (error.code !== 'storage/object-not-found') {
             toast({
                 variant: 'destructive',
                 title: 'Delete Failed',
@@ -537,6 +526,7 @@ export default function DashboardLayout({
   }
 
   const isUploadingPayment = uploadProgress > 0 && uploadProgress <= 100;
+  const displayPhoto = optimisticPhotoUrl ?? user?.photoURL;
 
   return (
       <div className="flex flex-col h-full">
@@ -675,7 +665,7 @@ export default function DashboardLayout({
                 <div className="flex items-center gap-3 cursor-pointer">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.photoURL ?? undefined} alt={user?.name || ''} />
+                          <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
                           <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
                     <div className="hidden sm:flex flex-col items-start">
@@ -711,7 +701,7 @@ export default function DashboardLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={user.photoURL ?? undefined} alt={user.name || ''} />
+                                                              <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
                                                               <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -728,7 +718,7 @@ export default function DashboardLayout({
                                                               Upload new photo
                                                           </Label>
                                                       </DropdownMenuItem>
-                                                      {user.photoURL && (
+                                                      {displayPhoto && (
                                                           <AlertDialogTrigger asChild>
                                                               <DropdownMenuItem className="text-destructive focus:text-destructive">
                                                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -965,7 +955,7 @@ export default function DashboardLayout({
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently remove your profile photo. A Cloud Function should be configured to clear the URL from your profile.
+                        This action cannot be undone. This will permanently remove your profile photo. Your profile will be updated after a moment.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

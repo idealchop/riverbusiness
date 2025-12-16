@@ -55,6 +55,7 @@ export default function AdminLayout({
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [optimisticPhotoUrl, setOptimisticPhotoUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -66,6 +67,9 @@ export default function AdminLayout({
   useEffect(() => {
     if (adminUser) {
       setEditableFormData(adminUser);
+      if (adminUser.photoURL) {
+        setOptimisticPhotoUrl(adminUser.photoURL);
+      }
     }
   }, [adminUser]);
 
@@ -159,19 +163,18 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser) return;
+    if (!profilePhotoFile || !authUser || !profilePhotoPreview) return;
   
     setIsUploading(true);
     setUploadProgress(0);
   
     const storage = getStorage();
-    // Use a consistent file name like 'profile.jpg' or a unique one.
-    // Using a consistent name makes it easier for a Cloud Function to know which file to process.
-    const filePath = `users/${authUser.uid}/profile/profile_photo`; 
+    const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`; 
     const storageRef = ref(storage, filePath);
     const metadata = { contentType: profilePhotoFile.type };
   
     try {
+      setOptimisticPhotoUrl(profilePhotoPreview);
       const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
   
       await new Promise<void>((resolve, reject) => {
@@ -182,11 +185,10 @@ export default function AdminLayout({
             setUploadProgress(progress);
           },
           (error) => {
-            reject(error); // This will be caught by the outer try-catch block
+            setOptimisticPhotoUrl(adminUser?.photoURL || null);
+            reject(error);
           },
           () => {
-            // Upload completed successfully.
-            // A Cloud Function would now trigger to update Firestore.
             toast({
               title: 'Upload Complete!',
               description: 'Your new profile photo is being processed and will appear shortly.',
@@ -197,6 +199,7 @@ export default function AdminLayout({
         );
       });
     } catch (error: any) {
+      setOptimisticPhotoUrl(adminUser?.photoURL || null);
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
@@ -206,10 +209,7 @@ export default function AdminLayout({
       setIsUploading(false);
       setUploadProgress(0);
       setProfilePhotoFile(null);
-      if (profilePhotoPreview) {
-        URL.revokeObjectURL(profilePhotoPreview);
-      }
-      setProfilePhotoPreview(null);
+      // Don't revoke object URL here so the optimistic image stays
     }
   };
 
@@ -227,20 +227,19 @@ export default function AdminLayout({
   const handleProfilePhotoDelete = async () => {
     if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
 
-    // This will delete the photo from storage.
-    // A Cloud Function should be set up to clear the photoURL from Firestore.
     const storage = getStorage();
-    const photoRef = ref(storage, adminUser.photoURL);
-
     try {
+        // Optimistically remove the photo
+        setOptimisticPhotoUrl(null);
+        const photoRef = ref(storage, adminUser.photoURL);
         await deleteObject(photoRef);
-        // The client-side no longer updates Firestore directly for this.
-        // It relies on a Cloud Function to clear the URL.
         toast({
             title: 'Delete Request Sent',
             description: 'Your profile photo will be removed shortly.',
         });
     } catch (error: any) {
+        // Revert on failure
+        setOptimisticPhotoUrl(adminUser.photoURL);
         console.error("Error removing profile photo: ", error);
         toast({
             variant: 'destructive',
@@ -262,6 +261,8 @@ export default function AdminLayout({
         </div>
     );
   }
+
+  const displayPhoto = optimisticPhotoUrl ?? adminUser?.photoURL;
 
   return (
       <div className="flex flex-col h-screen">
@@ -298,7 +299,7 @@ export default function AdminLayout({
                           className="overflow-hidden rounded-full"
                       >
                           <Avatar className="h-8 w-8">
-                              <AvatarImage src={adminUser?.photoURL ?? undefined} alt="Admin" />
+                              <AvatarImage src={displayPhoto ?? undefined} alt="Admin" />
                               <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                           </Avatar>
                       </Button>
@@ -320,7 +321,7 @@ export default function AdminLayout({
                                                   <DropdownMenuTrigger asChild>
                                                       <div className="relative group cursor-pointer">
                                                           <Avatar className="h-20 w-20">
-                                                              <AvatarImage src={adminUser.photoURL ?? undefined} alt={adminUser.name || ''} />
+                                                              <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
                                                               <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
                                                           <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -337,7 +338,7 @@ export default function AdminLayout({
                                                               Upload new photo
                                                           </Label>
                                                       </DropdownMenuItem>
-                                                      {adminUser.photoURL && (
+                                                      {displayPhoto && (
                                                           <AlertDialogTrigger asChild>
                                                               <DropdownMenuItem className="text-destructive focus:text-destructive">
                                                                   <Trash2 className="mr-2 h-4 w-4" />
@@ -405,7 +406,7 @@ export default function AdminLayout({
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action cannot be undone. This will permanently remove your profile photo. A Cloud Function should be configured to clear the URL from your profile.
+                                This action cannot be undone. This will permanently remove your profile photo. Your profile will be updated after a moment.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -497,3 +498,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    
