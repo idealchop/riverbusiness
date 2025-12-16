@@ -146,6 +146,8 @@ export default function DashboardLayout({
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
   
   const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
+  const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
   const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -177,13 +179,15 @@ export default function DashboardLayout({
       setEditableFormData(user);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (profilePhotoFile) {
-        handleProfilePhotoUpload(profilePhotoFile);
-        setProfilePhotoFile(null); // Reset after initiating upload
+  
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePhotoFile(file);
+      setProfilePhotoPreview(URL.createObjectURL(file));
+      setIsPhotoPreviewOpen(true);
     }
-  }, [profilePhotoFile, authUser, userDocRef]);
+  };
 
   useEffect(() => {
     if (!userDocRef) return;
@@ -375,17 +379,18 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-  const handleProfilePhotoUpload = async (file: File) => {
-    if (!authUser || !userDocRef) return;
-    
+  const handleProfilePhotoUpload = async () => {
+    if (!profilePhotoFile || !authUser || !userDocRef) return;
+
+    setIsPhotoPreviewOpen(false);
     const uploadKey = `profile-${authUser.uid}`;
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
     try {
       const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${file.name}`;
+      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
       const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
   
       await new Promise<void>((resolve, reject) => {
         uploadTask.on('state_changed',
@@ -409,11 +414,16 @@ export default function DashboardLayout({
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
-      setUploadingFiles(prev => {
-        const newUploadingFiles = { ...prev };
-        delete newUploadingFiles[uploadKey];
-        return newUploadingFiles;
-      });
+        setUploadingFiles(prev => {
+            const newUploadingFiles = { ...prev };
+            delete newUploadingFiles[uploadKey];
+            return newUploadingFiles;
+        });
+        setProfilePhotoFile(null);
+        if (profilePhotoPreview) {
+          URL.revokeObjectURL(profilePhotoPreview);
+        }
+        setProfilePhotoPreview(null);
     }
   };
 
@@ -421,22 +431,34 @@ export default function DashboardLayout({
     if (!authUser || !userDocRef || !user?.photoURL) return;
 
     const storage = getStorage();
-    const photoRef = ref(storage, user.photoURL);
+    try {
+        const photoRef = ref(storage, user.photoURL);
+        await deleteObject(photoRef);
+    } catch (error: any) {
+        if (error.code !== 'storage/object-not-found') {
+            console.error("Error deleting profile photo from storage: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Delete Failed',
+                description: 'Could not delete the old photo from storage. Please try again.',
+            });
+            return; 
+        }
+    }
 
     try {
-      await deleteObject(photoRef);
-      updateDocumentNonBlocking(userDocRef, { photoURL: null });
-      toast({
-        title: 'Profile Photo Deleted',
-        description: 'Your profile photo has been removed.',
-      });
+        updateDocumentNonBlocking(userDocRef, { photoURL: null });
+        toast({
+            title: 'Profile Photo Removed',
+            description: 'Your profile photo has been removed.',
+        });
     } catch (error) {
-      console.error("Error deleting profile photo: ", error);
-      toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: 'Could not delete the photo. Please try again.',
-      });
+        console.error("Error updating Firestore after photo delete: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not update your profile. Please try again.',
+        });
     }
   };
 
@@ -505,13 +527,11 @@ export default function DashboardLayout({
     return <div>Loading...</div>
   }
 
-  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : 0;
-  const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
-  const isProfilePhotoActionRunning = isUploadingProfilePhoto;
+  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : undefined;
+  const isUploadingProfilePhoto = profileUploadProgress !== undefined;
 
   const paymentUploadProgress = selectedInvoice ? uploadingFiles[`payment-${selectedInvoice.id}`] : 0;
   const isUploadingPayment = paymentUploadProgress > 0 && paymentUploadProgress <= 100;
-  const isPaymentActionRunning = isUploadingPayment;
 
   return (
       <div className="flex flex-col h-full">
@@ -689,7 +709,7 @@ export default function DashboardLayout({
                                                               <AvatarImage src={user.photoURL ?? undefined} alt={user.name || ''} />
                                                               <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          {isUploadingProfilePhoto && profileUploadProgress < 100 ? (
+                                                          {isUploadingProfilePhoto && profileUploadProgress !== undefined ? (
                                                               <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
                                                                   <CircularProgress value={profileUploadProgress} />
                                                               </div>
@@ -719,7 +739,7 @@ export default function DashboardLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isProfilePhotoActionRunning}/>
+                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isUploadingProfilePhoto}/>
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{user.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>
@@ -967,6 +987,37 @@ export default function DashboardLayout({
                   River Philippines
               </a>.
           </footer>
+
+          <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Preview Profile Photo</DialogTitle>
+                <DialogDescription>
+                  Confirm this is the photo you want to upload.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="my-4 flex justify-center">
+                {profilePhotoPreview && (
+                  <Image
+                    src={profilePhotoPreview}
+                    alt="Profile photo preview"
+                    width={200}
+                    height={200}
+                    className="rounded-full aspect-square object-cover"
+                  />
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPhotoPreviewOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleProfilePhotoUpload}>
+                  Upload Photo
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
             <DialogContent className="sm:max-w-4xl">
               <DialogHeader>
@@ -1020,7 +1071,7 @@ export default function DashboardLayout({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="payment-proof-upload">Proof of Payment</Label>
-                        <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isPaymentActionRunning} />
+                        <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isUploadingPayment} />
                         {isUploadingPayment && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Progress value={paymentUploadProgress} className="w-full" />
@@ -1028,8 +1079,8 @@ export default function DashboardLayout({
                           </div>
                         )}
                       </div>
-                      <Button onClick={handleProofUpload} disabled={!paymentProofFile || isPaymentActionRunning} className="w-full">
-                        {isPaymentActionRunning ? 'Submitting...' : 'Submit for Verification'}
+                      <Button onClick={handleProofUpload} disabled={!paymentProofFile || isUploadingPayment} className="w-full">
+                        {isUploadingPayment ? 'Submitting...' : 'Submit for Verification'}
                       </Button>
                     </div>
                   </div>
@@ -1161,5 +1212,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    

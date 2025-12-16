@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { useMounted } from '@/hooks/use-mounted';
+import Image from 'next/image';
 
 
 export default function AdminLayout({
@@ -50,6 +51,8 @@ export default function AdminLayout({
   const [confirmPassword, setConfirmPassword] = React.useState('');
   
   const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
+  const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
   const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -64,13 +67,16 @@ export default function AdminLayout({
     }
   }, [adminUser]);
 
-  useEffect(() => {
-    if (profilePhotoFile) {
-      handleProfilePhotoUpload(profilePhotoFile);
-      setProfilePhotoFile(null);
-    }
-  }, [profilePhotoFile, adminUserDocRef, authUser]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePhotoFile(file);
+      setProfilePhotoPreview(URL.createObjectURL(file));
+      setIsPhotoPreviewOpen(true);
+    }
+  };
+  
   const handleLogout = () => {
     if (!auth) return;
     signOut(auth).then(() => {
@@ -148,17 +154,18 @@ export default function AdminLayout({
     }
   }
 
-  const handleProfilePhotoUpload = async (file: File) => {
-    if (!authUser || !adminUserDocRef) return;
+  const handleProfilePhotoUpload = async () => {
+    if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
 
+    setIsPhotoPreviewOpen(false);
     const uploadKey = `profile-${authUser.uid}`;
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
 
     try {
       const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${file.name}`;
+      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
       const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
 
       await new Promise<void>((resolve, reject) => {
         uploadTask.on('state_changed',
@@ -190,6 +197,11 @@ export default function AdminLayout({
         delete newUploadingFiles[uploadKey];
         return newUploadingFiles;
       });
+      setProfilePhotoFile(null);
+      if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview);
+      }
+      setProfilePhotoPreview(null);
     }
   };
 
@@ -197,22 +209,38 @@ export default function AdminLayout({
     if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
 
     const storage = getStorage();
-    const photoRef = ref(storage, adminUser.photoURL);
-
+    // Create a reference from the full URL
     try {
-      await deleteObject(photoRef);
-      updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
-      toast({
-        title: 'Profile Photo Deleted',
-        description: 'Your profile photo has been removed.',
-      });
+        const photoRef = ref(storage, adminUser.photoURL);
+        await deleteObject(photoRef);
+    } catch (error: any) {
+        // It's possible the object doesn't exist, especially if the URL is old/invalid.
+        // We can ignore "object-not-found" and proceed to update Firestore.
+        if (error.code !== 'storage/object-not-found') {
+            console.error("Error deleting profile photo from storage: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Delete Failed',
+                description: 'Could not delete the old photo from storage. Please try again.',
+            });
+            return; // Stop if it's a real error (like permissions)
+        }
+    }
+
+    // Always attempt to clear the URL from Firestore
+    try {
+        updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
+        toast({
+            title: 'Profile Photo Removed',
+            description: 'Your profile photo has been removed.',
+        });
     } catch (error) {
-      console.error("Error deleting profile photo: ", error);
-      toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: 'Could not delete the photo. Please try again.',
-      });
+        console.error("Error updating Firestore after photo delete: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not update your profile. Please try again.',
+        });
     }
   };
   
@@ -229,9 +257,8 @@ export default function AdminLayout({
     );
   }
 
-  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : 0;
-  const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
-  const isProfilePhotoActionRunning = isUploadingProfilePhoto;
+  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : undefined;
+  const isUploadingProfilePhoto = profileUploadProgress !== undefined;
 
   return (
       <div className="flex flex-col h-screen">
@@ -323,7 +350,7 @@ export default function AdminLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isProfilePhotoActionRunning}/>
+                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isUploadingProfilePhoto}/>
 
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{adminUser.name}</h4>
@@ -396,6 +423,37 @@ export default function AdminLayout({
           <main className="flex-1 overflow-auto p-4 sm:p-6">
             {children}
           </main>
+          
+          <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Preview Profile Photo</DialogTitle>
+                <DialogDescription>
+                  Confirm this is the photo you want to upload.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="my-4 flex justify-center">
+                {profilePhotoPreview && (
+                  <Image
+                    src={profilePhotoPreview}
+                    alt="Profile photo preview"
+                    width={200}
+                    height={200}
+                    className="rounded-full aspect-square object-cover"
+                  />
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPhotoPreviewOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleProfilePhotoUpload}>
+                  Upload Photo
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
               <DialogContent>
                   <DialogHeader>
@@ -436,5 +494,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    
