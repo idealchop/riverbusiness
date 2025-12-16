@@ -144,6 +144,8 @@ export default function DashboardLayout({
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
+  
+  const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
   const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
@@ -178,6 +180,13 @@ export default function DashboardLayout({
   }, [user]);
 
   useEffect(() => {
+    if (profilePhotoFile) {
+        handleProfilePhotoUpload(profilePhotoFile);
+        setProfilePhotoFile(null); // Reset after initiating upload
+    }
+  }, [profilePhotoFile]);
+
+  useEffect(() => {
     if (!userDocRef) return;
 
     const handleVisibilityChange = () => {
@@ -194,7 +203,6 @@ export default function DashboardLayout({
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // Consider setting to inactive on unmount, but visibilitychange is more reliable for tab closing.
       if (auth.currentUser) {
         updateDocumentNonBlocking(userDocRef, { accountStatus: 'Inactive' });
       }
@@ -203,7 +211,6 @@ export default function DashboardLayout({
   
   React.useEffect(() => {
     if (!isPaymentDialogOpen) {
-      // Reset payment method selection when dialog closes
       setSelectedPaymentMethod(null);
       setPaymentProofFile(null);
     }
@@ -375,8 +382,8 @@ export default function DashboardLayout({
     if (!authUser || !userDocRef) return;
     
     const uploadKey = `profile-${authUser.uid}`;
-    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
     setIsSubmitting(true);
+    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
     try {
       const storage = getStorage();
@@ -422,12 +429,8 @@ export default function DashboardLayout({
     const photoRef = ref(storage, user.photoURL);
 
     try {
-      // Delete the file from Storage
       await deleteObject(photoRef);
-      
-      // Remove the URL from the user's document in Firestore
       updateDocumentNonBlocking(userDocRef, { photoURL: null });
-
       toast({
         title: 'Profile Photo Deleted',
         description: 'Your profile photo has been removed.',
@@ -451,7 +454,6 @@ export default function DashboardLayout({
     };
     setChatMessages((prev) => [...prev, newUserMessage]);
 
-    // Simulate an admin response
     setTimeout(() => {
       const adminResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -491,11 +493,10 @@ export default function DashboardLayout({
             date: invoiceDate.toISOString(),
             description: `${user.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
             amount: user.plan.price,
-            status: 'Upcoming', // Default status, can be updated from DB
+            status: 'Upcoming', 
             });
         }
 
-        // Merge with DB payments
         const mergedInvoices = invoices.map(inv => {
             const dbInvoice = paymentHistoryFromDb?.find(p => p.id === inv.id);
             return dbInvoice ? { ...inv, ...dbInvoice } : inv;
@@ -721,7 +722,7 @@ export default function DashboardLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])} disabled={isSubmitting}/>
+                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isSubmitting}/>
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{user.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>

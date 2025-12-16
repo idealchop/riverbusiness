@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Bell, Search, User, Edit, KeyRound, EyeOff, Eye, Upload, LogOut, Pencil, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection, useAuth } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection, useAuth, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
@@ -39,9 +39,6 @@ export default function AdminLayout({
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: appUsers } = useCollection<AppUser>(usersQuery);
-
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
   const [isEditingDetails, setIsEditingDetails] = React.useState(false);
@@ -52,6 +49,8 @@ export default function AdminLayout({
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  
+  const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
   const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -66,6 +65,13 @@ export default function AdminLayout({
       setEditableFormData(adminUser);
     }
   }, [adminUser]);
+
+  useEffect(() => {
+    if (profilePhotoFile) {
+      handleProfilePhotoUpload(profilePhotoFile);
+      setProfilePhotoFile(null);
+    }
+  }, [profilePhotoFile]);
 
   const handleLogout = () => {
     if (!auth) return;
@@ -148,8 +154,8 @@ export default function AdminLayout({
     if (!authUser || !adminUserDocRef) return;
 
     const uploadKey = `profile-${authUser.uid}`;
-    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
     setIsSubmitting(true);
+    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
 
     try {
       const storage = getStorage();
@@ -219,7 +225,6 @@ export default function AdminLayout({
         <div className="flex flex-col h-screen">
             <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
                  <div className="flex-1" />
-                 {/* Render skeleton or placeholders for header icons */}
             </header>
             <main className="flex-1 overflow-auto p-4 sm:p-6">
                 {children}
@@ -321,7 +326,7 @@ export default function AdminLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])} disabled={isSubmitting}/>
+                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => setProfilePhotoFile(e.target.files?.[0] || null)} disabled={isSubmitting}/>
 
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{adminUser.name}</h4>
