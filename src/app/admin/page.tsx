@@ -139,6 +139,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [activeTab, setActiveTab] = React.useState('user-management');
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
+    const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
     const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = React.useState(false);
     const [adjustmentType, setAdjustmentType] = React.useState<'add' | 'deduct'>('deduct');
     const [selectedProofUrl, setSelectedProofUrl] = React.useState<string | null>(null);
@@ -389,6 +390,20 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
             }
         }
+    };
+
+    const handleDeleteStation = async () => {
+        if (!stationToDelete || !firestore) return;
+        
+        const stationRef = doc(firestore, 'waterStations', stationToDelete.id);
+        deleteDocumentNonBlocking(stationRef);
+
+        toast({
+            title: 'Station Deleted',
+            description: `Water station "${stationToDelete.name}" has been removed.`,
+        });
+
+        setStationToDelete(null);
     };
 
 
@@ -896,7 +911,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-      <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
+        <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>User Account Management</DialogTitle>
@@ -1810,21 +1825,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Station ID</TableHead>
-                                            <TableHead>Name</TableHead>
+                                            <TableHead>Station Name</TableHead>
                                             <TableHead>Location</TableHead>
-                                            <TableHead>Permits</TableHead>
+                                            <TableHead>Compliance Status</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {stationsLoading && (
-                                            <TableRow><TableCell colSpan={5} className="text-center">Loading stations...</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={4} className="text-center">Loading stations...</TableCell></TableRow>
                                         )}
                                         {!stationsLoading && waterStations?.map((station) => (
                                             <TableRow key={station.id}>
-                                                <TableCell>{station.id}</TableCell>
-                                                <TableCell>{station.name}</TableCell>
+                                                <TableCell className="font-medium">{station.name}</TableCell>
                                                 <TableCell>{station.location}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={'outline'}>
@@ -1832,13 +1845,30 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="outline" size="sm" onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
-                                                        <UserCog className="mr-2 h-4 w-4"/>
-                                                        Manage
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Manage
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => setStationToDelete(station)} className="text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
+                                         {!stationsLoading && waterStations?.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center">No water stations found.</TableCell>
+                                            </TableRow>
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>
@@ -1848,6 +1878,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </Card>
         </div>
 
+
+        <AlertDialog open={!!stationToDelete} onOpenChange={(open) => !open && setStationToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the water station <span className="font-semibold">{stationToDelete?.name}</span> and all its associated data.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setStationToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteStation}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={isAssignStationOpen} onOpenChange={setIsAssignStationOpen}>
             <DialogContent>
@@ -2097,3 +2142,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
