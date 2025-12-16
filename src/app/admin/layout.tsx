@@ -166,15 +166,15 @@ export default function AdminLayout({
     setUploadProgress(0);
     const oldPhotoURL = adminUser?.photoURL;
   
+    const storage = getStorage();
+    const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
+    const storageRef = ref(storage, filePath);
+    const metadata = { contentType: profilePhotoFile.type };
+  
     try {
-      const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
-      const storageRef = ref(storage, filePath);
-      const metadata = { contentType: profilePhotoFile.type };
+      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
   
       await new Promise<void>((resolve, reject) => {
-        const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-        
         uploadTask.on(
           'state_changed',
           (snapshot) => {
@@ -182,8 +182,7 @@ export default function AdminLayout({
             setUploadProgress(progress);
           },
           (error) => {
-            console.error("Upload failed during state change:", error);
-            reject(error);
+            reject(error); // This will be caught by the outer try-catch block
           },
           async () => {
             try {
@@ -195,6 +194,7 @@ export default function AdminLayout({
                   const oldPhotoRef = ref(storage, oldPhotoURL);
                   await deleteObject(oldPhotoRef);
                 } catch (deleteError: any) {
+                  // If the old photo doesn't exist, we don't need to worry.
                   if (deleteError.code !== 'storage/object-not-found') {
                     console.warn("Could not delete old profile photo:", deleteError);
                   }
@@ -202,19 +202,15 @@ export default function AdminLayout({
               }
               
               toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+              setIsPhotoPreviewOpen(false);
               resolve();
             } catch (innerError) {
-              console.error("Error updating document or deleting old photo:", innerError);
               reject(innerError);
             }
           }
         );
       });
-  
-      setIsPhotoPreviewOpen(false);
-  
     } catch (error: any) {
-      console.error("Upload failed:", error);
       toast({
         variant: 'destructive',
         title: 'Upload Failed',

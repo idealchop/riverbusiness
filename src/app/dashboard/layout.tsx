@@ -381,75 +381,70 @@ export default function DashboardLayout({
 
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile || !authUser || !userDocRef) return;
-  
+
     setIsUploading(true);
     setUploadProgress(0);
     const oldPhotoURL = user?.photoURL;
-  
+
+    const storage = getStorage();
+    const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
+    const storageRef = ref(storage, filePath);
+    const metadata = { contentType: profilePhotoFile.type };
+
     try {
-      const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
-      const storageRef = ref(storage, filePath);
-      const metadata = { contentType: profilePhotoFile.type };
-  
-      await new Promise<void>((resolve, reject) => {
         const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-        
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-          },
-          (error) => {
-            console.error("Upload failed during state change:", error);
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              await updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
-  
-              if (oldPhotoURL) {
-                try {
-                  const oldPhotoRef = ref(storage, oldPhotoURL);
-                  await deleteObject(oldPhotoRef);
-                } catch (deleteError: any) {
-                  if (deleteError.code !== 'storage/object-not-found') {
-                    console.warn("Could not delete old profile photo:", deleteError);
-                  }
+
+        await new Promise<void>((resolve, reject) => {
+            uploadTask.on(
+                'state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadProgress(progress);
+                },
+                (error) => {
+                    reject(error);
+                },
+                async () => {
+                    try {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        await updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
+
+                        if (oldPhotoURL) {
+                            try {
+                                const oldPhotoRef = ref(storage, oldPhotoURL);
+                                await deleteObject(oldPhotoRef);
+                            } catch (deleteError: any) {
+                                if (deleteError.code !== 'storage/object-not-found') {
+                                    console.warn("Could not delete old profile photo:", deleteError);
+                                }
+                            }
+                        }
+                        
+                        toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+                        setIsPhotoPreviewOpen(false);
+                        resolve();
+                    } catch (innerError) {
+                        reject(innerError);
+                    }
                 }
-              }
-              
-              toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-              resolve();
-            } catch (innerError) {
-              console.error("Error updating document or deleting old photo:", innerError);
-              reject(innerError);
-            }
-          }
-        );
-      });
-  
-      setIsPhotoPreviewOpen(false);
-  
+            );
+        });
     } catch (error: any) {
-      console.error("Upload failed:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: error.message || 'Could not upload your photo. Please try again.'
-      });
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error.message || 'Could not upload your photo. Please try again.'
+        });
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      setProfilePhotoFile(null);
-      if (profilePhotoPreview) {
-        URL.revokeObjectURL(profilePhotoPreview);
-      }
-      setProfilePhotoPreview(null);
+        setIsUploading(false);
+        setUploadProgress(0);
+        setProfilePhotoFile(null);
+        if (profilePhotoPreview) {
+            URL.revokeObjectURL(profilePhotoPreview);
+        }
+        setProfilePhotoPreview(null);
     }
-  };
+};
 
   const handleCancelUpload = () => {
     setIsPhotoPreviewOpen(false);
