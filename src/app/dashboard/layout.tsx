@@ -388,6 +388,7 @@ export default function DashboardLayout({
   
     try {
       setOptimisticPhotoUrl(profilePhotoPreview);
+      setIsPhotoPreviewOpen(false); // Close dialog immediately
       const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
   
       await new Promise<void>((resolve, reject) => {
@@ -395,7 +396,8 @@ export default function DashboardLayout({
           'state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
+            // Progress UI is removed, but we can log it
+             console.log('Upload is ' + progress + '% done');
           },
           (error) => {
             setOptimisticPhotoUrl(user?.photoURL || null);
@@ -404,9 +406,8 @@ export default function DashboardLayout({
           () => {
             toast({
               title: 'Upload Complete!',
-              description: 'Your new profile photo is being processed and will appear shortly.',
+              description: 'Your new profile photo is being processed and will appear permanently shortly.',
             });
-            setIsPhotoPreviewOpen(false);
             resolve();
           }
         );
@@ -420,7 +421,6 @@ export default function DashboardLayout({
       });
     } finally {
       setIsUploading(false);
-      setUploadProgress(0);
       setProfilePhotoFile(null);
     }
   };
@@ -441,15 +441,22 @@ export default function DashboardLayout({
 
     const storage = getStorage();
     try {
+        const previousPhotoUrl = optimisticPhotoUrl;
         setOptimisticPhotoUrl(null);
+        
+        updateDocumentNonBlocking(userDocRef, { photoURL: null });
+
         const photoRef = ref(storage, user.photoURL);
         await deleteObject(photoRef);
+        
         toast({
-            title: 'Delete Request Sent',
-            description: 'Your profile photo will be removed shortly.',
+            title: 'Profile Photo Removed',
+            description: 'Your profile photo has been removed.',
         });
     } catch (error: any) {
         setOptimisticPhotoUrl(user.photoURL);
+        updateDocumentNonBlocking(userDocRef, { photoURL: user.photoURL });
+
         console.error("Error removing profile photo: ", error);
         if (error.code !== 'storage/object-not-found') {
             toast({

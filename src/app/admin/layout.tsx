@@ -175,6 +175,7 @@ export default function AdminLayout({
   
     try {
       setOptimisticPhotoUrl(profilePhotoPreview);
+      setIsPhotoPreviewOpen(false); // Close dialog immediately
       const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
   
       await new Promise<void>((resolve, reject) => {
@@ -182,18 +183,21 @@ export default function AdminLayout({
           'state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
+            // The UI for progress is removed, but we could still log it
+            console.log('Upload is ' + progress + '% done');
           },
           (error) => {
+            // Revert optimistic update on error
             setOptimisticPhotoUrl(adminUser?.photoURL || null);
             reject(error);
           },
           () => {
+            // The Cloud Function will handle the Firestore update.
+            // The UI is already updated optimistically.
             toast({
               title: 'Upload Complete!',
-              description: 'Your new profile photo is being processed and will appear shortly.',
+              description: 'Your new profile photo is being processed and will appear permanently shortly.',
             });
-            setIsPhotoPreviewOpen(false);
             resolve();
           }
         );
@@ -207,9 +211,8 @@ export default function AdminLayout({
       });
     } finally {
       setIsUploading(false);
-      setUploadProgress(0);
       setProfilePhotoFile(null);
-      // Don't revoke object URL here so the optimistic image stays
+      // Do not revoke object URL here so the optimistic image stays
     }
   };
 
@@ -230,16 +233,26 @@ export default function AdminLayout({
     const storage = getStorage();
     try {
         // Optimistically remove the photo
+        const previousPhotoUrl = optimisticPhotoUrl;
         setOptimisticPhotoUrl(null);
+        
+        // Asynchronously update Firestore to remove the photo URL
+        updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
+
+        // Asynchronously delete the file from storage
         const photoRef = ref(storage, adminUser.photoURL);
         await deleteObject(photoRef);
+        
         toast({
-            title: 'Delete Request Sent',
-            description: 'Your profile photo will be removed shortly.',
+            title: 'Profile Photo Removed',
+            description: 'Your profile photo has been removed.',
         });
     } catch (error: any) {
         // Revert on failure
         setOptimisticPhotoUrl(adminUser.photoURL);
+        // Also revert the doc
+        updateDocumentNonBlocking(adminUserDocRef, { photoURL: adminUser.photoURL });
+
         console.error("Error removing profile photo: ", error);
         toast({
             variant: 'destructive',
