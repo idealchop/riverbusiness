@@ -155,18 +155,24 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
+    // Check for authUser and docRef, but not profilePhotoFile, as it will be checked before this is called.
+    if (!authUser || !adminUserDocRef || !profilePhotoFile) {
+        toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context missing.' });
+        return;
+    }
 
     setIsPhotoPreviewOpen(false);
     const oldPhotoURL = adminUser?.photoURL;
     const uploadKey = `profile-${authUser.uid}`;
+    const fileToUpload = profilePhotoFile; // Capture the file
+
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
 
     try {
       const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
+      const filePath = `users/${authUser.uid}/profile/${fileToUpload.name}`;
       const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
+      const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
 
       const downloadURL = await new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed',
@@ -492,5 +498,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    
