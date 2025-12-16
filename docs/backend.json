@@ -37,7 +37,8 @@
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the station." },
         "name": { "type": "string", "description": "Name of the station." },
-        "location": { "type": "string", "description": "Location of the station." }
+        "location": { "type": "string", "description": "Location of the station." },
+        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." }
       },
       "required": ["id", "name", "location"]
     },

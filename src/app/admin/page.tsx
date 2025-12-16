@@ -381,7 +381,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const newDocRef = await addDocumentNonBlocking(stationsRef, values);
                 if (newDocRef) {
                     const newStationData = { ...values, id: newDocRef.id };
-                    setStationToUpdate(newStationData); 
+                    setStationToUpdate(newStationData as WaterStation); 
                     toast({ title: 'Station Created', description: `Station "${values.name}" has been created. Please attach compliance documents.` });
                 }
             } catch (error) {
@@ -459,6 +459,41 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
                 setUploadProgress(prev => ({ ...prev, [permitType]: 0 }));
                 setComplianceRefresher(c => c + 1); // Trigger a refresh
+                setIsUploading(false);
+            }
+        );
+    };
+
+    const handleAgreementUpload = (file: File) => {
+        if (!stationToUpdate || !firestore) return;
+        setIsUploading(true);
+        const storage = getStorage();
+        const filePath = `stations/${stationToUpdate.id}/agreement/${file.name}`;
+        const storageRef = ref(storage, filePath);
+        const uploadKey = `agreement-${stationToUpdate.id}`;
+
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
+            },
+            (error) => {
+                console.error("Upload error:", error);
+                toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the agreement. Please try again.' });
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                setIsUploading(false);
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+                await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
+
+                setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: downloadURL } as WaterStation : null);
+
+                toast({ title: 'Agreement Uploaded', description: 'The partnership agreement has been attached successfully.' });
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                 setIsUploading(false);
             }
         );
@@ -553,9 +588,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
         if (!userForHistory || !firestore) return;
     
-        setIsUploading(true);
         let proofOfDeliveryUrl = '';
         if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
+            setIsUploading(true);
             const file = values.proofOfDeliveryUrl[0];
             const storage = getStorage();
             const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
@@ -584,6 +619,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                 setIsUploading(false);
                 return;
+            } finally {
+                setIsUploading(false);
             }
         }
     
@@ -611,7 +648,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
         deliveryForm.reset();
         setIsCreateDeliveryOpen(false);
-        setIsUploading(false);
     };
 
     const handleUpdateDelivery = async (values: DeliveryFormValues) => {
@@ -860,7 +896,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-        <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
+      <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>User Account Management</DialogTitle>
@@ -1704,7 +1740,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell>{request.clientId}</TableCell>
                                                         <TableCell>{request.businessName}</TableCell>
                                                         <TableCell>
-                                                            {request.requestedAt ? formatDistanceToNow(new Date(request.requestedAt.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                                                            {request.requestedAt ? formatDistanceToNow(new Date((request.requestedAt as any).seconds * 1000), { addSuffix: true }) : 'Just now'}
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
@@ -1962,7 +1998,35 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
                             <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
-                            <Button variant="outline" disabled={!isAdmin || !stationToUpdate} onClick={() => toast({ title: "Coming Soon!" })}><FileText className="mr-2 h-4 w-4" /> View &amp; Sign Agreement</Button>
+                            <div className="flex items-center gap-4">
+                                {stationToUpdate?.partnershipAgreementUrl ? (
+                                    <>
+                                        <Button asChild variant="outline">
+                                            <a href={stationToUpdate.partnershipAgreementUrl} target="_blank" rel="noopener noreferrer">
+                                                <Eye className="mr-2 h-4 w-4" /> View Agreement
+                                            </a>
+                                        </Button>
+                                        <Button asChild variant="secondary" size="sm" disabled={isUploading}>
+                                            <Label className={isUploading ? "cursor-not-allowed" : "cursor-pointer"}>
+                                                <Upload className="mr-2 h-4 w-4" /> Replace
+                                                <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => e.target.files?.[0] && handleAgreementUpload(e.target.files[0])} />
+                                            </Label>
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button asChild variant="outline" disabled={isUploading}>
+                                        <Label className={isUploading ? "cursor-not-allowed" : "cursor-pointer"}>
+                                            <Upload className="mr-2 h-4 w-4" /> Attach Agreement
+                                            <Input type="file" accept=".pdf,.doc,.docx" className="hidden" disabled={isUploading} onChange={(e) => e.target.files?.[0] && handleAgreementUpload(e.target.files[0])} />
+                                        </Label>
+                                    </Button>
+                                )}
+                                {isUploading && stationToUpdate && uploadProgress[`agreement-${stationToUpdate.id}`] > 0 && (
+                                    <div className="w-32">
+                                        <Progress value={uploadProgress[`agreement-${stationToUpdate.id}`]} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </ScrollArea>
