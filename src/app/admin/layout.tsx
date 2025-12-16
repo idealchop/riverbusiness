@@ -6,18 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Bell, Search, User, Edit, KeyRound, EyeOff, Eye, Upload, LogOut, Pencil, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection, useAuth, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useAuth, deleteDocumentNonBlocking } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import type { AppUser } from '@/lib/types';
-import { doc, collection } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut } from 'firebase/auth';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CircularProgress } from '@/components/ui/circular-progress';
@@ -71,7 +70,7 @@ export default function AdminLayout({
       handleProfilePhotoUpload(profilePhotoFile);
       setProfilePhotoFile(null);
     }
-  }, [profilePhotoFile]);
+  }, [profilePhotoFile, adminUserDocRef, authUser]);
 
   const handleLogout = () => {
     if (!auth) return;
@@ -219,7 +218,7 @@ export default function AdminLayout({
       });
     }
   };
-
+  
   if (!isMounted) {
     return (
         <div className="flex flex-col h-screen">
@@ -233,7 +232,7 @@ export default function AdminLayout({
     );
   }
 
-  const profileUploadProgress = uploadingFiles[`profile-${authUser?.uid}`];
+  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : 0;
   const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
 
   return (
@@ -439,3 +438,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    

@@ -184,7 +184,7 @@ export default function DashboardLayout({
         handleProfilePhotoUpload(profilePhotoFile);
         setProfilePhotoFile(null); // Reset after initiating upload
     }
-  }, [profilePhotoFile]);
+  }, [profilePhotoFile, authUser, userDocRef]);
 
   useEffect(() => {
     if (!userDocRef) return;
@@ -510,7 +510,7 @@ export default function DashboardLayout({
     return <div>Loading...</div>
   }
 
-  const profileUploadProgress = uploadingFiles[`profile-${authUser?.uid}`];
+  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : 0;
   const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
 
   const paymentUploadProgress = selectedInvoice ? uploadingFiles[`payment-${selectedInvoice.id}`] : 0;
@@ -1164,3 +1164,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
