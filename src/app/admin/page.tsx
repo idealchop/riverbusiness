@@ -765,8 +765,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     try {
                         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                         setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                        setIsUploading(false);
                         resolve(downloadURL);
                     } catch (error) {
+                        setIsUploading(false);
                         reject(error);
                     }
                 }
@@ -779,17 +781,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsUploading(true);
     
         try {
+            // Use await with addDoc to get the document reference, including the ID
             const newStationRef = await addDoc(collection(firestore, 'waterStations'), values);
             const stationId = newStationRef.id;
-    
-            const uploadPromises: Promise<any>[] = [];
-    
+
+            const uploadPromises = [];
+
             if (agreementFile) {
                 const filePath = `stations/${stationId}/agreement/${agreementFile.name}`;
                 const uploadKey = `agreement-${stationId}`;
                 uploadPromises.push(
                     handleFileUpload(agreementFile, filePath, uploadKey).then(url => 
-                        updateDocumentNonBlocking(doc(firestore, 'waterStations', stationId), { partnershipAgreementUrl: url })
+                        updateDoc(doc(firestore, 'waterStations', stationId), { partnershipAgreementUrl: url })
                     )
                 );
             }
@@ -801,7 +804,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     const uploadKey = `${key}-${stationId}`;
                     uploadPromises.push(
                         handleFileUpload(file, filePath, uploadKey).then(url => 
-                            addDocumentNonBlocking(collection(firestore, 'waterStations', stationId, 'complianceReports'), {
+                            addDoc(collection(firestore, 'waterStations', stationId, 'complianceReports'), {
                                 name: field.label,
                                 date: new Date().toISOString(),
                                 status: 'Compliant',
@@ -842,53 +845,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const userRef = doc(firestore, 'users', authUser.uid);
             await updateDocumentNonBlocking(userRef, { photoURL: downloadURL });
             toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-        } finally {
-            setIsUploading(false);
-        }
-    };
-    
-    const handleUploadComplianceDoc = async (key: string) => {
-        if (!stationToUpdate || !complianceFiles[key] || !firestore) return;
-
-        const file = complianceFiles[key];
-        const field = complianceFields.find(f => f.key === key);
-        if (!field) return;
-
-        setIsUploading(true);
-        const filePath = `stations/${stationToUpdate.id}/compliance/${key}-${file.name}`;
-        const uploadKey = `${key}-${stationToUpdate.id}`;
-
-        try {
-            const url = await handleFileUpload(file, filePath, uploadKey);
-            const reportsRef = collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports');
-            await addDocumentNonBlocking(reportsRef, {
-                name: field.label,
-                date: new Date().toISOString(),
-                status: 'Compliant',
-                reportUrl: url,
-            });
-            toast({ title: 'Document Uploaded', description: `${field.label} has been uploaded.` });
-            handleComplianceFileSelect(key, null); // Clear staged file
-            setComplianceRefresher(c => c + 1);
-        } finally {
-            setIsUploading(false);
-        }
-    };
-    
-    const handleAgreementUpload = async () => {
-        if (!stationToUpdate || !agreementFile || !firestore) return;
-        
-        setIsUploading(true);
-        const filePath = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
-        const uploadKey = `agreement-${stationToUpdate.id}`;
-
-        try {
-            const url = await handleFileUpload(file, filePath, uploadKey);
-            const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
-            await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: url });
-            setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: url } : null);
-            toast({ title: 'Agreement Uploaded', description: 'Partnership agreement has been uploaded.' });
-            setAgreementFile(null); // Clear staged file
         } finally {
             setIsUploading(false);
         }
@@ -1981,7 +1937,25 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     ) : stagedFile ? (
                                                         <>
                                                             <span className="text-sm text-muted-foreground truncate max-w-[120px]">{stagedFile.name}</span>
-                                                            <Button size="sm" onClick={() => handleUploadComplianceDoc(field.key)} disabled={!stationToUpdate || isUploading}>
+                                                            <Button size="sm" disabled={!stationToUpdate || isUploading} onClick={async () => {
+                                                                if (!firestore || !stationToUpdate || !stagedFile) return;
+                                                                setIsUploading(true);
+                                                                const filePath = `stations/${stationToUpdate.id}/compliance/${field.key}-${stagedFile.name}`;
+                                                                try {
+                                                                    const url = await handleFileUpload(stagedFile, filePath, uploadKey);
+                                                                    await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), {
+                                                                        name: field.label,
+                                                                        date: new Date().toISOString(),
+                                                                        status: 'Compliant',
+                                                                        reportUrl: url,
+                                                                    });
+                                                                    toast({ title: 'Document Uploaded', description: `${field.label} has been uploaded.` });
+                                                                    handleComplianceFileSelect(field.key, null);
+                                                                    setComplianceRefresher(c => c + 1);
+                                                                } finally {
+                                                                    setIsUploading(false);
+                                                                }
+                                                            }}>
                                                                 <Upload className="mr-2 h-4 w-4" /> Upload
                                                             </Button>
                                                             <Button size="icon" variant="ghost" onClick={() => handleComplianceFileSelect(field.key, null)}>
@@ -2033,7 +2007,22 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <p className="text-xs text-muted-foreground">Ready to upload</p>
                                         </div>
                                         {stationToUpdate && (
-                                            <Button onClick={handleAgreementUpload} disabled={isUploading}>
+                                            <Button disabled={isUploading} onClick={async () => {
+                                                if (!stationToUpdate || !agreementFile || !firestore) return;
+                                                setIsUploading(true);
+                                                const filePath = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
+                                                const uploadKey = `agreement-${stationToUpdate.id}`;
+                                                try {
+                                                    const url = await handleFileUpload(agreementFile, filePath, uploadKey);
+                                                    const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+                                                    await updateDoc(stationRef, { partnershipAgreementUrl: url });
+                                                    setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: url } : null);
+                                                    toast({ title: 'Agreement Uploaded', description: 'Partnership agreement has been uploaded.' });
+                                                    setAgreementFile(null);
+                                                } finally {
+                                                    setIsUploading(false);
+                                                }
+                                            }}>
                                                 <Upload className="mr-2 h-4 w-4"/> Upload
                                             </Button>
                                         )}
