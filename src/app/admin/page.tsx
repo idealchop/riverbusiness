@@ -488,19 +488,24 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             (error) => {
                 console.error("Upload error:", error);
                 toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the agreement. Please try again.' });
-                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
                 setIsUploading(false);
             },
             async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
-                await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
-
-                setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: downloadURL } as WaterStation : null);
-
-                toast({ title: 'Agreement Uploaded', description: 'The partnership agreement has been attached successfully.' });
-                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
-                setIsUploading(false);
+                try {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
+                    await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
+    
+                    setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: downloadURL } as WaterStation : null);
+    
+                    toast({ title: 'Agreement Uploaded', description: 'The partnership agreement has been attached successfully.' });
+                } catch (e) {
+                    console.error("Error updating station document:", e);
+                    toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save the agreement URL.' });
+                } finally {
+                    setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                    setIsUploading(false);
+                }
             }
         );
     };
@@ -911,25 +916,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore) return;
         setIsUploading(true);
         setUploadProgress({});
-
+    
         try {
-            // 1. Create station document to get ID
             const stationsRef = collection(firestore, 'waterStations');
             const newDocRef = await addDoc(stationsRef, values);
             const stationId = newDocRef.id;
-
+    
             const storage = getStorage();
-            const uploadPromises = [];
-            const filesToUpload = { ...complianceFiles };
-            if (agreementFile) {
-                filesToUpload.agreement = agreementFile;
-            }
-
-            // 2. Upload all documents in parallel
-            for (const key in filesToUpload) {
-                const file = filesToUpload[key as keyof typeof filesToUpload];
-                if (!file) continue;
-                
+            const filesToUpload = { ...complianceFiles, ...(agreementFile && { agreement: agreementFile }) };
+            const uploadPromises = Object.entries(filesToUpload).map(([key, file]) => {
+                if (!file) return Promise.resolve();
+    
                 const isComplianceDoc = complianceFields.some(f => f.key === key);
                 const filePath = isComplianceDoc
                     ? `stations/${stationId}/compliance/${key}-${file.name}`
@@ -937,8 +934,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 
                 const storageRef = ref(storage, filePath);
                 const uploadTask = uploadBytesResumable(storageRef, file);
-
-                uploadPromises.push(new Promise<void>((resolve, reject) => {
+    
+                return new Promise<void>((resolve, reject) => {
                     uploadTask.on('state_changed',
                         (snapshot) => {
                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -946,39 +943,40 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         },
                         (error) => reject(error),
                         async () => {
-                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                            if (isComplianceDoc) {
-                                const field = complianceFields.find(f => f.key === key);
-                                const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
-                                const newReport: Omit<ComplianceReport, 'id'> = { name: field!.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: downloadURL };
-                                await addDocumentNonBlocking(reportsRef, newReport);
-                            } else { // It's the agreement
-                                const stationRef = doc(firestore, 'waterStations', stationId);
-                                await updateDocumentNonBlocking(stationRef, { partnershipAgreementUrl: downloadURL });
+                            try {
+                                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                                if (isComplianceDoc) {
+                                    const field = complianceFields.find(f => f.key === key);
+                                    const reportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
+                                    await addDocumentNonBlocking(reportsRef, { name: field!.label, date: new Date().toISOString(), status: 'Compliant', reportUrl: downloadURL });
+                                } else { // It's the agreement
+                                    await updateDocumentNonBlocking(newDocRef, { partnershipAgreementUrl: downloadURL });
+                                }
+                                resolve();
+                            } catch(e) {
+                                reject(e);
                             }
-                            resolve();
                         }
                     );
-                }));
-            }
-
+                });
+            });
+    
             await Promise.all(uploadPromises);
-
+    
             toast({ title: 'Station Created', description: `Station "${values.name}" created successfully with all documents.` });
             stationForm.reset();
             setComplianceFiles({});
             setAgreementFile(null);
             setIsStationProfileOpen(false);
-
+    
         } catch (error) {
              console.error("Error creating station with documents: ", error);
-             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station and upload documents.' });
+             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station and upload documents. Please check console for errors.' });
         } finally {
             setIsUploading(false);
             setUploadProgress({});
         }
     };
-
 
 
     if (usersLoading || stationsLoading) {
@@ -2236,5 +2234,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
