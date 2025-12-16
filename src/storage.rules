@@ -5,50 +5,58 @@ service firebase.storage {
   match /b/{bucket}/o {
     
     function isAdmin() {
-      // Assumes user's role is stored in Firestore.
-      return request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      // Assumes user's role is stored in Firestore at /users/{uid}
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // Best Practice: Enforce file size and content type
+    function isAllowed(maxSizeMB) {
+        return request.resource.size < maxSizeMB * 1024 * 1024
+               && (request.resource.contentType.matches('image/.*') || 
+                   request.resource.contentType.matches('application/pdf'));
     }
 
     // Rule for user profile photos
     match /users/{userId}/profile/{fileName} {
-      allow read, write: if request.auth.uid == userId;
+      allow read;
+      allow create, update: if request.auth.uid == userId && isAllowed(5);
+      allow delete: if request.auth.uid == userId;
     }
 
-    // Rule for user contracts
+    // Rule for user contracts (uploaded by admin)
     match /userContracts/{userId}/{fileName} {
       allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isAllowed(10);
+      allow delete: if isAdmin();
     }
     
-    // Rule for proof of delivery
+    // Rule for proof of delivery (uploaded by admin)
     match /users/{userId}/deliveries/{deliveryId}/{fileName} {
        allow read: if request.auth.uid == userId || isAdmin();
-       allow write: if isAdmin();
+       allow create, update: if isAdmin() && isAllowed(5);
+       allow delete: if isAdmin();
     }
     
-    // Rule for proof of payment
+    // Rule for proof of payment (uploaded by user)
     match /users/{userId}/payments/{paymentId}/{fileName} {
-       allow read, write: if request.auth.uid == userId;
+       allow read: if request.auth.uid == userId || isAdmin();
+       allow create, update: if request.auth.uid == userId && isAllowed(5);
     }
 
-    // Rule for station compliance documents
+    // Rule for station compliance documents (uploaded by admin)
     match /stations/{stationId}/compliance/{fileName} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isAllowed(10);
+      allow delete: if isAdmin();
     }
     
-    // Rule for station partnership agreements
+    // Rule for station partnership agreements (uploaded by admin)
     match /stations/{stationId}/agreement/{fileName} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
-    }
-
-    // Rule for station sanitation reports
-    match /stations/{stationId}/sanitation/{visitId}/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isAllowed(10);
+      allow delete: if isAdmin();
     }
   }
 }
-
-    
