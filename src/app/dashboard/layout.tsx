@@ -184,9 +184,12 @@ export default function DashboardLayout({
     const file = e.target.files?.[0];
     if (file) {
       setProfilePhotoFile(file);
-      setProfilePhotoPreview(URL.createObjectURL(file));
+      const previewUrl = URL.createObjectURL(file);
+      setProfilePhotoPreview(previewUrl);
       setIsPhotoPreviewOpen(true);
     }
+    // Clear the input value to allow selecting the same file again
+    e.target.value = '';
   };
 
   useEffect(() => {
@@ -380,15 +383,17 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
+    // This function is now only called when the "Upload" button in the preview dialog is clicked.
+    // profilePhotoFile is guaranteed to have a file at this point.
     if (!authUser || !userDocRef || !profilePhotoFile) {
-        toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context missing.' });
+        toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context or file is missing.' });
         return;
     }
 
-    setIsPhotoPreviewOpen(false);
+    setIsPhotoPreviewOpen(false); // Close the preview dialog
     const oldPhotoURL = user?.photoURL;
     const uploadKey = `profile-${authUser.uid}`;
-    const fileToUpload = profilePhotoFile; // Capture the file
+    const fileToUpload = profilePhotoFile; // Capture the file to upload
 
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
@@ -433,6 +438,7 @@ export default function DashboardLayout({
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
+        // Cleanup state
         setUploadingFiles(prev => {
             const newUploadingFiles = { ...prev };
             delete newUploadingFiles[uploadKey];
@@ -1219,5 +1225,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
