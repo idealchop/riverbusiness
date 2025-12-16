@@ -136,7 +136,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = React.useState(false);
     const [userForHistory, setUserForHistory] = React.useState<AppUser | null>(null);
-    const [activeTab, setActiveTab] = React.useState('user-management');
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
     const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
@@ -839,7 +838,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         async () => {
           try {
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            onComplete(downloadURL, uploadTask);
+            onComplete(downloadURL, task);
           } catch (error) {
             console.error("URL retrieval error:", error);
             onError(error as Error);
@@ -1766,143 +1765,144 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         </Dialog>
 
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-3">
-                <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="user-management">
-                    <CardHeader>
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="user-management" className="relative">
-                                <Users className="mr-2 h-4 w-4"/>User Management
-                                {pendingRefillRequests.length > 0 && (
-                                    <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{pendingRefillRequests.length}</Badge>
-                                )}
-                            </TabsTrigger>
-                            <TabsTrigger value="water-stations"><Building className="mr-2 h-4 w-4" />Water Stations</TabsTrigger>
-                        </TabsList>
-                    </CardHeader>
-                    <CardContent>
-                        <TabsContent value="user-management" className="space-y-6">
-                            {pendingRefillRequests.length > 0 && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2"><BellRing className="h-5 w-5 text-primary"/> Pending Refill Requests</CardTitle>
-                                        <CardDescription>Users who have requested a one-time refill.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Client ID</TableHead>
-                                                    <TableHead>Business Name</TableHead>
-                                                    <TableHead>Requested</TableHead>
-                                                    <TableHead className="text-right">Action</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {refillRequestsLoading ? (
-                                                    <TableRow><TableCell colSpan={4} className="text-center">Loading requests...</TableCell></TableRow>
-                                                ) : pendingRefillRequests.map((request) => (
-                                                    <TableRow key={request.id}>
-                                                        <TableCell>{request.clientId}</TableCell>
-                                                        <TableCell>{request.businessName}</TableCell>
-                                                        <TableCell>
-                                                            {request.requestedAt ? formatDistanceToNow(new Date((request.requestedAt as any).seconds * 1000), { addSuffix: true }) : 'Just now'}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
-                                                                Mark as Complete
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
-                            )}
-                             <div className="overflow-x-auto">
-                                <Table className="min-w-full">
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="relative flex items-center">
+                        <Users className="mr-2 h-4 w-4"/>User Management
+                        {pendingRefillRequests.length > 0 && (
+                            <Badge className="ml-2 h-5 w-5 justify-center p-0">{pendingRefillRequests.length}</Badge>
+                        )}
+                    </CardTitle>
+                    <CardDescription>Manage all user accounts and their details.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                     {pendingRefillRequests.length > 0 && (
+                        <Card className="bg-amber-50 border-amber-200">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/> Pending Refill Requests</CardTitle>
+                                <CardDescription>Users who have requested a one-time refill.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Client ID</TableHead>
                                             <TableHead>Business Name</TableHead>
-                                            <TableHead>Auto Refill</TableHead>
-                                            <TableHead>Delivery Schedule</TableHead>
-                                            <TableHead>Assigned Station</TableHead>
+                                            <TableHead>Requested</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredUsers.map((user) => {
-                                            const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
-                                                ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
-                                                : 'N/A';
-                                            const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
-                                            return (
-                                            <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
-                                                <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
+                                        {refillRequestsLoading ? (
+                                            <TableRow><TableCell colSpan={4} className="text-center">Loading requests...</TableCell></TableRow>
+                                        ) : pendingRefillRequests.map((request) => (
+                                            <TableRow key={request.id}>
+                                                <TableCell>{request.clientId}</TableCell>
+                                                <TableCell>{request.businessName}</TableCell>
                                                 <TableCell>
-                                                    <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
-                                                        {autoRefillEnabled ? (
-                                                            <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                        ) : (
-                                                            <Badge variant="destructive">Disabled</Badge>
-                                                        )}
-                                                    </div>
+                                                    {request.requestedAt ? formatDistanceToNow(new Date((request.requestedAt as any).seconds * 1000), { addSuffix: true }) : 'Just now'}
                                                 </TableCell>
-                                                <TableCell className="whitespace-nowrap">{schedule}</TableCell>
-                                                <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
-                                            </TableRow>
-                                        )})}
-                                        {filteredUsers.length === 0 && !usersLoading && (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="text-center">No users found.</TableCell>
-                                            </TableRow>
-                                        )}
-                                         {usersLoading && (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                             </div>
-                        </TabsContent>
-                        <TabsContent value="water-stations">
-                            <div className="flex justify-end mb-4">
-                               <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
-                            </div>
-                            <div className="overflow-x-auto">
-                               <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Station ID</TableHead>
-                                            <TableHead>Station Name</TableHead>
-                                            <TableHead>Location</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {stationsLoading && (
-                                            <TableRow><TableCell colSpan={3} className="text-center">Loading stations...</TableCell></TableRow>
-                                        )}
-                                        {!stationsLoading && waterStations?.map((station) => (
-                                            <TableRow key={station.id} onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }} className="cursor-pointer">
-                                                <TableCell className="font-mono text-xs">{station.id}</TableCell>
-                                                <TableCell className="font-medium">{station.name}</TableCell>
-                                                <TableCell>{station.location}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
+                                                        Mark as Complete
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
-                                         {!stationsLoading && waterStations?.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={3} className="text-center">No water stations found.</TableCell>
-                                            </TableRow>
-                                        )}
                                     </TableBody>
                                 </Table>
-                            </div>
-                        </TabsContent>
-                    </CardContent>
-                </Tabs>
+                            </CardContent>
+                        </Card>
+                    )}
+                    <div className="overflow-x-auto">
+                        <Table className="min-w-full">
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Client ID</TableHead>
+                                    <TableHead>Business Name</TableHead>
+                                    <TableHead>Auto Refill</TableHead>
+                                    <TableHead>Delivery Schedule</TableHead>
+                                    <TableHead>Assigned Station</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredUsers.map((user) => {
+                                    const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
+                                        ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
+                                        : 'N/A';
+                                    const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
+                                    return (
+                                    <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
+                                        <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
+                                        <TableCell>
+                                            <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
+                                                {autoRefillEnabled ? (
+                                                    <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                ) : (
+                                                    <Badge variant="destructive">Disabled</Badge>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap">{schedule}</TableCell>
+                                        <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
+                                    </TableRow>
+                                )})}
+                                {filteredUsers.length === 0 && !usersLoading && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center">No users found.</TableCell>
+                                    </TableRow>
+                                )}
+                                 {usersLoading && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                     </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center"><Building className="mr-2 h-4 w-4" />Water Stations</CardTitle>
+                    <CardDescription>Manage all water refilling stations in the network.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex justify-end mb-4">
+                       <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
+                    </div>
+                    <div className="overflow-x-auto">
+                       <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Station ID</TableHead>
+                                    <TableHead>Station Name</TableHead>
+                                    <TableHead>Location</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {stationsLoading && (
+                                    <TableRow><TableCell colSpan={3} className="text-center">Loading stations...</TableCell></TableRow>
+                                )}
+                                {!stationsLoading && waterStations?.map((station) => (
+                                    <TableRow key={station.id} onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }} className="cursor-pointer">
+                                        <TableCell className="font-mono text-xs">{station.id}</TableCell>
+                                        <TableCell className="font-medium">{station.name}</TableCell>
+                                        <TableCell>{station.location}</TableCell>
+                                    </TableRow>
+                                ))}
+                                 {!stationsLoading && waterStations?.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center">No water stations found.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
             </Card>
         </div>
 
@@ -2248,5 +2248,7 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
 
     
