@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { useMounted } from '@/hooks/use-mounted';
 import Image from 'next/image';
+import { Progress } from '@/components/ui/progress';
 
 
 export default function AdminLayout({
@@ -53,7 +54,9 @@ export default function AdminLayout({
   const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
-  const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -76,7 +79,6 @@ export default function AdminLayout({
       setProfilePhotoPreview(previewUrl);
       setIsPhotoPreviewOpen(true);
     }
-    // Clear the input value to allow selecting the same file again
     e.target.value = '';
   };
   
@@ -158,31 +160,27 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async () => {
-    // This function is now only called when the "Upload" button in the preview dialog is clicked.
-    // profilePhotoFile is guaranteed to have a file at this point.
-    if (!authUser || !adminUserDocRef || !profilePhotoFile) {
+    if (!profilePhotoFile || !authUser || !adminUserDocRef) {
         toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context or file is missing.' });
         return;
     }
   
-    setIsPhotoPreviewOpen(false); // Close the preview dialog
+    setIsUploading(true);
+    setUploadProgress(0);
+    
     const oldPhotoURL = adminUser?.photoURL;
-    const uploadKey = `profile-${authUser.uid}`;
-    const fileToUpload = profilePhotoFile; // Capture the file to upload
-  
-    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
     try {
       const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${fileToUpload.name}`;
+      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
       const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
   
       const downloadURL = await new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+            setUploadProgress(progress);
           },
           (error) => {
             console.error("Upload error:", error);
@@ -202,6 +200,9 @@ export default function AdminLayout({
       await updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
       toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
   
+      // Cleanly close the dialog on success
+      setIsPhotoPreviewOpen(false);
+
       if (oldPhotoURL) {
         try {
           const oldPhotoRef = ref(storage, oldPhotoURL);
@@ -216,18 +217,26 @@ export default function AdminLayout({
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
-      // Cleanup state
-      setUploadingFiles(prev => {
-        const newUploadingFiles = { ...prev };
-        delete newUploadingFiles[uploadKey];
-        return newUploadingFiles;
-      });
+      setIsUploading(false);
+      setUploadProgress(0);
+      // Clean up local preview state only after everything is done
       setProfilePhotoFile(null);
       if (profilePhotoPreview) {
         URL.revokeObjectURL(profilePhotoPreview);
       }
       setProfilePhotoPreview(null);
     }
+  };
+
+  const handleCancelUpload = () => {
+    setIsPhotoPreviewOpen(false);
+    setProfilePhotoFile(null);
+    if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview);
+    }
+    setProfilePhotoPreview(null);
+    setIsUploading(false);
+    setUploadProgress(0);
   };
 
   const handleProfilePhotoDelete = async () => {
@@ -265,9 +274,6 @@ export default function AdminLayout({
         </div>
     );
   }
-
-  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : undefined;
-  const isUploadingProfilePhoto = profileUploadProgress !== undefined;
 
   return (
       <div className="flex flex-col h-screen">
@@ -329,15 +335,9 @@ export default function AdminLayout({
                                                               <AvatarImage src={adminUser.photoURL ?? undefined} alt={adminUser.name || ''} />
                                                               <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          {isUploadingProfilePhoto && profileUploadProgress < 100 ? (
-                                                            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                                                <CircularProgress value={profileUploadProgress} />
-                                                            </div>
-                                                          ) : (
-                                                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <Pencil className="h-6 w-6 text-white" />
-                                                            </div>
-                                                          )}
+                                                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                              <Pencil className="h-6 w-6 text-white" />
+                                                          </div>
                                                       </div>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="start">
@@ -359,7 +359,7 @@ export default function AdminLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isUploadingProfilePhoto}/>
+                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
 
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{adminUser.name}</h4>
@@ -433,15 +433,15 @@ export default function AdminLayout({
             {children}
           </main>
           
-          <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
-            <DialogContent>
+          <Dialog open={isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isOpen && !isUploading) { handleCancelUpload() } }}>
+            <DialogContent onInteractOutside={(e) => { if (isUploading) e.preventDefault(); }}>
               <DialogHeader>
                 <DialogTitle>Preview Profile Photo</DialogTitle>
                 <DialogDescription>
                   Confirm this is the photo you want to upload.
                 </DialogDescription>
               </DialogHeader>
-              <div className="my-4 flex justify-center">
+              <div className="my-4 flex flex-col items-center justify-center gap-4">
                 {profilePhotoPreview && (
                   <Image
                     src={profilePhotoPreview}
@@ -451,13 +451,19 @@ export default function AdminLayout({
                     className="rounded-full aspect-square object-cover"
                   />
                 )}
+                {isUploading && (
+                  <div className="w-full px-4">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-center text-sm text-muted-foreground mt-2">{Math.round(uploadProgress)}%</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPhotoPreviewOpen(false)}>
+                <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
                   Cancel
                 </Button>
-                <Button onClick={handleProfilePhotoUpload}>
-                  Upload Photo
+                <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </DialogFooter>
             </DialogContent>

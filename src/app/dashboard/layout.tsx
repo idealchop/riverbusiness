@@ -148,7 +148,8 @@ export default function DashboardLayout({
   const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
-  const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [isUploading, setIsUploading] = React.useState(false);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -162,7 +163,6 @@ export default function DashboardLayout({
       return;
     }
     
-    // Onboarding check moved here
     const checkOnboarding = async () => {
         if (!firestore) return;
         const userDoc = await getDoc(doc(firestore, 'users', authUser.uid));
@@ -188,7 +188,6 @@ export default function DashboardLayout({
       setProfilePhotoPreview(previewUrl);
       setIsPhotoPreviewOpen(true);
     }
-    // Clear the input value to allow selecting the same file again
     e.target.value = '';
   };
 
@@ -234,7 +233,8 @@ export default function DashboardLayout({
       return;
     }
     const uploadKey = `payment-${selectedInvoice.id}`;
-    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
+    setIsUploading(true);
+    setUploadProgress(0);
 
     try {
         const storage = getStorage();
@@ -246,7 +246,7 @@ export default function DashboardLayout({
             uploadTask.on('state_changed',
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+                    setUploadProgress(progress);
                 },
                 (error) => reject(error),
                 async () => {
@@ -272,11 +272,8 @@ export default function DashboardLayout({
     } catch(error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
     } finally {
-        setUploadingFiles(prev => {
-            const newUploadingFiles = { ...prev };
-            delete newUploadingFiles[uploadKey];
-            return newUploadingFiles;
-        });
+        setIsUploading(false);
+        setUploadProgress(0);
     }
   };
 
@@ -383,31 +380,26 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
-    // This function is now only called when the "Upload" button in the preview dialog is clicked.
-    // profilePhotoFile is guaranteed to have a file at this point.
-    if (!authUser || !userDocRef || !profilePhotoFile) {
+    if (!profilePhotoFile || !authUser || !userDocRef) {
         toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context or file is missing.' });
         return;
     }
 
-    setIsPhotoPreviewOpen(false); // Close the preview dialog
+    setIsUploading(true);
+    setUploadProgress(0);
     const oldPhotoURL = user?.photoURL;
-    const uploadKey = `profile-${authUser.uid}`;
-    const fileToUpload = profilePhotoFile; // Capture the file to upload
-
-    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
     try {
       const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${fileToUpload.name}`;
+      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
       const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
   
       const downloadURL = await new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+            setUploadProgress(progress);
           },
           (error) => reject(error),
           async () => {
@@ -423,6 +415,7 @@ export default function DashboardLayout({
 
       await updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
       toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+      setIsPhotoPreviewOpen(false);
 
       if (oldPhotoURL) {
         try {
@@ -438,12 +431,8 @@ export default function DashboardLayout({
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
-        // Cleanup state
-        setUploadingFiles(prev => {
-            const newUploadingFiles = { ...prev };
-            delete newUploadingFiles[uploadKey];
-            return newUploadingFiles;
-        });
+        setIsUploading(false);
+        setUploadProgress(0);
         setProfilePhotoFile(null);
         if (profilePhotoPreview) {
           URL.revokeObjectURL(profilePhotoPreview);
@@ -451,6 +440,18 @@ export default function DashboardLayout({
         setProfilePhotoPreview(null);
     }
   };
+
+  const handleCancelUpload = () => {
+    setIsPhotoPreviewOpen(false);
+    setProfilePhotoFile(null);
+    if (profilePhotoPreview) {
+        URL.revokeObjectURL(profilePhotoPreview);
+    }
+    setProfilePhotoPreview(null);
+    setIsUploading(false);
+    setUploadProgress(0);
+  };
+
 
    const handleProfilePhotoDelete = async () => {
     if (!authUser || !userDocRef || !user?.photoURL) return;
@@ -540,11 +541,7 @@ export default function DashboardLayout({
     return <div>Loading...</div>
   }
 
-  const profileUploadProgress = authUser ? uploadingFiles[`profile-${authUser.uid}`] : undefined;
-  const isUploadingProfilePhoto = profileUploadProgress !== undefined;
-
-  const paymentUploadProgress = selectedInvoice ? uploadingFiles[`payment-${selectedInvoice.id}`] : 0;
-  const isUploadingPayment = paymentUploadProgress > 0 && paymentUploadProgress <= 100;
+  const isUploadingPayment = uploadProgress > 0 && uploadProgress <= 100;
 
   return (
       <div className="flex flex-col h-full">
@@ -722,15 +719,9 @@ export default function DashboardLayout({
                                                               <AvatarImage src={user.photoURL ?? undefined} alt={user.name || ''} />
                                                               <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          {isUploadingProfilePhoto && profileUploadProgress !== undefined ? (
-                                                              <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                                                  <CircularProgress value={profileUploadProgress} />
-                                                              </div>
-                                                          ) : (
-                                                              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                  <Pencil className="h-6 w-6 text-white" />
-                                                              </div>
-                                                          )}
+                                                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                              <Pencil className="h-6 w-6 text-white" />
+                                                          </div>
                                                       </div>
                                                   </DropdownMenuTrigger>
                                                   <DropdownMenuContent align="start">
@@ -752,7 +743,7 @@ export default function DashboardLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isUploadingProfilePhoto}/>
+                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{user.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>
@@ -1001,15 +992,15 @@ export default function DashboardLayout({
               </a>.
           </footer>
 
-          <Dialog open={isPhotoPreviewOpen} onOpenChange={setIsPhotoPreviewOpen}>
-            <DialogContent>
+          <Dialog open={isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isOpen && !isUploading) { handleCancelUpload() } }}>
+            <DialogContent onInteractOutside={(e) => { if (isUploading) e.preventDefault(); }}>
               <DialogHeader>
                 <DialogTitle>Preview Profile Photo</DialogTitle>
                 <DialogDescription>
                   Confirm this is the photo you want to upload.
                 </DialogDescription>
               </DialogHeader>
-              <div className="my-4 flex justify-center">
+              <div className="my-4 flex flex-col items-center justify-center gap-4">
                 {profilePhotoPreview && (
                   <Image
                     src={profilePhotoPreview}
@@ -1019,13 +1010,19 @@ export default function DashboardLayout({
                     className="rounded-full aspect-square object-cover"
                   />
                 )}
+                {isUploading && (
+                  <div className="w-full px-4">
+                      <Progress value={uploadProgress} className="h-2" />
+                      <p className="text-center text-sm text-muted-foreground mt-2">{Math.round(uploadProgress)}%</p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPhotoPreviewOpen(false)}>
+                <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
                   Cancel
                 </Button>
-                <Button onClick={handleProfilePhotoUpload}>
-                  Upload Photo
+                <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1087,8 +1084,8 @@ export default function DashboardLayout({
                         <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isUploadingPayment} />
                         {isUploadingPayment && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Progress value={paymentUploadProgress} className="w-full" />
-                            <span>{Math.round(paymentUploadProgress)}%</span>
+                            <Progress value={uploadProgress} className="w-full" />
+                            <span>{Math.round(uploadProgress)}%</span>
                           </div>
                         )}
                       </div>
