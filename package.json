@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "deploy:functions": "firebase deploy --only functions"
+    "deploy:functions": "npm --prefix functions install && npm --prefix functions run build && firebase deploy --only functions"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.0.0",
