@@ -34,7 +34,6 @@ export default function AdminLayout({
   const auth = useAuth();
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const [searchTerm, setSearchTerm] = useState('');
   const isMounted = useMounted();
 
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -73,18 +72,6 @@ export default function AdminLayout({
     signOut(auth).then(() => {
       router.push('/login');
     });
-  };
-
-  const handleSearch = () => {
-    if (!searchTerm) return;
-    const event = new CustomEvent('admin-user-search-term', { detail: searchTerm });
-    window.dispatchEvent(event);
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-          handleSearch();
-      }
   };
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,19 +216,6 @@ export default function AdminLayout({
           <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
             <div className="flex-1" />
             <div className="flex items-center gap-4">
-                <div className="relative">
-                    <Input
-                      type="search"
-                      placeholder="Enter User ID or Name..."
-                      className="w-full appearance-none bg-background pl-8 shadow-none md:w-64 lg:w-96"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={handleSearchKeyDown}
-                    />
-                    <Button onClick={handleSearch} size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
-                      <Search className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                </div>
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -440,3 +414,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    
