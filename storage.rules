@@ -4,35 +4,58 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
+    // Helper function to check if the user is an Admin by reading their role from Firestore.
     function isAdmin() {
-      // Assumes user's role is stored in Firestore.
-      return request.auth != null && get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
+    // Helper function to enforce file size and type constraints for security.
+    function isAllowed(maxSizeMB) {
+        return request.resource.size < maxSizeMB * 1024 * 1024
+               && (request.resource.contentType.matches('image/.*') || 
+                   request.resource.contentType.matches('application/pdf'));
+    }
+
+    // Rule for user profile photos
     match /users/{userId}/profile/{fileName} {
-      allow read, write: if request.auth.uid == userId;
+      // Anyone can view a profile photo.
+      allow get;
+      // Only the owner of the profile can upload, update, or delete their own photo (up to 5MB).
+      allow create, update, delete: if request.auth.uid == userId && isAllowed(5);
     }
 
-    match /users/{userId}/contracts/{fileName} {
-      allow read, write: if isAdmin();
-      allow read: if request.auth.uid == userId;
+    // Rule for user contracts (can only be managed by admins)
+    match /userContracts/{userId}/{fileName} {
+      // The user and admins can view the contract.
+      allow get: if request.auth.uid == userId || isAdmin();
+      // Only admins can upload, update, or delete contracts (up to 10MB).
+      allow create, update, delete: if isAdmin() && isAllowed(10);
     }
     
+    // Rule for proof of delivery (managed by admin)
     match /users/{userId}/deliveries/{deliveryId}/{fileName} {
-       // Admins can upload and view. The specific user can also view.
-       allow read, write: if isAdmin();
-       allow read: if request.auth.uid == userId;
+       // The user and admins can view the proof.
+       allow get: if request.auth.uid == userId || isAdmin();
+       // Only admins can manage proof of delivery files (up to 5MB).
+       allow create, update, delete: if isAdmin() && isAllowed(5);
     }
     
-    match /stations/{stationId}/compliance/{fileName} {
-      allow read, write: if isAdmin();
-      allow read: if request.auth != null;
+    // Rule for proof of payment (uploaded by user)
+    match /users/{userId}/payments/{paymentId}/{fileName} {
+       // The user and admins can view the proof.
+       allow get: if request.auth.uid == userId || isAdmin();
+       // Only the user can upload their own proof of payment (up to 5MB).
+       allow create, update: if request.auth.uid == userId && isAllowed(5);
     }
 
-    match /stations/{stationId}/sanitation/{visitId}/{fileName} {
-      allow read, write: if isAdmin();
-      allow read: if request.auth != null;
+    // Rule for station documents (managed by admin)
+    match /stations/{stationId}/{documentType}/{fileName} {
+      // Any authenticated user can view station documents (compliance, agreement).
+      allow get: if request.auth != null;
+      // Only admins can upload, update, or delete station documents (up to 10MB).
+      allow create, update, delete: if isAdmin() && isAllowed(10);
     }
-
   }
 }
