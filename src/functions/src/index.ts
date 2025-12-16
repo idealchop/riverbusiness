@@ -1,5 +1,4 @@
-
-import * as functions from "firebase-functions";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as path from "path";
 
@@ -12,18 +11,20 @@ const storage = admin.storage();
 /**
  * A generic Cloud Function that triggers on any file being finalized in
  * Firebase Storage. It determines the file type based on its path and
+
  * updates the corresponding Firestore document with a public URL.
  */
-export const onFileUpload = functions.storage.object().onFinalize(async (object) => {
+export const onFileUpload = functions.storage.bucket().object().onFinalize(async (object) => {
   const filePath = object.name;
-
+  const bucketName = object.bucket;
+  
   // Ensure filePath is valid before proceeding
   if (!filePath) {
     functions.logger.warn("File path is undefined. Exiting function.");
     return;
   }
-
-  const bucket = storage.bucket(object.bucket);
+  
+  const bucket = storage.bucket(bucketName);
   const file = bucket.file(filePath); // Create file object only after validation
 
   const getPublicUrl = async () => {
