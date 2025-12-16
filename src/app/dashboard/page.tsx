@@ -449,7 +449,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
                  <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting}>
+                        <Button variant="default" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting}>
                             <BellRing className="mr-2 h-4 w-4" />
                             {isRefillRequesting ? "Requesting..." : "Request Refill"}
                         </Button>
