@@ -1825,6 +1825,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead>Station ID</TableHead>
                                             <TableHead>Station Name</TableHead>
                                             <TableHead>Location</TableHead>
                                             <TableHead>Compliance Status</TableHead>
@@ -1833,14 +1834,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </TableHeader>
                                     <TableBody>
                                         {stationsLoading && (
-                                            <TableRow><TableCell colSpan={4} className="text-center">Loading stations...</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5} className="text-center">Loading stations...</TableCell></TableRow>
                                         )}
                                         {!stationsLoading && waterStations?.map((station) => (
                                             <TableRow key={station.id}>
+                                                <TableCell className="font-mono text-xs">{station.id}</TableCell>
                                                 <TableCell className="font-medium">{station.name}</TableCell>
                                                 <TableCell>{station.location}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={'outline'}>
+                                                    <Badge 
+                                                        variant={'outline'} 
+                                                        className="cursor-pointer hover:bg-muted"
+                                                        onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}
+                                                    >
                                                        View
                                                     </Badge>
                                                 </TableCell>
@@ -1866,7 +1872,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         ))}
                                          {!stationsLoading && waterStations?.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center">No water stations found.</TableCell>
+                                                <TableCell colSpan={5} className="text-center">No water stations found.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -2142,5 +2148,7 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
 
     
