@@ -45,6 +45,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { CircularProgress } from '@/components/ui/circular-progress';
+import { useMounted } from '@/hooks/use-mounted';
 
 type Notification = {
     id: string;
@@ -89,6 +90,8 @@ export default function DashboardLayout({
   const auth = getAuth();
   const firestore = useFirestore();
   const { user: authUser, isUserLoading } = useUser();
+  const isMounted = useMounted();
+
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
@@ -477,7 +480,7 @@ export default function DashboardLayout({
     }, [user, paymentHistoryFromDb]);
 
 
-  if (isUserLoading || isUserDocLoading) {
+  if (isUserLoading || isUserDocLoading || !isMounted) {
     return <div>Loading...</div>
   }
 
@@ -939,7 +942,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
-
-    

@@ -21,6 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { CircularProgress } from '@/components/ui/circular-progress';
+import { useMounted } from '@/hooks/use-mounted';
 
 
 export default function AdminLayout({
@@ -34,6 +35,7 @@ export default function AdminLayout({
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
+  const isMounted = useMounted();
 
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
@@ -208,6 +210,19 @@ export default function AdminLayout({
     }
   };
 
+  if (!isMounted) {
+    return (
+        <div className="flex flex-col h-screen">
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
+                 <div className="flex-1" />
+                 {/* Render skeleton or placeholders for header icons */}
+            </header>
+            <main className="flex-1 overflow-auto p-4 sm:p-6">
+                {children}
+            </main>
+        </div>
+    );
+  }
 
   return (
       <div className="flex flex-col h-screen">
@@ -425,5 +440,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    
