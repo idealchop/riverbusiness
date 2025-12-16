@@ -2080,14 +2080,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const progress = uploadingFiles[field.key] || 0;
                                         const isUploadingFile = progress > 0 && progress < 100;
                                         
-                                        const onUpload = async () => {
-                                            if (!stagedFile || !stationToUpdate || !firestore) return;
+                                        const onUpload = async (fileToUpload: File) => {
+                                            if (!stationToUpdate || !firestore) return;
                                             const docKey = field.key;
                                             
                                             try {
                                                 const url = await handleFileUpload(
-                                                    stagedFile,
-                                                    `stations/${stationToUpdate.id}/compliance/${docKey}-${stagedFile.name}`,
+                                                    fileToUpload,
+                                                    `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`,
                                                     (p) => setUploadingFiles(prev => ({...prev, [docKey]: p})),
                                                 );
                                                 
@@ -2125,7 +2125,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     ) : stagedFile ? (
                                                         <>
                                                             <span className="text-sm text-muted-foreground truncate max-w-[120px]">{stagedFile.name}</span>
-                                                            <Button size="sm" disabled={!stationToUpdate || isSubmitting} onClick={onUpload}>
+                                                            <Button size="sm" disabled={!stationToUpdate || isSubmitting} onClick={() => onUpload(stagedFile)}>
                                                                 <Upload className="mr-2 h-4 w-4" /> Upload
                                                             </Button>
                                                             <Button size="icon" variant="ghost" onClick={() => handleComplianceFileSelect(field.key, null)} disabled={isSubmitting}>
@@ -2305,5 +2305,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
