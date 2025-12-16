@@ -446,7 +446,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             },
             (error) => {
                 console.error("Upload error:", error);
-                toast({ variant: 'destructive', title: 'Attach Failed', description: 'Could not attach the compliance document. Please try again.' });
+                toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the compliance document. Please try again.' });
                 setUploadProgress(prev => ({ ...prev, [fieldKey]: 0 }));
                 setIsUploading(false);
             },
@@ -462,7 +462,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 };
                 await addDocumentNonBlocking(reportsRef, newReport);
     
-                toast({ title: 'Compliance Document Attached', description: `${label} has been successfully attached.` });
+                toast({ title: 'Compliance Document Uploaded', description: `${label} has been successfully uploaded.` });
                 setUploadProgress(prev => ({ ...prev, [fieldKey]: 0 }));
                 setComplianceRefresher(c => c + 1); // Trigger a refresh
                 setIsUploading(false);
@@ -499,7 +499,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
                     setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: downloadURL } as WaterStation : null);
     
-                    toast({ title: 'Agreement Uploaded', description: 'The partnership agreement has been attached successfully.' });
+                    toast({ title: 'Agreement Uploaded', description: 'The partnership agreement has been uploaded successfully.' });
                     setAgreementFile(null); // Clear staged file
                 } catch (e) {
                     console.error("Error updating station document:", e);
@@ -918,14 +918,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore) return;
         setIsUploading(true);
         setUploadProgress({});
-        let stationId: string;
     
         try {
             // 1. Create the station document to get an ID
             const stationsRef = collection(firestore, 'waterStations');
-            const newDocRef = await addDocumentNonBlocking(stationsRef, values);
-            stationId = newDocRef.id;
+            const newDocRef = await addDoc(stationsRef, values);
+            const stationId = newDocRef.id;
 
+            // Update the UI immediately to show the new station in management mode
+            setStationToUpdate({ id: stationId, ...values });
+    
             // 2. Prepare upload promises
             const filesToUpload = { ...complianceFiles, ...(agreementFile && { agreement: agreementFile }) };
             const uploadPromises = Object.entries(filesToUpload).map(([key, file]) => {
@@ -936,7 +938,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     ? `stations/${stationId}/compliance/${key}-${file.name}`
                     : `stations/${stationId}/agreement/${file.name}`;
                 
-                const storageRef = ref(storage, filePath);
+                const storageRef = ref(getStorage(), filePath);
                 const uploadTask = uploadBytesResumable(storageRef, file);
     
                 return new Promise<{key: string, url: string}>((resolve, reject) => {
@@ -962,6 +964,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const agreementUrl = uploadedFiles.find(f => f.key === 'agreement')?.url || '';
             if (agreementUrl) {
                 await updateDocumentNonBlocking(stationDoc, { partnershipAgreementUrl: agreementUrl });
+                 setStationToUpdate(prev => prev ? { ...prev, partnershipAgreementUrl: agreementUrl } as WaterStation : null);
             }
 
             const complianceReportsRef = collection(firestore, 'waterStations', stationId, 'complianceReports');
@@ -973,6 +976,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     }
                 }
             }
+            setComplianceRefresher(c => c + 1);
     
             toast({ title: 'Station Created', description: `Station "${values.name}" created successfully with all documents.` });
             stationForm.reset();
@@ -2245,5 +2249,7 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
 
     
