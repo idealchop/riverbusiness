@@ -383,6 +383,7 @@ export default function DashboardLayout({
     if (!profilePhotoFile || !authUser || !userDocRef) return;
 
     setIsPhotoPreviewOpen(false);
+    const oldPhotoURL = user?.photoURL;
     const uploadKey = `profile-${authUser.uid}`;
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
   
@@ -392,7 +393,7 @@ export default function DashboardLayout({
       const storageRef = ref(storage, filePath);
       const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
   
-      await new Promise<void>((resolve, reject) => {
+      const downloadURL = await new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -401,16 +402,29 @@ export default function DashboardLayout({
           (error) => reject(error),
           async () => {
             try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
-              toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-              resolve();
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
             } catch (error) {
               reject(error);
             }
           }
         );
       });
+
+      await updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
+      toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+
+      if (oldPhotoURL) {
+        try {
+          const oldPhotoRef = ref(storage, oldPhotoURL);
+          await deleteObject(oldPhotoRef);
+        } catch (deleteError: any) {
+          if (deleteError.code !== 'storage/object-not-found') {
+            console.warn("Could not delete old profile photo:", deleteError);
+          }
+        }
+      }
+
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
@@ -447,7 +461,7 @@ export default function DashboardLayout({
     }
 
     try {
-        updateDocumentNonBlocking(userDocRef, { photoURL: null });
+        await updateDocumentNonBlocking(userDocRef, { photoURL: null });
         toast({
             title: 'Profile Photo Removed',
             description: 'Your profile photo has been removed.',

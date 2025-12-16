@@ -158,6 +158,7 @@ export default function AdminLayout({
     if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
 
     setIsPhotoPreviewOpen(false);
+    const oldPhotoURL = adminUser?.photoURL;
     const uploadKey = `profile-${authUser.uid}`;
     setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
 
@@ -167,7 +168,7 @@ export default function AdminLayout({
       const storageRef = ref(storage, filePath);
       const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
 
-      await new Promise<void>((resolve, reject) => {
+      const downloadURL = await new Promise<string>((resolve, reject) => {
         uploadTask.on('state_changed',
           (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
@@ -179,16 +180,31 @@ export default function AdminLayout({
           },
           async () => {
             try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
-              toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-              resolve();
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
             } catch (error) {
               reject(error);
             }
           }
         );
       });
+
+      // Update Firestore with the new URL
+      await updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
+      toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+
+      // After successful upload and Firestore update, delete the old photo
+      if (oldPhotoURL) {
+        try {
+          const oldPhotoRef = ref(storage, oldPhotoURL);
+          await deleteObject(oldPhotoRef);
+        } catch (deleteError: any) {
+          if (deleteError.code !== 'storage/object-not-found') {
+            console.warn("Could not delete old profile photo:", deleteError);
+          }
+        }
+      }
+
     } catch (error) {
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
     } finally {
@@ -209,13 +225,10 @@ export default function AdminLayout({
     if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
 
     const storage = getStorage();
-    // Create a reference from the full URL
     try {
         const photoRef = ref(storage, adminUser.photoURL);
         await deleteObject(photoRef);
     } catch (error: any) {
-        // It's possible the object doesn't exist, especially if the URL is old/invalid.
-        // We can ignore "object-not-found" and proceed to update Firestore.
         if (error.code !== 'storage/object-not-found') {
             console.error("Error deleting profile photo from storage: ", error);
             toast({
@@ -223,13 +236,12 @@ export default function AdminLayout({
                 title: 'Delete Failed',
                 description: 'Could not delete the old photo from storage. Please try again.',
             });
-            return; // Stop if it's a real error (like permissions)
+            return; 
         }
     }
 
-    // Always attempt to clear the URL from Firestore
     try {
-        updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
+        await updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
         toast({
             title: 'Profile Photo Removed',
             description: 'Your profile photo has been removed.',
