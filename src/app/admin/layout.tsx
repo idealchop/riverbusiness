@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Bell, Search, User, Edit, KeyRound, EyeOff, Eye, Upload, LogOut, Pencil, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection, useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import type { AppUser } from '@/lib/types';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut } from 'firebase/auth';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -30,6 +30,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,6 +65,13 @@ export default function AdminLayout({
       setEditableFormData(adminUser);
     }
   }, [adminUser]);
+
+  const handleLogout = () => {
+    if (!auth) return;
+    signOut(auth).then(() => {
+      router.push('/login');
+    });
+  };
 
   const handleSearch = () => {
     if (!searchTerm) return;
@@ -355,7 +363,7 @@ export default function AdminLayout({
                           </div>
                       </ScrollArea>
                       <DialogFooter className="pr-6 pt-4">
-                        <Button variant="outline"><LogOut className="mr-2 h-4 w-4" />Logout</Button>
+                        <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
                       </DialogFooter>
                     </DialogContent>
                     <AlertDialogContent>
@@ -417,5 +425,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    
