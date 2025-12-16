@@ -42,7 +42,7 @@ const perks = [
         discounts: [
             { title: "50% Membership Discount" },
             { title: "1 Free Pass" },
-            { title: "On-site Structured Class", description: "Boost team wellness with a guided physical activity session at your office." }
+            { title: "Free class (Office Visit)", description: "Boost team wellness with a guided physical activity session at your office." }
         ],
         websiteUrl: "https://www.newbreed.com",
         mapUrl: "https://www.google.com/maps/search/?api=1&query=New+Breed+Fitness"
@@ -1078,3 +1078,4 @@ export default function DashboardPage() {
     </div>
     );
 }
+
