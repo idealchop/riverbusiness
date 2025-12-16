@@ -17,7 +17,6 @@ service firebase.storage {
     match /users/{userId}/profile/{fileName} {
       allow get;
       allow create, update: if request.auth.uid == userId && isAllowed(5);
-      // Corrected: Separated delete rule to not use isAllowed()
       allow delete: if request.auth.uid == userId;
     }
 
@@ -42,3 +41,5 @@ service firebase.storage {
     }
   }
 }
+
+    

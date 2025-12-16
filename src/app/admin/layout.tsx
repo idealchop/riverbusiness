@@ -160,67 +160,66 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !adminUserDocRef) {
-      toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context or file is missing.' });
-      return;
-    }
+    if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
 
     setIsUploading(true);
     setUploadProgress(0);
     const oldPhotoURL = adminUser?.photoURL;
-
+    
     try {
-      const storage = getStorage();
-      const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
-      const storageRef = ref(storage, filePath);
-      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile);
+        const storage = getStorage();
+        const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
+        const storageRef = ref(storage, filePath);
+        
+        // Add file metadata for content type
+        const metadata = {
+            contentType: profilePhotoFile.type,
+        };
 
-      // This is the core change: listen to progress and completion separately.
-      uploadTask.on('state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
+        const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
+
+        // Await the completion of the upload task
+        await uploadTask;
+        
+        // Listen to progress separately
+        uploadTask.on('state_changed', (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(progress);
+        });
+
+        // Get URL after upload is complete
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+        // Update Firestore document
+        await updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
+        toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+
+        // Cleanly close the dialog on success
+        setIsPhotoPreviewOpen(false);
+
+        // Delete the old photo only after the new one is successfully uploaded and saved
+        if (oldPhotoURL) {
+            try {
+                const oldPhotoRef = ref(storage, oldPhotoURL);
+                await deleteObject(oldPhotoRef);
+            } catch (deleteError: any) {
+                // Don't throw an error if old photo deletion fails, just log it.
+                if (deleteError.code !== 'storage/object-not-found') {
+                    console.warn("Could not delete old profile photo:", deleteError);
+                }
+            }
         }
-      );
-
-      // Await the completion of the upload task
-      await uploadTask;
-
-      // Get URL after upload is complete
-      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-      // Update Firestore document
-      await updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
-      toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-      
-      // Cleanly close the dialog on success
-      setIsPhotoPreviewOpen(false);
-
-      // Delete the old photo only after the new one is successfully uploaded and saved
-      if (oldPhotoURL) {
-        try {
-          const oldPhotoRef = ref(storage, oldPhotoURL);
-          await deleteObject(oldPhotoRef);
-        } catch (deleteError: any) {
-          // Don't throw an error if old photo deletion fails, just log it.
-          if (deleteError.code !== 'storage/object-not-found') {
-            console.warn("Could not delete old profile photo:", deleteError);
-          }
-        }
-      }
-
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+    } catch (error: any) {
+        console.error("Upload failed:", error);
+        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message || 'Could not upload your photo. Please try again.' });
     } finally {
-      // This block runs regardless of success or failure
-      setIsUploading(false);
-      setUploadProgress(0);
-      setProfilePhotoFile(null);
-      if (profilePhotoPreview) {
-        URL.revokeObjectURL(profilePhotoPreview);
-      }
-      setProfilePhotoPreview(null);
+        setIsUploading(false);
+        setUploadProgress(0);
+        setProfilePhotoFile(null);
+        if (profilePhotoPreview) {
+            URL.revokeObjectURL(profilePhotoPreview);
+        }
+        setProfilePhotoPreview(null);
     }
   };
 
@@ -506,3 +505,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    
