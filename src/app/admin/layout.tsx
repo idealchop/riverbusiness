@@ -52,8 +52,8 @@ export default function AdminLayout({
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -145,33 +145,50 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async (file: File) => {
-    if (!authUser || !firestore || !adminUserDocRef) return;
-    setIsUploading(true);
-    setUploadProgress(0);
-    const storage = getStorage();
-    const filePath = `users/${authUser.uid}/profile/${file.name}`;
-    const storageRef = ref(storage, filePath);
+    if (!authUser || !adminUserDocRef) return;
 
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const uploadKey = `profile-${authUser.uid}`;
+    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
+    setIsSubmitting(true);
 
-    uploadTask.on('state_changed',
-        (snapshot) => {
+    try {
+      const storage = getStorage();
+      const filePath = `users/${authUser.uid}/profile/${file.name}`;
+      const storageRef = ref(storage, filePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-        },
-        (error) => {
-          toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
-          setIsUploading(false);
-          setUploadProgress(0);
-        },
-        async () => {
-            const downloadURL = await getDownloadURL(storageRef);
-            updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
-            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
-    );
+            setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
+              toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+      setUploadingFiles(prev => {
+        const newUploadingFiles = { ...prev };
+        delete newUploadingFiles[uploadKey];
+        return newUploadingFiles;
+      });
+    }
   };
 
   const handleProfilePhotoDelete = async () => {
@@ -210,6 +227,9 @@ export default function AdminLayout({
         </div>
     );
   }
+
+  const profileUploadProgress = uploadingFiles[`profile-${authUser?.uid}`];
+  const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
 
   return (
       <div className="flex flex-col h-screen">
@@ -271,9 +291,9 @@ export default function AdminLayout({
                                                               <AvatarImage src={adminUser.photoURL ?? undefined} alt={adminUser.name || ''} />
                                                               <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          {isUploading ? (
+                                                          {isUploadingProfilePhoto && profileUploadProgress < 100 ? (
                                                             <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                                                <CircularProgress value={uploadProgress} />
+                                                                <CircularProgress value={profileUploadProgress} />
                                                             </div>
                                                           ) : (
                                                             <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -301,7 +321,7 @@ export default function AdminLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                              <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])} disabled={isSubmitting}/>
 
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{adminUser.name}</h4>
@@ -414,5 +434,3 @@ export default function AdminLayout({
       </div>
   );
 }
-
-    

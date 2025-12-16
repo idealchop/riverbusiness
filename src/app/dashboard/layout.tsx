@@ -144,8 +144,8 @@ export default function DashboardLayout({
   const [hasNewMessage, setHasNewMessage] = React.useState(false);
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -220,42 +220,53 @@ export default function DashboardLayout({
       toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select an invoice and a file to upload.' });
       return;
     }
-    setIsUploading(true);
-    setUploadProgress(0);
-    const storage = getStorage();
-    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
-    const storageRef = ref(storage, filePath);
-  
-    const uploadTask = uploadBytesResumable(storageRef, paymentProofFile);
+    const uploadKey = `payment-${selectedInvoice.id}`;
+    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
+    setIsSubmitting(true);
 
-    uploadTask.on('state_changed', 
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-        },
-        (error) => {
-            console.error("Upload error:", error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
-            setIsUploading(false);
-            setUploadProgress(0);
-        },
-        async () => {
-            const downloadURL = await getDownloadURL(storageRef);
-            const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-            const paymentData: Partial<Payment> = {
-                status: 'Pending Review',
-                proofOfPaymentUrl: downloadURL,
-            };
-            setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
-            
-            toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-            setIsPaymentDialogOpen(false);
-            setSelectedInvoice(null);
-            setPaymentProofFile(null);
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
-    );
+    try {
+        const storage = getStorage();
+        const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
+        const storageRef = ref(storage, filePath);
+        const uploadTask = uploadBytesResumable(storageRef, paymentProofFile);
+
+        await new Promise<void>((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+                },
+                (error) => reject(error),
+                async () => {
+                    try {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
+                        const paymentData: Partial<Payment> = {
+                            status: 'Pending Review',
+                            proofOfPaymentUrl: downloadURL,
+                        };
+                        setDocumentNonBlocking(paymentRef, paymentData, { merge: true });
+                        toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
+                        setIsPaymentDialogOpen(false);
+                        setSelectedInvoice(null);
+                        setPaymentProofFile(null);
+                        resolve();
+                    } catch(e) {
+                        reject(e);
+                    }
+                }
+            );
+        });
+    } catch(error) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
+    } finally {
+        setIsSubmitting(false);
+        setUploadingFiles(prev => {
+            const newUploadingFiles = { ...prev };
+            delete newUploadingFiles[uploadKey];
+            return newUploadingFiles;
+        });
+    }
   };
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,33 +372,47 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async (file: File) => {
-    if (!authUser || !firestore || !userDocRef) return;
-    setIsUploading(true);
-    setUploadProgress(0);
-    const storage = getStorage();
-    const filePath = `users/${authUser.uid}/profile/${file.name}`;
-    const storageRef = ref(storage, filePath);
-
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on('state_changed',
-        (snapshot) => {
+    if (!authUser || !userDocRef) return;
+    
+    const uploadKey = `profile-${authUser.uid}`;
+    setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
+    setIsSubmitting(true);
+  
+    try {
+      const storage = getStorage();
+      const filePath = `users/${authUser.uid}/profile/${file.name}`;
+      const storageRef = ref(storage, filePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+  
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-        },
-        (error) => {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
-            setIsUploading(false);
-            setUploadProgress(0);
-        },
-        async () => {
-            const downloadURL = await getDownloadURL(storageRef);
-            updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
-            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
-    );
+            setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+          },
+          (error) => reject(error),
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              updateDocumentNonBlocking(userDocRef, { photoURL: downloadURL });
+              toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          }
+        );
+      });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+      setUploadingFiles(prev => {
+        const newUploadingFiles = { ...prev };
+        delete newUploadingFiles[uploadKey];
+        return newUploadingFiles;
+      });
+    }
   };
 
    const handleProfilePhotoDelete = async () => {
@@ -484,6 +509,11 @@ export default function DashboardLayout({
     return <div>Loading...</div>
   }
 
+  const profileUploadProgress = uploadingFiles[`profile-${authUser?.uid}`];
+  const isUploadingProfilePhoto = profileUploadProgress > 0 && profileUploadProgress <= 100;
+
+  const paymentUploadProgress = selectedInvoice ? uploadingFiles[`payment-${selectedInvoice.id}`] : 0;
+  const isUploadingPayment = paymentUploadProgress > 0 && paymentUploadProgress <= 100;
 
   return (
       <div className="flex flex-col h-full">
@@ -661,9 +691,9 @@ export default function DashboardLayout({
                                                               <AvatarImage src={user.photoURL ?? undefined} alt={user.name || ''} />
                                                               <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                                                           </Avatar>
-                                                          {isUploading ? (
+                                                          {isUploadingProfilePhoto && profileUploadProgress < 100 ? (
                                                               <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                                                  <CircularProgress value={uploadProgress} />
+                                                                  <CircularProgress value={profileUploadProgress} />
                                                               </div>
                                                           ) : (
                                                               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -691,7 +721,7 @@ export default function DashboardLayout({
                                                       )}
                                                   </DropdownMenuContent>
                                               </DropdownMenu>
-                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
+                                              <Input id="photo-upload-input" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])} disabled={isSubmitting}/>
                                               <div className="space-y-1">
                                                   <h4 className="font-semibold">{user.name}</h4>
                                                   <p className="text-sm text-muted-foreground">Update your account details.</p>
@@ -939,6 +969,197 @@ export default function DashboardLayout({
                   River Philippines
               </a>.
           </footer>
+          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+            <DialogContent className="sm:max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Complete Your Payment</DialogTitle>
+                <DialogDescription>
+                  Invoice {selectedInvoice?.id} for ₱{selectedInvoice?.amount.toFixed(2)}
+                </DialogDescription>
+              </DialogHeader>
+              {!selectedPaymentMethod ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                  {paymentOptions.map((option) => (
+                    <Card
+                      key={option.name}
+                      onClick={() => handlePaymentOptionClick(option)}
+                      className="cursor-pointer hover:border-primary transition-colors flex flex-col items-center justify-center p-6"
+                    >
+                      <h3 className="font-semibold text-lg">{option.name}</h3>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-4 space-y-4">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedPaymentMethod(null)}>
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to payment options
+                  </Button>
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h4 className="font-semibold">Scan to Pay with {selectedPaymentMethod.name}</h4>
+                      {selectedPaymentMethod.qr && (
+                        <div className="relative aspect-square w-full max-w-sm mx-auto border rounded-lg overflow-hidden">
+                          <Image
+                            src={selectedPaymentMethod.qr.imageUrl}
+                            alt={`${selectedPaymentMethod.name} QR Code`}
+                            fill
+                            className="object-contain"
+                            data-ai-hint={selectedPaymentMethod.qr.imageHint}
+                          />
+                        </div>
+                      )}
+                      {selectedPaymentMethod.details && (
+                        <div className="text-sm text-center space-y-1 pt-2">
+                          <p>Account Name: <span className="font-semibold">{selectedPaymentMethod.details.accountName}</span></p>
+                          <p>Account Number: <span className="font-semibold">{selectedPaymentMethod.details.accountNumber}</span></p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-4">
+                      <h4 className="font-semibold">Upload Proof of Payment</h4>
+                      <div className="p-4 border rounded-lg bg-muted/50">
+                        <p className="text-sm text-muted-foreground">After paying, please upload a screenshot of your transaction confirmation.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="payment-proof-upload">Proof of Payment</Label>
+                        <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmitting} />
+                        {isUploadingPayment && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Progress value={paymentUploadProgress} className="w-full" />
+                            <span>{Math.round(paymentUploadProgress)}%</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmitting} className="w-full">
+                        {isSubmitting ? 'Submitting...' : 'Submit for Verification'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+              <DialogContent>
+                  <DialogHeader>
+                      <DialogTitle>Update Password</DialogTitle>
+                      <DialogDescription>
+                      Enter your current and new password to update.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                      <div className="relative">
+                          <Label htmlFor="current-password">Current Password</Label>
+                          <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                          <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                              {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                      </div>
+                      <div className="relative">
+                          <Label htmlFor="new-password">New Password</Label>
+                          <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                          <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowNewPassword(!showNewPassword)}>
+                              {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                      </div>
+                      <div className="relative">
+                          <Label htmlFor="confirm-password">Confirm New Password</Label>
+                          <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                          <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                      </div>
+                  </div>
+                  <DialogFooter>
+                      <Button variant="secondary" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
+                      <Button onClick={handlePasswordChange}>Change Password</Button>
+                  </DialogFooter>
+              </DialogContent>
+          </Dialog>
+
+          <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Submit Feedback</DialogTitle>
+                    <DialogDescription>
+                        We value your opinion. Let us know how we can improve.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                     <div className="flex justify-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                                key={star}
+                                className={cn(
+                                    "h-8 w-8 cursor-pointer transition-colors",
+                                    (hoverRating || feedbackRating) >= star ? "text-yellow-400 fill-yellow-400" : "text-gray-300"
+                                )}
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                onClick={() => setFeedbackRating(star)}
+                            />
+                        ))}
+                    </div>
+                    <Textarea 
+                        placeholder="Tell us more about your experience..."
+                        value={feedbackMessage}
+                        onChange={(e) => setFeedbackMessage(e.target.value)} 
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleFeedbackSubmit}>Submit</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+         <Dialog open={isSwitchProviderDialogOpen} onOpenChange={setIsSwitchProviderDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Request to Switch Water Provider</DialogTitle>
+                    <DialogDescription>
+                        Please provide a reason for your request. An admin will contact you shortly.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <Textarea 
+                        placeholder="Describe the reason for your request (e.g., water quality, delivery issues, etc.)..."
+                        value={switchReason}
+                        onChange={(e) => setSwitchReason(e.target.value)} 
+                    />
+                    <Select onValueChange={setSwitchUrgency}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select urgency level..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="low">Low - Just exploring options</SelectItem>
+                            <SelectItem value="medium">Medium - I have some concerns</SelectItem>
+                            <SelectItem value="high">High - Urgent issue, need to switch ASAP</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsSwitchProviderDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSwitchProviderSubmit}>Send Request</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isVerificationDialogOpen} onOpenChange={setIsVerificationDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Payment Verification In Progress</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Your payment is currently being verified by our team. You will be notified once the process is complete. Thank you for your patience.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setIsVerificationDialogOpen(false)}>OK</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
       </div>
   );
 }
