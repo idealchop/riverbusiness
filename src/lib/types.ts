@@ -67,7 +67,7 @@ export interface AppUser {
     plan?: any;
     clientType?: string | null;
     customPlanDetails?: any;
-    currentContractUrl: string;
+    currentContractUrl?: string;
     photoURL?: string;
     contractStatus?: string;
     contractUploadedDate?: any;
