@@ -404,6 +404,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
 
         setStationToDelete(null);
+        setIsStationProfileOpen(false);
     };
 
 
@@ -1829,15 +1830,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Station Name</TableHead>
                                             <TableHead>Location</TableHead>
                                             <TableHead>Compliance Status</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {stationsLoading && (
-                                            <TableRow><TableCell colSpan={5} className="text-center">Loading stations...</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={4} className="text-center">Loading stations...</TableCell></TableRow>
                                         )}
                                         {!stationsLoading && waterStations?.map((station) => (
-                                            <TableRow key={station.id}>
+                                            <TableRow key={station.id} onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }} className="cursor-pointer">
                                                 <TableCell className="font-mono text-xs">{station.id}</TableCell>
                                                 <TableCell className="font-medium">{station.name}</TableCell>
                                                 <TableCell>{station.location}</TableCell>
@@ -1845,34 +1845,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <Badge 
                                                         variant={'outline'} 
                                                         className="cursor-pointer hover:bg-muted"
-                                                        onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}
                                                     >
                                                        View
                                                     </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }}>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Manage
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={() => setStationToDelete(station)} className="text-destructive">
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                          {!stationsLoading && waterStations?.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center">No water stations found.</TableCell>
+                                                <TableCell colSpan={4} className="text-center">No water stations found.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -2081,13 +2062,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="mt-4 pt-4 border-t">
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
-                    </DialogClose>
-                     {stationToUpdate && (
-                        <Button onClick={() => { setStationToUpdate(null); stationForm.reset(); setIsStationProfileOpen(false);}} disabled={!isAdmin}>Finish</Button>
-                    )}
+                <DialogFooter className="mt-4 pt-4 border-t flex justify-between w-full">
+                     <div>
+                        {stationToUpdate && (
+                             <Button variant="destructive" onClick={() => setStationToDelete(stationToUpdate)} disabled={!isAdmin}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Station
+                             </Button>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
+                        </DialogClose>
+                        {stationToUpdate && (
+                            <Button onClick={() => { setStationToUpdate(null); stationForm.reset(); setIsStationProfileOpen(false);}} disabled={!isAdmin}>Finish</Button>
+                        )}
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -2148,7 +2139,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
-
-    
