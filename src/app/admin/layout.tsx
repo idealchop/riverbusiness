@@ -155,7 +155,6 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async () => {
-    // Check for authUser and docRef, but not profilePhotoFile, as it will be checked before this is called.
     if (!authUser || !adminUserDocRef || !profilePhotoFile) {
         toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context missing.' });
         return;
@@ -498,3 +497,5 @@ export default function AdminLayout({
       </div>
   );
 }
+
+    

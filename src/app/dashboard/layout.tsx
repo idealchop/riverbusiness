@@ -380,7 +380,6 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
-    // Check for authUser and docRef, but not profilePhotoFile, as it will be checked before this is called.
     if (!authUser || !userDocRef || !profilePhotoFile) {
         toast({ variant: 'destructive', title: 'Upload Error', description: 'Could not upload photo. User context missing.' });
         return;
@@ -1220,3 +1219,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
