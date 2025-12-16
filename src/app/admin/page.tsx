@@ -53,15 +53,6 @@ const newStationSchema = z.object({
 
 type NewStationFormValues = z.infer<typeof newStationSchema>;
 
-const newSanitationVisitSchema = z.object({
-    id: z.string().min(1, "Visit ID is required"),
-    scheduledDate: z.date({ required_error: 'Date is required.'}),
-    status: z.enum(['Completed', 'Scheduled', 'Cancelled']),
-    assignedTo: z.string().min(1, "Technician name is required"),
-    reportUrl: z.any().optional(),
-});
-type NewSanitationVisitFormValues = z.infer<typeof newSanitationVisitSchema>;
-
 const adjustConsumptionSchema = z.object({
     amount: z.coerce.number().min(0, 'Amount must be a positive number'),
     containers: z.coerce.number().optional(),
@@ -175,7 +166,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [currentPassword, setCurrentPassword] = React.useState('');
     const [newPassword, setNewPassword] = React.useState('');
     const [confirmPassword, setConfirmPassword] = React.useState('');
-    const [isCreateSanitationVisitOpen, setIsCreateSanitationVisitOpen] = React.useState(false);
     const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
     const [complianceRefresher, setComplianceRefresher] = React.useState(0);
     const [isScheduleDialogOpen, setIsScheduleDialogOpen] = React.useState(false);
@@ -357,11 +347,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { amount: 0, containers: 0 },
     });
 
-    const sanitationVisitForm = useForm<NewSanitationVisitFormValues>({
-        resolver: zodResolver(newSanitationVisitSchema),
-        defaultValues: { id: '', status: 'Scheduled', assignedTo: '' },
-    });
-
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
             stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
@@ -479,57 +464,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         );
     };
 
-    const handleCreateSanitationVisit = async (values: NewSanitationVisitFormValues) => {
-        if (!stationToUpdate || !firestore) return;
-        setIsUploading(true);
-        let reportUrl = '';
-        if (values.reportUrl && values.reportUrl.length > 0) {
-            const file = values.reportUrl[0];
-            const storage = getStorage();
-            const filePath = `stations/${stationToUpdate.id}/sanitation/${values.id}/${file.name}`;
-            const storageRef = ref(storage, filePath);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            
-            const uploadKey = `sanitation-${values.id}`;
-            await new Promise<void>((resolve, reject) => {
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
-                    },
-                    (error) => {
-                        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload sanitation report.' });
-                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
-                        setIsUploading(false);
-                        reject(error);
-                    },
-                    async () => {
-                        reportUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
-                        resolve();
-                    }
-                );
-            });
-        }
-    
-        const visitDocRef = doc(firestore, 'waterStations', stationToUpdate.id, 'sanitationVisits', values.id);
-        
-        const newVisitData: SanitationVisit = {
-            id: values.id,
-            scheduledDate: values.scheduledDate.toISOString(),
-            status: values.status,
-            assignedTo: values.assignedTo,
-            reportUrl: reportUrl,
-        };
-
-        setDocumentNonBlocking(visitDocRef, newVisitData);
-
-        toast({ title: "Sanitation Visit Created", description: `A new sanitation visit has been scheduled.` });
-        sanitationVisitForm.reset();
-        setIsCreateSanitationVisitOpen(false);
-        setIsUploading(false);
-    };
-
     const handleUploadProof = () => {
         if (!deliveryToUpdate || !userForHistory || !firestore || !deliveryProofFile) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
@@ -629,24 +563,28 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const uploadTask = uploadBytesResumable(storageRef, file);
 
             const uploadKey = `delivery-${values.trackingNumber}`;
-            await new Promise<void>((resolve, reject) => {
-                uploadTask.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
-                    }, 
-                    (error) => {
-                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
-                        setIsUploading(false);
-                        reject(error);
-                    },
-                    async () => {
-                        proofOfDeliveryUrl = await getDownloadURL(uploadTask.snapshot.ref);
-                        setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
-                        resolve();
-                    }
-                );
-            });
+            try {
+                await new Promise<void>((resolve, reject) => {
+                    uploadTask.on('state_changed', 
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            setUploadProgress(prev => ({ ...prev, [uploadKey]: progress }));
+                        }, 
+                        (error) => {
+                            reject(error);
+                        },
+                        async () => {
+                            proofOfDeliveryUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                            resolve();
+                        }
+                    );
+                });
+            } catch (error) {
+                toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of delivery.' });
+                setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+                setIsUploading(false);
+                return;
+            }
         }
     
         const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
@@ -903,11 +841,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [refillRequests]);
 
     const complianceFields: { key: string, label: string }[] = [
-        { key: 'dohPermitUrl', label: 'DOH Permit' },
         { key: 'businessPermitUrl', label: 'Business Permit' },
-        { key: 'bacteriologicalTestUrl', label: 'Bacteriological' },
-        { key: 'physicalChemicalTestUrl', label: 'Physical-Chemical' },
-        { key: 'annualMonitoringUrl', label: 'Annual Monitoring' },
+        { key: 'dohPermitUrl', label: 'DOH Permit' },
+        { key: 'sanitaryPermitUrl', label: 'Sanitary Permit' },
     ];
       
     const selectedUserPlanImage = React.useMemo(() => {
@@ -1927,80 +1863,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isCreateSanitationVisitOpen} onOpenChange={setIsCreateSanitationVisitOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Schedule Sanitation Visit</DialogTitle>
-                    <DialogDescription>Schedule a new sanitation visit for {stationToUpdate?.name}.</DialogDescription>
-                </DialogHeader>
-                <Form {...sanitationVisitForm}>
-                    <form onSubmit={sanitationVisitForm.handleSubmit(handleCreateSanitationVisit)} className="space-y-4 py-4">
-                        <FormField control={sanitationVisitForm.control} name="id" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Visit ID</FormLabel>
-                                <FormControl><Input placeholder="e.g., SV-001" {...field} disabled={isUploading}/></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Scheduled Date</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full text-left font-normal", !field.value && "text-muted-foreground")} disabled={isUploading}>
-                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Assigned Technician</FormLabel>
-                                <FormControl><Input placeholder="e.g., John Doe" {...field} disabled={isUploading}/></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isUploading}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                        <SelectItem value="Completed">Completed</SelectItem>
-                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Sanitation Report (Optional)</FormLabel>
-                                <FormControl><Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isUploading}/></FormControl>
-                                {uploadProgress[`sanitation-${sanitationVisitForm.watch('id')}`] > 0 && (
-                                    <Progress value={uploadProgress[`sanitation-${sanitationVisitForm.watch('id')}`]} className="mt-2" />
-                                )}
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary" disabled={isUploading}>Cancel</Button></DialogClose>
-                            <Button type="submit" disabled={isUploading}>{isUploading ? 'Creating...' : 'Create Visit'}</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
-
          <Dialog open={isStationProfileOpen} onOpenChange={(open) => {if (!open) {setStationToUpdate(null); stationForm.reset();} setIsStationProfileOpen(open);}}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
@@ -2040,13 +1902,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <p className="text-sm text-muted-foreground mb-4">
                                 {!stationToUpdate 
                                     ? "Please save the station details first to enable document uploads."
-                                    : "Submit your latest water test results. All tests are required for full partner verification."
+                                    : "Submit your latest permits. All documents are required for full partner verification."
                                 }
                             </p>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Test Type</TableHead>
+                                        <TableHead>Document Type</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -2094,19 +1956,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TableBody>
                             </Table>
                         </div>
-
-                         <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
-                            <div className="flex justify-between items-center mb-4">
-                                <div>
-                                    <h3 className="font-semibold text-base">Sanitation Visits</h3>
-                                    <p className="text-sm text-muted-foreground">Schedule and manage sanitation visits.</p>
-                                </div>
-                                <Button size="sm" onClick={() => setIsCreateSanitationVisitOpen(true)} disabled={!stationToUpdate || !isAdmin}>
-                                    <Wrench className="mr-2 h-4 w-4" /> Schedule Visit
-                                </Button>
-                            </div>
-                        </div>
                         
+                        <Separator />
+
                         <div className={cn(!stationToUpdate && "opacity-50 pointer-events-none")}>
                             <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
