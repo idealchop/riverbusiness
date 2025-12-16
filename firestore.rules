@@ -8,23 +8,14 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // UPDATED: Check for role on the auth token's custom claims.
     function isAdmin() {
-      // Use `exists()` to safely check for the document's existence before accessing its data.
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      return request.auth != null && request.auth.token.role == 'Admin';
     }
 
     match /users/{userId} {
-      // Read and Delete: Allowed if the user is the owner OR is an admin.
       allow read, delete: if isOwner(userId) || isAdmin();
-      
-      // Create: Allow any authenticated user to create THEIR OWN document.
-      // This is crucial for new user onboarding.
       allow create: if isOwner(userId);
-      
-      // Update: Allow if the user is the owner OR is an admin.
-      // This covers subsequent logins and admin modifications.
       allow update: if isOwner(userId) || isAdmin();
     }
     
