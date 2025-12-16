@@ -19,7 +19,6 @@ import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOu
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { CircularProgress } from '@/components/ui/circular-progress';
 import { useMounted } from '@/hooks/use-mounted';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
@@ -160,14 +159,15 @@ export default function AdminLayout({
   }
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
+    if (!profilePhotoFile || !authUser) return;
   
     setIsUploading(true);
     setUploadProgress(0);
-    const oldPhotoURL = adminUser?.photoURL;
   
     const storage = getStorage();
-    const filePath = `users/${authUser.uid}/profile/${profilePhotoFile.name}`;
+    // Use a consistent file name like 'profile.jpg' or a unique one.
+    // Using a consistent name makes it easier for a Cloud Function to know which file to process.
+    const filePath = `users/${authUser.uid}/profile/profile_photo`; 
     const storageRef = ref(storage, filePath);
     const metadata = { contentType: profilePhotoFile.type };
   
@@ -184,29 +184,15 @@ export default function AdminLayout({
           (error) => {
             reject(error); // This will be caught by the outer try-catch block
           },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              await updateDocumentNonBlocking(adminUserDocRef, { photoURL: downloadURL });
-  
-              if (oldPhotoURL) {
-                try {
-                  const oldPhotoRef = ref(storage, oldPhotoURL);
-                  await deleteObject(oldPhotoRef);
-                } catch (deleteError: any) {
-                  // If the old photo doesn't exist, we don't need to worry.
-                  if (deleteError.code !== 'storage/object-not-found') {
-                    console.warn("Could not delete old profile photo:", deleteError);
-                  }
-                }
-              }
-              
-              toast({ title: 'Profile Photo Updated', description: 'Your new photo has been saved.' });
-              setIsPhotoPreviewOpen(false);
-              resolve();
-            } catch (innerError) {
-              reject(innerError);
-            }
+          () => {
+            // Upload completed successfully.
+            // A Cloud Function would now trigger to update Firestore.
+            toast({
+              title: 'Upload Complete!',
+              description: 'Your new profile photo is being processed and will appear shortly.',
+            });
+            setIsPhotoPreviewOpen(false);
+            resolve();
           }
         );
       });
@@ -214,7 +200,7 @@ export default function AdminLayout({
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
-        description: error.message || 'Could not upload your photo. Please try again.'
+        description: error.message || 'Could not upload your photo. Please check your connection and try again.'
       });
     } finally {
       setIsUploading(false);
@@ -241,15 +227,18 @@ export default function AdminLayout({
   const handleProfilePhotoDelete = async () => {
     if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
 
+    // This will delete the photo from storage.
+    // A Cloud Function should be set up to clear the photoURL from Firestore.
     const storage = getStorage();
     const photoRef = ref(storage, adminUser.photoURL);
 
     try {
         await deleteObject(photoRef);
-        await updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
+        // The client-side no longer updates Firestore directly for this.
+        // It relies on a Cloud Function to clear the URL.
         toast({
-            title: 'Profile Photo Removed',
-            description: 'Your profile photo has been removed.',
+            title: 'Delete Request Sent',
+            description: 'Your profile photo will be removed shortly.',
         });
     } catch (error: any) {
         console.error("Error removing profile photo: ", error);
@@ -416,7 +405,7 @@ export default function AdminLayout({
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action cannot be undone. This will permanently remove your profile photo.
+                                This action cannot be undone. This will permanently remove your profile photo. A Cloud Function should be configured to clear the URL from your profile.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

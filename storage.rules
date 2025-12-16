@@ -8,6 +8,7 @@ service firebase.storage {
       return request.auth != null && request.auth.token.role == 'Admin';
     }
 
+    // Function to check file metadata on create/update
     function isAllowed(maxSizeMB) {
         return request.resource.size < maxSizeMB * 1024 * 1024
                && (request.resource.contentType.matches('image/.*') || 
@@ -16,30 +17,34 @@ service firebase.storage {
 
     match /users/{userId}/profile/{fileName} {
       allow get;
+      // Use this for create and update operations that include a file resource
       allow create, update: if request.auth.uid == userId && isAllowed(5);
+      // Delete should only check ownership, as there is no request.resource
       allow delete: if request.auth.uid == userId;
     }
 
     match /userContracts/{userId}/{fileName} {
       allow get: if request.auth.uid == userId || isAdmin();
-      allow create, update, delete: if isAdmin() && isAllowed(10);
+      allow create, update: if isAdmin() && isAllowed(10);
+      allow delete: if isAdmin();
     }
     
     match /users/{userId}/deliveries/{deliveryId}/{fileName} {
        allow get: if request.auth.uid == userId || isAdmin();
-       allow create, update, delete: if isAdmin() && isAllowed(5);
+       allow create, update: if isAdmin() && isAllowed(5);
+       allow delete: if isAdmin();
     }
     
     match /users/{userId}/payments/{paymentId}/{fileName} {
        allow get: if request.auth.uid == userId || isAdmin();
        allow create, update: if request.auth.uid == userId && isAllowed(5);
+       allow delete: if request.auth.uid == userId;
     }
 
     match /stations/{stationId}/{documentType}/{fileName} {
       allow get: if request.auth != null;
-      allow create, update, delete: if isAdmin() && isAllowed(10);
+      allow create, update: if isAdmin() && isAllowed(10);
+      allow delete: if isAdmin();
     }
   }
 }
-
-    
