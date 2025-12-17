@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage } from '@/firebase';
+import { useFirestore, useStorage, useAuth } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
@@ -116,6 +116,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   const { toast } = useToast();
   const firestore = useFirestore();
   const storage = useStorage();
+  const auth = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -168,13 +169,13 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   };
   
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser || !storage) return;
+    if (!state.profilePhotoFile || !authUser || !storage || !auth) return;
   
     const filePath = `users/${authUser.uid}/profile/profile-photo-${Date.now()}`;
     
     startTransition(async () => {
       try {
-        await uploadFileWithProgress(storage, filePath, state.profilePhotoFile, {}, setUploadProgress);
+        await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
         toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
       } catch (error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });

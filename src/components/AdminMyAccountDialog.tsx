@@ -170,7 +170,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     
     startTransition(async () => {
       try {
-        await uploadFileWithProgress(storage, filePath, state.profilePhotoFile, {}, setUploadProgress);
+        await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
         toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
       } catch (error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
