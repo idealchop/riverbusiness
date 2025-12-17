@@ -23,15 +23,16 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useStorage } from '@/firebase';
+import { useFirestore, useStorage } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref, getStorage } from 'firebase/storage';
+import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/firebase';
 
 // State Management with useReducer
 type State = {
@@ -60,6 +61,7 @@ type Action =
   | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
   | { type: 'UPLOAD_SUCCESS' }
   | { type: 'UPLOAD_ERROR' }
+  | { type: 'RESET_UPLOAD_STATE' }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_OPTIMISTIC_URL'; payload: string | null }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
@@ -94,8 +96,9 @@ function reducer(state: State, action: Action): State {
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'START_UPLOAD': return { ...state, uploadStatus: 'uploading', uploadProgress: 0, isPhotoPreviewOpen: false };
     case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
-    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null, uploadProgress: 0 };
-    case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error', uploadProgress: 0 };
+    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null };
+    case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error' };
+    case 'RESET_UPLOAD_STATE': return { ...state, uploadStatus: 'idle', uploadProgress: 0 };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_OPTIMISTIC_URL': return { ...state, optimisticPhotoUrl: action.payload };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
@@ -175,7 +178,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     }
     try {
       const credential = EmailAuthProvider.credential(authUser.email, state.currentPassword);
-      await reauthenticateWithCredential(authUser, credential);
+      await reauthenticateWithCredential(authUser, state.newPassword);
       await updatePassword(authUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -198,9 +201,10 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
   
-      const userDocRef = doc(firestore, 'users', authUser.uid);
-      await updateDoc(userDocRef, { photoURL: downloadURL });
-  
+      await updateDoc(doc(firestore, 'users', authUser.uid), {
+        photoURL: downloadURL,
+      });
+      
       dispatch({ type: 'UPLOAD_SUCCESS' });
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
       toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
@@ -211,12 +215,16 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: error instanceof Error ? error.message : 'Could not upload photo.' });
     } finally {
+      // Clean up the local preview URL
+      if (state.profilePhotoPreview) {
+        URL.revokeObjectURL(state.profilePhotoPreview);
+      }
       dispatch({ type: 'RESET_UPLOAD' });
     }
   };
   
   const handleProfilePhotoDelete = async () => {
-    if (!authUser || !user?.photoURL || !firestore) return;
+    if (!authUser || !user?.photoURL || !firestore || !storage) return;
     
     const originalUrl = user.photoURL;
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
@@ -428,8 +436,10 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
             {state.profilePhotoPreview && <Image src={state.profilePhotoPreview} alt="Preview" width={200} height={200} className="rounded-full aspect-square object-cover" />}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => dispatch({ type: 'RESET_UPLOAD' })} disabled={isUploading}>Cancel</Button>
-            <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>{isUploading ? 'Uploading...' : 'Upload Photo'}</Button>
+            <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isUploading}>Cancel</Button>
+            <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+              {isUploading ? 'Uploading...' : 'Upload Photo'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

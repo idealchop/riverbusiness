@@ -21,7 +21,8 @@ service firebase.storage {
     // Allow read for anyone, but only the owner can write to their own profile path.
     match /users/{userId}/profile/{fileName} {
       allow read;
-      // Ensure the file is an image and within size limits.
+      // Let any authenticated user write to their own profile folder, up to 5MB.
+      // This rule is critical for the client-side upload to work.
       allow write: if isOwner(userId) && isAllowed(5);
     }
 

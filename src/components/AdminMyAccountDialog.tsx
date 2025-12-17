@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useStorage } from '@/firebase';
+import { useFirestore, useStorage } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { deleteObject, ref } from 'firebase/storage';
@@ -28,6 +28,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePasswor
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
 
 // State Management with useReducer
 type State = {
@@ -56,6 +57,7 @@ type Action =
   | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
   | { type: 'UPLOAD_SUCCESS' }
   | { type: 'UPLOAD_ERROR' }
+  | { type: 'RESET_UPLOAD_STATE' }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_OPTIMISTIC_URL'; payload: string | null }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
@@ -90,8 +92,9 @@ function reducer(state: State, action: Action): State {
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'START_UPLOAD': return { ...state, uploadStatus: 'uploading', uploadProgress: 0, isPhotoPreviewOpen: false };
     case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
-    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null, uploadProgress: 0 };
-    case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error', uploadProgress: 0 };
+    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null };
+    case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error' };
+    case 'RESET_UPLOAD_STATE': return { ...state, uploadStatus: 'idle', uploadProgress: 0 };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_OPTIMISTIC_URL': return { ...state, optimisticPhotoUrl: action.payload };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
@@ -206,7 +209,10 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: error instanceof Error ? error.message : 'Could not upload photo.' });
     } finally {
-        dispatch({ type: 'RESET_UPLOAD' });
+      if(state.profilePhotoPreview) {
+        URL.revokeObjectURL(state.profilePhotoPreview);
+      }
+      dispatch({ type: 'RESET_UPLOAD' });
     }
   };
 
@@ -359,7 +365,9 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isUploading}>Cancel</Button>
-            <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>{isUploading ? 'Uploading...' : 'Upload Photo'}</Button>
+            <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                {isUploading ? 'Uploading...' : 'Upload Photo'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
