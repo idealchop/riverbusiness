@@ -91,18 +91,13 @@ async function handleProfilePhotoUpload(
     setUploadProgress: (progress: number) => void;
     setIsPhotoPreviewOpen: (isOpen: boolean) => void;
     setOptimisticPhotoUrl: (url: string | null) => void;
-    setProfilePhotoFile: (file: File | null) => void;
-    setProfilePhotoPreview: (preview: string | null) => void;
-  },
-  originalPhotoUrl: string | null | undefined
+  }
 ) {
   const {
     setIsUploading,
     setUploadProgress,
     setIsPhotoPreviewOpen,
     setOptimisticPhotoUrl,
-    setProfilePhotoFile,
-    setProfilePhotoPreview,
   } = stateSetters;
 
   setIsPhotoPreviewOpen(false);
@@ -112,6 +107,7 @@ async function handleProfilePhotoUpload(
   try {
     const filePath = `users/${user.id}/profile/profile_photo_${Date.now()}`;
     
+    // 1. Await the file upload
     const downloadURL = await uploadFile(
       storage,
       profilePhotoFile,
@@ -119,7 +115,10 @@ async function handleProfilePhotoUpload(
       (progress) => setUploadProgress(progress)
     );
 
+    // 2. Await the database update
     await updateDoc(userDocRef, { photoURL: downloadURL });
+    
+    // 3. Set final state and show success toast
     setOptimisticPhotoUrl(downloadURL);
 
     toast({
@@ -128,7 +127,8 @@ async function handleProfilePhotoUpload(
     });
 
   } catch (error) {
-    setOptimisticPhotoUrl(originalPhotoUrl || null); // Revert on failure
+    // Revert optimistic update on failure
+    setOptimisticPhotoUrl(user.photoURL ?? null); 
     console.error("Upload failed:", error);
     toast({
       variant: 'destructive',
@@ -136,10 +136,9 @@ async function handleProfilePhotoUpload(
       description: error instanceof Error ? error.message : 'Could not upload photo. Please try again.',
     });
   } finally {
+    // 4. Reset uploading state
     setIsUploading(false);
     setUploadProgress(0);
-    setProfilePhotoFile(null);
-    setProfilePhotoPreview(null);
   }
 };
 
@@ -1027,10 +1026,7 @@ export default function DashboardLayout({
                             setUploadProgress,
                             setIsPhotoPreviewOpen,
                             setOptimisticPhotoUrl,
-                            setProfilePhotoFile,
-                            setProfilePhotoPreview,
-                          },
-                          user?.photoURL
+                          }
                         );
                       }
                     }} 
@@ -1164,5 +1160,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    

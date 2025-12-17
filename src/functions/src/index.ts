@@ -35,11 +35,12 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
   };
 
   try {
-    // --- User Profile Photo Upload is now handled client-side to provide a better UX ---
-    // The client will directly update the user's document after a successful upload.
-    // This section is intentionally left empty for profile photos.
+    // --- User Profile Photo ---
+    // This is now handled entirely on the client-side to provide a better UX.
+    // The client directly updates the user's document after a successful upload.
+    // This section is intentionally left empty to prevent conflicts.
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
-      functions.logger.log(`Client is handling profile photo update for path: ${filePath}. No server action needed.`);
+      functions.logger.log(`Client handled profile photo update for path: ${filePath}. No server action needed.`);
       return;
     }
 
@@ -123,5 +124,3 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
     functions.logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    

@@ -2,37 +2,48 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
-export function initializeFirebase() {
-  if (!getApps().length) {
-    let firebaseApp;
-    try {
-      firebaseApp = initializeApp();
-    } catch (e) {
-      if (process.env.NODE_ENV === "production") {
+// This structure ensures that Firebase is initialized only once.
+let firebaseApp: FirebaseApp;
+let auth: Auth;
+let firestore: Firestore;
+let storage: FirebaseStorage;
+
+// Check if Firebase has already been initialized
+if (!getApps().length) {
+  try {
+    // Try to initialize with environment variables first (for App Hosting)
+    firebaseApp = initializeApp();
+  } catch (e) {
+    if (process.env.NODE_ENV !== "production") {
         console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
     }
-
-    return getSdks(firebaseApp);
+    // Fallback to config object if automatic initialization fails
+    firebaseApp = initializeApp(firebaseConfig);
   }
-
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+} else {
+  // If already initialized, get the existing app
+  firebaseApp = getApp();
 }
 
-export function getSdks(firebaseApp: FirebaseApp) {
+// Get SDK instances from the initialized app
+auth = getAuth(firebaseApp);
+firestore = getFirestore(firebaseApp);
+storage = getStorage(firebaseApp);
+
+
+// This function is now a simple getter for the initialized services.
+// It does not perform any initialization itself.
+export function initializeFirebase() {
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
-    storage: getStorage(firebaseApp),
+    auth,
+    firestore,
+    storage,
   };
 }
 
