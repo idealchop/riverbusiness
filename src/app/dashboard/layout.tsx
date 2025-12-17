@@ -509,7 +509,7 @@ export default function DashboardLayout({
                     <Textarea 
                         placeholder="Describe the reason for your request (e.g., water quality, delivery issues, etc.)..."
                         value={switchReason}
-                        onChange={(e) => setSwitchReason(e.target.value)} T
+                        onChange={(e) => setSwitchReason(e.target.value)}
                     />
                     <Select onValueChange={setSwitchUrgency}>
                         <SelectTrigger>
@@ -535,7 +535,7 @@ export default function DashboardLayout({
                     <AlertDialogTitle>Payment Verification In Progress</AlertDialogTitle>
                     <AlertDialogDescription>
                         Your payment is currently being verified by our team. You will be notified once the process is complete. Thank you for your patience.
-                    </DialogDescription>
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogAction onClick={() => setIsVerificationDialogOpen(false)}>OK</AlertDialogAction>
@@ -545,3 +545,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
