@@ -6,8 +6,8 @@ import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App, credential } from 'firebase-admin/app';
 
-// This is a robust way to initialize the Firebase Admin SDK in a serverless environment like Next.js.
-// It ensures that the app is initialized only once per server instance.
+// This is the definitive, robust way to initialize the Firebase Admin SDK in a serverless environment.
+// It ensures that the app is initialized only once per server instance and correctly parses credentials.
 function initializeAdminApp(): App {
   const apps = getApps();
   if (apps.length > 0) {
@@ -15,24 +15,30 @@ function initializeAdminApp(): App {
   }
 
   // Ensure service account environment variable is set.
-  // This is provided by the Firebase Studio environment.
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
   }
 
+  // Correctly parse the service account JSON, handling escaped newlines.
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  
+  // The official way to handle the private key from an env var.
+  if (serviceAccount.private_key) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
 
-  // Initialize the app with credential and the KNOWN storage bucket.
+  // Initialize the app with the correctly parsed credential.
   return initializeApp({
     credential: credential.cert(serviceAccount),
-    storageBucket: "studio-911553385-80027.appspot.com",
+    // The storage bucket is specified at the time of use, not here.
   });
 }
 
+const BUCKET_NAME = "studio-911553385-80027.appspot.com";
 
 export async function uploadProfilePhotoAction(formData: FormData) {
   try {
-    // Initialize the app *inside* the action. This is the key fix.
+    // Initialize the app *inside* the action. This is key for serverless environments.
     const adminApp = initializeAdminApp();
     const db = getFirestore(adminApp);
     const storage = getStorage(adminApp);
@@ -45,7 +51,7 @@ export async function uploadProfilePhotoAction(formData: FormData) {
     }
     
     // Explicitly specify the bucket to use. This is the definitive fix.
-    const bucket = storage.bucket("studio-911553385-80027.appspot.com");
+    const bucket = storage.bucket(BUCKET_NAME);
     const filePath = `users/${userId}/profile/profile_photo.jpg`;
     const fileRef = bucket.file(filePath);
 
@@ -69,11 +75,14 @@ export async function uploadProfilePhotoAction(formData: FormData) {
     // Revalidate paths to ensure the new photo shows up immediately
     revalidatePath('/dashboard');
     revalidatePath('/admin');
-    revalidatePath('/test-upload');
 
     return { success: true, url: publicUrl };
   } catch (error: any) {
     console.error('Upload failed:', error);
-    return { success: false, error: error.message || "An unknown error occurred during upload." };
+    // Provide a more helpful error message in the response
+    const errorMessage = error.message?.includes('access token') 
+      ? 'Authentication with Firebase failed. Check server credentials.'
+      : error.message || "An unknown error occurred during upload.";
+    return { success: false, error: errorMessage };
   }
 }
