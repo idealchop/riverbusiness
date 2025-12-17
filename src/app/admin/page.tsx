@@ -122,9 +122,9 @@ function AdminDashboardSkeleton() {
     );
   }
 
-async function handleAdminProfilePhotoUpload (
+async function handleAdminProfilePhotoUpload(
     profilePhotoFile: File,
-    authUser: AppUser,
+    authUserUid: string,
     adminUserDocRef: DocumentReference,
     storage: FirebaseStorage,
     toast: ReturnType<typeof useToast>['toast'],
@@ -152,7 +152,7 @@ async function handleAdminProfilePhotoUpload (
     setUploadProgress(0);
 
     try {
-        const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
+        const filePath = `users/${authUserUid}/profile/profile_photo_${Date.now()}`;
         
         const downloadURL = await uploadFile(
             storage,
@@ -1799,7 +1799,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                   if (profilePhotoFile && authUser && adminUserDocRef && storage) {
                     handleAdminProfilePhotoUpload(
                       profilePhotoFile,
-                      authUser as AppUser,
+                      authUser.uid,
                       adminUserDocRef,
                       storage,
                       toast,
@@ -2352,3 +2352,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

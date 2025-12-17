@@ -82,7 +82,7 @@ const includedFeatures = [
 
 async function handleProfilePhotoUpload(
   profilePhotoFile: File,
-  authUser: AppUser,
+  user: AppUser,
   userDocRef: DocumentReference,
   storage: FirebaseStorage,
   toast: ReturnType<typeof useToast>['toast'],
@@ -110,7 +110,7 @@ async function handleProfilePhotoUpload(
   setUploadProgress(0);
 
   try {
-    const filePath = `users/${authUser.id}/profile/profile_photo_${Date.now()}`;
+    const filePath = `users/${user.id}/profile/profile_photo_${Date.now()}`;
     
     const downloadURL = await uploadFile(
       storage,
@@ -1164,3 +1164,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
