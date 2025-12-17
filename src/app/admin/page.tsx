@@ -122,6 +122,69 @@ function AdminDashboardSkeleton() {
     );
   }
 
+async function handleAdminProfilePhotoUpload (
+    profilePhotoFile: File,
+    authUser: AppUser,
+    adminUserDocRef: DocumentReference,
+    storage: FirebaseStorage,
+    toast: ReturnType<typeof useToast>['toast'],
+    stateSetters: {
+      setIsUploading: (isUploading: boolean) => void;
+      setUploadProgress: (progress: number) => void;
+      setIsPhotoPreviewOpen: (isOpen: boolean) => void;
+      setOptimisticPhotoUrl: (url: string | null) => void;
+      setProfilePhotoFile: (file: File | null) => void;
+      setProfilePhotoPreview: (preview: string | null) => void;
+    },
+    originalPhotoUrl: string | null | undefined
+) {
+    const {
+        setIsUploading,
+        setUploadProgress,
+        setIsPhotoPreviewOpen,
+        setOptimisticPhotoUrl,
+        setProfilePhotoFile,
+        setProfilePhotoPreview,
+    } = stateSetters;
+
+    setIsPhotoPreviewOpen(false);
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+        const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
+        
+        const downloadURL = await uploadFile(
+            storage,
+            profilePhotoFile,
+            filePath,
+            (progress) => setUploadProgress(progress)
+        );
+
+        await updateDoc(adminUserDocRef, { photoURL: downloadURL });
+        setOptimisticPhotoUrl(downloadURL);
+
+        toast({
+            title: 'Profile Photo Updated!',
+            description: 'Your new photo has been saved permanently.',
+        });
+
+    } catch (error) {
+        setOptimisticPhotoUrl(originalPhotoUrl || null); // Revert on failure
+        console.error("Upload failed:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error instanceof Error ? error.message : 'Could not upload photo. Please try again.',
+        });
+    } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+        setProfilePhotoFile(null);
+        setProfilePhotoPreview(null);
+    }
+};
+
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
     const auth = useAuth();
@@ -686,51 +749,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         e.target.value = '';
     };
 
-    const handleProfilePhotoUpload = async () => {
-      if (!profilePhotoFile || !authUser || !adminUserDocRef || !storage) return;
-  
-      setIsUploading(true);
-      setUploadProgress(0);
-      setIsPhotoPreviewOpen(false);
-  
-      if (profilePhotoPreview) {
-        setOptimisticPhotoUrl(profilePhotoPreview);
-      }
-  
-      try {
-        const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
-        
-        const downloadURL = await uploadFile(
-          storage,
-          profilePhotoFile,
-          filePath,
-          (progress) => setUploadProgress(progress)
-        );
-  
-        await updateDoc(adminUserDocRef, { photoURL: downloadURL });
-  
-        setOptimisticPhotoUrl(downloadURL);
-  
-        toast({
-          title: 'Profile Photo Updated!',
-          description: 'Your new photo has been saved permanently.',
-        });
-  
-      } catch (error) {
-        setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
-        toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: 'Could not upload photo. Please try again.',
-        });
-      } finally {
-        setIsUploading(false);
-        setProfilePhotoFile(null);
-        setProfilePhotoPreview(null);
-        setUploadProgress(0);
-      }
-    };
-    
     const handleCancelUpload = () => {
         setIsPhotoPreviewOpen(false);
         setProfilePhotoFile(null);
@@ -884,7 +902,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return new Promise((resolve, reject) => {
             uploadFile(storage, file, path, (progress) => {
                 setUploadingFiles(prev => ({ ...prev, [docKey]: progress }));
-            }).then(() => {
+            }).then((url) => {
                 setUploadingFiles(prev => {
                     const newUploadingFiles = { ...prev };
                     delete newUploadingFiles[docKey];
@@ -1777,7 +1795,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
                   Cancel
                 </Button>
-                <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                <Button onClick={() => {
+                  if (profilePhotoFile && authUser && adminUserDocRef && storage) {
+                    handleAdminProfilePhotoUpload(
+                      profilePhotoFile,
+                      authUser as AppUser,
+                      adminUserDocRef,
+                      storage,
+                      toast,
+                      {
+                        setIsUploading,
+                        setUploadProgress,
+                        setIsPhotoPreviewOpen,
+                        setOptimisticPhotoUrl,
+                        setProfilePhotoFile,
+                        setProfilePhotoPreview,
+                      },
+                      adminUser?.photoURL
+                    );
+                  }
+                }} disabled={isUploading}>
                   {isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </DialogFooter>
@@ -2315,3 +2352,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

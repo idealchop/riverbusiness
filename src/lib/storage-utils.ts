@@ -5,9 +5,7 @@ import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL, UploadTask,
 
 /**
  * A reusable, robust function to upload a file to Firebase Storage with progress tracking.
- *
- * This function is designed to be called from within a React component's event handler.
- * It throws an error on failure, which should be caught by the calling component to handle UI updates (e.g., showing a toast).
+ * This version uses a more explicit Promise structure to avoid race conditions.
  *
  * @param storage The Firebase Storage instance.
  * @param file The file to be uploaded.
@@ -16,21 +14,22 @@ import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL, UploadTask,
  * @returns A promise that resolves with the public download URL of the uploaded file.
  * @throws An error if the upload or URL retrieval fails.
  */
-export const uploadFile = (
+export function uploadFile(
   storage: FirebaseStorage,
   file: File,
   path: string,
   onProgress?: (progress: number) => void
-): Promise<string> => {
+): Promise<string> {
   
-  if (!storage) {
-    throw new Error('Firebase Storage is not available.');
-  }
-
-  const storageRef = ref(storage, path);
-  const uploadTask: UploadTask = uploadBytesResumable(storageRef, file);
-
   return new Promise((resolve, reject) => {
+    if (!storage) {
+      // Reject the promise if storage is not available
+      return reject(new Error('Firebase Storage is not available.'));
+    }
+
+    const storageRef = ref(storage, path);
+    const uploadTask: UploadTask = uploadBytesResumable(storageRef, file);
+
     uploadTask.on(
       'state_changed',
       (snapshot: UploadTaskSnapshot) => {
@@ -43,18 +42,30 @@ export const uploadFile = (
       (error) => {
         // Handle unsuccessful uploads by rejecting the promise
         console.error('Upload failed:', error);
-        reject(new Error(`Could not upload file. Reason: ${error.code}`));
-      },
-      async () => {
-        // Handle successful uploads on complete
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
-        } catch (error) {
-          console.error('Failed to get download URL:', error);
-          reject(new Error('File was uploaded but could not be processed.'));
+        switch (error.code) {
+          case 'storage/unauthorized':
+            reject(new Error('Permission denied. Please check your storage security rules.'));
+            break;
+          case 'storage/canceled':
+            reject(new Error('Upload was canceled.'));
+            break;
+          default:
+            reject(new Error(`Upload failed. Reason: ${error.code}`));
+            break;
         }
+      },
+      () => {
+        // Handle successful uploads on complete.
+        // The upload is finished, now get the download URL.
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          resolve(downloadURL);
+        }).catch((error) => {
+          console.error('Failed to get download URL:', error);
+          reject(new Error('File uploaded but could not get the download URL.'));
+        });
       }
     );
   });
 };
+
+    
