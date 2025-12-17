@@ -712,6 +712,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   
       } catch (error) {
         setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
+        // Error toast handled in uploadFile
       } finally {
         setIsUploading(false);
         setProfilePhotoFile(null);

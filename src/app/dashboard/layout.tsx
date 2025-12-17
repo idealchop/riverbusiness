@@ -365,15 +365,15 @@ export default function DashboardLayout({
 
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile || !authUser || !userDocRef || !storage) return;
-  
+
     setIsUploading(true);
     setUploadProgress(0);
     setIsPhotoPreviewOpen(false);
-  
+
     if (profilePhotoPreview) {
       setOptimisticPhotoUrl(profilePhotoPreview);
     }
-  
+
     try {
       const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
       
@@ -383,18 +383,19 @@ export default function DashboardLayout({
         filePath,
         (progress) => setUploadProgress(progress)
       );
-  
+
       await updateDoc(userDocRef, { photoURL: downloadURL });
-  
+
       setOptimisticPhotoUrl(downloadURL);
-  
+
       toast({
         title: 'Profile Photo Updated!',
         description: 'Your new photo has been saved permanently.',
       });
-  
+
     } catch (error) {
       setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
+      // The toast for the error is handled inside uploadFile
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
