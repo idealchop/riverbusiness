@@ -1,12 +1,13 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, type UploadTask, type UploadMetadata, getDownloadURL } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata } from 'firebase/storage';
 import type { Auth } from 'firebase/auth';
 
 /**
  * A utility function to upload a file to Firebase Storage with progress tracking.
  * It now requires the Auth instance and will fail if the user is not authenticated.
+ * This implementation is promise-safe to ensure it always resolves or rejects.
  *
  * @param storage The Firebase Storage instance.
  * @param auth The Firebase Auth instance.
@@ -14,7 +15,7 @@ import type { Auth } from 'firebase/auth';
  * @param file The file object to upload.
  * @param metadata The custom metadata to attach to the file, if any.
  * @param onProgress A callback function to report the upload progress (0-100).
- * @returns A promise that resolves when the upload is 100% complete. The backend function handles the rest.
+ * @returns A promise that resolves when the upload is 100% complete.
  */
 export function uploadFileWithProgress(
   storage: FirebaseStorage,
@@ -27,8 +28,9 @@ export function uploadFileWithProgress(
   return new Promise((resolve, reject) => {
     // Critical Step: Ensure user is authenticated before attempting upload.
     if (!auth.currentUser) {
-      console.error("[UPLOAD] Error: User is not authenticated. Upload blocked.");
-      return reject(new Error("User not authenticated."));
+      const authError = new Error("User not authenticated.");
+      console.error("[UPLOAD] Error: User is not authenticated. Upload blocked.", authError);
+      return reject(authError);
     }
     
     console.log("[UPLOAD] function called for user:", auth.currentUser.uid);
