@@ -174,12 +174,16 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     const filePath = `users/${authUser.uid}/profile/profile-photo-${Date.now()}`;
     
     startTransition(async () => {
+      console.log('[UPLOAD] Starting profile photo upload...');
       try {
         await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
         toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
+        console.log('[UPLOAD] Promise from uploadFileWithProgress resolved.');
       } catch (error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
+        console.error('[UPLOAD] Promise from uploadFileWithProgress rejected:', error);
       } finally {
+        console.log('[UPLOAD] Upload process finished (in finally block).');
         dispatch({ type: 'RESET_UPLOAD' });
         setUploadProgress(0);
       }
