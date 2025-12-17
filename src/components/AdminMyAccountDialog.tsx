@@ -38,7 +38,6 @@ type State = {
   uploadProgress: number;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
-  optimisticPhotoUrl: string | null;
   editableFormData: Partial<AppUser>;
   currentPassword: string;
   newPassword: string;
@@ -52,12 +51,9 @@ type Action =
   | { type: 'SET_EDIT_DETAILS'; payload: boolean }
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
-  | { type: 'START_UPLOAD' }
+  | { type: 'SET_UPLOAD_STATUS'; payload: 'idle' | 'uploading' | 'success' | 'error' }
   | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
-  | { type: 'UPLOAD_SUCCESS' }
-  | { type: 'UPLOAD_ERROR' }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
-  | { type: 'SET_OPTIMISTIC_URL'; payload: string | null }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
   | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
@@ -73,7 +69,6 @@ const initialState: State = {
   uploadProgress: 0,
   profilePhotoFile: null,
   profilePhotoPreview: null,
-  optimisticPhotoUrl: null,
   editableFormData: {},
   currentPassword: '',
   newPassword: '',
@@ -88,12 +83,9 @@ function reducer(state: State, action: Action): State {
     case 'SET_EDIT_DETAILS': return { ...state, isEditingDetails: action.payload };
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
-    case 'START_UPLOAD': return { ...state, uploadStatus: 'uploading', uploadProgress: 0, isPhotoPreviewOpen: false };
+    case 'SET_UPLOAD_STATUS': return { ...state, uploadStatus: action.payload };
     case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
-    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null };
-    case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error', profilePhotoFile: null, profilePhotoPreview: null };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
-    case 'SET_OPTIMISTIC_URL': return { ...state, optimisticPhotoUrl: action.payload };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
     case 'UPDATE_FORM_DATA': return { ...state, editableFormData: { ...state.editableFormData, [action.payload.name]: action.payload.value } };
     case 'SET_PASSWORD_FIELD':
@@ -131,7 +123,6 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   useEffect(() => {
     if (adminUser) {
       dispatch({ type: 'SET_FORM_DATA', payload: adminUser });
-      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: adminUser.photoURL ?? null });
     }
   }, [adminUser]);
 
@@ -170,7 +161,6 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       return;
     }
     try {
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword);
       await reauthenticateWithCredential(auth.currentUser, state.currentPassword);
       await updatePassword(auth.currentUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
@@ -183,58 +173,51 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   const handleProfilePhotoUpload = async () => {
     if (!state.profilePhotoFile || !auth.currentUser || !storage) return;
 
-    dispatch({ type: 'START_UPLOAD' });
-    dispatch({ type: 'SET_OPTIMISTIC_URL', payload: state.profilePhotoPreview });
+    dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'uploading' });
+    dispatch({ type: 'SET_PHOTO_PREVIEW_DIALOG', payload: false });
 
-    try {
-      const file = state.profilePhotoFile;
-      const userId = auth.currentUser.uid;
-      const filePath = `users/${userId}/profile/profile_photo.jpg`;
-      
-      const metadata: UploadMetadata = {
-        customMetadata: {
-          firestorePath: `users/${userId}`,
-          firestoreField: 'photoURL'
-        }
-      };
-      
-      await uploadFile(
-        storage,
-        file,
-        filePath,
-        metadata,
-        (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
-      );
-
-      toast({ title: 'Profile Photo Uploaded!', description: 'Your new photo is being processed and will appear shortly.' });
-
-    } catch (error) {
-      dispatch({ type: 'UPLOAD_ERROR' });
-      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: adminUser?.photoURL ?? null });
-      console.error("Upload failed:", error);
-      toast({ variant: 'destructive', title: 'Upload Failed', description: String(error) });
-    } finally {
-      dispatch({ type: 'UPLOAD_SUCCESS' });
-    }
+    const file = state.profilePhotoFile;
+    const userId = auth.currentUser.uid;
+    const filePath = `users/${userId}/profile/profile_photo.jpg`;
+    
+    const metadata: UploadMetadata = {
+      customMetadata: {
+        firestorePath: `users/${userId}`,
+        firestoreField: 'photoURL'
+      }
+    };
+    
+    uploadFile(
+      storage,
+      file,
+      filePath,
+      metadata,
+      (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress }),
+      () => { // onSuccess
+        toast({ title: 'Upload Complete', description: 'Your photo is being processed and will appear shortly.' });
+        dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'success' });
+        setTimeout(() => dispatch({ type: 'RESET_UPLOAD' }), 2000);
+      },
+      (error) => { // onError
+        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
+        dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'error' });
+      }
+    );
   };
 
   const handleProfilePhotoDelete = async () => {
     if (!auth.currentUser || !adminUser?.photoURL || !firestore || !storage) return;
     
-    const originalUrl = adminUser.photoURL;
-    dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
-
     try {
       const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
       await updateDoc(adminUserDocRef, { photoURL: null });
 
-      const photoRef = ref(storage, originalUrl);
+      const photoRef = ref(storage, adminUser.photoURL);
       await deleteObject(photoRef);
       
       toast({ title: 'Profile Photo Removed' });
     } catch (error) {
       console.error("Error removing photo:", error);
-      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: originalUrl });
       if ((error as any).code !== 'storage/object-not-found') {
         toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
       }
@@ -244,7 +227,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   if (!adminUser) return null;
 
   const isUploading = state.uploadStatus === 'uploading';
-  const displayPhoto = state.optimisticPhotoUrl;
+  const displayPhoto = adminUser.photoURL;
 
   return (
     <AlertDialog>
