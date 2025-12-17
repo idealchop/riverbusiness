@@ -20,7 +20,7 @@ export function uploadFile(
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  // CRITICAL FIX: The ref function must be called with the storage instance and the path.
+  // This correctly creates the reference to the file path in your bucket.
   const storageRef = ref(storage, path);
   const uploadTask: UploadTask = uploadBytesResumable(storageRef, file);
 
@@ -42,7 +42,6 @@ export function uploadFile(
             reject(new Error('Permission denied. Please check your storage security rules.'));
             break;
           case 'storage/canceled':
-            // Although we don't expose a cancel button, this handles browser-based cancellations.
             reject(new Error('Upload was canceled.'));
             break;
           default:
@@ -51,7 +50,8 @@ export function uploadFile(
         }
       },
       () => {
-        // Handle successful uploads on complete
+        // Handle successful uploads on complete.
+        // The upload is finished, now get the download URL.
         getDownloadURL(uploadTask.snapshot.ref)
           .then((downloadURL) => {
             resolve(downloadURL);

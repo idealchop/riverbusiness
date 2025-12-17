@@ -191,8 +191,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     dispatch({ type: 'START_UPLOAD' });
 
     try {
-      // Use a consistent filename to overwrite the old photo
-      const filePath = `users/${authUser.uid}/profile/photo.jpg`;
+      const filePath = `users/${authUser.uid}/profile/profile_photo.jpg`;
       const userDocRef = doc(firestore, 'users', authUser.uid);
 
       const downloadURL = await uploadFile(

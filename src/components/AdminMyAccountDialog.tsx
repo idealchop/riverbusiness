@@ -186,7 +186,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     dispatch({ type: 'START_UPLOAD' });
 
     try {
-      const filePath = `users/${auth.currentUser.uid}/profile/photo.jpg`;
+      const filePath = `users/${auth.currentUser.uid}/profile/profile_photo.jpg`;
       const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
 
       const downloadURL = await uploadFile(
