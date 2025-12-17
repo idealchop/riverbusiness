@@ -251,7 +251,7 @@ export default function DashboardLayout({
         // The Cloud Function will handle updating Firestore.
         toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
     } catch(error) {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
+        // Error toast is handled inside uploadFile
     } finally {
         setIsPaymentDialogOpen(false);
         setSelectedInvoice(null);
@@ -390,16 +390,11 @@ export default function DashboardLayout({
   
       toast({
         title: 'Profile Photo Updated!',
-        description: 'Your new photo has been saved.',
+        description: 'Your new photo has been saved permanently.',
       });
   
-    } catch (error: any) {
+    } catch (error) {
       setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
-      toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: error.message || 'Could not upload your photo. Please try again.',
-      });
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
@@ -426,7 +421,7 @@ export default function DashboardLayout({
         const previousPhotoUrl = optimisticPhotoUrl;
         setOptimisticPhotoUrl(null);
         
-        updateDocumentNonBlocking(userDocRef, { photoURL: null });
+        await updateDoc(userDocRef, { photoURL: null });
 
         const photoRef = ref(storage, user.photoURL);
         await deleteObject(photoRef);
@@ -437,7 +432,7 @@ export default function DashboardLayout({
         });
     } catch (error: any) {
         setOptimisticPhotoUrl(user.photoURL);
-        updateDocumentNonBlocking(userDocRef, { photoURL: user.photoURL });
+        await updateDoc(userDocRef, { photoURL: user.photoURL });
 
         console.error("Error removing profile photo: ", error);
         if (error.code !== 'storage/object-not-found') {

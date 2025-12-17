@@ -483,7 +483,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             // The `onFileUpload` Cloud Function handles the Firestore update.
             toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
         } catch(error) {
-             console.error("Upload error:", error);
+             // Error toast handled in uploadFile
         } finally {
             setIsUploadContractOpen(false);
             setUserForContract(null);
@@ -536,7 +536,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsCreateDeliveryOpen(false);
     
         } catch (error) {
-            console.error("Delivery creation failed:", error);
+            // error is handled in uploadFile or non-blocking updates
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});
@@ -705,11 +705,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           setOptimisticPhotoUrl(downloadURL);
           toast({
             title: 'Profile Photo Updated!',
-            description: 'Your new photo has been saved.',
+            description: 'Your new photo has been saved permanently.',
           });
-        } catch (error: any) {
+        } catch (error) {
           setOptimisticPhotoUrl(adminUser?.photoURL || null);
-          console.error("Upload error:", error);
         } finally {
           setIsUploading(false);
           setProfilePhotoFile(null);
@@ -735,7 +734,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const storageForDelete = getStorage();
         try {
             setOptimisticPhotoUrl(null);
-            updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
+            await updateDoc(adminUserDocRef, { photoURL: null });
             const photoRef = ref(storageForDelete, adminUser.photoURL);
             await deleteObject(photoRef);
             
@@ -745,7 +744,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
         } catch (error: any) {
             setOptimisticPhotoUrl(adminUser.photoURL);
-            updateDocumentNonBlocking(adminUserDocRef, { photoURL: adminUser.photoURL });
+            await updateDoc(adminUserDocRef, { photoURL: adminUser.photoURL });
     
             console.error("Error removing profile photo: ", error);
             if (error.code !== 'storage/object-not-found') {
@@ -880,7 +879,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 });
                 resolve();
             }).catch(error => {
-                console.error(`Upload error for ${docKey}:`, error);
+                // Error is handled by toast in uploadFile
                 setUploadingFiles(prev => ({ ...prev, [docKey]: -1 }));
                 reject(error);
             });
@@ -922,7 +921,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setComplianceRefresher(c => c + 1);
     
         } catch (error) {
-             console.error("Error creating station or uploading documents: ", error);
+             // error is handled by promises
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});

@@ -36,15 +36,8 @@ export const onFileUpload = functions.storage.bucket().object().onFinalize(async
   };
 
   try {
-    // --- User Profile Photo ---
-    if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
-      const parts = filePath.split("/");
-      const userId = parts[1];
-      const url = await getPublicUrl();
-      await db.collection("users").doc(userId).update({ photoURL: url });
-      functions.logger.log(`Updated profile photo for user: ${userId}`);
-      return;
-    }
+    // This function now only handles non-profile photo uploads.
+    // Profile photos are handled directly on the client for a better UX.
 
     // --- User Contract ---
     if (filePath.startsWith("userContracts/")) {
