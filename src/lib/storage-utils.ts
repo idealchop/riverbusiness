@@ -1,52 +1,50 @@
 
 'use client';
 
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, type FirebaseStorage, type UploadMetadata } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, type FirebaseStorage, type UploadMetadata, type UploadTask } from 'firebase/storage';
 
 /**
  * A robust function to upload a file to Firebase Storage with progress tracking and metadata.
- * This function uses callbacks for success and error, suitable for client-side UI updates.
+ * This function uses a Promise-based approach with async/await for cleaner control flow.
  *
  * @param storage The initialized FirebaseStorage instance.
  * @param file The file to upload.
  * @param path The full path in Firebase Storage where the file should be saved.
- * @param metadata The metadata to attach to the file, which can be used by Cloud Functions.
+ * @param metadata The metadata to attach to the file, used by Cloud Functions.
  * @param onProgress A callback to receive upload progress updates (0-100).
- * @param onSuccess A callback that fires when the upload is fully complete.
- * @param onError A callback that fires if the upload fails.
+ * @returns A Promise that resolves when the upload is complete. The calling function can then proceed.
  */
-export function uploadFile(
+export async function uploadFile(
   storage: FirebaseStorage,
   file: File,
   path: string,
   metadata: UploadMetadata,
-  onProgress?: (progress: number) => void,
-  onSuccess?: () => void,
-  onError?: (error: Error) => void
-): void {
-  if (!storage) {
-    onError?.(new Error("Firebase Storage is not initialized."));
-    return;
-  }
-
-  const storageRef = ref(storage, path);
-  const uploadTask = uploadBytesResumable(storageRef, file, metadata);
-
-  uploadTask.on(
-    'state_changed',
-    (snapshot) => {
-      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-      onProgress?.(progress);
-    },
-    (error) => {
-      // The promise is rejected with the Firebase error, allowing the caller to handle it.
-      console.error('Upload failed:', error);
-      onError?.(error);
-    },
-    () => {
-      // This completion callback is only called on successful upload.
-      // The Cloud Function will handle the Firestore update, so we just signal success here.
-      onSuccess?.();
+  onProgress?: (progress: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!storage) {
+      return reject(new Error("Firebase Storage is not initialized."));
     }
-  );
+
+    const storageRef = ref(storage, path);
+    const uploadTask: UploadTask = uploadBytesResumable(storageRef, file, metadata);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        onProgress?.(progress);
+      },
+      (error) => {
+        // Handle unsuccessful uploads and reject the promise
+        console.error('Upload failed:', error);
+        reject(error);
+      },
+      () => {
+        // Handle successful uploads on complete
+        // The Cloud Function will handle the Firestore update, so we just resolve the promise here.
+        resolve();
+      }
+    );
+  });
 }
