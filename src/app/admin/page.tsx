@@ -449,8 +449,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
             // The Cloud Function will handle updating Firestore.
             toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
-        } catch (error) {
-            // Error toast handled in uploadFile
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: error.message || 'Could not upload proof.',
+            });
         } finally {
             setDeliveryToUpdate(null);
             setDeliveryProofFile(null);
@@ -482,8 +486,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
             // The `onFileUpload` Cloud Function handles the Firestore update.
             toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
-        } catch(error) {
-             // Error toast handled in uploadFile
+        } catch(error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: error.message || 'Could not upload contract.',
+            });
         } finally {
             setIsUploadContractOpen(false);
             setUserForContract(null);
@@ -535,8 +543,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             deliveryForm.reset();
             setIsCreateDeliveryOpen(false);
     
-        } catch (error) {
-            // error is handled in uploadFile or non-blocking updates
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Creation Failed',
+                description: error.message || 'Could not create delivery record.',
+            });
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});
@@ -710,9 +722,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           description: 'Your new photo has been saved permanently.',
         });
   
-      } catch (error) {
+      } catch (error: any) {
         setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
-        // Error toast handled in uploadFile
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error.message || 'Could not upload photo.',
+        });
       } finally {
         setIsUploading(false);
         setProfilePhotoFile(null);
@@ -922,8 +938,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsStationProfileOpen(false);
             setComplianceRefresher(c => c + 1);
     
-        } catch (error) {
-             // error is handled by promises
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Station Creation Failed',
+                description: error.message || 'An error occurred while creating the station.',
+            });
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});
@@ -2301,3 +2321,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

@@ -87,7 +87,7 @@ export default function DashboardLayout({
 }) {
   const { toast } = useToast();
   const router = useRouter();
-  const auth = useUser().auth!;
+  const { auth } = useUser();
   const firestore = useFirestore();
   const storage = useStorage();
   const { user: authUser, isUserLoading } = useUser();
@@ -250,8 +250,12 @@ export default function DashboardLayout({
         });
         // The Cloud Function will handle updating Firestore.
         toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-    } catch(error) {
-        // Error toast is handled inside uploadFile
+    } catch(error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error.message || 'Could not upload proof.',
+        });
     } finally {
         setIsPaymentDialogOpen(false);
         setSelectedInvoice(null);
@@ -393,9 +397,13 @@ export default function DashboardLayout({
         description: 'Your new photo has been saved permanently.',
       });
 
-    } catch (error) {
+    } catch (error: any) {
       setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
-      // The toast for the error is handled inside uploadFile
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: error.message || 'Could not upload photo.',
+      });
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
@@ -857,7 +865,7 @@ export default function DashboardLayout({
                                           );
                                       })}
                                   </div>
-                              </CardContent>
+                               </CardContent>
                           </Card>
 
                         </div>
@@ -1120,3 +1128,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
