@@ -75,6 +75,65 @@ type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
+async function handleAdminProfilePhotoUpload(
+    profilePhotoFile: File,
+    authUserUid: string,
+    adminUserDocRef: DocumentReference,
+    storage: FirebaseStorage,
+    toast: ReturnType<typeof useToast>['toast'],
+    stateSetters: {
+      setUploadStatus: (status: 'idle' | 'uploading' | 'success') => void;
+      setUploadProgress: (progress: number) => void;
+      setIsPhotoPreviewOpen: (isOpen: boolean) => void;
+      setOptimisticPhotoUrl: (url: string | null) => void;
+    },
+    originalPhotoUrl: string | null | undefined
+) {
+    const {
+        setUploadStatus,
+        setUploadProgress,
+        setIsPhotoPreviewOpen,
+        setOptimisticPhotoUrl,
+    } = stateSetters;
+
+    setIsPhotoPreviewOpen(false);
+    setUploadStatus('uploading');
+    setUploadProgress(0);
+
+    try {
+        const filePath = `users/${authUserUid}/profile/profile_photo_${Date.now()}`;
+        
+        const downloadURL = await uploadFile(
+            storage,
+            profilePhotoFile,
+            filePath,
+            (progress) => setUploadProgress(progress)
+        );
+        
+        await updateDoc(adminUserDocRef, { photoURL: downloadURL });
+        
+        setOptimisticPhotoUrl(downloadURL);
+        setUploadStatus('success');
+
+        toast({
+            title: 'Profile Photo Updated!',
+            description: 'Your new photo has been saved permanently.',
+        });
+
+    } catch (error) {
+        setOptimisticPhotoUrl(originalPhotoUrl || null);
+        console.error("Upload failed:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error instanceof Error ? error.message : 'Could not upload photo. Please try again.',
+        });
+        setUploadStatus('idle');
+    } finally {
+        setUploadProgress(0);
+    }
+};
+
 function AdminDashboardSkeleton() {
     return (
       <div className="flex flex-col gap-6">
@@ -121,69 +180,6 @@ function AdminDashboardSkeleton() {
       </div>
     );
   }
-
-async function handleAdminProfilePhotoUpload(
-    profilePhotoFile: File,
-    authUserUid: string,
-    adminUserDocRef: DocumentReference,
-    storage: FirebaseStorage,
-    toast: ReturnType<typeof useToast>['toast'],
-    stateSetters: {
-      setIsUploading: (isUploading: boolean) => void;
-      setUploadProgress: (progress: number) => void;
-      setIsPhotoPreviewOpen: (isOpen: boolean) => void;
-      setOptimisticPhotoUrl: (url: string | null) => void;
-    },
-    originalPhotoUrl: string | null | undefined
-) {
-    const {
-        setIsUploading,
-        setUploadProgress,
-        setIsPhotoPreviewOpen,
-        setOptimisticPhotoUrl,
-    } = stateSetters;
-
-    setIsPhotoPreviewOpen(false);
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-        const filePath = `users/${authUserUid}/profile/profile_photo_${Date.now()}`;
-        
-        // 1. Await the file upload
-        const downloadURL = await uploadFile(
-            storage,
-            profilePhotoFile,
-            filePath,
-            (progress) => setUploadProgress(progress)
-        );
-        
-        // 2. Await the database update
-        await updateDoc(adminUserDocRef, { photoURL: downloadURL });
-        
-        // 3. Set final state and show success toast
-        setOptimisticPhotoUrl(downloadURL);
-
-        toast({
-            title: 'Profile Photo Updated!',
-            description: 'Your new photo has been saved permanently.',
-        });
-
-    } catch (error) {
-        // Revert optimistic update on failure
-        setOptimisticPhotoUrl(originalPhotoUrl || null);
-        console.error("Upload failed:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: error instanceof Error ? error.message : 'Could not upload photo. Please try again.',
-        });
-    } finally {
-        // 4. Reset uploading state
-        setIsUploading(false);
-        setUploadProgress(0);
-    }
-};
 
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
@@ -252,7 +248,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
     const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
     const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
-    const [isUploading, setIsUploading] = React.useState(false);
+    const [uploadStatus, setUploadStatus] = React.useState<'idle' | 'uploading' | 'success'>('idle');
     const [uploadProgress, setUploadProgress] = React.useState(0);
     const [optimisticPhotoUrl, setOptimisticPhotoUrl] = React.useState<string | null>(null);
     
@@ -756,7 +752,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             URL.revokeObjectURL(profilePhotoPreview);
         }
         setProfilePhotoPreview(null);
-        setIsUploading(false);
+        setUploadStatus('idle');
         setUploadProgress(0);
     };
 
@@ -966,6 +962,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return <AdminDashboardSkeleton />;
     }
 
+    const isUploading = uploadStatus === 'uploading';
     const displayPhoto = optimisticPhotoUrl ?? adminUser?.photoURL;
 
 
@@ -1804,7 +1801,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                       storage,
                       toast,
                       {
-                        setIsUploading,
+                        setUploadStatus,
                         setUploadProgress,
                         setIsPhotoPreviewOpen,
                         setOptimisticPhotoUrl,

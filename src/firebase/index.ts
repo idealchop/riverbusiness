@@ -9,15 +9,12 @@ import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 // This structure ensures that Firebase is initialized only once.
 let firebaseApp: FirebaseApp;
-let auth: Auth;
-let firestore: Firestore;
-let storage: FirebaseStorage;
 
 // Check if Firebase has already been initialized
 if (!getApps().length) {
   try {
     // Try to initialize with environment variables first (for App Hosting)
-    firebaseApp = initializeApp();
+    firebaseApp = initializeApp(process.env.FIREBASE_CONFIG ? JSON.parse(process.env.FIREBASE_CONFIG) : firebaseConfig);
   } catch (e) {
     if (process.env.NODE_ENV !== "production") {
         console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
@@ -31,9 +28,9 @@ if (!getApps().length) {
 }
 
 // Get SDK instances from the initialized app
-auth = getAuth(firebaseApp);
-firestore = getFirestore(firebaseApp);
-storage = getStorage(firebaseApp);
+const auth = getAuth(firebaseApp);
+const firestore = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 
 
 // This function is now a simple getter for the initialized services.

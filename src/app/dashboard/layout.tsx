@@ -87,27 +87,26 @@ async function handleProfilePhotoUpload(
   storage: FirebaseStorage,
   toast: ReturnType<typeof useToast>['toast'],
   stateSetters: {
-    setIsUploading: (isUploading: boolean) => void;
+    setUploadStatus: (status: 'idle' | 'uploading' | 'success') => void;
     setUploadProgress: (progress: number) => void;
     setIsPhotoPreviewOpen: (isOpen: boolean) => void;
     setOptimisticPhotoUrl: (url: string | null) => void;
   }
 ) {
   const {
-    setIsUploading,
+    setUploadStatus,
     setUploadProgress,
     setIsPhotoPreviewOpen,
     setOptimisticPhotoUrl,
   } = stateSetters;
 
   setIsPhotoPreviewOpen(false);
-  setIsUploading(true);
+  setUploadStatus('uploading');
   setUploadProgress(0);
 
   try {
     const filePath = `users/${user.id}/profile/profile_photo_${Date.now()}`;
     
-    // 1. Await the file upload
     const downloadURL = await uploadFile(
       storage,
       profilePhotoFile,
@@ -115,11 +114,10 @@ async function handleProfilePhotoUpload(
       (progress) => setUploadProgress(progress)
     );
 
-    // 2. Await the database update
     await updateDoc(userDocRef, { photoURL: downloadURL });
     
-    // 3. Set final state and show success toast
     setOptimisticPhotoUrl(downloadURL);
+    setUploadStatus('success');
 
     toast({
       title: 'Profile Photo Updated!',
@@ -127,7 +125,6 @@ async function handleProfilePhotoUpload(
     });
 
   } catch (error) {
-    // Revert optimistic update on failure
     setOptimisticPhotoUrl(user.photoURL ?? null); 
     console.error("Upload failed:", error);
     toast({
@@ -135,9 +132,8 @@ async function handleProfilePhotoUpload(
       title: 'Upload Failed',
       description: error instanceof Error ? error.message : 'Could not upload photo. Please try again.',
     });
+    setUploadStatus('idle');
   } finally {
-    // 4. Reset uploading state
-    setIsUploading(false);
     setUploadProgress(0);
   }
 };
@@ -214,7 +210,7 @@ export default function DashboardLayout({
   const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
   const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadStatus, setUploadStatus] = React.useState<'idle' | 'uploading' | 'success'>('idle');
   const [optimisticPhotoUrl, setOptimisticPhotoUrl] = useState<string | null>(null);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -304,7 +300,7 @@ export default function DashboardLayout({
         return;
     }
 
-    setIsUploading(true);
+    setUploadStatus('uploading');
     setUploadProgress(0);
 
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
@@ -325,7 +321,7 @@ export default function DashboardLayout({
         setIsPaymentDialogOpen(false);
         setSelectedInvoice(null);
         setPaymentProofFile(null);
-        setIsUploading(false);
+        setUploadStatus('idle');
         setUploadProgress(0);
     }
 };
@@ -433,7 +429,7 @@ export default function DashboardLayout({
         URL.revokeObjectURL(profilePhotoPreview);
     }
     setProfilePhotoPreview(null);
-    setIsUploading(false);
+    setUploadStatus('idle');
     setUploadProgress(0);
   };
 
@@ -532,7 +528,7 @@ export default function DashboardLayout({
     return <div>Loading...</div>
   }
 
-  const isUploadingPayment = uploadProgress > 0 && uploadProgress <= 100;
+  const isUploading = uploadStatus === 'uploading';
   const displayPhoto = optimisticPhotoUrl ?? user?.photoURL;
 
   return (
@@ -1022,7 +1018,7 @@ export default function DashboardLayout({
                           storage,
                           toast,
                           {
-                            setIsUploading,
+                            setUploadStatus,
                             setUploadProgress,
                             setIsPhotoPreviewOpen,
                             setOptimisticPhotoUrl,
