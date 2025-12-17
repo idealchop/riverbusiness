@@ -23,10 +23,10 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useStorage, useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref } from 'firebase/storage';
+import { deleteObject, ref, getStorage } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
@@ -130,7 +130,6 @@ interface MyAccountDialogProps {
 export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, onLogout, children }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast();
-  const storage = useStorage();
   const firestore = useFirestore();
 
   useEffect(() => {
@@ -185,25 +184,25 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser || !storage || !firestore) return;
-
+    if (!state.profilePhotoFile || !authUser || !firestore) return;
+  
     dispatch({ type: 'START_UPLOAD' });
     const filePath = `users/${authUser.uid}/profile/profile_photo.jpg`;
-    const userDocRef = doc(firestore, 'users', authUser.uid);
-
+    
     try {
       const downloadURL = await uploadFile(
-        storage,
-        filePath,
         state.profilePhotoFile,
+        filePath,
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
-
+  
+      const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: downloadURL });
-      
+  
       dispatch({ type: 'UPLOAD_SUCCESS' });
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
       toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
+  
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null });
@@ -211,18 +210,20 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       toast({ variant: 'destructive', title: 'Upload Failed', description: error instanceof Error ? error.message : 'Could not upload photo.' });
     }
   };
-
+  
   const handleProfilePhotoDelete = async () => {
-    if (!authUser || !user?.photoURL || !storage || !firestore) return;
+    if (!authUser || !user?.photoURL || !firestore) return;
     
     const originalUrl = user.photoURL;
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
-
+  
     try {
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: null });
-
-      const photoRef = ref(storage, user.photoURL);
+      
+      // We need a storage instance to create the ref
+      const storage = getStorage();
+      const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
       
       toast({ title: 'Profile Photo Removed' });

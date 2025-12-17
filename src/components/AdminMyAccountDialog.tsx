@@ -20,10 +20,10 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useStorage, useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref } from 'firebase/storage';
+import { deleteObject, ref, getStorage } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
@@ -123,7 +123,6 @@ interface AdminMyAccountDialogProps {
 export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminMyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast();
-  const storage = useStorage();
   const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
@@ -181,20 +180,19 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser || !storage || !firestore) return;
-
+    if (!state.profilePhotoFile || !auth.currentUser || !firestore) return;
+  
     dispatch({ type: 'START_UPLOAD' });
     const filePath = `users/${auth.currentUser.uid}/profile/profile_photo.jpg`;
-    const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
-
+    
     try {
       const downloadURL = await uploadFile(
-        storage,
-        filePath,
         state.profilePhotoFile,
+        filePath,
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
-
+  
+      const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
       await updateDoc(adminUserDocRef, { photoURL: downloadURL });
       
       dispatch({ type: 'UPLOAD_SUCCESS' });
@@ -208,9 +206,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     }
   };
 
-
   const handleProfilePhotoDelete = async () => {
-    if (!auth.currentUser || !adminUser?.photoURL || !storage || !firestore) return;
+    if (!auth.currentUser || !adminUser?.photoURL || !firestore) return;
     
     const originalUrl = adminUser.photoURL;
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
@@ -219,6 +216,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
       await updateDoc(adminUserDocRef, { photoURL: null });
 
+      const storage = getStorage();
       const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
       

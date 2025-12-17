@@ -18,7 +18,7 @@ service firebase.storage {
                    request.resource.contentType.matches('application/pdf'));
     }
 
-    // Corrected rule: allow read for anyone, allow write for the owner.
+    // Allow read for anyone, but only the owner can write to their own profile path.
     match /users/{userId}/profile/{fileName} {
       allow read;
       allow write: if isOwner(userId) && isAllowed(5);

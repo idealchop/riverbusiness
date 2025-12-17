@@ -1,26 +1,31 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, type FirebaseStorage } from 'firebase/storage';
+import { initializeFirebase } from '@/firebase';
 
 /**
  * A robust, promise-based function to upload a file to Firebase Storage with progress tracking.
- * Based on a user-provided implementation for systematic troubleshooting.
+ * This version internally gets the storage instance.
  *
- * @param storage The Firebase Storage instance.
- * @param path The full path in Firebase Storage where the file should be saved (e.g., 'users/uid/profile.jpg').
  * @param file The file to upload.
+ * @param path The full path in Firebase Storage where the file should be saved (e.g., 'users/uid/profile.jpg').
  * @param onProgress An optional callback to receive upload progress updates (0-100).
  * @returns A promise that resolves with the public download URL of the uploaded file.
  * @throws An error if the upload fails.
  */
 export function uploadFile(
-  storage: FirebaseStorage,
-  path: string,
   file: File,
+  path: string,
   onProgress?: (progress: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    // Get storage instance internally for robustness
+    const { storage } = initializeFirebase();
+    if (!storage) {
+        return reject(new Error("Firebase Storage is not initialized."));
+    }
+
     const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -33,14 +38,15 @@ export function uploadFile(
         }
       },
       (error) => {
-        // Handle unsuccessful uploads
+        // Handle unsuccessful uploads and reject the promise
         console.error('Upload failed in utility:', error);
         switch (error.code) {
           case 'storage/unauthorized':
             reject(new Error('Permission denied. Please check your storage security rules.'));
             break;
           case 'storage/canceled':
-            // Don't reject on cancellation, just do nothing.
+            // Don't reject on cancellation, but we can log it.
+            console.log("Upload was canceled.");
             break;
           default:
             reject(new Error(`Upload failed. Reason: ${error.code}`));
