@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, getDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -258,9 +258,7 @@ export default function DashboardLayout({
                 reject(error);
             },
             () => {
-                const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-                setDocumentNonBlocking(paymentRef, { status: 'Pending Review' }, { merge: true });
-
+                // The Firestore update is handled by the `onFileUpload` Cloud Function.
                 toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
                 setIsPaymentDialogOpen(false);
                 setSelectedInvoice(null);
@@ -376,53 +374,60 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !profilePhotoPreview) return;
+    if (!profilePhotoFile || !authUser || !profilePhotoPreview || !userDocRef) return;
   
     setIsUploading(true);
     setUploadProgress(0);
+    setOptimisticPhotoUrl(profilePhotoPreview); // Optimistic UI update
+    setIsPhotoPreviewOpen(false);
   
     const storage = getStorage();
     const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
     const storageRef = ref(storage, filePath);
     const metadata = { contentType: profilePhotoFile.type };
   
-    try {
-      setOptimisticPhotoUrl(profilePhotoPreview);
-      setIsPhotoPreviewOpen(false); // Close dialog immediately
-      const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-  
-      await new Promise<void>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
+    const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
+
+    uploadTask.on(
+        'state_changed',
+        (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            // Progress UI is removed, but we can log it
-             console.log('Upload is ' + progress + '% done');
-          },
-          (error) => {
+            setUploadProgress(progress);
+        },
+        (error) => {
+            // Revert optimistic update on failure
             setOptimisticPhotoUrl(user?.photoURL || null);
-            reject(error);
-          },
-          () => {
+            setIsUploading(false);
             toast({
-              title: 'Upload Complete!',
-              description: 'Your new profile photo is being processed and will appear permanently shortly.',
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: error.message || 'Could not upload your photo. Please try again.'
             });
-            resolve();
-          }
-        );
-      });
-    } catch (error: any) {
-      setOptimisticPhotoUrl(user?.photoURL || null);
-      toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: error.message || 'Could not upload your photo. Please try again.'
-      });
-    } finally {
-      setIsUploading(false);
-      setProfilePhotoFile(null);
-    }
+        },
+        async () => {
+            try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                // Direct update to Firestore
+                await updateDoc(userDocRef, { photoURL: downloadURL });
+                toast({
+                    title: 'Profile Photo Updated!',
+                    description: 'Your new profile photo has been saved permanently.',
+                });
+            } catch (error: any) {
+                // Revert optimistic update on Firestore update failure
+                setOptimisticPhotoUrl(user?.photoURL || null);
+                 toast({
+                    variant: 'destructive',
+                    title: 'Update Failed',
+                    description: 'Your photo was uploaded, but we could not save it to your profile. Please try again.'
+                });
+            } finally {
+                setIsUploading(false);
+                setProfilePhotoFile(null);
+                setProfilePhotoPreview(null);
+            }
+        }
+    );
   };
 
   const handleCancelUpload = () => {
@@ -1214,5 +1219,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    

@@ -37,7 +37,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject, getDownloadURL } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -458,8 +458,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     reject(error);
                 },
                 () => {
-                    // This function now only handles client-side state cleanup.
-                    // The Firestore update is handled by a Cloud Function.
+                    // The Firestore update is handled by the `onFileUpload` Cloud Function.
                     toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
                     setDeliveryToUpdate(null);
                     setDeliveryProofFile(null);
@@ -486,7 +485,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
         setIsSubmitting(true);
     
-        // A Cloud Function should trigger on this path to update the user's document
         const filePath = `userContracts/${userForContract.id}/latest_plan_contract.pdf`;
         const storage = getStorage();
         const storageRef = ref(storage, filePath);
@@ -506,7 +504,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     reject(error);
                 },
                 () => {
-                    // Client-side is done, Cloud Function takes over.
+                    // The Firestore update is handled by the `onFileUpload` Cloud Function.
                     toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
                     setIsUploadContractOpen(false);
                     setUserForContract(null);
@@ -537,13 +535,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
-                // proofOfDeliveryUrl is omitted, will be added by a Cloud Function if a file is uploaded.
             };
     
-            // Set the initial delivery document
             await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
     
-            // If there's a proof file, upload it. The Cloud Function will handle linking it.
             if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
                 const file = values.proofOfDeliveryUrl[0];
                 const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
@@ -560,8 +555,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
                     }
                 );
-    
-                // We don't await the upload here. The client's job is to create the record and start the upload.
             }
     
             if (values.status === 'Delivered') {
@@ -721,52 +714,57 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProfilePhotoUpload = async () => {
-        if (!profilePhotoFile || !authUser || !profilePhotoPreview) return;
+        if (!profilePhotoFile || !authUser || !profilePhotoPreview || !adminUserDocRef) return;
       
         setIsUploading(true);
         setUploadProgress(0);
+        setOptimisticPhotoUrl(profilePhotoPreview);
+        setIsPhotoPreviewOpen(false);
       
         const storage = getStorage();
         const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`; 
         const storageRef = ref(storage, filePath);
         const metadata = { contentType: profilePhotoFile.type };
       
-        try {
-          setOptimisticPhotoUrl(profilePhotoPreview);
-          setIsPhotoPreviewOpen(false);
-          const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-      
-          await new Promise<void>((resolve, reject) => {
-            uploadTask.on(
-              'state_changed',
-              (snapshot) => {
+        const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
+    
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 setUploadProgress(progress);
-              },
-              (error) => {
+            },
+            (error) => {
                 setOptimisticPhotoUrl(adminUser?.photoURL || null);
-                reject(error);
-              },
-              () => {
+                setIsUploading(false);
                 toast({
-                  title: 'Upload Complete!',
-                  description: 'Your new profile photo is being processed and will appear permanently shortly.',
+                    variant: 'destructive',
+                    title: 'Upload Failed',
+                    description: error.message || 'Could not upload photo.'
                 });
-                resolve();
-              }
-            );
-          });
-        } catch (error: any) {
-          setOptimisticPhotoUrl(adminUser?.photoURL || null);
-          toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: error.message || 'Could not upload your photo. Please check your connection and try again.'
-          });
-        } finally {
-          setIsUploading(false);
-          setProfilePhotoFile(null);
-        }
+            },
+            async () => {
+                try {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    await updateDoc(adminUserDocRef, { photoURL: downloadURL });
+                    toast({
+                        title: 'Profile Photo Updated!',
+                        description: 'Your new photo has been saved.',
+                    });
+                } catch (error: any) {
+                    setOptimisticPhotoUrl(adminUser?.photoURL || null);
+                     toast({
+                        variant: 'destructive',
+                        title: 'Update Failed',
+                        description: 'Could not save the new photo URL.'
+                    });
+                } finally {
+                    setIsUploading(false);
+                    setProfilePhotoFile(null);
+                    setProfilePhotoPreview(null);
+                }
+            }
+        );
     };
     
     const handleCancelUpload = () => {
@@ -812,7 +810,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     React.useEffect(() => {
         if(selectedUser) {
             const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
-            // This will trigger a fetch, handled by useCollection
         }
     }, [selectedUser, firestore]);
 
@@ -955,10 +952,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setUploadingFiles({});
     
         try {
-            // First, create the station document to get an ID.
             const newStationRef = await addDoc(collection(firestore, "waterStations"), {
                 ...values,
-                partnershipAgreementUrl: "" // Initialize as empty
+                partnershipAgreementUrl: ""
             });
             const stationId = newStationRef.id;
             
@@ -974,17 +970,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 uploadPromises.push(handleFileUpload(file, path, key));
             }
     
-            // Wait for all uploads to complete on the client side.
             await Promise.all(uploadPromises);
     
-            // The client's job is done. Cloud Functions will handle linking the URLs.
             toast({ title: 'Station Created', description: `Station "${values.name}" created and documents are being processed.` });
             
             stationForm.reset();
             setComplianceFiles({});
             setAgreementFile(null);
             setIsStationProfileOpen(false);
-            setComplianceRefresher(c => c + 1); // Refresh data if needed
+            setComplianceRefresher(c => c + 1);
     
         } catch (error) {
              console.error("Error creating station or uploading documents: ", error);
