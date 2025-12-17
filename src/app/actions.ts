@@ -30,10 +30,10 @@ function initializeAdminApp(): App {
   // Initialize the app with the correctly parsed credential.
   return initializeApp({
     credential: credential.cert(serviceAccount),
-    // The storage bucket is specified at the time of use, not here.
   });
 }
 
+// Hard-code the bucket name to avoid environment variable issues.
 const BUCKET_NAME = "studio-911553385-80027.appspot.com";
 
 export async function uploadProfilePhotoAction(formData: FormData) {
