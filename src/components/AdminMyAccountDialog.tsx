@@ -20,10 +20,10 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref, getStorage } from 'firebase/storage';
+import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
@@ -125,6 +125,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = useAuth();
+  const storage = useStorage();
   const router = useRouter();
 
   useEffect(() => {
@@ -180,13 +181,14 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser || !firestore) return;
+    if (!state.profilePhotoFile || !auth.currentUser || !firestore || !storage) return;
   
     dispatch({ type: 'START_UPLOAD' });
     const filePath = `users/${auth.currentUser.uid}/profile/profile_photo.jpg`;
     
     try {
       const downloadURL = await uploadFile(
+        storage,
         state.profilePhotoFile,
         filePath,
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
@@ -203,11 +205,13 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: adminUser?.photoURL ?? null });
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: error instanceof Error ? error.message : 'Could not upload photo.' });
+    } finally {
+        dispatch({ type: 'RESET_UPLOAD' });
     }
   };
 
   const handleProfilePhotoDelete = async () => {
-    if (!auth.currentUser || !adminUser?.photoURL || !firestore) return;
+    if (!auth.currentUser || !adminUser?.photoURL || !firestore || !storage) return;
     
     const originalUrl = adminUser.photoURL;
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
@@ -216,7 +220,6 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
       await updateDoc(adminUserDocRef, { photoURL: null });
 
-      const storage = getStorage();
       const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
       

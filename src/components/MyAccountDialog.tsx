@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { deleteObject, ref, getStorage } from 'firebase/storage';
@@ -131,6 +131,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   const [state, dispatch] = useReducer(reducer, initialState);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const storage = useStorage();
 
   useEffect(() => {
     if (user) {
@@ -184,13 +185,14 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser || !firestore) return;
+    if (!state.profilePhotoFile || !authUser || !firestore || !storage) return;
   
     dispatch({ type: 'START_UPLOAD' });
     const filePath = `users/${authUser.uid}/profile/profile_photo.jpg`;
     
     try {
       const downloadURL = await uploadFile(
+        storage,
         state.profilePhotoFile,
         filePath,
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
@@ -208,6 +210,8 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null });
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: error instanceof Error ? error.message : 'Could not upload photo.' });
+    } finally {
+      dispatch({ type: 'RESET_UPLOAD' });
     }
   };
   
@@ -221,15 +225,12 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: null });
       
-      // We need a storage instance to create the ref
-      const storage = getStorage();
       const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
       
       toast({ title: 'Profile Photo Removed' });
     } catch (error) {
       console.error("Error removing photo:", error);
-      // Revert optimistic update on failure
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: originalUrl });
       if ((error as any).code !== 'storage/object-not-found') {
         toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });

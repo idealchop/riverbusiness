@@ -2,12 +2,12 @@
 'use client';
 
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, type FirebaseStorage } from 'firebase/storage';
-import { initializeFirebase } from '@/firebase';
 
 /**
  * A robust, promise-based function to upload a file to Firebase Storage with progress tracking.
  * This version internally gets the storage instance.
  *
+ * @param storage The initialized FirebaseStorage instance.
  * @param file The file to upload.
  * @param path The full path in Firebase Storage where the file should be saved (e.g., 'users/uid/profile.jpg').
  * @param onProgress An optional callback to receive upload progress updates (0-100).
@@ -15,13 +15,12 @@ import { initializeFirebase } from '@/firebase';
  * @throws An error if the upload fails.
  */
 export function uploadFile(
+  storage: FirebaseStorage,
   file: File,
   path: string,
   onProgress?: (progress: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    // Get storage instance internally for robustness
-    const { storage } = initializeFirebase();
     if (!storage) {
         return reject(new Error("Firebase Storage is not initialized."));
     }
