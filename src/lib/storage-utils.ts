@@ -1,18 +1,18 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, type UploadTask, type UploadMetadata } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, type UploadTask, type UploadMetadata, getDownloadURL } from 'firebase/storage';
 
 /**
  * A utility function to upload a file to Firebase Storage with progress tracking.
- * The backend Cloud Function will handle creating a public URL and updating Firestore.
+ * It now returns a Promise that resolves when the upload is complete.
  *
  * @param storage The Firebase Storage instance.
  * @param path The full path in the storage bucket where the file should be uploaded.
  * @param file The file object to upload.
  * @param metadata The custom metadata to attach to the file, if any.
  * @param onProgress A callback function to report the upload progress (0-100).
- * @returns A promise that resolves with the UploadTask when the upload is initiated.
+ * @returns A promise that resolves when the upload is 100% complete. The backend function handles the rest.
  */
 export function uploadFileWithProgress(
   storage: FirebaseStorage,
@@ -20,7 +20,7 @@ export function uploadFileWithProgress(
   file: File,
   metadata: UploadMetadata,
   onProgress: (progress: number) => void
-): Promise<UploadTask> {
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const storageRef = ref(storage, path);
     
@@ -44,11 +44,8 @@ export function uploadFileWithProgress(
         // Handle successful uploads on complete.
         // The `onfileupload` Cloud Function will handle the rest.
         onProgress(100);
+        resolve(); // Resolve the promise ONLY when the upload is complete.
       }
     );
-
-    resolve(uploadTask);
   });
 }
-
-    
