@@ -37,7 +37,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { UploadTask } from 'firebase/storage';
+import { UploadTask, getStorage } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -417,7 +417,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         storage,
         path,
         file,
-        { customMetadata: metadata },
+        metadata,
         (progress) => {
           setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
         }
@@ -447,6 +447,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
         } finally {
             setIsSubmitting(false);
+            setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
         }
     };
 
@@ -473,6 +474,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
         } finally {
             setIsSubmitting(false);
+            setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
         }
     };
 
@@ -577,7 +579,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     React.useEffect(() => {
-        if(selectedUser) {
+        if(selectedUser && firestore) {
             const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
         }
     }, [selectedUser, firestore]);
@@ -687,7 +689,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         try {
             const newStationRef = await addDocumentNonBlocking(collection(firestore, 'waterStations'), values);
             
-            // Upload files after station is created
             const uploadPromises: Promise<any>[] = [];
             const stationId = newStationRef.id;
 
@@ -699,8 +700,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
             Object.entries(complianceFiles).forEach(([key, file]) => {
                 const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                // Note: The cloud function for compliance is slightly different.
-                // It creates a new doc in a subcollection. This metadata reflects that.
                 const metadata = {
                     firestorePath: `waterStations/${stationId}/complianceReports/${key}`,
                     firestoreField: 'reportUrl'

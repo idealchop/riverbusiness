@@ -24,7 +24,7 @@ function initializeAdminApp(): App {
   // Initialize the app with credential and storage bucket.
   return initializeApp({
     credential: credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    storageBucket: "studio-911553385-80027.appspot.com",
   });
 }
 
@@ -49,7 +49,7 @@ export async function uploadProfilePhotoAction(formData: FormData) {
     }
     
     // Explicitly specify the bucket to use.
-    const bucket = storage.bucket(process.env.FIREBASE_STORAGE_BUCKET);
+    const bucket = storage.bucket("studio-911553385-80027.appspot.com");
     const filePath = `users/${userId}/profile/profile_photo.jpg`;
     const fileRef = bucket.file(filePath);
 

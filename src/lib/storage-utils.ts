@@ -1,8 +1,7 @@
 
 'use client';
 
-import { FirebaseStorage, getStorage, ref, uploadBytesResumable, UploadTask, UploadMetadata } from 'firebase/storage';
-import { FirebaseApp } from 'firebase/app';
+import { FirebaseStorage, ref, uploadBytesResumable, UploadTask, UploadMetadata } from 'firebase/storage';
 
 /**
  * A utility function to upload a file to Firebase Storage with progress tracking
@@ -24,7 +23,7 @@ export function uploadFileWithProgress(
 ): Promise<UploadTask> {
   return new Promise((resolve, reject) => {
     const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+    const uploadTask = uploadBytesResumable(storageRef, file, { customMetadata: metadata });
 
     uploadTask.on(
       'state_changed',
@@ -41,7 +40,7 @@ export function uploadFileWithProgress(
       () => {
         // Handle successful uploads on complete
         // The onfileupload Cloud Function will handle getting the URL and updating Firestore.
-        onProgress(100); // Ensure progress reaches 100%
+        onProgress(100);
       }
     );
 
