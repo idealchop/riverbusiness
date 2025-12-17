@@ -35,7 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -47,6 +47,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { uploadFile } from '@/lib/storage-utils';
+import { FirebaseStorage } from 'firebase/storage';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -124,6 +125,7 @@ function AdminDashboardSkeleton() {
 function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
     const auth = useAuth();
+    const storage = useStorage();
     const { user: authUser } = useUser();
     const firestore = useFirestore();
     const router = useRouter();
@@ -440,39 +442,27 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
     
         const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${deliveryProofFile.name}`;
-        const storage = getStorage();
-        const storageRef = ref(storage, filePath);
-        const metadata = { contentType: deliveryProofFile.type };
-        const uploadTask = uploadBytesResumable(storageRef, deliveryProofFile, metadata);
-    
-        return new Promise<void>((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-                },
-                (error) => {
-                    console.error("Upload error:", error);
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-                    setIsSubmitting(false);
-                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
-                    reject(error);
-                },
-                () => {
-                    // The Firestore update is handled by the `onFileUpload` Cloud Function.
-                    toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
-                    setDeliveryToUpdate(null);
-                    setDeliveryProofFile(null);
-                    setIsSubmitting(false);
-                    setUploadingFiles(prev => {
-                        const newUploadingFiles = { ...prev };
-                        delete newUploadingFiles[uploadKey];
-                        return newUploadingFiles;
-                    });
-                    resolve();
-                }
-            );
-        });
+        
+        try {
+            await uploadFile(storage, deliveryProofFile, filePath, (progress) => {
+                setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+            });
+            // The Cloud Function will handle updating Firestore.
+            toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
+        } catch (error) {
+            console.error("Upload error:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: (error as Error).message });
+            setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
+        } finally {
+            setDeliveryToUpdate(null);
+            setDeliveryProofFile(null);
+            setIsSubmitting(false);
+            setUploadingFiles(prev => {
+                const newUploadingFiles = { ...prev };
+                delete newUploadingFiles[uploadKey];
+                return newUploadingFiles;
+            });
+        }
     };
 
 
@@ -487,39 +477,27 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
     
         const filePath = `userContracts/${userForContract.id}/latest_plan_contract.pdf`;
-        const storage = getStorage();
-        const storageRef = ref(storage, filePath);
-        const metadata = { contentType: contractFile.type };
-        const uploadTask = uploadBytesResumable(storageRef, contractFile, metadata);
-    
-        return new Promise<void>((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-                },
-                (error) => {
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-                    setIsSubmitting(false);
-                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
-                    reject(error);
-                },
-                () => {
-                    // The Firestore update is handled by the `onFileUpload` Cloud Function.
-                    toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
-                    setIsUploadContractOpen(false);
-                    setUserForContract(null);
-                    setContractFile(null);
-                    setIsSubmitting(false);
-                    setUploadingFiles(prev => {
-                        const newUploadingFiles = { ...prev };
-                        delete newUploadingFiles[uploadKey];
-                        return newUploadingFiles;
-                    });
-                    resolve();
-                }
-            );
-        });
+        
+        try {
+            await uploadFile(storage, contractFile, filePath, (progress) => {
+                 setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+            });
+            // The `onFileUpload` Cloud Function handles the Firestore update.
+            toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
+        } catch(error) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: (error as Error).message });
+             setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
+        } finally {
+            setIsUploadContractOpen(false);
+            setUserForContract(null);
+            setContractFile(null);
+            setIsSubmitting(false);
+            setUploadingFiles(prev => {
+                const newUploadingFiles = { ...prev };
+                delete newUploadingFiles[uploadKey];
+                return newUploadingFiles;
+            });
+        }
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
@@ -545,17 +523,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
                 const uploadKey = `delivery-${values.trackingNumber}`;
                 
-                const storage = getStorage();
-                const storageRef = ref(storage, filePath);
-                const metadata = { contentType: file.type };
-                const uploadTask = uploadBytesResumable(storageRef, file, metadata);
-    
-                uploadTask.on('state_changed',
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-                    }
-                );
+                await uploadFile(storage, file, filePath, (progress) => {
+                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+                });
             }
     
             if (values.status === 'Delivered') {
@@ -728,6 +698,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         try {
           const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
           const downloadURL = await uploadFile(
+            storage,
             profilePhotoFile,
             filePath,
             (progress) => setUploadProgress(progress)
@@ -901,15 +872,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }
     
     const handleFileUpload = (
+        storage: FirebaseStorage,
         file: File,
         path: string,
         docKey: string,
       ): Promise<void> => {
         return new Promise((resolve, reject) => {
-          const storage = getStorage();
-          const storageRef = ref(storage, path);
-          const metadata = { contentType: file.type };
-          const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+          const uploadTask = uploadBytesResumable(ref(storage, path), file, { contentType: file.type });
       
           uploadTask.on(
             'state_changed',
@@ -950,12 +919,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
             if (agreementFile) {
                 const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                uploadPromises.push(handleFileUpload(agreementFile, path, 'agreement'));
+                uploadPromises.push(handleFileUpload(storage, agreementFile, path, 'agreement'));
             }
     
             for (const [key, file] of Object.entries(complianceFiles)) {
                 const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                uploadPromises.push(handleFileUpload(file, path, key));
+                uploadPromises.push(handleFileUpload(storage, file, path, key));
             }
     
             await Promise.all(uploadPromises);
@@ -2152,7 +2121,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             const docKey = field.key;
                                             const path = `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`;
                                             try {
-                                                await handleFileUpload(fileToUpload, path, docKey);
+                                                await handleFileUpload(storage, fileToUpload, path, docKey);
                                                 toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
@@ -2215,7 +2184,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const docKey = 'agreement';
                                         const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
                                         try {
-                                            await handleFileUpload(agreementFile, path, docKey);
+                                            await handleFileUpload(storage, agreementFile, path, docKey);
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err: any) {

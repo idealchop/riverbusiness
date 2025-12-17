@@ -33,13 +33,13 @@ import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, Comp
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage } from '@/firebase';
 import { doc, collection, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { getStorage, ref, uploadBytes, getDownloadURL, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -89,6 +89,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const auth = getAuth();
   const firestore = useFirestore();
+  const storage = useStorage();
   const { user: authUser, isUserLoading } = useUser();
   const isMounted = useMounted();
 
@@ -241,35 +242,22 @@ export default function DashboardLayout({
     setUploadProgress(0);
 
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}/${paymentProofFile.name}`;
-    const storage = getStorage();
-    const storageRef = ref(storage, filePath);
-    const metadata = { contentType: paymentProofFile.type };
-    const uploadTask = uploadBytesResumable(storageRef, paymentProofFile, metadata);
-
-    return new Promise<void>((resolve, reject) => {
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
-                setIsUploading(false);
-                setUploadProgress(0);
-                reject(error);
-            },
-            () => {
-                // The Firestore update is handled by the `onFileUpload` Cloud Function.
-                toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-                setIsPaymentDialogOpen(false);
-                setSelectedInvoice(null);
-                setPaymentProofFile(null);
-                setIsUploading(false);
-                setUploadProgress(0);
-                resolve();
-            }
-        );
-    });
+    
+    try {
+        await uploadFile(storage, paymentProofFile, filePath, (progress) => {
+            setUploadProgress(progress);
+        });
+        // The Cloud Function will handle updating Firestore.
+        toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
+    } catch(error) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof of payment. Please try again.' });
+    } finally {
+        setIsPaymentDialogOpen(false);
+        setSelectedInvoice(null);
+        setPaymentProofFile(null);
+        setIsUploading(false);
+        setUploadProgress(0);
+    }
 };
 
   const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -379,9 +367,8 @@ export default function DashboardLayout({
   
     setIsUploading(true);
     setUploadProgress(0);
-    setIsPhotoPreviewOpen(false); // Close preview dialog to show main dialog with progress
+    setIsPhotoPreviewOpen(false);
   
-    // Use the local preview URL for an instant optimistic update
     if (profilePhotoPreview) {
       setOptimisticPhotoUrl(profilePhotoPreview);
     }
@@ -390,24 +377,22 @@ export default function DashboardLayout({
       const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
       
       const downloadURL = await uploadFile(
+        storage,
         profilePhotoFile,
         filePath,
         (progress) => setUploadProgress(progress)
       );
   
-      // Once upload is complete, update Firestore with the permanent URL
       await updateDoc(userDocRef, { photoURL: downloadURL });
   
-      // Set the permanent URL for the optimistic UI state
       setOptimisticPhotoUrl(downloadURL);
   
       toast({
         title: 'Profile Photo Updated!',
-        description: 'Your new photo has been saved permanently.',
+        description: 'Your new photo has been saved.',
       });
   
     } catch (error: any) {
-      // Revert optimistic update on failure
       setOptimisticPhotoUrl(user?.photoURL || null);
       toast({
         variant: 'destructive',
@@ -415,7 +400,6 @@ export default function DashboardLayout({
         description: error.message || 'Could not upload your photo. Please try again.',
       });
     } finally {
-      // Clean up state regardless of outcome
       setIsUploading(false);
       setProfilePhotoFile(null);
       setProfilePhotoPreview(null);
@@ -437,7 +421,6 @@ export default function DashboardLayout({
    const handleProfilePhotoDelete = async () => {
     if (!authUser || !userDocRef || !user?.photoURL) return;
 
-    const storage = getStorage();
     try {
         const previousPhotoUrl = optimisticPhotoUrl;
         setOptimisticPhotoUrl(null);
@@ -1007,11 +990,11 @@ export default function DashboardLayout({
                 )}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={handleCancelUpload}>
+                <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
                   Cancel
                 </Button>
-                <Button onClick={handleProfilePhotoUpload}>
-                  Upload Photo
+                <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1174,7 +1157,7 @@ export default function DashboardLayout({
                     <Textarea 
                         placeholder="Describe the reason for your request (e.g., water quality, delivery issues, etc.)..."
                         value={switchReason}
-                        onChange={(e) => setSwitchReason(e.target.value)} 
+                        onChange={(e) => setSwitchReason(e.target.value)} T
                     />
                     <Select onValueChange={setSwitchUrgency}>
                         <SelectTrigger>
