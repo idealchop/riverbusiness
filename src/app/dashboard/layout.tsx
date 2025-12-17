@@ -87,10 +87,9 @@ export default function DashboardLayout({
 }) {
   const { toast } = useToast();
   const router = useRouter();
-  const { auth } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const storage = useStorage();
-  const { user: authUser, isUserLoading } = useUser();
   const isMounted = useMounted();
 
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
@@ -128,9 +127,7 @@ export default function DashboardLayout({
   const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
   
-  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
-  const [showNewPassword, setShowNewPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [showCurrentPassword, setShowNewPassword, setShowConfirmPassword] = React.useState(false);
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -157,6 +154,8 @@ export default function DashboardLayout({
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
   ]);
 
+  const auth = useAuth();
+  
   React.useEffect(() => {
     if (isUserLoading) return;
 
@@ -364,10 +363,10 @@ export default function DashboardLayout({
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile || !authUser || !userDocRef || !storage) return;
 
+    setIsPhotoPreviewOpen(false);
     setIsUploading(true);
     setUploadProgress(0);
-    setIsPhotoPreviewOpen(false);
-
+    
     if (profilePhotoPreview) {
       setOptimisticPhotoUrl(profilePhotoPreview);
     }
@@ -393,11 +392,19 @@ export default function DashboardLayout({
 
     } catch (error) {
       setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
-      toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: 'Could not upload photo. Please try again.',
-      });
+      if (error instanceof Error) {
+        toast({
+          variant: 'destructive',
+          title: 'Upload Failed',
+          description: error.message || 'Could not upload photo. Please try again.',
+        });
+      } else {
+         toast({
+          variant: 'destructive',
+          title: 'Upload Failed',
+          description: 'An unknown error occurred. Please try again.',
+        });
+      }
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
@@ -1122,3 +1129,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
