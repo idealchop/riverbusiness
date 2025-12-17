@@ -37,7 +37,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject } from 'firebase/storage';
+import { UploadTask } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -47,6 +47,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -66,7 +67,7 @@ const deliveryFormSchema = z.object({
     date: z.date({ required_error: 'Date is required.'}),
     volumeContainers: z.coerce.number().min(1, 'Volume is required.'),
     status: z.enum(['Pending', 'In Transit', 'Delivered']),
-    proofOfDeliveryUrl: z.any().optional(),
+    proofFile: z.any().optional(),
     adminNotes: z.string().optional(),
 });
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
@@ -404,13 +405,75 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         adjustConsumptionForm.reset();
     };
 
+    const handleFileUpload = async (
+      file: File,
+      path: string,
+      metadata: any,
+      uploadKey: string,
+    ): Promise<UploadTask> => {
+      if (!storage) throw new Error("Storage not initialized");
+      
+      return uploadFileWithProgress(
+        storage,
+        path,
+        file,
+        { customMetadata: metadata },
+        (progress) => {
+          setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+        }
+      );
+    };
+
     const handleProofUpload = async () => {
-        // To be implemented with a robust upload utility
+        if (!deliveryProofFile || !deliveryToUpdate || !userForHistory) return;
+    
+        setIsSubmitting(true);
+        const uploadKey = `proof-${deliveryToUpdate.id}`;
+    
+        try {
+            const path = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}-${deliveryProofFile.name}`;
+            const metadata = {
+                firestorePath: `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}`,
+                firestoreField: 'proofOfDeliveryUrl'
+            };
+            await handleFileUpload(deliveryProofFile, path, metadata, uploadKey);
+            
+            toast({ title: 'Proof Uploaded', description: 'The proof of delivery is being processed.' });
+            setDeliveryToUpdate(null);
+            setDeliveryProofFile(null);
+    
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
 
     const handleUploadContract = async () => {
-       // To be implemented with a robust upload utility
+        if (!contractFile || !userForContract) return;
+
+        setIsSubmitting(true);
+        const uploadKey = `contract-${userForContract.id}`;
+    
+        try {
+            const path = `userContracts/${userForContract.id}/${contractFile.name}`;
+            const metadata = {
+                firestorePath: `users/${userForContract.id}`,
+                firestoreField: 'currentContractUrl'
+            };
+            await handleFileUpload(contractFile, path, metadata, uploadKey);
+    
+            toast({ title: 'Contract Uploaded', description: 'The contract is being processed.' });
+            setIsUploadContractOpen(false);
+            setContractFile(null);
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
@@ -431,8 +494,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
             await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
     
-            if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
-               // To be implemented
+            const file = values.proofFile?.[0];
+            if (file) {
+                const uploadKey = `delivery-${values.trackingNumber}`;
+                const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
+                const metadata = {
+                    firestorePath: newDeliveryDocRef.path,
+                    firestoreField: 'proofOfDeliveryUrl'
+                };
+                await handleFileUpload(file, path, metadata, uploadKey);
             }
     
             if (values.status === 'Delivered') {
@@ -611,19 +681,47 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         })
     }
     
-    const handleFileUpload = (
-        file: File,
-        path: string,
-        docKey: string,
-      ): Promise<void> => {
-        return new Promise((resolve, reject) => {
-           // To be implemented
-           resolve();
-        });
-      };
-
     const handleCreateStation = async (values: NewStationFormValues) => {
-        // To be implemented
+        if (!firestore) return;
+        setIsSubmitting(true);
+        try {
+            const newStationRef = await addDocumentNonBlocking(collection(firestore, 'waterStations'), values);
+            
+            // Upload files after station is created
+            const uploadPromises: Promise<any>[] = [];
+            const stationId = newStationRef.id;
+
+            if (agreementFile) {
+                const path = `stations/${stationId}/agreement/${agreementFile.name}`;
+                const metadata = { firestorePath: `waterStations/${stationId}`, firestoreField: 'partnershipAgreementUrl' };
+                uploadPromises.push(handleFileUpload(agreementFile, path, metadata, 'agreement'));
+            }
+
+            Object.entries(complianceFiles).forEach(([key, file]) => {
+                const path = `stations/${stationId}/compliance/${key}-${file.name}`;
+                // Note: The cloud function for compliance is slightly different.
+                // It creates a new doc in a subcollection. This metadata reflects that.
+                const metadata = {
+                    firestorePath: `waterStations/${stationId}/complianceReports/${key}`,
+                    firestoreField: 'reportUrl'
+                };
+                uploadPromises.push(handleFileUpload(file, path, metadata, key));
+            });
+
+            await Promise.all(uploadPromises);
+
+            toast({ title: "Station Created", description: `Station "${values.name}" and its documents are being processed.` });
+            setIsStationProfileOpen(false);
+            stationForm.reset();
+            setAgreementFile(null);
+            setComplianceFiles({});
+
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (usersLoading || stationsLoading) {
@@ -1080,7 +1178,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         />
                          <FormField
                             control={deliveryForm.control}
-                            name="proofOfDeliveryUrl"
+                            name="proofFile"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Proof of Delivery (Optional)</FormLabel>
@@ -1616,13 +1714,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             if (!stationToUpdate || !storage) return;
                                             const docKey = field.key;
                                             const path = `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`;
+                                            const metadata = { firestorePath: `waterStations/${stationToUpdate.id}/complianceReports/${docKey}`, firestoreField: 'reportUrl' };
                                             try {
-                                                await handleFileUpload(fileToUpload, path, docKey);
+                                                await handleFileUpload(fileToUpload, path, metadata, docKey);
                                                 toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
                                             } catch (err) {
                                                 console.error(err);
+                                                toast({variant: 'destructive', title: 'Upload Failed'});
                                             }
                                         };
 
@@ -1642,7 +1742,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     ) : stagedFile ? (
                                                         <>
                                                             <span className="text-sm text-muted-foreground truncate max-w-[120px]">{stagedFile.name}</span>
-                                                            <Button size="sm" disabled={!stationToUpdate || isSubmitting} onClick={() => onUpload(stagedFile)}>
+                                                            <Button size="sm" disabled={isSubmitting || !stationToUpdate} onClick={() => onUpload(stagedFile)}>
                                                                 <Upload className="mr-2 h-4 w-4" /> Upload
                                                             </Button>
                                                             <Button size="icon" variant="ghost" onClick={() => handleComplianceFileSelect(field.key, null)} disabled={isSubmitting}>
@@ -1680,11 +1780,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const docKey = 'agreement';
                                         const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
                                         try {
-                                            await handleFileUpload(agreementFile, path, docKey);
+                                            const metadata = { firestorePath: `waterStations/${stationToUpdate.id}`, firestoreField: 'partnershipAgreementUrl' };
+                                            await handleFileUpload(agreementFile, path, metadata, docKey);
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err) {
                                             console.error(err);
+                                            toast({variant: 'destructive', title: 'Upload Failed'});
                                         }
                                     };
                                     
@@ -1711,7 +1813,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <p className="font-medium truncate">{agreementFile.name}</p>
                                                     <p className="text-xs text-muted-foreground">Ready to upload</p>
                                                 </div>
-                                                {stationToUpdate && <Button disabled={isSubmitting} onClick={onUpload}><Upload className="mr-2 h-4 w-4"/> Upload</Button>}
+                                                {<Button disabled={isSubmitting || !stationToUpdate} onClick={onUpload}><Upload className="mr-2 h-4 w-4"/> Upload</Button>}
                                                 <Button size="icon" variant="ghost" onClick={() => setAgreementFile(null)} disabled={isSubmitting}><X className="h-4 w-4"/></Button>
                                             </>
                                         );
