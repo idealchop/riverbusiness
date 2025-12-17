@@ -449,11 +449,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
             // The Cloud Function will handle updating Firestore.
             toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 variant: 'destructive',
                 title: 'Upload Failed',
-                description: error.message || 'Could not upload proof.',
+                description: 'Could not upload proof.',
             });
         } finally {
             setDeliveryToUpdate(null);
@@ -486,11 +486,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
             // The `onFileUpload` Cloud Function handles the Firestore update.
             toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
-        } catch(error: any) {
+        } catch(error) {
             toast({
                 variant: 'destructive',
                 title: 'Upload Failed',
-                description: error.message || 'Could not upload contract.',
+                description: 'Could not upload contract.',
             });
         } finally {
             setIsUploadContractOpen(false);
@@ -543,11 +543,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             deliveryForm.reset();
             setIsCreateDeliveryOpen(false);
     
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 variant: 'destructive',
                 title: 'Creation Failed',
-                description: error.message || 'Could not create delivery record.',
+                description: 'Could not create delivery record.',
             });
         } finally {
             setIsSubmitting(false);
@@ -666,17 +666,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           setNewPassword('');
           setConfirmPassword('');
           setIsPasswordDialogOpen(false);
-        } catch (error: any) {
-            let description = 'An unexpected error occurred. Please try again.';
-            if (error.code === 'auth/wrong-password') {
-                description = 'The current password you entered is incorrect.';
-            } else if (error.code === 'auth/weak-password') {
-                description = 'The new password is too weak.';
-            }
+        } catch (error) {
            toast({
             variant: "destructive",
             title: "Password Update Failed",
-            description: description,
+            description: "The current password you entered is incorrect or the new password is too weak.",
           });
         }
     }
@@ -722,12 +716,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           description: 'Your new photo has been saved permanently.',
         });
   
-      } catch (error: any) {
+      } catch (error) {
         setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
         toast({
             variant: 'destructive',
             title: 'Upload Failed',
-            description: error.message || 'Could not upload photo.',
+            description: 'Could not upload photo. Please try again.',
         });
       } finally {
         setIsUploading(false);
@@ -761,12 +755,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 title: 'Profile Photo Removed',
                 description: 'Your profile photo has been removed.',
             });
-        } catch (error: any) {
+        } catch (error) {
             setOptimisticPhotoUrl(adminUser.photoURL);
             await updateDoc(adminUserDocRef, { photoURL: adminUser.photoURL });
     
             console.error("Error removing profile photo: ", error);
-            if (error.code !== 'storage/object-not-found') {
+            if ((error as any).code !== 'storage/object-not-found') {
                 toast({
                     variant: 'destructive',
                     title: 'Delete Failed',
@@ -938,11 +932,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsStationProfileOpen(false);
             setComplianceRefresher(c => c + 1);
     
-        } catch (error: any) {
+        } catch (error) {
             toast({
                 variant: 'destructive',
                 title: 'Station Creation Failed',
-                description: error.message || 'An error occurred while creating the station.',
+                description: 'An error occurred while creating the station.',
             });
         } finally {
             setIsSubmitting(false);
@@ -2129,7 +2123,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
-                                            } catch (err: any) {
+                                            } catch (err) {
                                                 console.error(err);
                                             }
                                         };
@@ -2191,7 +2185,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             await handleFileUpload(storage, agreementFile, path, docKey);
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
-                                        } catch (err: any) {
+                                        } catch (err) {
                                             console.error(err);
                                         }
                                     };
@@ -2321,5 +2315,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    

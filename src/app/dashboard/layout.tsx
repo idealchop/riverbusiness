@@ -250,11 +250,11 @@ export default function DashboardLayout({
         });
         // The Cloud Function will handle updating Firestore.
         toast({ title: 'Proof Submitted', description: 'Your proof of payment is now pending for verification.' });
-    } catch(error: any) {
+    } catch(error) {
         toast({
             variant: 'destructive',
             title: 'Upload Failed',
-            description: error.message || 'Could not upload proof.',
+            description: 'Could not upload proof.',
         });
     } finally {
         setIsPaymentDialogOpen(false);
@@ -320,17 +320,11 @@ export default function DashboardLayout({
       setNewPassword('');
       setConfirmPassword('');
       setIsPasswordDialogOpen(false);
-    } catch (error: any) {
-        let description = 'An unexpected error occurred. Please try again.';
-        if (error.code === 'auth/wrong-password') {
-            description = 'The current password you entered is incorrect.';
-        } else if (error.code === 'auth/weak-password') {
-            description = 'The new password is too weak.';
-        }
+    } catch (error) {
        toast({
         variant: "destructive",
         title: "Password Update Failed",
-        description: description,
+        description: "The current password you entered is incorrect or the new password is too weak.",
       });
     }
   }
@@ -397,12 +391,12 @@ export default function DashboardLayout({
         description: 'Your new photo has been saved permanently.',
       });
 
-    } catch (error: any) {
+    } catch (error) {
       setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
-        description: error.message || 'Could not upload photo.',
+        description: 'Could not upload photo. Please try again.',
       });
     } finally {
       setIsUploading(false);
@@ -439,12 +433,12 @@ export default function DashboardLayout({
             title: 'Profile Photo Removed',
             description: 'Your profile photo has been removed.',
         });
-    } catch (error: any) {
+    } catch (error) {
         setOptimisticPhotoUrl(user.photoURL);
         await updateDoc(userDocRef, { photoURL: user.photoURL });
 
         console.error("Error removing profile photo: ", error);
-        if (error.code !== 'storage/object-not-found') {
+        if ((error as any).code !== 'storage/object-not-found') {
             toast({
                 variant: 'destructive',
                 title: 'Delete Failed',
@@ -1128,5 +1122,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
