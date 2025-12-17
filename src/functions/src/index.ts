@@ -62,7 +62,7 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
     if (filePath.startsWith("users/") && filePath.includes("/deliveries/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
-        const deliveryId = parts[3];
+        const deliveryId = path.basename(filePath).split('.')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
             proofOfDeliveryUrl: url,
@@ -75,7 +75,7 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
      if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
-        const paymentId = parts[3];
+        const paymentId = path.basename(filePath).split('.')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("payments").doc(paymentId).update({
             proofOfPaymentUrl: url,
