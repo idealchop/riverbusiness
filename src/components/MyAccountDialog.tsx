@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -58,12 +58,12 @@ type Action =
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'START_UPLOAD' }
   | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
-  | { type: 'UPLOAD_SUCCESS'; payload: string }
+  | { type: 'UPLOAD_SUCCESS' }
   | { type: 'UPLOAD_ERROR' }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_OPTIMISTIC_URL'; payload: string | null }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
-  | { type: 'UPDATE_FORM_DATA'; payload: { name: string, value: string } }
+  | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
   | { type: 'TOGGLE_PASSWORD_VISIBILITY'; payload: 'current' | 'new' | 'confirm' }
   | { type: 'RESET_PASSWORD_FORM' }
@@ -94,7 +94,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'START_UPLOAD': return { ...state, uploadStatus: 'uploading', uploadProgress: 0, isPhotoPreviewOpen: false };
     case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
-    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', optimisticPhotoUrl: action.payload, profilePhotoFile: null, profilePhotoPreview: null, uploadProgress: 0 };
+    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null, uploadProgress: 0 };
     case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error', uploadProgress: 0 };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_OPTIMISTIC_URL': return { ...state, optimisticPhotoUrl: action.payload };
@@ -132,7 +132,6 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   const { toast } = useToast();
   const storage = useStorage();
   const firestore = useFirestore();
-  const auth = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -189,11 +188,10 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     if (!state.profilePhotoFile || !authUser || !storage || !firestore) return;
 
     dispatch({ type: 'START_UPLOAD' });
+    const filePath = `users/${authUser.uid}/profile/profile_photo.jpg`;
+    const userDocRef = doc(firestore, 'users', authUser.uid);
 
     try {
-      const filePath = `users/${authUser.uid}/profile/profile_photo.jpg`;
-      const userDocRef = doc(firestore, 'users', authUser.uid);
-
       const downloadURL = await uploadFile(
         storage,
         filePath,
@@ -203,7 +201,8 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
 
       await updateDoc(userDocRef, { photoURL: downloadURL });
       
-      dispatch({ type: 'UPLOAD_SUCCESS', payload: downloadURL });
+      dispatch({ type: 'UPLOAD_SUCCESS' });
+      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
       toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
@@ -312,7 +311,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails} />
+                                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!state.isEditingDetails} />
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="email" className="text-right">Login Email</Label>
@@ -320,19 +319,19 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
-                                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails} />
+                                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!state.isEditingDetails} />
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="businessName" className="text-right">Business Name</Label>
-                                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails}/>
+                                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="address" className="text-right">Address</Label>
-                                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails}/>
+                                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails}/>
+                                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                             </div>
                         </div>
                         {state.isEditingDetails && (
@@ -354,10 +353,49 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                   </Card>
                 </TabsContent>
                 <TabsContent value="plan" className="py-4">
-                  {/* Plan content remains the same */}
+                  <Card>
+                      <CardContent className="p-0">
+                          {planImage && (
+                              <div className="relative h-48 w-full">
+                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
+                              </div>
+                          )}
+                          <div className="p-6">
+                            <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
+                            <p className="text-lg font-bold text-foreground">₱{user.plan?.price.toLocaleString()}/month</p>
+                          </div>
+                      </CardContent>
+                  </Card>
                 </TabsContent>
                 <TabsContent value="invoices" className="py-4">
-                  {/* Invoices content remains the same */}
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Invoice ID</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {generatedInvoices.map((invoice) => (
+                          <TableRow key={invoice.id}>
+                              <TableCell>{invoice.id}</TableCell>
+                              <TableCell>{format(new Date(invoice.date), 'MMM dd, yyyy')}</TableCell>
+                              <TableCell>
+                                <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                )}>
+                                    {invoice.status}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                          </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
                 </TabsContent>
               </Tabs>
             </div>

@@ -54,12 +54,12 @@ type Action =
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'START_UPLOAD' }
   | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
-  | { type: 'UPLOAD_SUCCESS'; payload: string }
+  | { type: 'UPLOAD_SUCCESS' }
   | { type: 'UPLOAD_ERROR' }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_OPTIMISTIC_URL'; payload: string | null }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
-  | { type: 'UPDATE_FORM_DATA'; payload: { name: string, value: string } }
+  | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
   | { type: 'TOGGLE_PASSWORD_VISIBILITY'; payload: 'current' | 'new' | 'confirm' }
   | { type: 'RESET_PASSWORD_FORM' }
@@ -90,7 +90,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'START_UPLOAD': return { ...state, uploadStatus: 'uploading', uploadProgress: 0, isPhotoPreviewOpen: false };
     case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
-    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', optimisticPhotoUrl: action.payload, profilePhotoFile: null, profilePhotoPreview: null, uploadProgress: 0 };
+    case 'UPLOAD_SUCCESS': return { ...state, uploadStatus: 'success', profilePhotoFile: null, profilePhotoPreview: null, uploadProgress: 0 };
     case 'UPLOAD_ERROR': return { ...state, uploadStatus: 'error', uploadProgress: 0 };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_OPTIMISTIC_URL': return { ...state, optimisticPhotoUrl: action.payload };
@@ -184,11 +184,10 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     if (!state.profilePhotoFile || !auth.currentUser || !storage || !firestore) return;
 
     dispatch({ type: 'START_UPLOAD' });
+    const filePath = `users/${auth.currentUser.uid}/profile/profile_photo.jpg`;
+    const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
 
     try {
-      const filePath = `users/${auth.currentUser.uid}/profile/profile_photo.jpg`;
-      const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
-
       const downloadURL = await uploadFile(
         storage,
         filePath,
@@ -198,7 +197,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
 
       await updateDoc(adminUserDocRef, { photoURL: downloadURL });
       
-      dispatch({ type: 'UPLOAD_SUCCESS', payload: downloadURL });
+      dispatch({ type: 'UPLOAD_SUCCESS' });
+      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
       toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
@@ -301,7 +301,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                         <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                        <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails} />
+                        <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!state.isEditingDetails} />
                     </div>
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                         <Label htmlFor="email" className="text-right">Login Email</Label>
@@ -309,11 +309,11 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                     </div>
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                         <Label htmlFor="address" className="text-right">Address</Label>
-                        <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails}/>
+                        <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                     </div>
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                         <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                        <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: e.target})} disabled={!state.isEditingDetails}/>
+                        <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                     </div>
                     </div>
                     {state.isEditingDetails && (
