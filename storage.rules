@@ -4,7 +4,6 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // UPDATED: Check for the admin's email instead of a custom claim.
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
@@ -13,7 +12,6 @@ service firebase.storage {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Function to check file metadata on create/update
     function isAllowed(maxSizeMB) {
         return request.resource.size < maxSizeMB * 1024 * 1024
                && (request.resource.contentType.matches('image/.*') || 
@@ -21,7 +19,7 @@ service firebase.storage {
     }
 
     match /users/{userId}/profile/{fileName} {
-      allow get;
+      allow read;
       allow write: if isOwner(userId) && isAllowed(5);
     }
 
