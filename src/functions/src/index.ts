@@ -19,35 +19,25 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
   const contentType = object.contentType;
   const metadata = object.metadata;
 
-  if (!filePath || !contentType) {
-    functions.logger.warn("File path or content type is undefined. Exiting.");
-    return;
-  }
-
-  // Exit if this is a folder creation event
-  if (contentType === "application/octet-stream" && filePath.endsWith('/')) {
-    functions.logger.log(`Ignoring folder creation event for: ${filePath}`);
+  // Exit if this is a folder creation event or file path is missing
+  if (!filePath || !contentType || (contentType === "application/octet-stream" && filePath.endsWith('/'))) {
+    functions.logger.log(`Ignoring event for: ${filePath}`);
     return;
   }
   
-  if (!metadata || !metadata.customMetadata) {
-    functions.logger.log(`File ${filePath} has no customMetadata. Skipping Firestore update.`);
+  // Exit if the required custom metadata is not present
+  if (!metadata?.customMetadata?.firestorePath || !metadata?.customMetadata?.firestoreField) {
+    functions.logger.log(`File ${filePath} is missing required 'firestorePath' or 'firestoreField' metadata. Skipping Firestore update.`);
     return;
   }
   
   const { firestorePath, firestoreField } = metadata.customMetadata;
-  
-  if (!firestorePath || !firestoreField) {
-    functions.logger.log(`File ${filePath} is missing 'firestorePath' or 'firestoreField' in customMetadata. Skipping Firestore update.`);
-    return;
-  }
 
   const bucket = admin.storage().bucket(object.bucket);
   const file = bucket.file(filePath);
 
   try {
-    // Generate a signed URL to make the file publicly accessible.
-    // This URL is valid for a very long time.
+    // Generate a signed URL to make the file publicly accessible for a very long time.
     const [downloadURL] = await file.getSignedUrl({
       action: "read",
       expires: "01-01-2500", 
@@ -62,6 +52,6 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
     functions.logger.log(`Successfully updated document '${firestorePath}' with URL for ${filePath}.`);
 
   } catch (error) {
-    functions.logger.error(`Failed to process upload for ${filePath}.`, error);
+    functions.logger.error(`Failed to process upload for ${filePath}. Error:`, error);
   }
 });
