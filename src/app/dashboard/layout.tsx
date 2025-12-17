@@ -33,7 +33,7 @@ import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, Comp
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage } from '@/firebase';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth } from '@/firebase';
 import { doc, collection, getDoc, updateDoc } from 'firebase/firestore';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -127,7 +127,10 @@ export default function DashboardLayout({
   const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
   
-  const [showCurrentPassword, setShowNewPassword, setShowConfirmPassword] = React.useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -366,7 +369,7 @@ export default function DashboardLayout({
     setIsPhotoPreviewOpen(false);
     setIsUploading(true);
     setUploadProgress(0);
-    
+
     if (profilePhotoPreview) {
       setOptimisticPhotoUrl(profilePhotoPreview);
     }
@@ -374,6 +377,7 @@ export default function DashboardLayout({
     try {
       const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
       
+      // Correctly await the uploadFile function
       const downloadURL = await uploadFile(
         storage,
         profilePhotoFile,
@@ -381,6 +385,7 @@ export default function DashboardLayout({
         (progress) => setUploadProgress(progress)
       );
 
+      // Correctly await the database update
       await updateDoc(userDocRef, { photoURL: downloadURL });
 
       setOptimisticPhotoUrl(downloadURL);
@@ -412,6 +417,7 @@ export default function DashboardLayout({
       setUploadProgress(0);
     }
   };
+
 
   const handleCancelUpload = () => {
     setIsPhotoPreviewOpen(false);
