@@ -378,55 +378,60 @@ export default function DashboardLayout({
   
     setIsUploading(true);
     setUploadProgress(0);
-    setOptimisticPhotoUrl(profilePhotoPreview); // Optimistic UI update
+    setOptimisticPhotoUrl(profilePhotoPreview);
     setIsPhotoPreviewOpen(false);
   
     const storage = getStorage();
     const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
     const storageRef = ref(storage, filePath);
     const metadata = { contentType: profilePhotoFile.type };
-  
     const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-
+  
     uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(progress);
-        },
-        (error) => {
-            // Revert optimistic update on failure
-            setOptimisticPhotoUrl(user?.photoURL || null);
-            setIsUploading(false);
-            toast({
-                variant: 'destructive',
-                title: 'Upload Failed',
-                description: error.message || 'Could not upload your photo. Please try again.'
-            });
-        },
-        async () => {
-            try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                // Direct update to Firestore
-                await updateDoc(userDocRef, { photoURL: downloadURL });
-                toast({
-                    title: 'Profile Photo Updated!',
-                    description: 'Your new profile photo has been saved permanently.',
-                });
-            } catch (error: any) {
-                // Revert optimistic update on Firestore update failure
-                setOptimisticPhotoUrl(user?.photoURL || null);
-                 toast({
-                    variant: 'destructive',
-                    title: 'Update Failed',
-                    description: 'Your photo was uploaded, but we could not save it to your profile. Please try again.'
-                });
-            } finally {
-                setIsUploading(false);
-                setProfilePhotoFile(null);
-                setProfilePhotoPreview(null);
-            }
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        // Revert optimistic UI on failure
+        setOptimisticPhotoUrl(user?.photoURL || null);
+        setIsUploading(false);
+        setUploadProgress(0);
+        toast({
+          variant: 'destructive',
+          title: 'Upload Failed',
+          description: error.message || 'Could not upload your photo.'
+        });
+      },
+      async () => {
+        try {
+          // Upload complete, now get URL and update Firestore
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          await updateDoc(userDocRef, { photoURL: downloadURL });
+  
+          // Final state update and success toast
+          setOptimisticPhotoUrl(downloadURL);
+          toast({
+            title: 'Profile Photo Updated!',
+            description: 'Your new profile photo has been saved.',
+          });
+        } catch (error: any) {
+          // Revert optimistic UI on Firestore update failure
+          setOptimisticPhotoUrl(user?.photoURL || null);
+          toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Your photo was uploaded, but we could not save it to your profile.'
+          });
+        } finally {
+          // Cleanup
+          setIsUploading(false);
+          setProfilePhotoFile(null);
+          setProfilePhotoPreview(null);
+          setUploadProgress(0);
         }
+      }
     );
   };
 

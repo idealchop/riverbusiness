@@ -737,6 +737,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             (error) => {
                 setOptimisticPhotoUrl(adminUser?.photoURL || null);
                 setIsUploading(false);
+                setUploadProgress(0);
                 toast({
                     variant: 'destructive',
                     title: 'Upload Failed',
@@ -747,6 +748,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 try {
                     const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                     await updateDoc(adminUserDocRef, { photoURL: downloadURL });
+                    setOptimisticPhotoUrl(downloadURL);
                     toast({
                         title: 'Profile Photo Updated!',
                         description: 'Your new photo has been saved.',
@@ -762,6 +764,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     setIsUploading(false);
                     setProfilePhotoFile(null);
                     setProfilePhotoPreview(null);
+                    setUploadProgress(0);
                 }
             }
         );
