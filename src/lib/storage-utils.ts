@@ -1,24 +1,24 @@
-
 'use client';
 
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, UploadTask, UploadTaskSnapshot } from 'firebase/storage';
-import { useToast } from '@/hooks/use-toast';
-import type { Auth } from 'firebase/auth';
 
 /**
  * A reusable, robust function to upload a file to Firebase Storage with progress tracking.
+ *
+ * This function is designed to be called from within a React component's event handler.
+ * It throws an error on failure, which should be caught by the calling component to handle UI updates (e.g., showing a toast).
  *
  * @param file The file to be uploaded.
  * @param path The relative path within Firebase Storage (e.g., 'users/user-id/profile/photo.jpg').
  * @param onProgress An optional callback function to receive upload progress updates (0-100).
  * @returns A promise that resolves with the public download URL of the uploaded file.
+ * @throws An error if the upload or URL retrieval fails.
  */
-export const uploadFile = async (
+export const uploadFile = (
   file: File,
   path: string,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
-  const { toast } = useToast();
   const storage = getStorage();
   
   if (!storage) {
@@ -39,14 +39,9 @@ export const uploadFile = async (
         }
       },
       (error) => {
-        // Handle unsuccessful uploads
+        // Handle unsuccessful uploads by rejecting the promise
         console.error('Upload failed:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Upload Failed',
-          description: `Could not upload file. Reason: ${error.code}`,
-        });
-        reject(error);
+        reject(new Error(`Could not upload file. Reason: ${error.code}`));
       },
       async () => {
         // Handle successful uploads on complete
@@ -55,12 +50,7 @@ export const uploadFile = async (
           resolve(downloadURL);
         } catch (error) {
           console.error('Failed to get download URL:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Processing Failed',
-            description: 'File was uploaded but could not be processed.',
-          });
-          reject(error);
+          reject(new Error('File was uploaded but could not be processed.'));
         }
       }
     );

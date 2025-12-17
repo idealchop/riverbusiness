@@ -377,7 +377,6 @@ export default function DashboardLayout({
   const handleProfilePhotoUpload = async () => {
     if (!profilePhotoFile || !authUser || !userDocRef) return;
 
-    // Use the optimistic URL for immediate feedback
     if (profilePhotoPreview) {
       setOptimisticPhotoUrl(profilePhotoPreview);
     }
@@ -389,25 +388,22 @@ export default function DashboardLayout({
       const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
       const downloadURL = await uploadFile(profilePhotoFile, filePath, setUploadProgress);
 
-      // Direct update to Firestore
       await updateDoc(userDocRef, { photoURL: downloadURL });
 
-      setOptimisticPhotoUrl(downloadURL); // Set the final URL
+      setOptimisticPhotoUrl(downloadURL); 
       toast({
         title: 'Profile Photo Updated!',
         description: 'Your new photo has been saved.',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Profile photo upload failed:", error);
-      // Revert optimistic UI on failure
       setOptimisticPhotoUrl(user?.photoURL || null);
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
-        description: 'Could not upload your photo. Please try again.',
+        description: error.message || 'Could not upload your photo. Please try again.',
       });
     } finally {
-      // Cleanup
       setIsUploading(false);
       setProfilePhotoFile(null);
       setProfilePhotoPreview(null);
