@@ -4,55 +4,51 @@
 import { revalidatePath } from 'next/cache';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, App, deleteApp } from 'firebase-admin/app';
-import { credential } from 'firebase-admin';
+import { initializeApp, getApps, App, credential } from 'firebase-admin/app';
 
-// Initialize Firebase Admin SDK
-let adminApp: App;
+// This is a robust way to initialize the Firebase Admin SDK in a serverless environment like Next.js.
+// It ensures that the app is initialized only once.
+function initializeAdminApp(): App {
+  const apps = getApps();
+  if (apps.length > 0) {
+    return apps[0];
+  }
 
-if (!getApps().length) {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        adminApp = initializeApp({
-            credential: credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-            storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-        });
-    } else {
-        // This is a fallback for local development if environment variables are not set.
-        // It will likely not work in a deployed environment without proper configuration.
-        console.warn("Firebase Admin SDK credentials not found in environment variables. Attempting to initialize without explicit credentials.");
-        try {
-            adminApp = initializeApp();
-        } catch(e) {
-            console.error("Fatal: Could not initialize Firebase Admin SDK. Ensure you have the necessary environment variables set up or Application Default Credentials configured.", e);
-        }
-    }
-} else {
-  adminApp = getApps()[0];
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
+  }
+   if (!process.env.FIREBASE_STORAGE_BUCKET) {
+    throw new Error('FIREBASE_STORAGE_BUCKET environment variable is not set.');
+  }
+
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+  return initializeApp({
+    credential: credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  });
 }
 
 
-const db = getFirestore(adminApp);
-const storage = getStorage(adminApp);
-
 export async function uploadProfilePhotoAction(formData: FormData) {
-  const file = formData.get('file') as File;
-  const userId = formData.get('userId') as string;
-  const firestorePath = `users/${userId}`;
-  const firestoreField = 'photoURL';
-
-  if (!file || !userId) {
-    return { success: false, error: 'Missing file or user ID.' };
-  }
-  
-  if (!adminApp) {
-    return { success: false, error: 'Firebase Admin SDK not initialized.' };
-  }
-
-  const bucket = storage.bucket(process.env.FIREBASE_STORAGE_BUCKET);
-  const filePath = `users/${userId}/profile/profile_photo.jpg`;
-  const fileRef = bucket.file(filePath);
-
   try {
+    const adminApp = initializeAdminApp();
+    const db = getFirestore(adminApp);
+    const storage = getStorage(adminApp);
+    
+    const file = formData.get('file') as File;
+    const userId = formData.get('userId') as string;
+    const firestorePath = `users/${userId}`;
+    const firestoreField = 'photoURL';
+
+    if (!file || !userId) {
+      return { success: false, error: 'Missing file or user ID.' };
+    }
+    
+    const bucket = storage.bucket(); // Use the default bucket from initialization
+    const filePath = `users/${userId}/profile/profile_photo.jpg`;
+    const fileRef = bucket.file(filePath);
+
     const buffer = Buffer.from(await file.arrayBuffer());
     await fileRef.save(buffer, {
       metadata: {
@@ -72,10 +68,11 @@ export async function uploadProfilePhotoAction(formData: FormData) {
 
     revalidatePath('/dashboard');
     revalidatePath('/admin');
+    revalidatePath('/test-upload');
 
     return { success: true, url: publicUrl };
   } catch (error: any) {
     console.error('Upload failed:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message || "An unknown error occurred during upload." };
   }
 }
