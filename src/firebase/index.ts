@@ -9,6 +9,10 @@ import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 // This structure ensures that Firebase is initialized only once.
 let firebaseApp: FirebaseApp;
+let auth: Auth;
+let firestore: Firestore;
+let storage: FirebaseStorage;
+
 
 // Check if Firebase has already been initialized
 if (!getApps().length) {
@@ -28,9 +32,9 @@ if (!getApps().length) {
 }
 
 // Get SDK instances from the initialized app
-const auth = getAuth(firebaseApp);
-const firestore = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
+auth = getAuth(firebaseApp);
+firestore = getFirestore(firebaseApp);
+storage = getStorage(firebaseApp);
 
 
 // This function is now a simple getter for the initialized services.

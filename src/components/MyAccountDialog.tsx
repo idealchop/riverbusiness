@@ -31,7 +31,7 @@ import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/firebase';
+import { uploadFile } from '@/lib/storage-utils';
 
 // State Management with useReducer
 type State = {
@@ -175,7 +175,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     }
     try {
       const credential = EmailAuthProvider.credential(authUser.email, state.currentPassword);
-      await reauthenticateWithCredential(authUser, state.newPassword);
+      await reauthenticateWithCredential(authUser, credential);
       await updatePassword(authUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -188,50 +188,31 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     if (!state.profilePhotoFile || !authUser || !storage || !firestore) return;
   
     dispatch({ type: 'START_UPLOAD' });
-    const file = state.profilePhotoFile;
-    const userId = authUser.uid;
-    const filePath = `users/${userId}/profile/profile_photo.jpg`;
-    const storageRef = ref(storage, filePath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
   
     try {
-      await new Promise<void>((resolve, reject) => {
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress });
-          },
-          (error) => {
-            console.error('Raw upload failed (on error):', error);
-            reject(error);
-          },
-          async () => {
-            try {
-              console.log('Upload complete, getting URL...');
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              console.log('Got download URL:', downloadURL);
-              
-              const userDocRef = doc(firestore, 'users', userId);
-              await updateDoc(userDocRef, { photoURL: downloadURL });
-              console.log('Firestore updated.');
+      const file = state.profilePhotoFile;
+      const userId = authUser.uid;
+      const filePath = `users/${userId}/profile/profile_photo.jpg`;
+      
+      const downloadURL = await uploadFile(
+        storage,
+        file,
+        filePath,
+        (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
+      );
   
-              dispatch({ type: 'UPLOAD_SUCCESS' });
-              dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
-              toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
-              resolve();
-            } catch (innerError) {
-              console.error('Error in completion handler:', innerError);
-              reject(innerError);
-            }
-          }
-        );
-      });
+      const userDocRef = doc(firestore, 'users', userId);
+      await updateDoc(userDocRef, { photoURL: downloadURL });
+  
+      dispatch({ type: 'UPLOAD_SUCCESS' });
+      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
+      toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
+  
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null });
       console.error("Upload failed:", error);
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload photo.' });
+      toast({ variant: 'destructive', title: 'Upload Failed', description: String(error) });
     } finally {
       if (state.profilePhotoPreview) {
         URL.revokeObjectURL(state.profilePhotoPreview);
