@@ -717,16 +717,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleProfilePhotoUpload = async () => {
         if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
     
+        setIsUploading(true);
+        setUploadProgress(0);
+        setIsPhotoPreviewOpen(false);
+    
         if (profilePhotoPreview) {
           setOptimisticPhotoUrl(profilePhotoPreview);
         }
-        setIsPhotoPreviewOpen(false);
-        setIsUploading(true);
-        setUploadProgress(0);
     
         try {
           const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
-          const downloadURL = await uploadFile(profilePhotoFile, filePath, setUploadProgress);
+          const downloadURL = await uploadFile(
+            profilePhotoFile,
+            filePath,
+            (progress) => setUploadProgress(progress)
+          );
     
           await updateDoc(adminUserDocRef, { photoURL: downloadURL });
     
@@ -736,7 +741,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             description: 'Your new photo has been saved.',
           });
         } catch (error: any) {
-          console.error("Profile photo upload failed:", error);
           setOptimisticPhotoUrl(adminUser?.photoURL || null);
           toast({
             variant: 'destructive',
@@ -1686,6 +1690,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
                                                             <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                                                         </Avatar>
+                                                        {isUploading && (
+                                                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                                                                <Progress value={uploadProgress} className="h-1 w-12" />
+                                                            </div>
+                                                        )}
                                                         <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <Pencil className="h-6 w-6 text-white" />
                                                         </div>
@@ -1795,12 +1804,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     height={200}
                     className="rounded-full aspect-square object-cover"
                   />
-                )}
-                {isUploading && (
-                  <div className="w-full px-4">
-                    <Progress value={uploadProgress} className="h-2" />
-                    <p className="text-center text-sm text-muted-foreground mt-2">{Math.round(uploadProgress)}%</p>
-                  </div>
                 )}
               </div>
               <DialogFooter>
