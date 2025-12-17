@@ -27,6 +27,7 @@ import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 // State Management with useReducer
 type State = {
@@ -181,15 +182,19 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
 
   const handleProfilePhotoUpload = async () => {
     if (!state.profilePhotoFile || !auth.currentUser || !storage || !firestore) return;
-    const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
 
     dispatch({ type: 'START_UPLOAD' });
 
     try {
-      const filePath = `users/${auth.currentUser.uid}/profile/profile_photo_${Date.now()}`;
-      const downloadURL = await uploadFile(storage, state.profilePhotoFile, filePath, (progress) => {
-        dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress });
-      });
+      const filePath = `users/${auth.currentUser.uid}/profile/photo.jpg`;
+      const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
+
+      const downloadURL = await uploadFile(
+        storage,
+        filePath,
+        state.profilePhotoFile,
+        (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
+      );
 
       await updateDoc(adminUserDocRef, { photoURL: downloadURL });
       
@@ -203,17 +208,20 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     }
   };
 
+
   const handleProfilePhotoDelete = async () => {
     if (!auth.currentUser || !adminUser?.photoURL || !storage || !firestore) return;
-    const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
     
     const originalUrl = adminUser.photoURL;
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
 
     try {
+      const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
       await updateDoc(adminUserDocRef, { photoURL: null });
+
       const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
+      
       toast({ title: 'Profile Photo Removed' });
     } catch (error) {
       console.error("Error removing photo:", error);
@@ -364,21 +372,21 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
             <div className="relative">
                 <Label htmlFor="current-password-admin">Current Password</Label>
                 <Input id="current-password-admin" type={state.showCurrentPassword ? 'text' : 'password'} value={state.currentPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'current', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'current'})}>
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'current'})}>
                     {state.showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
             </div>
             <div className="relative">
                 <Label htmlFor="new-password-admin">New Password</Label>
                 <Input id="new-password-admin" type={state.showNewPassword ? 'text' : 'password'} value={state.newPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'new', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'new'})}>
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'new'})}>
                     {state.showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
             </div>
             <div className="relative">
                 <Label htmlFor="confirm-password-admin">Confirm New Password</Label>
                 <Input id="confirm-password-admin" type={state.showConfirmPassword ? 'text' : 'password'} value={state.confirmPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'confirm', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'confirm'})}>
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'confirm'})}>
                     {state.showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
             </div>

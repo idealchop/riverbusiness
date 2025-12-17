@@ -23,16 +23,15 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useStorage, useAuth, updateDocumentNonBlocking, useFirestore } from '@/firebase';
+import { useStorage, useAuth, useFirestore } from '@/firebase';
 import { uploadFile } from '@/lib/storage-utils';
 import { doc, updateDoc } from 'firebase/firestore';
 import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, Droplets, Calendar, Package, FileX, RefreshCw, EyeOff, Eye, Check, CreditCard, Hourglass, Pencil, Shield } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { clientTypes } from '@/lib/plans';
 
 // State Management with useReducer
 type State = {
@@ -188,15 +187,20 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
 
   const handleProfilePhotoUpload = async () => {
     if (!state.profilePhotoFile || !authUser || !storage || !firestore) return;
-    const userDocRef = doc(firestore, 'users', authUser.uid);
 
     dispatch({ type: 'START_UPLOAD' });
 
     try {
-      const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
-      const downloadURL = await uploadFile(storage, state.profilePhotoFile, filePath, (progress) => {
-        dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress });
-      });
+      // Use a consistent filename to overwrite the old photo
+      const filePath = `users/${authUser.uid}/profile/photo.jpg`;
+      const userDocRef = doc(firestore, 'users', authUser.uid);
+
+      const downloadURL = await uploadFile(
+        storage,
+        filePath,
+        state.profilePhotoFile,
+        (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
+      );
 
       await updateDoc(userDocRef, { photoURL: downloadURL });
       
@@ -212,18 +216,21 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
 
   const handleProfilePhotoDelete = async () => {
     if (!authUser || !user?.photoURL || !storage || !firestore) return;
-    const userDocRef = doc(firestore, 'users', authUser.uid);
     
     const originalUrl = user.photoURL;
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
 
     try {
+      const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: null });
+
       const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
+      
       toast({ title: 'Profile Photo Removed' });
     } catch (error) {
       console.error("Error removing photo:", error);
+      // Revert optimistic update on failure
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: originalUrl });
       if ((error as any).code !== 'storage/object-not-found') {
         toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
@@ -231,7 +238,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     }
   };
 
-  if (!user) return <>{children}</>; // Render trigger but no dialog content if no user
+  if (!user) return <>{children}</>;
 
   const isUploading = state.uploadStatus === 'uploading';
   const displayPhoto = state.optimisticPhotoUrl;
@@ -398,21 +405,21 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
             <div className="relative">
                 <Label htmlFor="current-password">Current Password</Label>
                 <Input id="current-password" type={state.showCurrentPassword ? 'text' : 'password'} value={state.currentPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'current', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'current'})}>
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'current'})}>
                     {state.showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
             </div>
             <div className="relative">
                 <Label htmlFor="new-password">New Password</Label>
                 <Input id="new-password" type={state.showNewPassword ? 'text' : 'password'} value={state.newPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'new', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'new'})}>
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'new'})}>
                     {state.showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
             </div>
             <div className="relative">
                 <Label htmlFor="confirm-password">Confirm New Password</Label>
                 <Input id="confirm-password" type={state.showConfirmPassword ? 'text' : 'password'} value={state.confirmPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'confirm', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'confirm'})}>
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'confirm'})}>
                     {state.showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
             </div>
@@ -426,5 +433,3 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     </AlertDialog>
   );
 }
-
-    

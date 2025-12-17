@@ -1,38 +1,33 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL, UploadTask, UploadTaskSnapshot } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL, UploadTask } from 'firebase/storage';
 
 /**
- * A reusable, robust function to upload a file to Firebase Storage with progress tracking.
- * This version uses a more explicit Promise structure to avoid race conditions.
+ * A robust, promise-based function to upload a file to Firebase Storage with progress tracking.
+ * This version ensures the StorageReference is created correctly and properly handles the upload lifecycle.
  *
  * @param storage The Firebase Storage instance.
- * @param file The file to be uploaded.
- * @param path The relative path within Firebase Storage (e.g., 'users/user-id/profile/photo.jpg').
- * @param onProgress An optional callback function to receive upload progress updates (0-100).
+ * @param path The full path in Firebase Storage where the file should be saved (e.g., 'users/uid/profile.jpg').
+ * @param file The file to upload.
+ * @param onProgress An optional callback to receive upload progress updates (0-100).
  * @returns A promise that resolves with the public download URL of the uploaded file.
- * @throws An error if the upload or URL retrieval fails.
+ * @throws An error if the upload fails.
  */
 export function uploadFile(
   storage: FirebaseStorage,
-  file: File,
   path: string,
+  file: File,
   onProgress?: (progress: number) => void
 ): Promise<string> {
-  
+  // CRITICAL FIX: The ref function must be called with the storage instance and the path.
+  const storageRef = ref(storage, path);
+  const uploadTask: UploadTask = uploadBytesResumable(storageRef, file);
+
   return new Promise((resolve, reject) => {
-    if (!storage) {
-      // Reject the promise if storage is not available
-      return reject(new Error('Firebase Storage is not available.'));
-    }
-
-    const storageRef = ref(storage, path);
-    const uploadTask: UploadTask = uploadBytesResumable(storageRef, file);
-
     uploadTask.on(
       'state_changed',
-      (snapshot: UploadTaskSnapshot) => {
+      (snapshot) => {
         // Update progress
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         if (onProgress) {
@@ -40,13 +35,14 @@ export function uploadFile(
         }
       },
       (error) => {
-        // Handle unsuccessful uploads by rejecting the promise
+        // Handle unsuccessful uploads
         console.error('Upload failed:', error);
         switch (error.code) {
           case 'storage/unauthorized':
             reject(new Error('Permission denied. Please check your storage security rules.'));
             break;
           case 'storage/canceled':
+            // Although we don't expose a cancel button, this handles browser-based cancellations.
             reject(new Error('Upload was canceled.'));
             break;
           default:
@@ -55,15 +51,16 @@ export function uploadFile(
         }
       },
       () => {
-        // Handle successful uploads on complete.
-        // The upload is finished, now get the download URL.
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-          resolve(downloadURL);
-        }).catch((error) => {
-          console.error('Failed to get download URL:', error);
-          reject(new Error('File uploaded but could not get the download URL.'));
-        });
+        // Handle successful uploads on complete
+        getDownloadURL(uploadTask.snapshot.ref)
+          .then((downloadURL) => {
+            resolve(downloadURL);
+          })
+          .catch((error) => {
+            console.error('Failed to get download URL:', error);
+            reject(new Error('File uploaded successfully, but failed to get the download URL.'));
+          });
       }
     );
   });
-};
+}
