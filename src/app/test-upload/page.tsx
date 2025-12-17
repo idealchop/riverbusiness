@@ -1,31 +1,28 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useUser, useStorage } from '@/firebase';
-import { uploadFile } from '@/lib/storage-utils';
-import type { UploadMetadata } from 'firebase/storage';
+import { useUser } from '@/firebase';
+import { uploadProfilePhotoAction } from '@/app/actions';
 
 export default function TestUploadPage() {
   const { user, isUserLoading } = useUser();
-  const storage = useStorage();
   
   const [file, setFile] = useState<File | null>(null);
-  const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('Idle');
   const [result, setResult] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setStatus('File selected. Ready to upload.');
       setResult('');
-      setProgress(0);
     }
   };
 
@@ -38,48 +35,25 @@ export default function TestUploadPage() {
       setStatus('Error: You must be logged in to upload.');
       return;
     }
-    if (!storage) {
-        setStatus('Error: Firebase Storage is not available.');
-        return;
-    }
 
-    setIsUploading(true);
-    setProgress(0);
     setStatus('Starting upload...');
-    console.log('[TEST SCRIPT] Starting upload...');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userId', user.uid);
 
-    const userId = user.uid;
-    // This path format is now critical, as the Cloud Function uses it to identify the user.
-    const filePath = `users/${userId}/profile/profile_photo_${Date.now()}.jpg`;
-    
-    // The metadata is no longer needed for this specific test, as the function uses path-based logic.
-    const metadata: UploadMetadata = {};
+    startTransition(async () => {
+      const response = await uploadProfilePhotoAction(formData);
 
-    try {
-      // We don't need the downloadURL on the client anymore for this flow.
-      await uploadFile(
-        storage,
-        file,
-        filePath,
-        metadata,
-        (p) => {
-          setProgress(p);
-          console.log(`[TEST SCRIPT] Upload progress: ${p.toFixed(2)}%`);
-        }
-      );
-
-      setStatus('Upload complete! The Cloud Function has been triggered to update Firestore.');
-      setResult(`Success! The file was uploaded to: ${filePath}. The backend is now processing it.`);
-      console.log('[TEST SCRIPT] Upload successful.');
-      console.log('[TEST SCRIPT] The backend Cloud Function should now be updating the photoURL field in Firestore.');
-
-    } catch (error: any) {
-      setStatus(`Upload failed: ${error.message}`);
-      setResult('');
-      console.error('[TEST SCRIPT] Upload failed:', error);
-    } finally {
-      setIsUploading(false);
-    }
+      if (response.success) {
+        setStatus('Upload complete! Firestore has been updated.');
+        setResult(`Success! The file was uploaded and the public URL is: ${response.url}`);
+        console.log('[TEST SCRIPT] Upload and Firestore update successful.');
+      } else {
+        setStatus(`Upload failed: ${response.error}`);
+        setResult('');
+        console.error('[TEST SCRIPT] Upload failed:', response.error);
+      }
+    });
   };
 
   if (isUserLoading) {
@@ -90,9 +64,9 @@ export default function TestUploadPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <Card className="w-full max-w-lg mx-4">
         <CardHeader>
-          <CardTitle>File Upload Test Script</CardTitle>
+          <CardTitle>File Upload Test Script (v2: Server Action)</CardTitle>
           <CardDescription>
-            Use this page to test the file upload functionality. The backend Cloud Function will handle the Firestore update. Open your console to see logs.
+            This page now uses a Server Action to upload the file, bypassing CORS issues.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -102,11 +76,11 @@ export default function TestUploadPage() {
             <>
               <div className="space-y-2">
                 <Label htmlFor="file-upload">1. Select a file</Label>
-                <Input id="file-upload" type="file" onChange={handleFileChange} disabled={isUploading} />
+                <Input id="file-upload" type="file" onChange={handleFileChange} disabled={isPending} />
               </div>
 
-              <Button onClick={handleUpload} disabled={!file || isUploading} className="w-full">
-                {isUploading ? 'Uploading...' : '2. Run Upload Test'}
+              <Button onClick={handleUpload} disabled={!file || isPending} className="w-full">
+                {isPending ? 'Uploading...' : '2. Run Upload Test'}
               </Button>
 
               <div className="space-y-2">
@@ -114,10 +88,10 @@ export default function TestUploadPage() {
                 <p className="text-sm text-muted-foreground p-3 bg-gray-50 dark:bg-gray-800 rounded-md">{status}</p>
               </div>
               
-              {isUploading && (
+              {isPending && (
                 <div className="space-y-2">
                   <Label>Progress</Label>
-                  <Progress value={progress} />
+                  <Progress value={undefined} />
                 </div>
               )}
 

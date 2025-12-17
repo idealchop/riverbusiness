@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useReducer, useEffect } from 'react';
+import React, { useReducer, useEffect, useTransition } from 'react';
 import Image from 'next/image';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter
@@ -18,24 +18,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage, useAuth } from '@/firebase';
+import { useFirestore, useAuth } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref, type UploadMetadata } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { uploadFile } from '@/lib/storage-utils';
+import { uploadProfilePhotoAction } from '@/app/actions';
 
 // State Management with useReducer
 type State = {
   isEditingDetails: boolean;
   isPasswordDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
-  uploadStatus: 'idle' | 'uploading' | 'success' | 'error';
-  uploadProgress: number;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
   editableFormData: Partial<AppUser>;
@@ -51,8 +47,6 @@ type Action =
   | { type: 'SET_EDIT_DETAILS'; payload: boolean }
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
-  | { type: 'SET_UPLOAD_STATUS'; payload: 'idle' | 'uploading' | 'success' | 'error' }
-  | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
   | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
@@ -65,8 +59,6 @@ const initialState: State = {
   isEditingDetails: false,
   isPasswordDialogOpen: false,
   isPhotoPreviewOpen: false,
-  uploadStatus: 'idle',
-  uploadProgress: 0,
   profilePhotoFile: null,
   profilePhotoPreview: null,
   editableFormData: {},
@@ -83,8 +75,6 @@ function reducer(state: State, action: Action): State {
     case 'SET_EDIT_DETAILS': return { ...state, isEditingDetails: action.payload };
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
-    case 'SET_UPLOAD_STATUS': return { ...state, uploadStatus: action.payload };
-    case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
     case 'UPDATE_FORM_DATA': return { ...state, editableFormData: { ...state.editableFormData, [action.payload.name]: action.payload.value } };
@@ -101,7 +91,7 @@ function reducer(state: State, action: Action): State {
     case 'RESET_PASSWORD_FORM': return { ...state, currentPassword: '', newPassword: '', confirmPassword: '', isPasswordDialogOpen: false };
     case 'RESET_UPLOAD':
       if (state.profilePhotoPreview) URL.revokeObjectURL(state.profilePhotoPreview);
-      return { ...state, uploadStatus: 'idle', uploadProgress: 0, profilePhotoFile: null, profilePhotoPreview: null, isPhotoPreviewOpen: false };
+      return { ...state, profilePhotoFile: null, profilePhotoPreview: null, isPhotoPreviewOpen: false };
     default: return state;
   }
 }
@@ -114,10 +104,10 @@ interface AdminMyAccountDialogProps {
 
 export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminMyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = useAuth();
-  const storage = useStorage();
   const router = useRouter();
 
   useEffect(() => {
@@ -161,7 +151,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       return;
     }
     try {
-      await reauthenticateWithCredential(auth.currentUser, state.currentPassword);
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -171,62 +162,39 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser || !storage) return;
-
-    dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'uploading' });
-    dispatch({ type: 'SET_PHOTO_PREVIEW_DIALOG', payload: false });
-
-    const file = state.profilePhotoFile;
-    const userId = auth.currentUser.uid;
-    const filePath = `users/${userId}/profile/profile_photo.jpg`;
+    if (!state.profilePhotoFile || !auth.currentUser) return;
     
-    const metadata: UploadMetadata = {
-      customMetadata: {
-        firestorePath: `users/${userId}`,
-        firestoreField: 'photoURL'
-      }
-    };
-    
-    uploadFile(
-      storage,
-      file,
-      filePath,
-      metadata,
-      (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress }),
-      () => { // onSuccess
-        toast({ title: 'Upload Complete', description: 'Your photo is being processed and will appear shortly.' });
-        dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'success' });
-        setTimeout(() => dispatch({ type: 'RESET_UPLOAD' }), 2000);
-      },
-      (error) => { // onError
-        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-        dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'error' });
-      }
-    );
+    const formData = new FormData();
+    formData.append('file', state.profilePhotoFile);
+    formData.append('userId', auth.currentUser.uid);
+
+    startTransition(async () => {
+        const result = await uploadProfilePhotoAction(formData);
+        if (result.success) {
+            toast({ title: 'Upload Complete', description: 'Your photo has been updated.' });
+        } else {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: result.error });
+        }
+        dispatch({ type: 'RESET_UPLOAD' });
+    });
   };
 
   const handleProfilePhotoDelete = async () => {
-    if (!auth.currentUser || !adminUser?.photoURL || !firestore || !storage) return;
+    if (!auth.currentUser || !adminUser?.photoURL || !firestore) return;
     
-    try {
-      const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
-      await updateDoc(adminUserDocRef, { photoURL: null });
-
-      const photoRef = ref(storage, adminUser.photoURL);
-      await deleteObject(photoRef);
-      
-      toast({ title: 'Profile Photo Removed' });
-    } catch (error) {
-      console.error("Error removing photo:", error);
-      if ((error as any).code !== 'storage/object-not-found') {
-        toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
-      }
-    }
+    startTransition(async () => {
+        const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
+        try {
+            await updateDoc(userDocRef, { photoURL: null });
+            toast({ title: 'Profile Photo Removed' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
+        }
+    });
   };
 
   if (!adminUser) return null;
 
-  const isUploading = state.uploadStatus === 'uploading';
   const displayPhoto = adminUser.photoURL;
 
   return (
@@ -248,10 +216,10 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                             <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
                             <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            {isUploading && (
-                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                <Progress value={state.uploadProgress} className="h-1 w-12" />
-                            </div>
+                            {isPending && (
+                                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                                    <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                                </div>
                             )}
                             <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <Pencil className="h-6 w-6 text-white" />
@@ -277,7 +245,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                         )}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                    <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
                     <div className="space-y-1">
                         <h4 className="font-semibold">{adminUser.name}</h4>
                         <p className="text-sm text-muted-foreground">Update your account details.</p>
@@ -340,8 +308,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
         </AlertDialogFooter>
       </AlertDialogContent>
 
-      <Dialog open={state.isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isUploading) dispatch({type: 'SET_PHOTO_PREVIEW_DIALOG', payload: isOpen}); }}>
-        <DialogContent onInteractOutside={(e) => { if (isUploading) e.preventDefault(); }}>
+      <Dialog open={state.isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isPending) dispatch({type: 'SET_PHOTO_PREVIEW_DIALOG', payload: isOpen}); }}>
+        <DialogContent onInteractOutside={(e) => { if (isPending) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Preview Profile Photo</DialogTitle>
           </DialogHeader>
@@ -349,9 +317,9 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
             {state.profilePhotoPreview && <Image src={state.profilePhotoPreview} alt="Preview" width={200} height={200} className="rounded-full aspect-square object-cover" />}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isUploading}>Cancel</Button>
-            <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
-                {isUploading ? 'Uploading...' : 'Upload Photo'}
+            <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isPending}>Cancel</Button>
+            <Button onClick={handleProfilePhotoUpload} disabled={isPending}>
+                {isPending ? 'Uploading...' : 'Upload Photo'}
             </Button>
           </DialogFooter>
         </DialogContent>

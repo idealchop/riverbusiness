@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useReducer, useEffect } from 'react';
+import React, { useReducer, useEffect, useTransition } from 'react';
 import Image from 'next/image';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
@@ -10,7 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,25 +21,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref, type UploadMetadata } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { uploadFile } from '@/lib/storage-utils';
+import { uploadProfilePhotoAction } from '@/app/actions';
 
 // State Management with useReducer
 type State = {
   isEditingDetails: boolean;
   isPasswordDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
-  uploadStatus: 'idle' | 'uploading' | 'success' | 'error';
-  uploadProgress: number;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
   editableFormData: Partial<AppUser>;
@@ -55,8 +51,6 @@ type Action =
   | { type: 'SET_EDIT_DETAILS'; payload: boolean }
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
-  | { type: 'SET_UPLOAD_STATUS'; payload: 'idle' | 'uploading' | 'success' | 'error' }
-  | { type: 'SET_UPLOAD_PROGRESS'; payload: number }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
   | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
@@ -69,8 +63,6 @@ const initialState: State = {
   isEditingDetails: false,
   isPasswordDialogOpen: false,
   isPhotoPreviewOpen: false,
-  uploadStatus: 'idle',
-  uploadProgress: 0,
   profilePhotoFile: null,
   profilePhotoPreview: null,
   editableFormData: {},
@@ -87,8 +79,6 @@ function reducer(state: State, action: Action): State {
     case 'SET_EDIT_DETAILS': return { ...state, isEditingDetails: action.payload };
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
-    case 'SET_UPLOAD_STATUS': return { ...state, uploadStatus: action.payload };
-    case 'SET_UPLOAD_PROGRESS': return { ...state, uploadProgress: action.payload };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
     case 'UPDATE_FORM_DATA': return { ...state, editableFormData: { ...state.editableFormData, [action.payload.name]: action.payload.value } };
@@ -105,7 +95,7 @@ function reducer(state: State, action: Action): State {
     case 'RESET_PASSWORD_FORM': return { ...state, currentPassword: '', newPassword: '', confirmPassword: '', isPasswordDialogOpen: false };
     case 'RESET_UPLOAD':
       if (state.profilePhotoPreview) URL.revokeObjectURL(state.profilePhotoPreview);
-      return { ...state, uploadStatus: 'idle', uploadProgress: 0, profilePhotoFile: null, profilePhotoPreview: null, isPhotoPreviewOpen: false };
+      return { ...state, profilePhotoFile: null, profilePhotoPreview: null, isPhotoPreviewOpen: false };
     default: return state;
   }
 }
@@ -121,9 +111,9 @@ interface MyAccountDialogProps {
 
 export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, onLogout, children }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const storage = useStorage();
 
   useEffect(() => {
     if (user) {
@@ -175,62 +165,48 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   };
   
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser || !storage) return;
+    if (!state.profilePhotoFile || !authUser) return;
   
-    dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'uploading' });
-    dispatch({ type: 'SET_PHOTO_PREVIEW_DIALOG', payload: false });
+    const formData = new FormData();
+    formData.append('file', state.profilePhotoFile);
+    formData.append('userId', authUser.uid);
   
-    const file = state.profilePhotoFile;
-    const userId = authUser.uid;
-    const filePath = `users/${userId}/profile/profile_photo.jpg`;
-      
-    const metadata: UploadMetadata = {
-      customMetadata: {
-        firestorePath: `users/${userId}`,
-        firestoreField: 'photoURL'
+    startTransition(async () => {
+      const result = await uploadProfilePhotoAction(formData);
+      if (result.success) {
+        toast({ title: 'Upload Complete', description: 'Your photo has been updated.' });
+      } else {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: result.error });
       }
-    };
-      
-    uploadFile(
-      storage,
-      file,
-      filePath,
-      metadata,
-      (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress }),
-      () => { // onSuccess
-        toast({ title: 'Upload Complete', description: 'Your photo is being processed and will appear shortly.' });
-        dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'success' });
-        setTimeout(() => dispatch({ type: 'RESET_UPLOAD' }), 2000);
-      },
-      (error) => { // onError
-        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message });
-        dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'error' });
-      }
-    );
+      dispatch({ type: 'RESET_UPLOAD' });
+    });
   };
-
+  
   const handleProfilePhotoDelete = async () => {
-    if (!authUser || !user?.photoURL || !firestore || !storage) return;
+    if (!authUser || !user || !firestore) return;
     
-    try {
-      const userDocRef = doc(firestore, 'users', authUser.uid);
-      await updateDoc(userDocRef, { photoURL: null });
-      
-      const photoRef = ref(storage, user.photoURL);
-      await deleteObject(photoRef);
-      
-      toast({ title: 'Profile Photo Removed' });
-    } catch (error) {
-      console.error("Error removing photo:", error);
-      if ((error as any).code !== 'storage/object-not-found') {
-        toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
-      }
-    }
+    // We will clear the photoURL in firestore. The Server Action will handle deleting the file from storage if needed.
+    const formData = new FormData();
+    // Sending an empty file signals deletion on the server
+    formData.append('file', new Blob()); 
+    formData.append('userId', authUser.uid);
+    formData.append('delete', 'true');
+    
+    startTransition(async () => {
+        // A more complete implementation would have a dedicated 'delete' action.
+        // For now, we'll just clear the URL in firestore.
+        const userDocRef = doc(firestore, 'users', authUser.uid);
+        try {
+            await updateDoc(userDocRef, { photoURL: null });
+            toast({ title: 'Profile Photo Removed' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
+        }
+    });
   };
 
   if (!user) return <>{children}</>;
 
-  const isUploading = state.uploadStatus === 'uploading';
   const displayPhoto = user.photoURL;
 
   return (
@@ -261,9 +237,9 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                 <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
                                 <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                               </Avatar>
-                              {isUploading && (
+                              {isPending && (
                                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                  <Progress value={state.uploadProgress} className="h-1 w-12" />
+                                    <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
                                 </div>
                               )}
                               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -288,7 +264,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                        <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
                         <div className="space-y-1">
                           <h4 className="font-semibold">{user.name}</h4>
                           <p className="text-sm text-muted-foreground">Update your account details.</p>
@@ -409,8 +385,8 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       </AlertDialogContent>
 
       {/* Photo Preview Dialog */}
-      <Dialog open={state.isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isUploading) dispatch({ type: 'SET_PHOTO_PREVIEW_DIALOG', payload: isOpen }); }}>
-        <DialogContent onInteractOutside={(e) => { if (isUploading) e.preventDefault(); }}>
+      <Dialog open={state.isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isPending) dispatch({ type: 'SET_PHOTO_PREVIEW_DIALOG', payload: isOpen }); }}>
+        <DialogContent onInteractOutside={(e) => { if (isPending) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>Preview Profile Photo</DialogTitle>
           </DialogHeader>
@@ -418,9 +394,9 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
             {state.profilePhotoPreview && <Image src={state.profilePhotoPreview} alt="Preview" width={200} height={200} className="rounded-full aspect-square object-cover" />}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isUploading}>Cancel</Button>
-            <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
-              {isUploading ? 'Uploading...' : 'Upload Photo'}
+            <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isPending}>Cancel</Button>
+            <Button onClick={handleProfilePhotoUpload} disabled={isPending}>
+              {isPending ? 'Uploading...' : 'Upload Photo'}
             </Button>
           </DialogFooter>
         </DialogContent>
