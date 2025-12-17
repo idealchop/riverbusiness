@@ -35,7 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage } from '@/firebase';
 import { doc, collection, getDoc, updateDoc } from 'firebase/firestore';
-import { getAuth, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -87,7 +87,7 @@ export default function DashboardLayout({
 }) {
   const { toast } = useToast();
   const router = useRouter();
-  const auth = getAuth();
+  const { auth } = useUser();
   const firestore = useFirestore();
   const storage = useStorage();
   const { user: authUser, isUserLoading } = useUser();
@@ -197,7 +197,7 @@ export default function DashboardLayout({
   };
 
   useEffect(() => {
-    if (!userDocRef) return;
+    if (!userDocRef || !auth) return;
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
@@ -227,6 +227,7 @@ export default function DashboardLayout({
   }, [isPaymentDialogOpen]);
 
   const handleLogout = () => {
+    if (!auth) return;
     signOut(auth).then(() => {
       router.push('/login');
     })
@@ -393,7 +394,7 @@ export default function DashboardLayout({
       });
   
     } catch (error: any) {
-      setOptimisticPhotoUrl(user?.photoURL || null);
+      setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
       toast({
         variant: 'destructive',
         title: 'Upload Failed',
@@ -741,7 +742,7 @@ export default function DashboardLayout({
                                               </div>
                                               <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                                   <Label htmlFor="email" className="text-right">Login Email</Label>
-                                                  <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                                  <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={true} />
                                               </div>
                                               <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                                   <Label htmlFor="businessEmail" className="text-right">Business Email</Label>

@@ -451,8 +451,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
         } catch (error) {
             console.error("Upload error:", error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: (error as Error).message });
-            setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
         } finally {
             setDeliveryToUpdate(null);
             setDeliveryProofFile(null);
@@ -485,8 +483,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             // The `onFileUpload` Cloud Function handles the Firestore update.
             toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
         } catch(error) {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: (error as Error).message });
-             setUploadingFiles(prev => ({ ...prev, [uploadKey]: -1 }));
+             console.error("Upload error:", error);
         } finally {
             setIsUploadContractOpen(false);
             setUserForContract(null);
@@ -540,7 +537,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         } catch (error) {
             console.error("Delivery creation failed:", error);
-            toast({ variant: 'destructive', title: "Creation Failed", description: 'Could not create delivery record.' });
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});
@@ -713,11 +709,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           });
         } catch (error: any) {
           setOptimisticPhotoUrl(adminUser?.photoURL || null);
-          toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: error.message || 'Could not upload your photo. Please try again.',
-          });
+          console.error("Upload error:", error);
         } finally {
           setIsUploading(false);
           setProfilePhotoFile(null);
@@ -740,11 +732,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleProfilePhotoDelete = async () => {
         if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
     
-        const storage = getStorage();
+        const storageForDelete = getStorage();
         try {
             setOptimisticPhotoUrl(null);
             updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
-            const photoRef = ref(storage, adminUser.photoURL);
+            const photoRef = ref(storageForDelete, adminUser.photoURL);
             await deleteObject(photoRef);
             
             toast({
@@ -878,28 +870,20 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         docKey: string,
       ): Promise<void> => {
         return new Promise((resolve, reject) => {
-          const uploadTask = uploadBytesResumable(ref(storage, path), file, { contentType: file.type });
-      
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              setUploadingFiles(prev => ({ ...prev, [docKey]: progress }));
-            },
-            (error) => {
-              console.error(`Upload error for ${docKey}:`, error);
-              setUploadingFiles(prev => ({ ...prev, [docKey]: -1 }));
-              reject(error);
-            },
-            () => {
-              setUploadingFiles(prev => {
-                const newUploadingFiles = { ...prev };
-                delete newUploadingFiles[docKey];
-                return newUploadingFiles;
-              });
-              resolve();
-            }
-          );
+            uploadFile(storage, file, path, (progress) => {
+                setUploadingFiles(prev => ({ ...prev, [docKey]: progress }));
+            }).then(() => {
+                setUploadingFiles(prev => {
+                    const newUploadingFiles = { ...prev };
+                    delete newUploadingFiles[docKey];
+                    return newUploadingFiles;
+                });
+                resolve();
+            }).catch(error => {
+                console.error(`Upload error for ${docKey}:`, error);
+                setUploadingFiles(prev => ({ ...prev, [docKey]: -1 }));
+                reject(error);
+            });
         });
       };
 
@@ -939,7 +923,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         } catch (error) {
              console.error("Error creating station or uploading documents: ", error);
-             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station. Please check uploads.' });
         } finally {
             setIsSubmitting(false);
             setUploadingFiles({});
@@ -2126,7 +2109,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
                                             } catch (err: any) {
-                                                toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
+                                                console.error(err);
                                             }
                                         };
 
@@ -2188,7 +2171,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err: any) {
-                                            toast({ variant: 'destructive', title: 'Upload Failed', description: err.message });
+                                            console.error(err);
                                         }
                                     };
                                     
