@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +37,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, UploadTask } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -182,6 +183,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [currentPage, setCurrentPage] = React.useState(1);
     const ITEMS_PER_PAGE = 20;
 
+    const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
+    const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
+    const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
+    const [isUploading, setIsUploading] = React.useState(false);
+    const [uploadProgress, setUploadProgress] = React.useState(0);
+    const [optimisticPhotoUrl, setOptimisticPhotoUrl] = React.useState<string | null>(null);
+    
+    const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+    const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
+
     const userDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !selectedUser) return null;
         return collection(firestore, 'users', selectedUser.id, 'deliveries');
@@ -299,44 +310,25 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [selectedUser, userPaymentsData]);
 
     React.useEffect(() => {
-      const handleUserSearch = (event: Event) => {
-        const customEvent = event as CustomEvent<string>;
-        const searchTerm = customEvent.detail.toLowerCase();
-        
-        if (!appUsers) return;
-
-        const foundUser = appUsers.find(user => 
-            user.clientId?.toLowerCase() === searchTerm || (user.name && user.name.toLowerCase().includes(searchTerm))
-        );
-        
-        if (foundUser) {
-          setSelectedUser(foundUser);
-          setIsUserDetailOpen(true);
-        } else {
-            toast({
-                variant: "destructive",
-                title: "User not found",
-                description: `No user found with ID or name: ${customEvent.detail}`,
-            });
+      if (adminUser) {
+        setEditableFormData(adminUser);
+        if (adminUser.photoURL) {
+          setOptimisticPhotoUrl(adminUser.photoURL);
         }
-      };
+      }
+    }, [adminUser]);
 
-      const openAccountDialog = () => {
-        const adminUser = appUsers?.find(u => u.id === authUser?.uid);
-        if (adminUser) {
-            setEditableFormData(adminUser);
-        }
-        setIsAccountDialogOpen(true)
-      };
-      
-      window.addEventListener('admin-user-search-term', handleUserSearch);
-      window.addEventListener('admin-open-my-account', openAccountDialog);
-  
-      return () => {
-        window.removeEventListener('admin-user-search-term', handleUserSearch);
-        window.removeEventListener('admin-open-my-account', openAccountDialog);
-      };
-    }, [appUsers, toast, authUser]);
+    React.useEffect(() => {
+        const openAccountDialog = () => {
+          setIsAccountDialogOpen(true);
+        };
+    
+        window.addEventListener('admin-open-my-account', openAccountDialog);
+    
+        return () => {
+          window.removeEventListener('admin-open-my-account', openAccountDialog);
+        };
+    }, []);
 
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
@@ -655,8 +647,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleSaveChanges = () => {
-        if (!authUser || !firestore) return;
-        const adminUserDocRef = doc(firestore, "users", authUser.uid)
         if (adminUserDocRef && editableFormData) {
             updateDocumentNonBlocking(adminUserDocRef, editableFormData);
             setIsEditingDetails(false);
@@ -668,7 +658,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleCancelEdit = () => {
-        const adminUser = appUsers?.find(u => u.id === authUser?.uid);
         if (adminUser) {
             setEditableFormData(adminUser);
         }
@@ -719,6 +708,106 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           });
         }
     }
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setProfilePhotoFile(file);
+          const previewUrl = URL.createObjectURL(file);
+          setProfilePhotoPreview(previewUrl);
+          setIsPhotoPreviewOpen(true);
+        }
+        e.target.value = '';
+    };
+
+    const handleProfilePhotoUpload = async () => {
+        if (!profilePhotoFile || !authUser || !profilePhotoPreview) return;
+      
+        setIsUploading(true);
+        setUploadProgress(0);
+      
+        const storage = getStorage();
+        const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`; 
+        const storageRef = ref(storage, filePath);
+        const metadata = { contentType: profilePhotoFile.type };
+      
+        try {
+          setOptimisticPhotoUrl(profilePhotoPreview);
+          setIsPhotoPreviewOpen(false);
+          const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
+      
+          await new Promise<void>((resolve, reject) => {
+            uploadTask.on(
+              'state_changed',
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(progress);
+              },
+              (error) => {
+                setOptimisticPhotoUrl(adminUser?.photoURL || null);
+                reject(error);
+              },
+              () => {
+                toast({
+                  title: 'Upload Complete!',
+                  description: 'Your new profile photo is being processed and will appear permanently shortly.',
+                });
+                resolve();
+              }
+            );
+          });
+        } catch (error: any) {
+          setOptimisticPhotoUrl(adminUser?.photoURL || null);
+          toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: error.message || 'Could not upload your photo. Please check your connection and try again.'
+          });
+        } finally {
+          setIsUploading(false);
+          setProfilePhotoFile(null);
+        }
+    };
+    
+    const handleCancelUpload = () => {
+        setIsPhotoPreviewOpen(false);
+        setProfilePhotoFile(null);
+        if (profilePhotoPreview) {
+            URL.revokeObjectURL(profilePhotoPreview);
+        }
+        setProfilePhotoPreview(null);
+        setIsUploading(false);
+        setUploadProgress(0);
+    };
+
+    const handleProfilePhotoDelete = async () => {
+        if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
+    
+        const storage = getStorage();
+        try {
+            setOptimisticPhotoUrl(null);
+            updateDocumentNonBlocking(adminUserDocRef, { photoURL: null });
+            const photoRef = ref(storage, adminUser.photoURL);
+            await deleteObject(photoRef);
+            
+            toast({
+                title: 'Profile Photo Removed',
+                description: 'Your profile photo has been removed.',
+            });
+        } catch (error: any) {
+            setOptimisticPhotoUrl(adminUser.photoURL);
+            updateDocumentNonBlocking(adminUserDocRef, { photoURL: adminUser.photoURL });
+    
+            console.error("Error removing profile photo: ", error);
+            if (error.code !== 'storage/object-not-found') {
+                toast({
+                    variant: 'destructive',
+                    title: 'Delete Failed',
+                    description: 'Could not remove your profile photo. Please try again.',
+                });
+            }
+        }
+    };
 
     React.useEffect(() => {
         if(selectedUser) {
@@ -905,39 +994,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setUploadingFiles({});
         }
     };
-    
-    const handleProfilePhotoUpload = async (file: File) => {
-        if (!authUser) return;
-        
-        const uploadKey = `profile-${authUser.uid}`;
-        setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
-        setIsSubmitting(true);
-    
-        try {
-            // The Cloud Function will trigger on this path
-            await handleFileUpload(
-                file,
-                `users/${authUser.uid}/profile/${file.name}`,
-                uploadKey
-            );
-            toast({ title: 'Profile Photo Uploaded', description: 'Your new photo is being processed.' });
-        } catch (error) {
-            console.error("Profile photo upload failed: ", error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo.'});
-        } finally {
-            setIsSubmitting(false);
-            setUploadingFiles(prev => {
-                const next = {...prev};
-                delete next[uploadKey];
-                return next;
-            });
-        }
-    };
-
 
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
     }
+
+    const displayPhoto = optimisticPhotoUrl ?? adminUser?.photoURL;
+
 
   return (
     <>
@@ -1623,87 +1686,153 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
-            <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>My Account</DialogTitle>
-                <DialogDescription>
-                Manage your account details.
-                </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] w-full">
-                <div className="pr-6 py-4">
-                    {editableFormData ? (
-                        <div className="space-y-6">
-                            <div>
-                                <div className="flex items-center gap-4 mb-4">
-                                    <Avatar className="h-20 w-20">
-                                        <AvatarImage src={editableFormData.photoURL || undefined} alt={editableFormData.name || ''} />
-                                        <AvatarFallback className="text-3xl">{editableFormData.name?.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="space-y-1">
-                                        <h4 className="font-semibold">Profile Photo</h4>
-                                        <p className="text-sm text-muted-foreground">Update your photo.</p>
-                                        <div className="flex items-center gap-2">
-                                            <Button asChild variant="outline" size="sm" disabled={isSubmitting}>
-                                                <Label>
-                                                    <Upload className="mr-2 h-4 w-4" />
-                                                    Attach Photo
-                                                    <Input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleProfilePhotoUpload(e.target.files[0])}/>
-                                                </Label>
-                                            </Button>
-                                            {authUser && uploadingFiles[`profile-${authUser.uid}`] > 0 && (
-                                                <Progress value={uploadingFiles[`profile-${authUser.uid}`]} className="w-24 h-2" />
-                                            )}
+        <AlertDialog>
+            <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>My Account</DialogTitle>
+                        <DialogDescription>
+                        Manage your account details.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[70vh] w-full">
+                        <div className="pr-6 py-4">
+                            {adminUser && editableFormData ? (
+                                <div className="space-y-6">
+                                    <div>
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <div className="relative group cursor-pointer">
+                                                        <Avatar className="h-20 w-20">
+                                                            <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
+                                                            <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Pencil className="h-6 w-6 text-white" />
+                                                        </div>
+                                                    </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start">
+                                                    <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem asChild>
+                                                        <Label htmlFor="admin-photo-upload" className="w-full cursor-pointer">
+                                                            <Upload className="mr-2 h-4 w-4" />
+                                                            Upload new photo
+                                                        </Label>
+                                                    </DropdownMenuItem>
+                                                    {displayPhoto && (
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remove photo
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+
+                                            <div className="space-y-1">
+                                                <h4 className="font-semibold">{adminUser.name}</h4>
+                                                <p className="text-sm text-muted-foreground">Update your account details.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Separator />
+                                    <div>
+                                        <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-semibold">Your Details</h4>
+                                        {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => { setIsEditingDetails(true); setEditableFormData(adminUser); }}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="fullName" className="text-right">Full Name</Label>
+                                                <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="email" className="text-right">Login Email</Label>
+                                                <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={true} />
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="address" className="text-right">Address</Label>
+                                                <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                            </div>
+                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                                                <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
+                                                <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
+                                            </div>
+                                        </div>
+                                        {isEditingDetails && (
+                                            <div className="flex justify-end gap-2 mt-4">
+                                                <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
+                                                <Button onClick={handleSaveChanges}>Save Changes</Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Separator />
+                                    <div>
+                                        <h4 className="font-semibold mb-4">Security</h4>
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <Separator />
-                            <div>
-                                <div className="flex justify-between items-center mb-4">
-                                <h4 className="font-semibold">Your Details</h4>
-                                {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                        <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                                        <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                    </div>
-                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                        <Label htmlFor="email" className="text-right">Login Email</Label>
-                                        <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                    </div>
-                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                        <Label htmlFor="address" className="text-right">Address</Label>
-                                        <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                    </div>
-                                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                        <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                                        <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                    </div>
-                                </div>
-                                {isEditingDetails && (
-                                    <div className="flex justify-end gap-2 mt-4">
-                                        <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
-                                        <Button onClick={handleSaveChanges}>Save Changes</Button>
-                                    </div>
-                                )}
-                            </div>
-                            <Separator />
-                            <div>
-                                <h4 className="font-semibold mb-4">Security</h4>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                                </div>
-                            </div>
+                            ) : <p>No account information available.</p>}
                         </div>
-                    ) : <p>No account information available.</p>}
-                </div>
-            </ScrollArea>
-            <DialogFooter className="pr-6 pt-4">
-                <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
-            </DialogFooter>
+                    </ScrollArea>
+                    <DialogFooter className="pr-6 pt-4 border-t">
+                        <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
+                    </DialogFooter>
+                </DialogContent>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently remove your profile photo. Your profile will be updated after a moment.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleProfilePhotoDelete}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </Dialog>
+        </AlertDialog>
+        <Dialog open={isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isOpen && !isUploading) { handleCancelUpload() } }}>
+            <DialogContent onInteractOutside={(e) => { if (isUploading) e.preventDefault(); }}>
+              <DialogHeader>
+                <DialogTitle>Preview Profile Photo</DialogTitle>
+                <DialogDescription>
+                  Confirm this is the photo you want to upload.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="my-4 flex flex-col items-center justify-center gap-4">
+                {profilePhotoPreview && (
+                  <Image
+                    src={profilePhotoPreview}
+                    alt="Profile photo preview"
+                    width={200}
+                    height={200}
+                    className="rounded-full aspect-square object-cover"
+                  />
+                )}
+                {isUploading && (
+                  <div className="w-full px-4">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-center text-sm text-muted-foreground mt-2">{Math.round(uploadProgress)}%</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
+                  Cancel
+                </Button>
+                <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Upload Photo'}
+                </Button>
+              </DialogFooter>
             </DialogContent>
         </Dialog>
         <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
@@ -2238,5 +2367,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
