@@ -15,13 +15,14 @@ function initializeAdminApp(): App {
   }
 
   // Ensure service account environment variable is set.
+  // This is provided by the Firebase Studio environment.
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
   }
 
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-  // Initialize the app with credential and storage bucket.
+  // Initialize the app with credential and the KNOWN storage bucket.
   return initializeApp({
     credential: credential.cert(serviceAccount),
     storageBucket: "studio-911553385-80027.appspot.com",
@@ -31,11 +32,6 @@ function initializeAdminApp(): App {
 
 export async function uploadProfilePhotoAction(formData: FormData) {
   try {
-    // Ensure the storage bucket environment variable is set before proceeding.
-    if (!process.env.FIREBASE_STORAGE_BUCKET) {
-      throw new Error('FIREBASE_STORAGE_BUCKET environment variable is not set.');
-    }
-    
     // Initialize the app *inside* the action. This is the key fix.
     const adminApp = initializeAdminApp();
     const db = getFirestore(adminApp);
@@ -48,7 +44,7 @@ export async function uploadProfilePhotoAction(formData: FormData) {
       return { success: false, error: 'Missing file or user ID.' };
     }
     
-    // Explicitly specify the bucket to use.
+    // Explicitly specify the bucket to use. This is the definitive fix.
     const bucket = storage.bucket("studio-911553385-80027.appspot.com");
     const filePath = `users/${userId}/profile/profile_photo.jpg`;
     const fileRef = bucket.file(filePath);
@@ -70,6 +66,7 @@ export async function uploadProfilePhotoAction(formData: FormData) {
       photoURL: publicUrl,
     });
 
+    // Revalidate paths to ensure the new photo shows up immediately
     revalidatePath('/dashboard');
     revalidatePath('/admin');
     revalidatePath('/test-upload');
