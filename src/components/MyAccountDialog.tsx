@@ -30,7 +30,7 @@ import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, Droplets, Calendar, Package, FileX, RefreshCw, EyeOff, Eye, Check, CreditCard, Hourglass } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, Droplets, Calendar, Package, FileX, RefreshCw, EyeOff, Eye, Check, CreditCard, Hourglass, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { clientTypes } from '@/lib/plans';
 
@@ -426,3 +426,5 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     </AlertDialog>
   );
 }
+
+    
