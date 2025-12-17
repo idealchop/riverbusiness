@@ -170,7 +170,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       return;
     }
     try {
-      await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword));
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, state.currentPassword);
       await updatePassword(auth.currentUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });

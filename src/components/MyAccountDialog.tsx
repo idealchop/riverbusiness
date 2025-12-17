@@ -201,9 +201,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
           firestoreField: 'photoURL'
         }
       };
-  
-      // The uploadFile utility now correctly handles the full upload process and returns the URL.
-      // The Cloud Function will handle updating Firestore.
+      
       await uploadFile(
         storage,
         file,
@@ -212,17 +210,15 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
       
-      // The Cloud Function is triggered on successful upload to update Firestore.
-      // The UI has already been optimistically updated.
       toast({ title: 'Profile Photo Uploaded!', description: 'Your new photo is being processed and will appear shortly.' });
   
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
-      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null }); // Revert on failure
+      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null }); 
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: String(error) });
     } finally {
-        dispatch({ type: 'UPLOAD_SUCCESS' }); // Reset UI state
+        dispatch({ type: 'UPLOAD_SUCCESS' }); 
     }
   };
 
@@ -236,7 +232,6 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: null });
       
-      // It's safer to use the full URL to get the reference for deletion
       const photoRef = ref(storage, originalUrl);
       await deleteObject(photoRef);
       
