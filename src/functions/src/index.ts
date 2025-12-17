@@ -11,8 +11,8 @@ const db = admin.firestore();
  * which Firestore document and field to update with the public URL.
  *
  * Expected Metadata:
- * - `firestorePath`: The full path to the document in Firestore (e.g., 'users/userId123').
- * - `firestoreField`: The field within the document to update (e.g., 'photoURL').
+ * - `customMetadata.firestorePath`: The full path to the document in Firestore (e.g., 'users/userId123').
+ * - `customMetadata.firestoreField`: The field within the document to update (e.g., 'photoURL').
  */
 export const onFileUpload = functions.storage.object().onFinalize(async (object) => {
   const filePath = object.name;
@@ -30,15 +30,15 @@ export const onFileUpload = functions.storage.object().onFinalize(async (object)
     return;
   }
   
-  if (!metadata) {
-    functions.logger.log(`File ${filePath} has no metadata. Skipping Firestore update.`);
+  if (!metadata || !metadata.customMetadata) {
+    functions.logger.log(`File ${filePath} has no customMetadata. Skipping Firestore update.`);
     return;
   }
   
-  const { firestorePath, firestoreField } = metadata;
+  const { firestorePath, firestoreField } = metadata.customMetadata;
   
   if (!firestorePath || !firestoreField) {
-    functions.logger.log(`File ${filePath} is missing 'firestorePath' or 'firestoreField' metadata. Skipping Firestore update.`);
+    functions.logger.log(`File ${filePath} is missing 'firestorePath' or 'firestoreField' in customMetadata. Skipping Firestore update.`);
     return;
   }
 

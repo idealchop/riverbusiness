@@ -44,7 +44,8 @@ export function uploadFile(
             reject(new Error('Permission denied. Please check your storage security rules.'));
             break;
           case 'storage/canceled':
-            reject(new Error("Upload was canceled."));
+            // Don't reject on cancel, just resolve with an empty string or handle as needed
+            resolve(''); 
             break;
           default:
             reject(new Error(`Upload failed. Reason: ${error.code}`));
@@ -53,8 +54,7 @@ export function uploadFile(
       },
       async () => {
         try {
-          // The Cloud Function now handles updating Firestore. We just need to resolve
-          // with the URL so the client can optimistically update the UI.
+          // The upload is complete. Now, get the download URL.
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
           resolve(downloadURL);
         } catch (err) {

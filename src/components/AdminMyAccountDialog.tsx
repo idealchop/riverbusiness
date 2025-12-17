@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref } from 'firebase/storage';
+import { deleteObject, ref, type UploadMetadata } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
@@ -170,8 +170,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       return;
     }
     try {
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, state.currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword));
       await updatePassword(auth.currentUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -189,16 +188,16 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     try {
       const file = state.profilePhotoFile;
       const userId = auth.currentUser.uid;
-      const filePath = `users/${userId}/profile/${file.name}`;
+      const filePath = `users/${userId}/profile/profile_photo.jpg`;
       
-      const metadata = {
+      const metadata: UploadMetadata = {
         customMetadata: {
           firestorePath: `users/${userId}`,
           firestoreField: 'photoURL'
         }
       };
-
-      const downloadURL = await uploadFile(
+      
+      await uploadFile(
         storage,
         file,
         filePath,
@@ -206,9 +205,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
 
-      dispatch({ type: 'UPLOAD_SUCCESS' });
-      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
-      toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
+      toast({ title: 'Profile Photo Uploaded!', description: 'Your new photo is being processed and will appear shortly.' });
 
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
@@ -216,10 +213,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: String(error) });
     } finally {
-      if(state.profilePhotoPreview) {
-        URL.revokeObjectURL(state.profilePhotoPreview);
-      }
-      dispatch({ type: 'RESET_UPLOAD' });
+      dispatch({ type: 'UPLOAD_SUCCESS' });
     }
   };
 
