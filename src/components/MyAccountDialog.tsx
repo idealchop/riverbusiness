@@ -25,7 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
@@ -175,7 +175,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     }
     try {
       const credential = EmailAuthProvider.credential(authUser.email, state.currentPassword);
-      await reauthenticateWithCredential(authUser, credential);
+      await reauthenticateWithCredential(authUser, state.currentPassword);
       await updatePassword(authUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -185,32 +185,39 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   };
   
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser || !storage || !firestore) return;
-  
+    if (!state.profilePhotoFile || !authUser || !storage) return;
+
     dispatch({ type: 'START_UPLOAD' });
-  
+    dispatch({ type: 'SET_OPTIMISTIC_URL', payload: state.profilePhotoPreview });
+
     try {
       const file = state.profilePhotoFile;
       const userId = authUser.uid;
-      const filePath = `users/${userId}/profile/profile_photo.jpg`;
+      const filePath = `users/${userId}/profile/${file.name}`;
       
+      const metadata = {
+        customMetadata: {
+          firestorePath: `users/${userId}`,
+          firestoreField: 'photoURL'
+        }
+      };
+
       const downloadURL = await uploadFile(
         storage,
         file,
         filePath,
+        metadata,
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
-  
-      const userDocRef = doc(firestore, 'users', userId);
-      await updateDoc(userDocRef, { photoURL: downloadURL });
-  
+      
       dispatch({ type: 'UPLOAD_SUCCESS' });
+      // Optimistically update URL, but set final one from resolved promise to be safe
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
       toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
-  
+
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
-      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null });
+      dispatch({ type: 'SET_OPTIMISTIC_URL', payload: user?.photoURL ?? null }); // Revert on failure
       console.error("Upload failed:", error);
       toast({ variant: 'destructive', title: 'Upload Failed', description: String(error) });
     } finally {
@@ -228,6 +235,8 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     dispatch({ type: 'SET_OPTIMISTIC_URL', payload: null });
   
     try {
+      // It's better to let the Cloud Function handle the delete if we have one.
+      // For now, let's update Firestore and delete from storage.
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: null });
       

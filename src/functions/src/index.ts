@@ -1,125 +1,66 @@
 
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import * as path from "path";
 
-// Initialize the Firebase Admin SDK.
 admin.initializeApp();
-
 const db = admin.firestore();
-const storage = admin.storage();
 
 /**
  * A generic Cloud Function that triggers on any file being finalized in
- * Firebase Storage. It determines the file type based on its path and
- * updates the corresponding Firestore document with a public URL.
+ * Firebase Storage. It reads metadata from the uploaded file to determine
+ * which Firestore document and field to update with the public URL.
+ *
+ * Expected Metadata:
+ * - `firestorePath`: The full path to the document in Firestore (e.g., 'users/userId123').
+ * - `firestoreField`: The field within the document to update (e.g., 'photoURL').
  */
 export const onFileUpload = functions.storage.object().onFinalize(async (object) => {
   const filePath = object.name;
-  
-  // Ensure filePath is valid
-  if (!filePath) {
-    functions.logger.warn("File path is undefined.");
+  const contentType = object.contentType;
+  const metadata = object.metadata;
+
+  if (!filePath || !contentType) {
+    functions.logger.warn("File path or content type is undefined. Exiting.");
+    return;
+  }
+
+  // Exit if this is a folder creation event
+  if (contentType === "application/octet-stream" && filePath.endsWith('/')) {
+    functions.logger.log(`Ignoring folder creation event for: ${filePath}`);
     return;
   }
   
-  const bucket = storage.bucket(object.bucket);
+  if (!metadata) {
+    functions.logger.log(`File ${filePath} has no metadata. Skipping Firestore update.`);
+    return;
+  }
+  
+  const { firestorePath, firestoreField } = metadata;
+  
+  if (!firestorePath || !firestoreField) {
+    functions.logger.log(`File ${filePath} is missing 'firestorePath' or 'firestoreField' metadata. Skipping Firestore update.`);
+    return;
+  }
+
+  const bucket = admin.storage().bucket(object.bucket);
   const file = bucket.file(filePath);
 
-  const getPublicUrl = async () => {
+  try {
+    // Generate a signed URL to make the file publicly accessible.
+    // This URL is valid for a very long time.
     const [downloadURL] = await file.getSignedUrl({
       action: "read",
-      expires: "01-01-2500", // A far-future expiration date
+      expires: "01-01-2500", 
     });
-    return downloadURL;
-  };
 
-  try {
-    // --- User Profile Photo ---
-    // This is now handled entirely on the client-side to provide a better UX.
-    // The client directly updates the user's document after a successful upload.
-    // This section is intentionally left empty to prevent conflicts.
-    if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
-      functions.logger.log(`Client handled profile photo update for path: ${filePath}. No server action needed.`);
-      return;
-    }
+    // Update the specified Firestore document with the new URL.
+    const docRef = db.doc(firestorePath);
+    await docRef.update({
+      [firestoreField]: downloadURL,
+    });
 
-    // --- User Contract ---
-    if (filePath.startsWith("userContracts/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).update({
-            currentContractUrl: url,
-            contractUploadedDate: admin.firestore.FieldValue.serverTimestamp(),
-            contractStatus: "Active",
-        });
-        functions.logger.log(`Updated contract for user: ${userId}`);
-        return;
-    }
+    functions.logger.log(`Successfully updated document '${firestorePath}' with URL for ${filePath}.`);
 
-    // --- Delivery Proof ---
-    if (filePath.startsWith("users/") && filePath.includes("/deliveries/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const deliveryId = path.basename(filePath).split('.')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
-            proofOfDeliveryUrl: url,
-        });
-        functions.logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId}`);
-        return;
-    }
-
-    // --- Payment Proof ---
-     if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const paymentId = path.basename(filePath).split('.')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("payments").doc(paymentId).update({
-            proofOfPaymentUrl: url,
-            status: "Pending Review",
-        });
-        functions.logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
-        return;
-    }
-
-    // --- Water Station Documents (Agreement & Compliance) ---
-    if (filePath.startsWith("stations/")) {
-      const parts = filePath.split("/");
-      const stationId = parts[1];
-      const docType = parts[2]; // e.g., 'agreement' or 'compliance'
-      const fileName = path.basename(filePath);
-      const url = await getPublicUrl();
-
-      if (docType === "agreement") {
-        await db.collection("waterStations").doc(stationId).update({
-          partnershipAgreementUrl: url,
-        });
-        functions.logger.log(`Updated partnership agreement for station: ${stationId}`);
-      } else if (docType === "compliance") {
-        // Example filename: 'businessPermit-some_file.pdf'
-        const reportName = fileName.split("-")[0]; // 'businessPermit'
-        const formattedName = reportName.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
-        
-        const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports");
-        // Create a unique ID from the report name to avoid duplicates
-        const reportDocId = reportName;
-
-        await reportRef.doc(reportDocId).set({
-            id: reportDocId,
-            name: formattedName,
-            date: admin.firestore.FieldValue.serverTimestamp(),
-            status: "Pending Review",
-            reportUrl: url,
-        }, { merge: true });
-        functions.logger.log(`Updated compliance report '${formattedName}' for station: ${stationId}`);
-      }
-      return;
-    }
-
-    functions.logger.log(`File path ${filePath} did not match any handler.`);
   } catch (error) {
     functions.logger.error(`Failed to process upload for ${filePath}.`, error);
   }

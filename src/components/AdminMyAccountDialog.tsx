@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { deleteObject, ref } from 'firebase/storage';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
@@ -171,7 +171,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     }
     try {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, state.currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
+      await reauthenticateWithCredential(auth.currentUser, state.currentPassword);
       await updatePassword(auth.currentUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -181,29 +181,35 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser || !storage || !firestore) return;
-  
+    if (!state.profilePhotoFile || !auth.currentUser || !storage) return;
+
     dispatch({ type: 'START_UPLOAD' });
-  
+    dispatch({ type: 'SET_OPTIMISTIC_URL', payload: state.profilePhotoPreview });
+
     try {
       const file = state.profilePhotoFile;
       const userId = auth.currentUser.uid;
-      const filePath = `users/${userId}/profile/profile_photo.jpg`;
+      const filePath = `users/${userId}/profile/${file.name}`;
       
+      const metadata = {
+        customMetadata: {
+          firestorePath: `users/${userId}`,
+          firestoreField: 'photoURL'
+        }
+      };
+
       const downloadURL = await uploadFile(
         storage,
         file,
         filePath,
+        metadata,
         (progress) => dispatch({ type: 'SET_UPLOAD_PROGRESS', payload: progress })
       );
-  
-      const adminUserDocRef = doc(firestore, 'users', userId);
-      await updateDoc(adminUserDocRef, { photoURL: downloadURL });
-  
+
       dispatch({ type: 'UPLOAD_SUCCESS' });
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: downloadURL });
       toast({ title: 'Profile Photo Updated!', description: 'Your new photo has been saved.' });
-  
+
     } catch (error) {
       dispatch({ type: 'UPLOAD_ERROR' });
       dispatch({ type: 'SET_OPTIMISTIC_URL', payload: adminUser?.photoURL ?? null });

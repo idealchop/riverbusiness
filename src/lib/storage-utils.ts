@@ -1,16 +1,15 @@
 
 'use client';
 
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, type FirebaseStorage } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, type FirebaseStorage, type UploadMetadata } from 'firebase/storage';
 
 /**
- * A robust, promise-based function to upload a file to Firebase Storage with progress tracking.
- * This version correctly wraps the upload task in a Promise, ensuring it only resolves
- * after the upload is complete and the download URL has been retrieved.
+ * A robust, promise-based function to upload a file to Firebase Storage with progress tracking and metadata.
  *
  * @param storage The initialized FirebaseStorage instance.
  * @param file The file to upload.
  * @param path The full path in Firebase Storage where the file should be saved.
+ * @param metadata The metadata to attach to the file, used by the Cloud Function.
  * @param onProgress An optional callback to receive upload progress updates (0-100).
  * @returns A promise that resolves with the public download URL of the uploaded file.
  * @throws An error if the upload fails.
@@ -19,6 +18,7 @@ export function uploadFile(
   storage: FirebaseStorage,
   file: File,
   path: string,
+  metadata: UploadMetadata,
   onProgress?: (progress: number) => void
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
@@ -27,29 +27,23 @@ export function uploadFile(
     }
 
     const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
     uploadTask.on(
       'state_changed',
       (snapshot) => {
-        // Report progress
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         if (onProgress) {
           onProgress(progress);
         }
       },
       (error) => {
-        // Handle unsuccessful uploads
         console.error('Upload failed in utility:', error);
         switch (error.code) {
           case 'storage/unauthorized':
             reject(new Error('Permission denied. Please check your storage security rules.'));
             break;
           case 'storage/canceled':
-            // Don't reject on cancellation, but we can log it.
-            console.log("Upload was canceled.");
-            // We might not want to reject here, but let the user flow handle it.
-            // For now, we reject to ensure the calling code knows the upload didn't complete.
             reject(new Error("Upload was canceled."));
             break;
           default:
@@ -58,13 +52,14 @@ export function uploadFile(
         }
       },
       async () => {
-        // Handle successful uploads on complete
         try {
+          // The Cloud Function now handles updating Firestore. We just need to resolve
+          // with the URL so the client can optimistically update the UI.
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
           resolve(downloadURL);
         } catch (err) {
           console.error('Failed to get download URL:', err);
-          reject(new Error('File uploaded successfully, but failed to get the download URL.'));
+          reject(new Error('File uploaded, but failed to get the download URL.'));
         }
       }
     );
