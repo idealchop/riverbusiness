@@ -709,6 +709,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
           });
         } catch (error) {
           setOptimisticPhotoUrl(adminUser?.photoURL || null);
+           toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: 'Could not update your profile photo. Please try again.',
+          });
         } finally {
           setIsUploading(false);
           setProfilePhotoFile(null);

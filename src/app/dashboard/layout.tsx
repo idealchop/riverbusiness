@@ -394,7 +394,12 @@ export default function DashboardLayout({
       });
   
     } catch (error) {
-      setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
+      setOptimisticPhotoUrl(user?.photoURL || null);
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: 'Could not update your profile photo. Please try again.',
+      });
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
