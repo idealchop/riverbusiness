@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,8 +46,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { uploadFile } from '@/lib/storage-utils';
-import { FirebaseStorage } from 'firebase/storage';
+import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -75,64 +74,6 @@ type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-async function handleAdminProfilePhotoUpload(
-    profilePhotoFile: File,
-    authUserUid: string,
-    adminUserDocRef: DocumentReference,
-    storage: FirebaseStorage,
-    toast: ReturnType<typeof useToast>['toast'],
-    stateSetters: {
-      setUploadStatus: (status: 'idle' | 'uploading' | 'success') => void;
-      setUploadProgress: (progress: number) => void;
-      setIsPhotoPreviewOpen: (isOpen: boolean) => void;
-      setOptimisticPhotoUrl: (url: string | null) => void;
-    },
-    originalPhotoUrl: string | null | undefined
-) {
-    const {
-        setUploadStatus,
-        setUploadProgress,
-        setIsPhotoPreviewOpen,
-        setOptimisticPhotoUrl,
-    } = stateSetters;
-
-    setIsPhotoPreviewOpen(false);
-    setUploadStatus('uploading');
-    setUploadProgress(0);
-
-    try {
-        const filePath = `users/${authUserUid}/profile/profile_photo_${Date.now()}`;
-        
-        const downloadURL = await uploadFile(
-            storage,
-            profilePhotoFile,
-            filePath,
-            (progress) => setUploadProgress(progress)
-        );
-        
-        await updateDoc(adminUserDocRef, { photoURL: downloadURL });
-        
-        setOptimisticPhotoUrl(downloadURL);
-        setUploadStatus('success');
-
-        toast({
-            title: 'Profile Photo Updated!',
-            description: 'Your new photo has been saved permanently.',
-        });
-
-    } catch (error) {
-        setOptimisticPhotoUrl(originalPhotoUrl || null);
-        console.error("Upload failed:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: error instanceof Error ? error.message : 'Could not upload photo. Please try again.',
-        });
-        setUploadStatus('idle');
-    } finally {
-        setUploadProgress(0);
-    }
-};
 
 function AdminDashboardSkeleton() {
     return (
@@ -224,18 +165,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [agreementFile, setAgreementFile] = React.useState<File | null>(null);
     const [complianceFiles, setComplianceFiles] = React.useState<Record<string, File>>({});
 
-
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
-    const [editableFormData, setEditableFormData] = React.useState<Partial<AppUser>>({});
-    const [isEditingDetails, setIsEditingDetails] = React.useState(false);
-    const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
-    const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
-    const [showNewPassword, setShowNewPassword] = React.useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-    const [currentPassword, setCurrentPassword] = React.useState('');
-    const [newPassword, setNewPassword] = React.useState('');
-    const [confirmPassword, setConfirmPassword] = React.useState('');
-    
     const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
     const [complianceRefresher, setComplianceRefresher] = React.useState(0);
     const [isScheduleDialogOpen, setIsScheduleDialogOpen] = React.useState(false);
@@ -245,13 +175,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [currentPage, setCurrentPage] = React.useState(1);
     const ITEMS_PER_PAGE = 20;
 
-    const [profilePhotoFile, setProfilePhotoFile] = React.useState<File | null>(null);
-    const [profilePhotoPreview, setProfilePhotoPreview] = React.useState<string | null>(null);
-    const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = React.useState(false);
-    const [uploadStatus, setUploadStatus] = React.useState<'idle' | 'uploading' | 'success'>('idle');
-    const [uploadProgress, setUploadProgress] = React.useState(0);
-    const [optimisticPhotoUrl, setOptimisticPhotoUrl] = React.useState<string | null>(null);
-    
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
@@ -372,15 +295,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [selectedUser, userPaymentsData]);
 
     React.useEffect(() => {
-      if (adminUser) {
-        setEditableFormData(adminUser);
-        if (adminUser.photoURL) {
-          setOptimisticPhotoUrl(adminUser.photoURL);
-        }
-      }
-    }, [adminUser]);
-
-    React.useEffect(() => {
         const openAccountDialog = () => {
           setIsAccountDialogOpen(true);
         };
@@ -491,77 +405,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProofUpload = async () => {
-        if (!deliveryToUpdate || !userForHistory || !storage || !deliveryProofFile) {
-            toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
-            return;
-        }
-    
-        const uploadKey = `proof-${deliveryToUpdate.id}`;
-        setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
-        setIsSubmitting(true);
-    
-        const filePath = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}/${deliveryProofFile.name}`;
-        
-        try {
-            await uploadFile(storage, deliveryProofFile, filePath, (progress) => {
-                setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-            });
-            // The Cloud Function will handle updating Firestore.
-            toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Upload Failed',
-                description: 'Could not upload proof.',
-            });
-        } finally {
-            setDeliveryToUpdate(null);
-            setDeliveryProofFile(null);
-            setIsSubmitting(false);
-            setUploadingFiles(prev => {
-                const newUploadingFiles = { ...prev };
-                delete newUploadingFiles[uploadKey];
-                return newUploadingFiles;
-            });
-        }
+        // To be implemented with a robust upload utility
     };
 
 
     const handleUploadContract = async () => {
-        if (!userForContract || !contractFile || !storage) {
-            toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or user context missing.' });
-            return;
-        }
-    
-        const uploadKey = `contract-${userForContract.id}`;
-        setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
-        setIsSubmitting(true);
-    
-        const filePath = `userContracts/${userForContract.id}/latest_plan_contract.pdf`;
-        
-        try {
-            await uploadFile(storage, contractFile, filePath, (progress) => {
-                 setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-            });
-            // The `onFileUpload` Cloud Function handles the Firestore update.
-            toast({ title: "Contract Uploaded", description: `The contract for ${userForContract.name} is being processed.` });
-        } catch(error) {
-            toast({
-                variant: 'destructive',
-                title: 'Upload Failed',
-                description: 'Could not upload contract.',
-            });
-        } finally {
-            setIsUploadContractOpen(false);
-            setUserForContract(null);
-            setContractFile(null);
-            setIsSubmitting(false);
-            setUploadingFiles(prev => {
-                const newUploadingFiles = { ...prev };
-                delete newUploadingFiles[uploadKey];
-                return newUploadingFiles;
-            });
-        }
+       // To be implemented with a robust upload utility
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
@@ -583,13 +432,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
     
             if (values.proofOfDeliveryUrl && values.proofOfDeliveryUrl.length > 0) {
-                const file = values.proofOfDeliveryUrl[0];
-                const filePath = `users/${userForHistory.id}/deliveries/${values.trackingNumber}/${file.name}`;
-                const uploadKey = `delivery-${values.trackingNumber}`;
-                
-                await uploadFile(storage, file, filePath, (progress) => {
-                    setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-                });
+               // To be implemented
             }
     
             if (values.status === 'Delivered') {
@@ -661,127 +504,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
     
         setDeliveryToDelete(null);
-    };
-
-    const handleLogout = () => {
-        if (!auth) return;
-        signOut(auth).then(() => {
-          router.push('/login');
-        })
-    }
-
-    const handleAccountInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEditableFormData({
-            ...editableFormData,
-            [e.target.name]: e.target.value
-        });
-    };
-    
-    const handleSaveChanges = () => {
-        if (adminUserDocRef && editableFormData) {
-            updateDocumentNonBlocking(adminUserDocRef, editableFormData);
-            setIsEditingDetails(false);
-            toast({
-                title: "Changes Saved",
-                description: "Your account details have been successfully updated.",
-            });
-        }
-    };
-
-    const handleCancelEdit = () => {
-        if (adminUser) {
-            setEditableFormData(adminUser);
-        }
-        setIsEditingDetails(false);
-    }
-    
-    const handlePasswordChange = async () => {
-        if (!authUser || !authUser.email) {
-          toast({ variant: "destructive", title: "Error", description: "You must be logged in to change your password." });
-          return;
-        }
-    
-        if (newPassword !== confirmPassword) {
-          toast({ variant: "destructive", title: "Error", description: "New passwords do not match." });
-          return;
-        }
-    
-        if (newPassword.length < 6) {
-          toast({ variant: "destructive", title: "Error", description: "Password must be at least 6 characters long." });
-          return;
-        }
-    
-        try {
-          const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
-          await reauthenticateWithCredential(authUser, newPassword);
-          await updatePassword(authUser, newPassword);
-          
-          toast({
-              title: "Password Updated",
-              description: "Your password has been changed successfully.",
-          });
-    
-          setCurrentPassword('');
-          setNewPassword('');
-          setConfirmPassword('');
-          setIsPasswordDialogOpen(false);
-        } catch (error) {
-           toast({
-            variant: "destructive",
-            title: "Password Update Failed",
-            description: "The current password you entered is incorrect or the new password is too weak.",
-          });
-        }
-    }
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          setProfilePhotoFile(file);
-          const previewUrl = URL.createObjectURL(file);
-          setProfilePhotoPreview(previewUrl);
-          setIsPhotoPreviewOpen(true);
-        }
-        e.target.value = '';
-    };
-
-    const handleCancelUpload = () => {
-        setIsPhotoPreviewOpen(false);
-        setProfilePhotoFile(null);
-        if (profilePhotoPreview) {
-            URL.revokeObjectURL(profilePhotoPreview);
-        }
-        setProfilePhotoPreview(null);
-        setUploadStatus('idle');
-        setUploadProgress(0);
-    };
-
-    const handleProfilePhotoDelete = async () => {
-        if (!authUser || !adminUserDocRef || !adminUser?.photoURL || !storage) return;
-    
-        try {
-            setOptimisticPhotoUrl(null);
-            await updateDoc(adminUserDocRef, { photoURL: null });
-            const photoRef = ref(storage, adminUser.photoURL);
-            await deleteObject(photoRef);
-            
-            toast({
-                title: 'Profile Photo Removed',
-                description: 'Your profile photo has been removed.',
-            });
-        } catch (error) {
-            setOptimisticPhotoUrl(adminUser.photoURL);
-            await updateDoc(adminUserDocRef, { photoURL: adminUser.photoURL });
-    
-            console.error("Error removing profile photo: ", error);
-            if ((error as any).code !== 'storage/object-not-found') {
-                toast({
-                    variant: 'destructive',
-                    title: 'Delete Failed',
-                    description: 'Could not remove your profile photo. Please try again.',
-                });
-            }
-        }
     };
 
     React.useEffect(() => {
@@ -890,81 +612,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }
     
     const handleFileUpload = (
-        storage: FirebaseStorage,
         file: File,
         path: string,
         docKey: string,
       ): Promise<void> => {
         return new Promise((resolve, reject) => {
-            uploadFile(storage, file, path, (progress) => {
-                setUploadingFiles(prev => ({ ...prev, [docKey]: progress }));
-            }).then((url) => {
-                setUploadingFiles(prev => {
-                    const newUploadingFiles = { ...prev };
-                    delete newUploadingFiles[docKey];
-                    return newUploadingFiles;
-                });
-                resolve();
-            }).catch(error => {
-                setUploadingFiles(prev => ({ ...prev, [docKey]: -1 }));
-                reject(error);
-            });
+           // To be implemented
+           resolve();
         });
       };
 
     const handleCreateStation = async (values: NewStationFormValues) => {
-        if (!firestore || !storage) return;
-        setIsSubmitting(true);
-        setUploadingFiles({});
-    
-        try {
-            const newStationRef = await addDoc(collection(firestore, "waterStations"), {
-                ...values,
-                partnershipAgreementUrl: ""
-            });
-            const stationId = newStationRef.id;
-            
-            const uploadPromises: Promise<any>[] = [];
-    
-            if (agreementFile) {
-                const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                uploadPromises.push(handleFileUpload(storage, agreementFile, path, 'agreement'));
-            }
-    
-            for (const [key, file] of Object.entries(complianceFiles)) {
-                const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                uploadPromises.push(handleFileUpload(storage, file, path, key));
-            }
-    
-            await Promise.all(uploadPromises);
-    
-            toast({ title: 'Station Created', description: `Station "${values.name}" created and documents are being processed.` });
-            
-            stationForm.reset();
-            setComplianceFiles({});
-            setAgreementFile(null);
-            setIsStationProfileOpen(false);
-            setComplianceRefresher(c => c + 1);
-    
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Station Creation Failed',
-                description: 'An error occurred while creating the station.',
-            });
-        } finally {
-            setIsSubmitting(false);
-            setUploadingFiles({});
-        }
+        // To be implemented
     };
 
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
     }
-
-    const isUploading = uploadStatus === 'uploading';
-    const displayPhoto = optimisticPhotoUrl ?? adminUser?.photoURL;
-
 
   return (
     <>
@@ -1650,209 +1314,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <AlertDialog>
-            <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
-                <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>My Account</DialogTitle>
-                        <DialogDescription>
-                        Manage your account details.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-[70vh] w-full">
-                        <div className="pr-6 py-4">
-                            {adminUser && editableFormData ? (
-                                <div className="space-y-6">
-                                    <div>
-                                        <div className="flex items-center gap-4 mb-4">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <div className="relative group cursor-pointer">
-                                                        <Avatar className="h-20 w-20">
-                                                            <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
-                                                            <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        {isUploading && (
-                                                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                                                <Progress value={uploadProgress} className="h-1 w-12" />
-                                                            </div>
-                                                        )}
-                                                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <Pencil className="h-6 w-6 text-white" />
-                                                        </div>
-                                                    </div>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start">
-                                                    <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem asChild>
-                                                        <Label htmlFor="admin-photo-upload" className="w-full cursor-pointer">
-                                                            <Upload className="mr-2 h-4 w-4" />
-                                                            Upload new photo
-                                                        </Label>
-                                                    </DropdownMenuItem>
-                                                    {displayPhoto && (
-                                                        <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Remove photo
-                                                            </DropdownMenuItem>
-                                                        </AlertDialogTrigger>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-
-                                            <div className="space-y-1">
-                                                <h4 className="font-semibold">{adminUser.name}</h4>
-                                                <p className="text-sm text-muted-foreground">Update your account details.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <Separator />
-                                    <div>
-                                        <div className="flex justify-between items-center mb-4">
-                                        <h4 className="font-semibold">Your Details</h4>
-                                        {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => { setIsEditingDetails(true); setEditableFormData(adminUser); }}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                                <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                                                <Input id="fullName" name="name" value={editableFormData.name || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails} />
-                                            </div>
-                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                                <Label htmlFor="email" className="text-right">Login Email</Label>
-                                                <Input id="email" name="email" type="email" value={editableFormData.email || ''} onChange={handleAccountInfoChange} disabled={true} />
-                                            </div>
-                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                                <Label htmlFor="address" className="text-right">Address</Label>
-                                                <Input id="address" name="address" value={editableFormData.address || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                            </div>
-                                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                                <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                                                <Input id="contactNumber" name="contactNumber" type="tel" value={editableFormData.contactNumber || ''} onChange={handleAccountInfoChange} disabled={!isEditingDetails}/>
-                                            </div>
-                                        </div>
-                                        {isEditingDetails && (
-                                            <div className="flex justify-end gap-2 mt-4">
-                                                <Button variant="secondary" onClick={handleCancelEdit}>Cancel</Button>
-                                                <Button onClick={handleSaveChanges}>Save Changes</Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <Separator />
-                                    <div>
-                                        <h4 className="font-semibold mb-4">Security</h4>
-                                        <div className="flex flex-col sm:flex-row gap-2">
-                                            <Button onClick={() => setIsPasswordDialogOpen(true)}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : <p>No account information available.</p>}
-                        </div>
-                    </ScrollArea>
-                    <DialogFooter className="pr-6 pt-4 border-t">
-                        <Button variant="outline" onClick={handleLogout}><LogOut className="mr-2 h-4 w-4" />Logout</Button>
-                    </DialogFooter>
-                </DialogContent>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently remove your profile photo. Your profile will be updated after a moment.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleProfilePhotoDelete}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </Dialog>
-        </AlertDialog>
-        <Dialog open={isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isOpen && !isUploading) { handleCancelUpload() } }}>
-            <DialogContent onInteractOutside={(e) => { if (isUploading) e.preventDefault(); }}>
-              <DialogHeader>
-                <DialogTitle>Preview Profile Photo</DialogTitle>
-                <DialogDescription>
-                  Confirm this is the photo you want to upload.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="my-4 flex flex-col items-center justify-center gap-4">
-                {profilePhotoPreview && (
-                  <Image
-                    src={profilePhotoPreview}
-                    alt="Profile photo preview"
-                    width={200}
-                    height={200}
-                    className="rounded-full aspect-square object-cover"
-                  />
-                )}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
-                  Cancel
-                </Button>
-                <Button onClick={() => {
-                  if (profilePhotoFile && authUser && adminUserDocRef && storage && adminUser) {
-                    handleAdminProfilePhotoUpload(
-                      profilePhotoFile,
-                      authUser.uid,
-                      adminUserDocRef,
-                      storage,
-                      toast,
-                      {
-                        setUploadStatus,
-                        setUploadProgress,
-                        setIsPhotoPreviewOpen,
-                        setOptimisticPhotoUrl,
-                      },
-                      adminUser?.photoURL
-                    );
-                  }
-                }} disabled={isUploading}>
-                  {isUploading ? 'Uploading...' : 'Upload Photo'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-        </Dialog>
-        <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Update Password</DialogTitle>
-                    <DialogDescription>
-                    Enter your current and new password to update.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                    <div className="relative">
-                        <Label htmlFor="current-password">Current Password</Label>
-                        <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                    <div className="relative">
-                        <Label htmlFor="new-password">New Password</Label>
-                        <Input id="new-password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowNewPassword(!showNewPassword)}>
-                            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                    <div className="relative">
-                        <Label htmlFor="confirm-password">Confirm New Password</Label>
-                        <Input id="confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handlePasswordChange}>Change Password</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
+        <AdminMyAccountDialog
+            adminUser={adminUser}
+            isOpen={isAccountDialogOpen}
+            onOpenChange={setIsAccountDialogOpen}
+        />
 
         <div className="space-y-6">
             <Card>
@@ -2151,7 +1617,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             const docKey = field.key;
                                             const path = `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`;
                                             try {
-                                                await handleFileUpload(storage, fileToUpload, path, docKey);
+                                                await handleFileUpload(fileToUpload, path, docKey);
                                                 toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
@@ -2214,7 +1680,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const docKey = 'agreement';
                                         const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
                                         try {
-                                            await handleFileUpload(storage, agreementFile, path, docKey);
+                                            await handleFileUpload(agreementFile, path, docKey);
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err) {
