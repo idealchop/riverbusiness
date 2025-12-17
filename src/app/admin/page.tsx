@@ -712,7 +712,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   
       } catch (error) {
         setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
-        // The toast is already shown in uploadFile, but we can add a specific one here if needed
+        toast({
+          variant: "destructive",
+          title: "Upload Failed",
+          description: "Could not update your profile photo. Please try again.",
+        });
       } finally {
         setIsUploading(false);
         setProfilePhotoFile(null);
@@ -2302,5 +2306,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
