@@ -1,16 +1,16 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, UploadTask, UploadMetadata } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, type UploadTask, type UploadMetadata } from 'firebase/storage';
 
 /**
- * A utility function to upload a file to Firebase Storage with progress tracking
- * and custom metadata for backend processing by a Cloud Function.
+ * A utility function to upload a file to Firebase Storage with progress tracking.
+ * The backend Cloud Function will handle creating a public URL and updating Firestore.
  *
  * @param storage The Firebase Storage instance.
  * @param path The full path in the storage bucket where the file should be uploaded.
  * @param file The file object to upload.
- * @param metadata The custom metadata to attach to the file, specifically for the Cloud Function.
+ * @param metadata The custom metadata to attach to the file, if any.
  * @param onProgress A callback function to report the upload progress (0-100).
  * @returns A promise that resolves with the UploadTask when the upload is initiated.
  */
@@ -23,7 +23,10 @@ export function uploadFileWithProgress(
 ): Promise<UploadTask> {
   return new Promise((resolve, reject) => {
     const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file, { customMetadata: metadata });
+    
+    // The custom metadata is now an empty object because the V2 Cloud Function
+    // infers all necessary information from the file path itself.
+    const uploadTask = uploadBytesResumable(storageRef, file, {});
 
     uploadTask.on(
       'state_changed',
@@ -38,8 +41,8 @@ export function uploadFileWithProgress(
         reject(error);
       },
       () => {
-        // Handle successful uploads on complete
-        // The onfileupload Cloud Function will handle getting the URL and updating Firestore.
+        // Handle successful uploads on complete.
+        // The `onfileupload` Cloud Function will handle the rest.
         onProgress(100);
       }
     );
@@ -47,3 +50,5 @@ export function uploadFileWithProgress(
     resolve(uploadTask);
   });
 }
+
+    

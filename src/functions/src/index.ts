@@ -15,8 +15,7 @@ const storage = getStorage();
  * It determines the file type based on its path and
  * updates the corresponding Firestore document with a public URL.
  *
- * This function has been refactored from a more complex, metadata-driven approach
- * to a simpler, path-driven one for robustness.
+ * This function uses a path-driven approach to be robust and flexible.
  */
 export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) => {
   const fileBucket = event.data.bucket;
@@ -116,10 +115,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Note: Profile photo uploads are handled by a Server Action and do not trigger this function.
+    // Note: Profile photo uploads are handled by the Server Action and do not trigger this function.
     logger.log(`File path ${filePath} did not match any handler.`);
 
   } catch (error) {
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    

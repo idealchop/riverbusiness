@@ -37,7 +37,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { UploadTask, getStorage } from 'firebase/storage';
+import { type UploadTask } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -425,17 +425,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProofUpload = async () => {
-        if (!deliveryProofFile || !deliveryToUpdate || !userForHistory) return;
+        if (!deliveryProofFile || !deliveryToUpdate || !userForHistory || !storage) return;
     
         setIsSubmitting(true);
         const uploadKey = `proof-${deliveryToUpdate.id}`;
     
         try {
             const path = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}-${deliveryProofFile.name}`;
-            const metadata = {
-                firestorePath: `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}`,
-                firestoreField: 'proofOfDeliveryUrl'
-            };
+            const metadata = {}; // The backend function now infers this
             await handleFileUpload(deliveryProofFile, path, metadata, uploadKey);
             
             toast({ title: 'Proof Uploaded', description: 'The proof of delivery is being processed.' });
@@ -447,23 +444,24 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
         } finally {
             setIsSubmitting(false);
-            setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
+            setUploadingFiles(prev => {
+                const newUploadingFiles = { ...prev };
+                delete newUploadingFiles[uploadKey];
+                return newUploadingFiles;
+            });
         }
     };
 
 
     const handleUploadContract = async () => {
-        if (!contractFile || !userForContract) return;
+        if (!contractFile || !userForContract || !storage) return;
 
         setIsSubmitting(true);
         const uploadKey = `contract-${userForContract.id}`;
     
         try {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
-            const metadata = {
-                firestorePath: `users/${userForContract.id}`,
-                firestoreField: 'currentContractUrl'
-            };
+            const metadata = {};
             await handleFileUpload(contractFile, path, metadata, uploadKey);
     
             toast({ title: 'Contract Uploaded', description: 'The contract is being processed.' });
@@ -474,7 +472,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
         } finally {
             setIsSubmitting(false);
-            setUploadingFiles(prev => ({...prev, [uploadKey]: 0}));
+            setUploadingFiles(prev => {
+                const newUploadingFiles = { ...prev };
+                delete newUploadingFiles[uploadKey];
+                return newUploadingFiles;
+            });
         }
     };
 
@@ -483,11 +485,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
     
         try {
-            const newDeliveryDocRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
+            const newDeliveryDocRef = doc(collection(firestore, 'users', userForHistory.id, 'deliveries'), values.trackingNumber);
     
-            const newDeliveryData: Delivery = {
-                id: values.trackingNumber,
-                userId: userForHistory.id,
+            const newDeliveryData: Omit<Delivery, 'id'|'userId'> & {date: string} = {
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
@@ -500,10 +500,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const uploadKey = `delivery-${values.trackingNumber}`;
                 const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
-                const metadata = {
-                    firestorePath: newDeliveryDocRef.path,
-                    firestoreField: 'proofOfDeliveryUrl'
-                };
+                const metadata = {}; // Backend infers this now
                 await handleFileUpload(file, path, metadata, uploadKey);
             }
     
@@ -687,24 +684,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore) return;
         setIsSubmitting(true);
         try {
-            const newStationRef = await addDocumentNonBlocking(collection(firestore, 'waterStations'), values);
+            const newStationData = {
+                name: values.name,
+                location: values.location,
+            };
+            const newStationRef = await addDocumentNonBlocking(collection(firestore, 'waterStations'), newStationData);
             
             const uploadPromises: Promise<any>[] = [];
             const stationId = newStationRef.id;
 
             if (agreementFile) {
                 const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                const metadata = { firestorePath: `waterStations/${stationId}`, firestoreField: 'partnershipAgreementUrl' };
-                uploadPromises.push(handleFileUpload(agreementFile, path, metadata, 'agreement'));
+                uploadPromises.push(handleFileUpload(agreementFile, path, {}, `agreement-${stationId}`));
             }
 
             Object.entries(complianceFiles).forEach(([key, file]) => {
                 const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                const metadata = {
-                    firestorePath: `waterStations/${stationId}/complianceReports/${key}`,
-                    firestoreField: 'reportUrl'
-                };
-                uploadPromises.push(handleFileUpload(file, path, metadata, key));
+                uploadPromises.push(handleFileUpload(file, path, {}, `${key}-${stationId}`));
             });
 
             await Promise.all(uploadPromises);
@@ -1706,22 +1702,29 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     {complianceFields.map(field => {
                                         const report = complianceReports?.find(r => r.name === field.label);
                                         const stagedFile = complianceFiles[field.key];
-                                        const progress = uploadingFiles[field.key] || 0;
+                                        const progress = uploadingFiles[`${field.key}-${stationToUpdate?.id}`] || 0;
                                         const isUploadingFile = progress > 0 && progress < 100;
                                         
                                         const onUpload = async (fileToUpload: File) => {
                                             if (!stationToUpdate || !storage) return;
                                             const docKey = field.key;
-                                            const path = `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`;
-                                            const metadata = { firestorePath: `waterStations/${stationToUpdate.id}/complianceReports/${docKey}`, firestoreField: 'reportUrl' };
+                                            const stationId = stationToUpdate.id;
+                                            const path = `stations/${stationId}/compliance/${docKey}-${fileToUpload.name}`;
+                                            const uploadKey = `${docKey}-${stationId}`;
                                             try {
-                                                await handleFileUpload(fileToUpload, path, metadata, docKey);
+                                                await handleFileUpload(fileToUpload, path, {}, uploadKey);
                                                 toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
                                             } catch (err) {
                                                 console.error(err);
                                                 toast({variant: 'destructive', title: 'Upload Failed'});
+                                            } finally {
+                                                setUploadingFiles(prev => {
+                                                    const newState = {...prev};
+                                                    delete newState[uploadKey];
+                                                    return newState;
+                                                });
                                             }
                                         };
 
@@ -1777,19 +1780,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     const onUpload = async () => {
                                         if (!agreementFile || !stationToUpdate || !storage) return;
                                         const docKey = 'agreement';
-                                        const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
+                                        const stationId = stationToUpdate.id;
+                                        const path = `stations/${stationId}/agreement/${agreementFile.name}`;
+                                        const uploadKey = `${docKey}-${stationId}`;
                                         try {
-                                            const metadata = { firestorePath: `waterStations/${stationToUpdate.id}`, firestoreField: 'partnershipAgreementUrl' };
-                                            await handleFileUpload(agreementFile, path, metadata, docKey);
+                                            await handleFileUpload(agreementFile, path, {}, uploadKey);
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err) {
                                             console.error(err);
                                             toast({variant: 'destructive', title: 'Upload Failed'});
+                                        } finally {
+                                            setUploadingFiles(prev => {
+                                                const newState = {...prev};
+                                                delete newState[uploadKey];
+                                                return newState;
+                                            });
                                         }
                                     };
                                     
-                                    const progress = uploadingFiles['agreement'];
+                                    const progress = uploadingFiles[`agreement-${stationToUpdate?.id}`];
                                     const isUploadingFile = progress > 0 && progress < 100;
 
                                     if (isUploadingFile) {
@@ -1914,3 +1924,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
