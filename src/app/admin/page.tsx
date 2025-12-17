@@ -37,7 +37,7 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytesResumable, UploadTask, deleteObject } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -46,6 +46,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { uploadFile } from '@/lib/storage-utils';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -714,61 +715,45 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProfilePhotoUpload = async () => {
-        if (!profilePhotoFile || !authUser || !profilePhotoPreview || !adminUserDocRef) return;
-      
+        if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
+    
+        // Use the optimistic URL for immediate feedback
+        if (profilePhotoPreview) {
+          setOptimisticPhotoUrl(profilePhotoPreview);
+        }
+        setIsPhotoPreviewOpen(false);
         setIsUploading(true);
         setUploadProgress(0);
-        setOptimisticPhotoUrl(profilePhotoPreview);
-        setIsPhotoPreviewOpen(false);
-      
-        const storage = getStorage();
-        const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`; 
-        const storageRef = ref(storage, filePath);
-        const metadata = { contentType: profilePhotoFile.type };
-      
-        const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
     
-        uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                setOptimisticPhotoUrl(adminUser?.photoURL || null);
-                setIsUploading(false);
-                setUploadProgress(0);
-                toast({
-                    variant: 'destructive',
-                    title: 'Upload Failed',
-                    description: error.message || 'Could not upload photo.'
-                });
-            },
-            async () => {
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    await updateDoc(adminUserDocRef, { photoURL: downloadURL });
-                    setOptimisticPhotoUrl(downloadURL);
-                    toast({
-                        title: 'Profile Photo Updated!',
-                        description: 'Your new photo has been saved.',
-                    });
-                } catch (error: any) {
-                    setOptimisticPhotoUrl(adminUser?.photoURL || null);
-                     toast({
-                        variant: 'destructive',
-                        title: 'Update Failed',
-                        description: 'Could not save the new photo URL.'
-                    });
-                } finally {
-                    setIsUploading(false);
-                    setProfilePhotoFile(null);
-                    setProfilePhotoPreview(null);
-                    setUploadProgress(0);
-                }
-            }
-        );
-    };
+        try {
+          const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
+          const downloadURL = await uploadFile(profilePhotoFile, filePath, setUploadProgress);
+    
+          // Direct update to Firestore
+          await updateDoc(adminUserDocRef, { photoURL: downloadURL });
+    
+          setOptimisticPhotoUrl(downloadURL); // Set the final URL
+          toast({
+            title: 'Profile Photo Updated!',
+            description: 'Your new photo has been saved.',
+          });
+        } catch (error) {
+          console.error("Profile photo upload failed:", error);
+          // Revert optimistic UI on failure
+          setOptimisticPhotoUrl(adminUser?.photoURL || null);
+          toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: 'Could not upload your photo. Please try again.',
+          });
+        } finally {
+          // Cleanup
+          setIsUploading(false);
+          setProfilePhotoFile(null);
+          setProfilePhotoPreview(null);
+          setUploadProgress(0);
+        }
+      };
     
     const handleCancelUpload = () => {
         setIsPhotoPreviewOpen(false);

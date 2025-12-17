@@ -45,6 +45,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMounted } from '@/hooks/use-mounted';
+import { uploadFile } from '@/lib/storage-utils';
 
 type Notification = {
     id: string;
@@ -374,65 +375,44 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !profilePhotoPreview || !userDocRef) return;
-  
+    if (!profilePhotoFile || !authUser || !userDocRef) return;
+
+    // Use the optimistic URL for immediate feedback
+    if (profilePhotoPreview) {
+      setOptimisticPhotoUrl(profilePhotoPreview);
+    }
+    setIsPhotoPreviewOpen(false);
     setIsUploading(true);
     setUploadProgress(0);
-    setOptimisticPhotoUrl(profilePhotoPreview);
-    setIsPhotoPreviewOpen(false);
-  
-    const storage = getStorage();
-    const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
-    const storageRef = ref(storage, filePath);
-    const metadata = { contentType: profilePhotoFile.type };
-    const uploadTask = uploadBytesResumable(storageRef, profilePhotoFile, metadata);
-  
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      },
-      (error) => {
-        // Revert optimistic UI on failure
-        setOptimisticPhotoUrl(user?.photoURL || null);
-        setIsUploading(false);
-        setUploadProgress(0);
-        toast({
-          variant: 'destructive',
-          title: 'Upload Failed',
-          description: error.message || 'Could not upload your photo.'
-        });
-      },
-      async () => {
-        try {
-          // Upload complete, now get URL and update Firestore
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          await updateDoc(userDocRef, { photoURL: downloadURL });
-  
-          // Final state update and success toast
-          setOptimisticPhotoUrl(downloadURL);
-          toast({
-            title: 'Profile Photo Updated!',
-            description: 'Your new profile photo has been saved.',
-          });
-        } catch (error: any) {
-          // Revert optimistic UI on Firestore update failure
-          setOptimisticPhotoUrl(user?.photoURL || null);
-          toast({
-            variant: 'destructive',
-            title: 'Update Failed',
-            description: 'Your photo was uploaded, but we could not save it to your profile.'
-          });
-        } finally {
-          // Cleanup
-          setIsUploading(false);
-          setProfilePhotoFile(null);
-          setProfilePhotoPreview(null);
-          setUploadProgress(0);
-        }
-      }
-    );
+
+    try {
+      const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
+      const downloadURL = await uploadFile(profilePhotoFile, filePath, setUploadProgress);
+
+      // Direct update to Firestore
+      await updateDoc(userDocRef, { photoURL: downloadURL });
+
+      setOptimisticPhotoUrl(downloadURL); // Set the final URL
+      toast({
+        title: 'Profile Photo Updated!',
+        description: 'Your new photo has been saved.',
+      });
+    } catch (error) {
+      console.error("Profile photo upload failed:", error);
+      // Revert optimistic UI on failure
+      setOptimisticPhotoUrl(user?.photoURL || null);
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: 'Could not upload your photo. Please try again.',
+      });
+    } finally {
+      // Cleanup
+      setIsUploading(false);
+      setProfilePhotoFile(null);
+      setProfilePhotoPreview(null);
+      setUploadProgress(0);
+    }
   };
 
   const handleCancelUpload = () => {
