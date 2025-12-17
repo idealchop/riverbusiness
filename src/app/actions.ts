@@ -7,22 +7,21 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, App, credential } from 'firebase-admin/app';
 
 // This is a robust way to initialize the Firebase Admin SDK in a serverless environment like Next.js.
-// It ensures that the app is initialized only once.
+// It ensures that the app is initialized only once per server instance.
 function initializeAdminApp(): App {
   const apps = getApps();
   if (apps.length > 0) {
     return apps[0];
   }
 
+  // Ensure service account environment variable is set.
   if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set.');
-  }
-   if (!process.env.FIREBASE_STORAGE_BUCKET) {
-    throw new Error('FIREBASE_STORAGE_BUCKET environment variable is not set.');
   }
 
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
+  // Initialize the app with credential and storage bucket.
   return initializeApp({
     credential: credential.cert(serviceAccount),
     storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
@@ -32,20 +31,25 @@ function initializeAdminApp(): App {
 
 export async function uploadProfilePhotoAction(formData: FormData) {
   try {
+    // Ensure the storage bucket environment variable is set before proceeding.
+    if (!process.env.FIREBASE_STORAGE_BUCKET) {
+      throw new Error('FIREBASE_STORAGE_BUCKET environment variable is not set.');
+    }
+    
+    // Initialize the app *inside* the action. This is the key fix.
     const adminApp = initializeAdminApp();
     const db = getFirestore(adminApp);
     const storage = getStorage(adminApp);
     
     const file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
-    const firestorePath = `users/${userId}`;
-    const firestoreField = 'photoURL';
 
     if (!file || !userId) {
       return { success: false, error: 'Missing file or user ID.' };
     }
     
-    const bucket = storage.bucket(); // Use the default bucket from initialization
+    // Explicitly specify the bucket to use.
+    const bucket = storage.bucket(process.env.FIREBASE_STORAGE_BUCKET);
     const filePath = `users/${userId}/profile/profile_photo.jpg`;
     const fileRef = bucket.file(filePath);
 
@@ -61,9 +65,9 @@ export async function uploadProfilePhotoAction(formData: FormData) {
       expires: '01-01-2500', // A very long-lived URL
     });
     
-    const docRef = db.doc(firestorePath);
+    const docRef = db.doc(`users/${userId}`);
     await docRef.update({
-      [firestoreField]: publicUrl,
+      photoURL: publicUrl,
     });
 
     revalidatePath('/dashboard');
