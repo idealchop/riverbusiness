@@ -49,17 +49,15 @@ export default function TestUploadPage() {
     console.log('[TEST SCRIPT] Starting upload...');
 
     const userId = user.uid;
-    const filePath = `users/${userId}/profile/profile_photo.jpg`;
+    // This path format is now critical, as the Cloud Function uses it to identify the user.
+    const filePath = `users/${userId}/profile/profile_photo_${Date.now()}.jpg`;
     
-    const metadata: UploadMetadata = {
-      customMetadata: {
-        firestorePath: `users/${userId}`,
-        firestoreField: 'photoURL'
-      }
-    };
+    // The metadata is no longer needed for this specific test, as the function uses path-based logic.
+    const metadata: UploadMetadata = {};
 
     try {
-      const downloadURL = await uploadFile(
+      // We don't need the downloadURL on the client anymore for this flow.
+      await uploadFile(
         storage,
         file,
         filePath,
@@ -71,8 +69,8 @@ export default function TestUploadPage() {
       );
 
       setStatus('Upload complete! The Cloud Function has been triggered to update Firestore.');
-      setResult(`Success! File is available at: ${downloadURL}`);
-      console.log('[TEST SCRIPT] Upload successful. Download URL:', downloadURL);
+      setResult(`Success! The file was uploaded to: ${filePath}. The backend is now processing it.`);
+      console.log('[TEST SCRIPT] Upload successful.');
       console.log('[TEST SCRIPT] The backend Cloud Function should now be updating the photoURL field in Firestore.');
 
     } catch (error: any) {
@@ -94,8 +92,7 @@ export default function TestUploadPage() {
         <CardHeader>
           <CardTitle>File Upload Test Script</CardTitle>
           <CardDescription>
-            Use this page to test the file upload functionality in isolation.
-            Open your developer console to see detailed logs.
+            Use this page to test the file upload functionality. The backend Cloud Function will handle the Firestore update. Open your console to see logs.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
