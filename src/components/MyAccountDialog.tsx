@@ -22,14 +22,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useStorage } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { uploadProfilePhotoAction } from '@/app/actions';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 // State Management with useReducer
 type State = {
@@ -112,8 +112,10 @@ interface MyAccountDialogProps {
 export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, onLogout, children }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
+  const [uploadProgress, setUploadProgress] = React.useState(0);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const storage = useStorage();
 
   useEffect(() => {
     if (user) {
@@ -155,7 +157,8 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       return;
     }
     try {
-      await reauthenticateWithCredential(authUser, state.currentPassword);
+      const credential = EmailAuthProvider.credential(authUser.email, state.currentPassword);
+      await reauthenticateWithCredential(authUser, credential);
       await updatePassword(authUser, state.newPassword);
       toast({ title: "Password Updated", description: "Your password has been changed successfully." });
       dispatch({ type: 'RESET_PASSWORD_FORM' });
@@ -165,38 +168,31 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   };
   
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !authUser) return;
+    if (!state.profilePhotoFile || !authUser || !storage) return;
   
-    const formData = new FormData();
-    formData.append('file', state.profilePhotoFile);
-    formData.append('userId', authUser.uid);
-  
+    const filePath = `users/${authUser.uid}/profile/profile-photo-${Date.now()}`;
+    
     startTransition(async () => {
-      const result = await uploadProfilePhotoAction(formData);
-      if (result.success) {
-        toast({ title: 'Upload Complete', description: 'Your photo has been updated.' });
-      } else {
-        toast({ variant: 'destructive', title: 'Upload Failed', description: result.error });
+      try {
+        await uploadFileWithProgress(storage, filePath, state.profilePhotoFile, {}, setUploadProgress);
+        toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
+      } finally {
+        dispatch({ type: 'RESET_UPLOAD' });
+        setUploadProgress(0);
       }
-      dispatch({ type: 'RESET_UPLOAD' });
     });
   };
   
   const handleProfilePhotoDelete = async () => {
     if (!authUser || !user || !firestore) return;
     
-    // We will clear the photoURL in firestore. The Server Action will handle deleting the file from storage if needed.
-    const formData = new FormData();
-    // Sending an empty file signals deletion on the server
-    formData.append('file', new Blob()); 
-    formData.append('userId', authUser.uid);
-    formData.append('delete', 'true');
-    
     startTransition(async () => {
-        // A more complete implementation would have a dedicated 'delete' action.
-        // For now, we'll just clear the URL in firestore.
         const userDocRef = doc(firestore, 'users', authUser.uid);
         try {
+            // The Cloud Function doesn't handle deletion, so we just clear the URL.
+            // A more robust solution would involve a separate function to delete the file from storage.
             await updateDoc(userDocRef, { photoURL: null });
             toast({ title: 'Profile Photo Removed' });
         } catch (error) {
@@ -237,7 +233,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                 <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
                                 <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                               </Avatar>
-                              {isPending && (
+                              {(isPending) && (
                                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                                     <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
                                 </div>

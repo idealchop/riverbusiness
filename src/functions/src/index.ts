@@ -40,6 +40,16 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
+    // --- User Profile Photo ---
+    if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
+        const parts = filePath.split("/");
+        const userId = parts[1];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).update({ photoURL: url });
+        logger.log(`Updated profile photo for user: ${userId}`);
+        return;
+    }
+
     // --- User Contract ---
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
@@ -115,12 +125,9 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Note: Profile photo uploads are handled by the Server Action and do not trigger this function.
     logger.log(`File path ${filePath} did not match any handler.`);
 
   } catch (error) {
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    

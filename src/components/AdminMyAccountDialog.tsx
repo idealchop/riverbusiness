@@ -19,13 +19,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore, useAuth, useStorage } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword } from 'firebase/auth';
 import type { AppUser } from '@/lib/types';
 import { KeyRound, Edit, Trash2, Upload, LogOut, EyeOff, Eye, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { uploadProfilePhotoAction } from '@/app/actions';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 // State Management with useReducer
 type State = {
@@ -105,9 +105,11 @@ interface AdminMyAccountDialogProps {
 export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminMyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
+  const [uploadProgress, setUploadProgress] = React.useState(0);
   const { toast } = useToast();
   const firestore = useFirestore();
   const auth = useAuth();
+  const storage = useStorage();
   const router = useRouter();
 
   useEffect(() => {
@@ -162,20 +164,20 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser) return;
+    if (!state.profilePhotoFile || !auth.currentUser || !storage) return;
+  
+    const filePath = `users/${auth.currentUser.uid}/profile/profile-photo-${Date.now()}`;
     
-    const formData = new FormData();
-    formData.append('file', state.profilePhotoFile);
-    formData.append('userId', auth.currentUser.uid);
-
     startTransition(async () => {
-        const result = await uploadProfilePhotoAction(formData);
-        if (result.success) {
-            toast({ title: 'Upload Complete', description: 'Your photo has been updated.' });
-        } else {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: result.error });
-        }
+      try {
+        await uploadFileWithProgress(storage, filePath, state.profilePhotoFile, {}, setUploadProgress);
+        toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
+      } finally {
         dispatch({ type: 'RESET_UPLOAD' });
+        setUploadProgress(0);
+      }
     });
   };
 
@@ -183,7 +185,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     if (!auth.currentUser || !adminUser?.photoURL || !firestore) return;
     
     startTransition(async () => {
-        const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
+        const userDocRef = doc(firestore, 'users', auth.currentUser!.uid);
         try {
             await updateDoc(userDocRef, { photoURL: null });
             toast({ title: 'Profile Photo Removed' });
@@ -216,7 +218,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                             <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
                             <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            {isPending && (
+                            {(isPending) && (
                                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                                     <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
                                 </div>
