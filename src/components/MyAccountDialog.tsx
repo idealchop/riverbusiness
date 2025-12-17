@@ -222,7 +222,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { photoURL: null });
 
-      const photoRef = ref(storage, originalUrl);
+      const photoRef = ref(storage, user.photoURL);
       await deleteObject(photoRef);
       
       toast({ title: 'Profile Photo Removed' });
@@ -254,9 +254,9 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
             <div className="pr-6">
               <Tabs defaultValue="accounts">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="accounts"><UserIcon className="mr-2" />Accounts</TabsTrigger>
-                  <TabsTrigger value="plan"><FileText className="mr-2" />Plan</TabsTrigger>
-                  <TabsTrigger value="invoices"><Receipt className="mr-2" />Invoices</TabsTrigger>
+                  <TabsTrigger value="accounts"><UserIcon className="mr-2 h-4 w-4" />Accounts</TabsTrigger>
+                  <TabsTrigger value="plan"><FileText className="mr-2 h-4 w-4" />Plan</TabsTrigger>
+                  <TabsTrigger value="invoices"><Receipt className="mr-2 h-4 w-4" />Invoices</TabsTrigger>
                 </TabsList>
                 <TabsContent value="accounts" className="py-4">
                   <Card>

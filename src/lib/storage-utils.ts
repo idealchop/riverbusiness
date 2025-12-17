@@ -1,11 +1,11 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL, UploadTask } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 /**
- * A robust, promise-based function to upload a file to Firebase Storage with progress tracking,
- * based on a reliable, user-provided implementation.
+ * A robust, promise-based function to upload a file to Firebase Storage with progress tracking.
+ * Based on a user-provided implementation for systematic troubleshooting.
  *
  * @param storage The Firebase Storage instance.
  * @param path The full path in Firebase Storage where the file should be saved (e.g., 'users/uid/profile.jpg').
@@ -40,7 +40,7 @@ export function uploadFile(
             reject(new Error('Permission denied. Please check your storage security rules.'));
             break;
           case 'storage/canceled':
-            reject(new Error('Upload was canceled.'));
+            // Don't reject on cancellation, just do nothing.
             break;
           default:
             reject(new Error(`Upload failed. Reason: ${error.code}`));
