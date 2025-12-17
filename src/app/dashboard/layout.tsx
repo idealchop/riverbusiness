@@ -155,6 +155,7 @@ export default function DashboardLayout({
   const firestore = useFirestore();
   const storage = useStorage();
   const isMounted = useMounted();
+  const auth = useAuth();
 
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
@@ -221,7 +222,6 @@ export default function DashboardLayout({
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
   ]);
 
-  const auth = useAuth();
   
   React.useEffect(() => {
     if (isUserLoading) return;
@@ -374,7 +374,7 @@ export default function DashboardLayout({
 
     try {
       const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
-      await reauthenticateWithCredential(authUser, credential);
+      await reauthenticateWithCredential(authUser, newPassword);
       await updatePassword(authUser, newPassword);
       
       toast({
@@ -1164,5 +1164,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    

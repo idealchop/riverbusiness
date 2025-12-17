@@ -717,7 +717,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         try {
           const credential = EmailAuthProvider.credential(authUser.email, currentPassword);
-          await reauthenticateWithCredential(authUser, credential);
+          await reauthenticateWithCredential(authUser, newPassword);
           await updatePassword(authUser, newPassword);
           
           toast({
@@ -2352,5 +2352,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
