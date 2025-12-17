@@ -94,7 +94,7 @@ async function handleProfilePhotoUpload(
     setProfilePhotoFile: (file: File | null) => void;
     setProfilePhotoPreview: (preview: string | null) => void;
   },
-  originalPhotoUrl: string | null | undefined,
+  originalPhotoUrl: string | null | undefined
 ) {
   const {
     setIsUploading,

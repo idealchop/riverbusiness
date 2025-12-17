@@ -350,7 +350,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const createdAt = selectedUser.createdAt;
         const startDate = typeof (createdAt as any)?.toDate === 'function' 
             ? (createdAt as any).toDate() 
-            : new Date(createdAt as string);
+            : new Date(selectedUser.createdAt as string);
         
         if (isNaN(startDate.getTime())) return [];
 
