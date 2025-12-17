@@ -432,7 +432,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProofUpload = async () => {
-        if (!deliveryToUpdate || !userForHistory || !firestore || !deliveryProofFile) {
+        if (!deliveryToUpdate || !userForHistory || !storage || !deliveryProofFile) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or context missing.' });
             return;
         }
@@ -450,7 +450,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             // The Cloud Function will handle updating Firestore.
             toast({ title: "Upload Complete", description: `Proof for delivery ${deliveryToUpdate.id} is being processed.` });
         } catch (error) {
-            console.error("Upload error:", error);
+            // Error toast handled in uploadFile
         } finally {
             setDeliveryToUpdate(null);
             setDeliveryProofFile(null);
@@ -465,7 +465,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     const handleUploadContract = async () => {
-        if (!userForContract || !contractFile) {
+        if (!userForContract || !contractFile || !storage) {
             toast({ variant: 'destructive', title: 'Attach Failed', description: 'No file selected or user context missing.' });
             return;
         }
@@ -498,7 +498,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore) return;
+        if (!userForHistory || !firestore || !storage) return;
         setIsSubmitting(true);
     
         try {
@@ -681,46 +681,45 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProfilePhotoUpload = async () => {
-        if (!profilePhotoFile || !authUser || !adminUserDocRef) return;
-    
-        setIsUploading(true);
+      if (!profilePhotoFile || !authUser || !adminUserDocRef || !storage) return;
+  
+      setIsUploading(true);
+      setUploadProgress(0);
+      setIsPhotoPreviewOpen(false);
+  
+      if (profilePhotoPreview) {
+        setOptimisticPhotoUrl(profilePhotoPreview);
+      }
+  
+      try {
+        const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
+        
+        const downloadURL = await uploadFile(
+          storage,
+          profilePhotoFile,
+          filePath,
+          (progress) => setUploadProgress(progress)
+        );
+  
+        await updateDoc(adminUserDocRef, { photoURL: downloadURL });
+  
+        setOptimisticPhotoUrl(downloadURL);
+  
+        toast({
+          title: 'Profile Photo Updated!',
+          description: 'Your new photo has been saved permanently.',
+        });
+  
+      } catch (error) {
+        setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
+        // The toast is already shown in uploadFile, but we can add a specific one here if needed
+      } finally {
+        setIsUploading(false);
+        setProfilePhotoFile(null);
+        setProfilePhotoPreview(null);
         setUploadProgress(0);
-        setIsPhotoPreviewOpen(false);
-    
-        if (profilePhotoPreview) {
-          setOptimisticPhotoUrl(profilePhotoPreview);
-        }
-    
-        try {
-          const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
-          const downloadURL = await uploadFile(
-            storage,
-            profilePhotoFile,
-            filePath,
-            (progress) => setUploadProgress(progress)
-          );
-    
-          await updateDoc(adminUserDocRef, { photoURL: downloadURL });
-    
-          setOptimisticPhotoUrl(downloadURL);
-          toast({
-            title: 'Profile Photo Updated!',
-            description: 'Your new photo has been saved permanently.',
-          });
-        } catch (error) {
-          setOptimisticPhotoUrl(adminUser?.photoURL || null);
-           toast({
-            variant: 'destructive',
-            title: 'Upload Failed',
-            description: 'Could not update your profile photo. Please try again.',
-          });
-        } finally {
-          setIsUploading(false);
-          setProfilePhotoFile(null);
-          setProfilePhotoPreview(null);
-          setUploadProgress(0);
-        }
-      };
+      }
+    };
     
     const handleCancelUpload = () => {
         setIsPhotoPreviewOpen(false);
@@ -734,13 +733,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProfilePhotoDelete = async () => {
-        if (!authUser || !adminUserDocRef || !adminUser?.photoURL) return;
+        if (!authUser || !adminUserDocRef || !adminUser?.photoURL || !storage) return;
     
-        const storageForDelete = getStorage();
         try {
             setOptimisticPhotoUrl(null);
             await updateDoc(adminUserDocRef, { photoURL: null });
-            const photoRef = ref(storageForDelete, adminUser.photoURL);
+            const photoRef = ref(storage, adminUser.photoURL);
             await deleteObject(photoRef);
             
             toast({
@@ -892,7 +890,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
       };
 
     const handleCreateStation = async (values: NewStationFormValues) => {
-        if (!firestore) return;
+        if (!firestore || !storage) return;
         setIsSubmitting(true);
         setUploadingFiles({});
     
@@ -2104,7 +2102,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const isUploadingFile = progress > 0 && progress < 100;
                                         
                                         const onUpload = async (fileToUpload: File) => {
-                                            if (!stationToUpdate) return;
+                                            if (!stationToUpdate || !storage) return;
                                             const docKey = field.key;
                                             const path = `stations/${stationToUpdate.id}/compliance/${docKey}-${fileToUpload.name}`;
                                             try {
@@ -2167,7 +2165,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {(() => {
                                     const onUpload = async () => {
-                                        if (!agreementFile || !stationToUpdate) return;
+                                        if (!agreementFile || !stationToUpdate || !storage) return;
                                         const docKey = 'agreement';
                                         const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
                                         try {
@@ -2304,3 +2302,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    

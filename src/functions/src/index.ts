@@ -1,4 +1,4 @@
-import * as functions from "firebase-functions/v1";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as path from "path";
 
@@ -11,21 +11,19 @@ const storage = admin.storage();
 /**
  * A generic Cloud Function that triggers on any file being finalized in
  * Firebase Storage. It determines the file type based on its path and
-
  * updates the corresponding Firestore document with a public URL.
  */
-export const onFileUpload = functions.storage.bucket().object().onFinalize(async (object) => {
+export const onFileUpload = functions.storage.object().onFinalize(async (object) => {
   const filePath = object.name;
-  const bucketName = object.bucket;
   
-  // Ensure filePath is valid before proceeding
+  // Ensure filePath is valid
   if (!filePath) {
-    functions.logger.warn("File path is undefined. Exiting function.");
+    functions.logger.warn("File path is undefined.");
     return;
   }
   
-  const bucket = storage.bucket(bucketName);
-  const file = bucket.file(filePath); // Create file object only after validation
+  const bucket = storage.bucket(object.bucket);
+  const file = bucket.file(filePath);
 
   const getPublicUrl = async () => {
     const [downloadURL] = await file.getSignedUrl({
@@ -36,8 +34,13 @@ export const onFileUpload = functions.storage.bucket().object().onFinalize(async
   };
 
   try {
-    // This function now only handles non-profile photo uploads.
-    // Profile photos are handled directly on the client for a better UX.
+    // --- User Profile Photo Upload is now handled client-side to provide a better UX ---
+    // The client will directly update the user's document after a successful upload.
+    // This section is intentionally left empty for profile photos.
+    if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
+      functions.logger.log(`Client is handling profile photo update for path: ${filePath}. No server action needed.`);
+      return;
+    }
 
     // --- User Contract ---
     if (filePath.startsWith("userContracts/")) {
@@ -119,3 +122,5 @@ export const onFileUpload = functions.storage.bucket().object().onFinalize(async
     functions.logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    

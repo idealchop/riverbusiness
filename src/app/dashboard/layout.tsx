@@ -234,7 +234,7 @@ export default function DashboardLayout({
   }
 
   const handleProofUpload = async () => {
-    if (!authUser || !firestore || !paymentProofFile || !selectedInvoice) {
+    if (!authUser || !firestore || !paymentProofFile || !selectedInvoice || !storage) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Please select an invoice and a file to upload.' });
         return;
     }
@@ -364,7 +364,7 @@ export default function DashboardLayout({
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !userDocRef) return;
+    if (!profilePhotoFile || !authUser || !userDocRef || !storage) return;
   
     setIsUploading(true);
     setUploadProgress(0);
@@ -394,12 +394,8 @@ export default function DashboardLayout({
       });
   
     } catch (error) {
-      setOptimisticPhotoUrl(user?.photoURL || null);
-      toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: 'Could not update your profile photo. Please try again.',
-      });
+      setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
+      // The toast is already shown in uploadFile, but we can add a specific one here if needed
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
@@ -420,7 +416,7 @@ export default function DashboardLayout({
   };
 
    const handleProfilePhotoDelete = async () => {
-    if (!authUser || !userDocRef || !user?.photoURL) return;
+    if (!authUser || !userDocRef || !user?.photoURL || !storage) return;
 
     try {
         const previousPhotoUrl = optimisticPhotoUrl;
@@ -1001,77 +997,6 @@ export default function DashboardLayout({
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="sm:max-w-4xl">
-              <DialogHeader>
-                <DialogTitle>Complete Your Payment</DialogTitle>
-                <DialogDescription>
-                  Invoice {selectedInvoice?.id} for ₱{selectedInvoice?.amount.toFixed(2)}
-                </DialogDescription>
-              </DialogHeader>
-              {!selectedPaymentMethod ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-                  {paymentOptions.map((option) => (
-                    <Card
-                      key={option.name}
-                      onClick={() => handlePaymentOptionClick(option)}
-                      className="cursor-pointer hover:border-primary transition-colors flex flex-col items-center justify-center p-6"
-                    >
-                      <h3 className="font-semibold text-lg">{option.name}</h3>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-4 space-y-4">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedPaymentMethod(null)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to payment options
-                  </Button>
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h4 className="font-semibold">Scan to Pay with {selectedPaymentMethod.name}</h4>
-                      {selectedPaymentMethod.qr && (
-                        <div className="relative aspect-square w-full max-w-sm mx-auto border rounded-lg overflow-hidden">
-                          <Image
-                            src={selectedPaymentMethod.qr.imageUrl}
-                            alt={`${selectedPaymentMethod.name} QR Code`}
-                            fill
-                            className="object-contain"
-                            data-ai-hint={selectedPaymentMethod.qr.imageHint}
-                          />
-                        </div>
-                      )}
-                      {selectedPaymentMethod.details && (
-                        <div className="text-sm text-center space-y-1 pt-2">
-                          <p>Account Name: <span className="font-semibold">{selectedPaymentMethod.details.accountName}</span></p>
-                          <p>Account Number: <span className="font-semibold">{selectedPaymentMethod.details.accountNumber}</span></p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      <h4 className="font-semibold">Upload Proof of Payment</h4>
-                      <div className="p-4 border rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground">After paying, please upload a screenshot of your transaction confirmation.</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="payment-proof-upload">Proof of Payment</Label>
-                        <Input id="payment-proof-upload" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isUploadingPayment} />
-                        {isUploadingPayment && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Progress value={uploadProgress} className="w-full" />
-                            <span>{Math.round(uploadProgress)}%</span>
-                          </div>
-                        )}
-                      </div>
-                      <Button onClick={handleProofUpload} disabled={!paymentProofFile || isUploadingPayment} className="w-full">
-                        {isUploadingPayment ? 'Submitting...' : 'Submit for Verification'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
           <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
               <DialogContent>
                   <DialogHeader>
@@ -1195,3 +1120,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
