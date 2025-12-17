@@ -712,11 +712,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   
       } catch (error) {
         setOptimisticPhotoUrl(adminUser?.photoURL || null); // Revert on failure
-        toast({
-          variant: "destructive",
-          title: "Upload Failed",
-          description: "Could not update your profile photo. Please try again.",
-        });
       } finally {
         setIsUploading(false);
         setProfilePhotoFile(null);
@@ -886,7 +881,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 });
                 resolve();
             }).catch(error => {
-                // Error is handled by toast in uploadFile
                 setUploadingFiles(prev => ({ ...prev, [docKey]: -1 }));
                 reject(error);
             });

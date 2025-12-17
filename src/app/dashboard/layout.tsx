@@ -87,7 +87,7 @@ export default function DashboardLayout({
 }) {
   const { toast } = useToast();
   const router = useRouter();
-  const { auth } = useUser();
+  const auth = useUser().auth!;
   const firestore = useFirestore();
   const storage = useStorage();
   const { user: authUser, isUserLoading } = useUser();
@@ -395,11 +395,6 @@ export default function DashboardLayout({
   
     } catch (error) {
       setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
-      toast({
-        variant: "destructive",
-        title: "Upload Failed",
-        description: "Could not update your profile photo. Please try again.",
-      });
     } finally {
       setIsUploading(false);
       setProfilePhotoFile(null);
