@@ -34,12 +34,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, DocumentReference } from 'firebase/firestore';
 import { signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -79,6 +79,76 @@ const includedFeatures = [
         description: 'Flexibility to switch between our network of trusted providers.',
     },
 ];
+
+
+// Helper function moved outside the component to prevent re-creation on re-renders
+const handleProfilePhotoUpload = async (
+  profilePhotoFile: File | null,
+  authUser: AppUser | null,
+  userDocRef: DocumentReference | null,
+  storage: FirebaseStorage | null,
+  profilePhotoPreview: string | null,
+  setOptimisticPhotoUrl: (url: string | null) => void,
+  setIsPhotoPreviewOpen: (isOpen: boolean) => void,
+  setIsUploading: (isUploading: boolean) => void,
+  setUploadProgress: (progress: number) => void,
+  toast: ({ title, description, variant }: { title: string; description: string; variant?: "default" | "destructive" }) => void,
+  setProfilePhotoFile: (file: File | null) => void,
+  setProfilePhotoPreview: (preview: string | null) => void,
+  originalPhotoUrl: string | null | undefined,
+) => {
+  if (!profilePhotoFile || !authUser || !userDocRef || !storage) return;
+
+  setIsPhotoPreviewOpen(false);
+  setIsUploading(true);
+  setUploadProgress(0);
+
+  if (profilePhotoPreview) {
+    setOptimisticPhotoUrl(profilePhotoPreview);
+  }
+
+  try {
+    const filePath = `users/${authUser.id}/profile/profile_photo_${Date.now()}`;
+    
+    const downloadURL = await uploadFile(
+      storage,
+      profilePhotoFile,
+      filePath,
+      (progress) => setUploadProgress(progress)
+    );
+
+    await updateDoc(userDocRef, { photoURL: downloadURL });
+
+    setOptimisticPhotoUrl(downloadURL);
+
+    toast({
+      title: 'Profile Photo Updated!',
+      description: 'Your new photo has been saved permanently.',
+    });
+
+  } catch (error) {
+    setOptimisticPhotoUrl(originalPhotoUrl || null); // Revert on failure
+    if (error instanceof Error) {
+      toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: error.message || 'Could not upload photo. Please try again.',
+      });
+    } else {
+       toast({
+        variant: 'destructive',
+        title: 'Upload Failed',
+        description: 'An unknown error occurred. Please try again.',
+      });
+    }
+  } finally {
+    setIsUploading(false);
+    setProfilePhotoFile(null);
+    setProfilePhotoPreview(null);
+    setUploadProgress(0);
+  }
+};
+
 
 export default function DashboardLayout({
   children,
@@ -362,62 +432,6 @@ export default function DashboardLayout({
     }
     setSelectedPaymentMethod(option);
   };
-
-  const handleProfilePhotoUpload = async () => {
-    if (!profilePhotoFile || !authUser || !userDocRef || !storage) return;
-
-    setIsPhotoPreviewOpen(false);
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    if (profilePhotoPreview) {
-      setOptimisticPhotoUrl(profilePhotoPreview);
-    }
-
-    try {
-      const filePath = `users/${authUser.uid}/profile/profile_photo_${Date.now()}`;
-      
-      // Correctly await the uploadFile function
-      const downloadURL = await uploadFile(
-        storage,
-        profilePhotoFile,
-        filePath,
-        (progress) => setUploadProgress(progress)
-      );
-
-      // Correctly await the database update
-      await updateDoc(userDocRef, { photoURL: downloadURL });
-
-      setOptimisticPhotoUrl(downloadURL);
-
-      toast({
-        title: 'Profile Photo Updated!',
-        description: 'Your new photo has been saved permanently.',
-      });
-
-    } catch (error) {
-      setOptimisticPhotoUrl(user?.photoURL || null); // Revert on failure
-      if (error instanceof Error) {
-        toast({
-          variant: 'destructive',
-          title: 'Upload Failed',
-          description: error.message || 'Could not upload photo. Please try again.',
-        });
-      } else {
-         toast({
-          variant: 'destructive',
-          title: 'Upload Failed',
-          description: 'An unknown error occurred. Please try again.',
-        });
-      }
-    } finally {
-      setIsUploading(false);
-      setProfilePhotoFile(null);
-      setProfilePhotoPreview(null);
-      setUploadProgress(0);
-    }
-  };
-
 
   const handleCancelUpload = () => {
     setIsPhotoPreviewOpen(false);
@@ -1005,7 +1019,23 @@ export default function DashboardLayout({
                 <Button variant="outline" onClick={handleCancelUpload} disabled={isUploading}>
                   Cancel
                 </Button>
-                <Button onClick={handleProfilePhotoUpload} disabled={isUploading}>
+                <Button 
+                    onClick={() => handleProfilePhotoUpload(
+                        profilePhotoFile,
+                        user as AppUser,
+                        userDocRef,
+                        storage,
+                        profilePhotoPreview,
+                        setOptimisticPhotoUrl,
+                        setIsPhotoPreviewOpen,
+                        setIsUploading,
+                        setUploadProgress,
+                        toast,
+                        setProfilePhotoFile,
+                        setProfilePhotoPreview,
+                        user?.photoURL
+                    )} 
+                    disabled={isUploading}>
                   {isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </DialogFooter>
@@ -1135,5 +1165,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
