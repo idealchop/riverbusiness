@@ -342,7 +342,9 @@ export default function DashboardLayout({
                               </Button>
                           </div>
                           <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
-                          <p className="text-xs text-muted-foreground">By Smart Refill</p>
+                          <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline">
+                              By River Philippines
+                          </a>
                         </div>
                       </div>
                       <div className="flex flex-col min-h-0">
