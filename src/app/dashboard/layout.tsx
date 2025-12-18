@@ -55,29 +55,6 @@ type Notification = {
     data: Delivery | Payment | ComplianceReport | SanitationVisit;
 };
 
-const includedFeatures = [
-    {
-        icon: LayoutGrid,
-        title: 'Smart Client Portal',
-        description: 'Monitor consumption, compliance, water providers, and payments in real time.',
-    },
-    {
-        icon: Wrench,
-        title: 'Monthly Sanitation Visit',
-        description: 'Regular cleaning and compliance check for your dispensers and reusable gallons.',
-    },
-    {
-        icon: ShieldCheck,
-        title: 'Guaranteed Water Compliance',
-        description: 'All partner stations meet strict sanitation and quality standards.',
-    },
-    {
-        icon: Repeat,
-        title: 'Switch Water Providers',
-        description: 'Flexibility to switch between our network of trusted providers.',
-    },
-];
-
 export default function DashboardLayout({
   children,
 }: {
@@ -258,7 +235,7 @@ export default function DashboardLayout({
     }, [user]);
 
     const generatedInvoices = React.useMemo(() => {
-        if (!user?.createdAt || !user.plan) return [];
+        if (!user?.createdAt || !user.plan || user.plan.isConsumptionBased) return [];
         
         const invoices: Payment[] = [];
         const now = new Date();
@@ -545,5 +522,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    

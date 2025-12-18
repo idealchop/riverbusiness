@@ -27,7 +27,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 
@@ -99,6 +99,29 @@ function reducer(state: State, action: Action): State {
     default: return state;
   }
 }
+
+const includedFeatures = [
+    {
+        icon: LayoutGrid,
+        title: 'Smart Client Portal',
+        description: 'Monitor consumption, compliance, water providers, and payments in real time.',
+    },
+    {
+        icon: Wrench,
+        title: 'Monthly Sanitation Visit',
+        description: 'Regular cleaning and compliance check for your dispensers and reusable gallons.',
+    },
+    {
+        icon: ShieldCheck,
+        title: 'Guaranteed Water Compliance',
+        description: 'All partner stations meet strict sanitation and quality standards.',
+    },
+    {
+        icon: Repeat,
+        title: 'Switch Water Providers',
+        description: 'Flexibility to switch between our network of trusted providers.',
+    },
+];
 
 interface MyAccountDialogProps {
   user: AppUser | null;
@@ -317,7 +340,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="plan" className="py-4">
+                <TabsContent value="plan" className="py-4 space-y-6">
                   <Card>
                     <CardContent className="p-0">
                       {planImage && (
@@ -375,6 +398,28 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                       </div>
                     </CardContent>
                   </Card>
+                   <Card>
+                        <CardContent className="p-6 space-y-4">
+                            <div>
+                                <h3 className="font-semibold">Included in Every Plan</h3>
+                                <p className="text-sm text-muted-foreground">Every subscription plan includes full access to our growing network of partner perks.</p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                {includedFeatures.map((feature, index) => {
+                                    const Icon = feature.icon;
+                                    return (
+                                        <div key={index} className="flex items-start gap-3">
+                                            <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                                            <div>
+                                                <h4 className="font-medium text-sm">{feature.title}</h4>
+                                                <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 <TabsContent value="invoices" className="py-4">
                   <Table>
