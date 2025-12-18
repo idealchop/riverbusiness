@@ -915,6 +915,11 @@ export default function DashboardPage() {
                                                         <span>{sanitationReportStats.passRate.toFixed(0)}%</span>
                                                     </div>
                                                 </div>
+                                                {(sanitationReportStats.overallStatus === 'Excellent' || sanitationReportStats.overallStatus === 'Good') && (
+                                                    <p className="text-xs text-muted-foreground text-center pt-2">
+                                                        Based on our inspection, your drinking water is clean and safe.
+                                                    </p>
+                                                )}
                                             </CardContent>
                                         </Card>
                                     </>
@@ -1269,3 +1274,4 @@ export default function DashboardPage() {
     </div>
     );
 }
+
