@@ -21,11 +21,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
-import { format, startOfMonth, addMonths } from 'date-fns';
+import type { AppUser, ImagePlaceholder, Payment, Delivery } from '@/lib/types';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -132,6 +132,9 @@ const includedFeatures = [
     },
 ];
 
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+
 interface MyAccountDialogProps {
   user: AppUser | null;
   authUser: User | null;
@@ -150,6 +153,43 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const storage = useStorage();
   const auth = useAuth();
   
+  const deliveriesQuery = React.useMemo(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+  const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
+
+  const consumptionDetails = React.useMemo(() => {
+    const now = new Date();
+    const cycleStart = startOfMonth(now);
+    const cycleEnd = endOfMonth(now);
+
+    if (!user?.plan || !deliveries) {
+        return { estimatedCost: 0 };
+    }
+
+    const deliveriesThisCycle = deliveries.filter(d => {
+        const deliveryDate = new Date(d.date);
+        return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
+    });
+    const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    
+    let estimatedCost = 0;
+    if (user.plan.isConsumptionBased) {
+        estimatedCost = consumedLitersThisMonth * (user.plan.price || 0);
+    } else {
+        estimatedCost = user.plan.price || 0;
+    }
+
+    return { estimatedCost };
+  }, [user, deliveries]);
+
+
+  const currentMonthInvoice: Payment = {
+    id: `INV-${format(new Date(), 'yyyy-MMM').toUpperCase()}`,
+    date: new Date().toISOString(),
+    description: `Bill for ${format(new Date(), 'MMMM yyyy')}`,
+    amount: consumptionDetails.estimatedCost,
+    status: 'Upcoming',
+  };
+
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
 
   useEffect(() => {
@@ -510,6 +550,16 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           </TableRow>
                       </TableHeader>
                       <TableBody>
+                            <TableRow className="bg-muted/50 font-semibold">
+                                <TableCell>{currentMonthInvoice.id}</TableCell>
+                                <TableCell>{format(new Date(currentMonthInvoice.date), 'MMM dd, yyyy')}</TableCell>
+                                <TableCell>
+                                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
+                                        {currentMonthInvoice.status}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-right">₱{currentMonthInvoice.amount.toFixed(2)}</TableCell>
+                            </TableRow>
                           {paymentHistory.length > 0 ? (
                             paymentHistory.map((invoice) => (
                               <TableRow key={invoice.id}>
@@ -519,7 +569,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
                                         invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                         invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                        invoice.status === 'Pending Review' ? 'bg-blue-100 text-blue-800' :
+                                        invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
                                         'bg-gray-100 text-gray-800'
                                     )}>
                                         {invoice.status}
@@ -531,7 +581,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           ) : (
                             <TableRow>
                               <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
-                                  No invoices have been generated yet.
+                                  No past invoices found.
                               </TableCell>
                             </TableRow>
                           )}
