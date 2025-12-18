@@ -206,6 +206,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [isComplianceReportDialogOpen, setIsComplianceReportDialogOpen] = React.useState(false);
     const [complianceReportToEdit, setComplianceReportToEdit] = React.useState<ComplianceReport | null>(null);
+    const [complianceReportToDelete, setComplianceReportToDelete] = React.useState<ComplianceReport | null>(null);
 
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
@@ -884,6 +885,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleDeleteComplianceReport = async () => {
+        if (!firestore || !stationToUpdate || !complianceReportToDelete) return;
+
+        const reportRef = doc(firestore, 'waterStations', stationToUpdate.id, 'complianceReports', complianceReportToDelete.id);
+        await deleteDocumentNonBlocking(reportRef);
+
+        toast({ title: "Report Deleted", description: "The compliance report has been removed." });
+        setComplianceReportToDelete(null);
+        setComplianceRefresher(c => c + 1);
     };
     
 
@@ -1943,14 +1955,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormField control={stationForm.control} name="name" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Station Name</FormLabel>
-                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate || isSubmitting}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!stationToUpdate && isSubmitting}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
                                 <FormField control={stationForm.control} name="location" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Location</FormLabel>
-                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={!!stationToUpdate || isSubmitting}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={isSubmitting}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
@@ -2004,9 +2016,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 >{report.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="sm" onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => setComplianceReportToDelete(report)}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -2186,6 +2210,21 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </Form>
             </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={!!complianceReportToDelete} onOpenChange={(open) => !open && setComplianceReportToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the compliance report: <span className="font-semibold">{complianceReportToDelete?.name}</span>. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteComplianceReport}>Delete Report</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
 
         <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
