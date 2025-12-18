@@ -628,20 +628,30 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                         </CardContent>
                     </Card>
                 </div>
+            ) : user.plan?.isConsumptionBased ? (
+                <div className="py-4 text-center">
+                    <Card className="max-w-md mx-auto">
+                        <CardHeader>
+                            <CardTitle className="flex items-center justify-center gap-2">
+                                <CheckCircle className="h-6 w-6 text-green-500" />
+                                You're on the Flow Plan!
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <p className="text-muted-foreground">You are currently on our most flexible consumption-based plan. No further changes are needed.</p>
+                        </CardContent>
+                    </Card>
+                </div>
             ) : (
                 <>
                 <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card 
-                        onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: user.plan})}
-                        className={cn(
-                            "flex flex-col cursor-pointer",
-                            state.selectedNewPlan?.name === user.plan?.name ? "border-primary border-2" : ""
-                        )}
+                        className="flex flex-col cursor-default"
                     >
                         <CardHeader>
                             <CardTitle className="flex justify-between items-center">
                               Your Current Plan
-                              {state.selectedNewPlan?.name === user.plan?.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                              <CheckCircle className="h-5 w-5 text-primary" />
                             </CardTitle>
                             <CardDescription>{user.plan?.name}</CardDescription>
                         </CardHeader>
@@ -704,7 +714,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
                   <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name}>
-                    Schedule Plan Change
+                    Confirm and Switch Plan
                   </Button>
                 </DialogFooter>
               </>
