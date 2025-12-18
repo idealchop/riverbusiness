@@ -319,17 +319,61 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                 </TabsContent>
                 <TabsContent value="plan" className="py-4">
                   <Card>
-                      <CardContent className="p-0">
-                          {planImage && (
-                              <div className="relative h-48 w-full">
-                                  <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
-                              </div>
-                          )}
-                          <div className="p-6">
-                            <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
-                            <p className="text-lg font-bold text-foreground">₱{user.plan?.price.toLocaleString()}/month</p>
+                    <CardContent className="p-0">
+                      {planImage && (
+                          <div className="relative h-48 w-full">
+                              <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
                           </div>
-                      </CardContent>
+                      )}
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
+                        {user.plan?.isConsumptionBased ? (
+                            <p className="text-lg font-bold text-foreground">
+                                ₱{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
+                            </p>
+                        ) : (
+                            <p className="text-lg font-bold text-foreground">
+                                ₱{user.plan?.price.toLocaleString()}/month
+                            </p>
+                        )}
+                        <Separator className="my-4" />
+
+                        {user.plan?.isConsumptionBased ? (
+                            <div>
+                                <h4 className="font-semibold mb-2">Plan Details</h4>
+                                <ul className="space-y-1 text-muted-foreground text-sm">
+                                    <li><strong>Billing:</strong> Pay-as-you-go based on consumption.</li>
+                                    <li><strong>Deliveries:</strong> On-demand, request refills as needed.</li>
+                                </ul>
+                            </div>
+                        ) : user.customPlanDetails ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <h4 className="font-semibold mb-2">Water Plan</h4>
+                                    <ul className="space-y-1 text-muted-foreground">
+                                        <li><strong>Liters/Month:</strong> {user.customPlanDetails.litersPerMonth?.toLocaleString()} L</li>
+                                        <li><strong>Bonus Liters:</strong> {user.customPlanDetails.bonusLiters?.toLocaleString()} L</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold mb-2">Equipment</h4>
+                                    <ul className="space-y-1 text-muted-foreground">
+                                        <li><strong>Containers:</strong> {user.customPlanDetails.gallonQuantity}</li>
+                                        <li><strong>Dispensers:</strong> {user.customPlanDetails.dispenserQuantity}</li>
+                                    </ul>
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <h4 className="font-semibold mb-2">Delivery Schedule</h4>
+                                    <p className="text-muted-foreground">
+                                        {user.customPlanDetails.deliveryFrequency} on {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">Plan details are not fully configured.</p>
+                        )}
+                      </div>
+                    </CardContent>
                   </Card>
                 </TabsContent>
                 <TabsContent value="invoices" className="py-4">
