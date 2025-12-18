@@ -844,129 +844,63 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     </DialogDescription>
                 </DialogHeader>
                 {selectedUser && (
-                    <Tabs defaultValue="profile">
-                        <div className="grid md:grid-cols-2 gap-8 py-6">
-                            {/* Left Column: User Profile */}
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-4">
-                                    <Avatar className="h-20 w-20">
-                                        <AvatarImage src={selectedUser.photoURL || undefined} alt={selectedUser.name} />
-                                        <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
-                                        <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                                    </div>
+                    <div className="grid md:grid-cols-2 gap-8 py-6">
+                        {/* Left Column: User Profile & Details */}
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-4">
+                                <Avatar className="h-20 w-20">
+                                    <AvatarImage src={selectedUser.photoURL || undefined} alt={selectedUser.name} />
+                                    <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                    <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                                 </div>
-                                
+                            </div>
+                            
+                            <Tabs defaultValue="profile">
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="profile">Profile</TabsTrigger>
                                     <TabsTrigger value="invoices">Invoices</TabsTrigger>
                                 </TabsList>
-                                <TabsContent value="profile">
-                                    <div className="space-y-4 text-sm">
-                                        <Card>
-                                            <CardHeader className="pb-2">
-                                                <CardTitle className="text-base">User Profile</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-1 text-sm pt-0">
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Client ID:</span>
-                                                    <span className="font-medium">{selectedUser.clientId}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Business Name:</span>
-                                                    <span className="font-medium">{selectedUser.businessName}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Contact Person:</span>
-                                                    <span className="font-medium">{selectedUser.name}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Plan:</span>
-                                                    <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
-                                                </div>
-                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Role:</span>
-                                                    <span className="font-medium">{selectedUser.role}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Assigned Station:</span>
-                                                    <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Last Login:</span>
-                                                    <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        <Card>
-                                            <CardHeader className="pb-2">
-                                                <CardTitle className="text-base">Consumption Details</CardTitle>
-                                            </CardHeader>
-                                            {selectedUser.plan?.isConsumptionBased ? (
-                                                <CardContent className="space-y-2 text-sm pt-0">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Billing Model:</span>
-                                                        <span className="font-medium">Pay based on consumption</span>
-                                                    </div>
-                                                     <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
-                                                        <span className="text-foreground">Estimated Cost This Month:</span>
-                                                        <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                    </div>
-                                                    <Separator/>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Consumed this Month:</span>
-                                                        <span className="font-medium text-red-600">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Rate:</span>
-                                                        <span className="font-medium">₱{selectedUser.plan.price}/Liter</span>
-                                                    </div>
-                                                </CardContent>
-                                            ) : (
-                                                <CardContent className="space-y-2 text-sm pt-0">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Auto Refill:</span>
-                                                        {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
-                                                            <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                        ) : (
-                                                            <Badge variant="destructive">Disabled</Badge>
-                                                        )}
-                                                    </div>
-                                                    <Separator/>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Monthly Plan Liters:</span>
-                                                        <span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Bonus Liters:</span>
-                                                        <span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Rollover from Last Month:</span>
-                                                        <span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
-                                                    </div>
-                                                    <div className="flex justify-between font-semibold border-t pt-2 mt-1">
-                                                        <span className="text-foreground">Total for this Month:</span>
-                                                        <span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span>
-                                                    </div>
-                                                    <Separator/>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Consumed this Month:</span>
-                                                        <span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
-                                                    </div>
-                                                    <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
-                                                        <span className="text-foreground">Current Balance:</span>
-                                                        <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
-                                                    </div>
-                                                </CardContent>
-                                            )}
-                                        </Card>
-                                    </div>
+                                <TabsContent value="profile" className="pt-4">
+                                    <Card>
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-base">User Profile</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-1 text-sm pt-0">
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Client ID:</span>
+                                                <span className="font-medium">{selectedUser.clientId}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Business Name:</span>
+                                                <span className="font-medium">{selectedUser.businessName}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Contact Person:</span>
+                                                <span className="font-medium">{selectedUser.name}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Plan:</span>
+                                                <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
+                                            </div>
+                                             <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Role:</span>
+                                                <span className="font-medium">{selectedUser.role}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Assigned Station:</span>
+                                                <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Last Login:</span>
+                                                <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </TabsContent>
-                                <TabsContent value="invoices">
+                                <TabsContent value="invoices" className="pt-4">
                                     <ScrollArea className="h-72">
                                     {paymentsLoading ? (
                                          <div className="text-center text-muted-foreground py-10">
@@ -1012,69 +946,134 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}
                                     </ScrollArea>
                                 </TabsContent>
-                            </div>
+                            </Tabs>
+                        </div>
 
-                            {/* Right Column: Actions */}
-                            <div className="space-y-4">
-                                {selectedUserPlanImage && (
-                                  <div className="space-y-2">
-                                    <h4 className="font-semibold text-lg text-center">{selectedUser.clientType} Plan</h4>
-                                    <div className="relative w-full h-32 rounded-lg overflow-hidden">
-                                        <Image
-                                            src={selectedUserPlanImage.imageUrl}
-                                            alt={selectedUser.clientType || ''}
-                                            fill
-                                            className="object-contain"
-                                            data-ai-hint={selectedUserPlanImage.imageHint}
-                                        />
-                                    </div>
-                                  </div>
-                                )}
-                                <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
-                                <div className="flex flex-col gap-2">
-                                    <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
-                                        <History className="mr-2 h-4 w-4" />
-                                        Delivery History
-                                    </Button>
-                                    <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline">
-                                        <FileHeart className="mr-2 h-4 w-4" />
-                                        Manage Sanitation
-                                    </Button>
-                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
-                                        <Building className="mr-2 h-4 w-4" />
-                                        Assign Station
-                                    </Button>
-                                    <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin}>
-                                        <Upload className="mr-2 h-4 w-4" />
-                                        Attach Contract
-                                    </Button>
-                                     <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" disabled={selectedUser.plan?.isConsumptionBased}>
-                                                <Repeat className="mr-2 h-4 w-4" />
-                                                Adjust Consumption
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
-                                                <PlusCircle className="mr-2 h-4 w-4" />
-                                                Add Liters
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
-                                                 <MinusCircle className="mr-2 h-4 w-4" />
-                                                Deduct Liters
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    {selectedUser.currentContractUrl && (
-                                        <Button variant="link" asChild>
-                                            <a href={selectedUser.currentContractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
-                                        </Button>
-                                    )}
+                        {/* Right Column: Consumption & Actions */}
+                        <div className="space-y-4">
+                            {selectedUserPlanImage && (
+                                <div className="space-y-2">
+                                <h4 className="font-semibold text-lg text-center">{selectedUser.clientType} Plan</h4>
+                                <div className="relative w-full h-32 rounded-lg overflow-hidden">
+                                    <Image
+                                        src={selectedUserPlanImage.imageUrl}
+                                        alt={selectedUser.clientType || ''}
+                                        fill
+                                        className="object-contain"
+                                        data-ai-hint={selectedUserPlanImage.imageHint}
+                                    />
                                 </div>
+                                </div>
+                            )}
+
+                            <Card>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-base">Consumption Details</CardTitle>
+                                </CardHeader>
+                                {selectedUser.plan?.isConsumptionBased ? (
+                                    <CardContent className="space-y-2 text-sm pt-0">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Billing Model:</span>
+                                            <span className="font-medium">Pay based on consumption</span>
+                                        </div>
+                                         <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
+                                            <span className="text-foreground">Estimated Cost This Month:</span>
+                                            <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <Separator/>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Consumed this Month:</span>
+                                            <span className="font-medium text-red-600">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Rate:</span>
+                                            <span className="font-medium">₱{selectedUser.plan.price}/Liter</span>
+                                        </div>
+                                    </CardContent>
+                                ) : (
+                                    <CardContent className="space-y-2 text-sm pt-0">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Auto Refill:</span>
+                                            {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
+                                                <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                            ) : (
+                                                <Badge variant="destructive">Disabled</Badge>
+                                            )}
+                                        </div>
+                                        <Separator/>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Monthly Plan Liters:</span>
+                                            <span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Bonus Liters:</span>
+                                            <span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Rollover from Last Month:</span>
+                                            <span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
+                                        </div>
+                                        <div className="flex justify-between font-semibold border-t pt-2 mt-1">
+                                            <span className="text-foreground">Total for this Month:</span>
+                                            <span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span>
+                                        </div>
+                                        <Separator/>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Consumed this Month:</span>
+                                            <span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                                        </div>
+                                        <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
+                                            <span className="text-foreground">Current Balance:</span>
+                                            <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
+                                        </div>
+                                    </CardContent>
+                                )}
+                            </Card>
+
+                            <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
+                            <div className="flex flex-col gap-2">
+                                <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
+                                    <History className="mr-2 h-4 w-4" />
+                                    Delivery History
+                                </Button>
+                                <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline">
+                                    <FileHeart className="mr-2 h-4 w-4" />
+                                    Manage Sanitation
+                                </Button>
+                                <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
+                                    <Building className="mr-2 h-4 w-4" />
+                                    Assign Station
+                                </Button>
+                                <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin}>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Attach Contract
+                                </Button>
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" disabled={selectedUser.plan?.isConsumptionBased}>
+                                            <Repeat className="mr-2 h-4 w-4" />
+                                            Adjust Consumption
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Add Liters
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
+                                             <MinusCircle className="mr-2 h-4 w-4" />
+                                            Deduct Liters
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                {selectedUser.currentContractUrl && (
+                                    <Button variant="link" asChild>
+                                        <a href={selectedUser.currentContractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
+                                    </Button>
+                                )}
                             </div>
                         </div>
-                    </Tabs>
+                    </div>
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsUserDetailOpen(false)}>Close</Button>
@@ -2348,5 +2347,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    

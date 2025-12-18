@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -891,7 +891,9 @@ export default function DashboardPage() {
                                                 <TableRow key={index}>
                                                     <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
                                                     <TableCell className="text-right">
-                                                        {item.checked ? (
+                                                        {selectedSanitationVisit.status === 'Scheduled' ? (
+                                                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
+                                                        ) : item.checked ? (
                                                             <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
                                                         ) : (
                                                             <Popover>
