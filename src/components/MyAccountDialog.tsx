@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery } from '@/lib/types';
@@ -154,7 +154,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const storage = useStorage();
   const auth = useAuth();
   
-  const deliveriesQuery = React.useMemo(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+  const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
   const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
 
   const consumptionDetails = React.useMemo(() => {
