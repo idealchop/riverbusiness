@@ -19,7 +19,7 @@ import type { Auth } from 'firebase/auth';
  */
 export function uploadFileWithProgress(
   storage: FirebaseStorage,
-  auth: Auth,
+  auth: Auth, // The user's auth object is required for security checks
   path: string,
   file: File,
   metadata: UploadMetadata,
