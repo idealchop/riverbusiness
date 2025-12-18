@@ -26,8 +26,10 @@ service cloud.firestore {
 
     match /users/{userId}/payments/{paymentId} {
       allow read, list: if isOwner(userId) || isAdmin();
-      // Only backend functions can create/update invoices
-      allow create, update: if false; 
+      // Allow admins to update payment status
+      allow update: if isAdmin();
+      // Only backend functions can create invoices, users can't create them.
+      allow create: if false; 
     }
     
     match /users/{userId}/consumptionHistory/{historyId} {
@@ -64,5 +66,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

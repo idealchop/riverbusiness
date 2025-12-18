@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -171,6 +171,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [localSearchTerm, setLocalSearchTerm] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
+    const [isManageInvoiceOpen, setIsManageInvoiceOpen] = React.useState(false);
+    const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
+    const [rejectionReason, setRejectionReason] = React.useState('');
     const ITEMS_PER_PAGE = 20;
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -186,7 +189,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore || !selectedUser) return null;
         return collection(firestore, 'users', selectedUser.id, 'payments');
     }, [firestore, selectedUser]);
-    const { data: userPaymentsData } = useCollection<Payment>(paymentsQuery);
+    const { data: userPaymentsData, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -691,6 +694,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsSubmitting(false);
         }
     };
+    
+    const handleInvoiceStatusUpdate = (newStatus: 'Paid' | 'Upcoming') => {
+        if (!selectedUser || !selectedInvoice || !firestore) return;
+
+        const invoiceRef = doc(firestore, 'users', selectedUser.id, 'payments', selectedInvoice.id);
+        updateDocumentNonBlocking(invoiceRef, { status: newStatus });
+        toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
+        setIsManageInvoiceOpen(false);
+    };
 
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
@@ -831,7 +843,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TabsContent>
                                 <TabsContent value="invoices">
                                     <ScrollArea className="h-72">
-                                    {userPaymentsData && userPaymentsData.length > 0 ? (
+                                    {paymentsLoading ? (
+                                         <div className="text-center text-muted-foreground py-10">
+                                            Loading invoices...
+                                        </div>
+                                    ) : userPaymentsData && userPaymentsData.length > 0 ? (
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -842,7 +858,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableHeader>
                                             <TableBody>
                                                 {userPaymentsData.map((invoice) => (
-                                                    <TableRow key={invoice.id}>
+                                                    <TableRow key={invoice.id} className="cursor-pointer" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
                                                         <TableCell>
                                                             <div className="font-medium">{invoice.id}</div>
                                                             <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
@@ -1408,6 +1424,76 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isManageInvoiceOpen} onOpenChange={setIsManageInvoiceOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Manage Invoice</DialogTitle>
+                    <DialogDescription>Review payment and update the status for invoice {selectedInvoice?.id}.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-6">
+                    <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Amount</p>
+                        <p className="text-xl font-bold">₱{selectedInvoice?.amount.toFixed(2)}</p>
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Current Status</p>
+                        <Badge variant={selectedInvoice?.status === 'Paid' ? 'default' : (selectedInvoice?.status === 'Upcoming' ? 'secondary' : 'outline')} className={cn(
+                            selectedInvoice?.status === 'Paid' && 'bg-green-100 text-green-800',
+                            selectedInvoice?.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
+                        )}>
+                            {selectedInvoice?.status}
+                        </Badge>
+                    </div>
+                    {selectedInvoice?.proofOfPaymentUrl && (
+                        <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">Proof of Payment</p>
+                            <Button variant="outline" onClick={() => setSelectedProofUrl(selectedInvoice.proofOfPaymentUrl!)}>
+                                <Eye className="mr-2 h-4 w-4" /> View Proof
+                            </Button>
+                        </div>
+                    )}
+
+                    {selectedInvoice?.status === 'Pending Review' && (
+                        <div className="pt-4 space-y-4 border-t">
+                             <h4 className="font-semibold">Actions</h4>
+                             <div className="flex gap-2">
+                                <Button onClick={() => handleInvoiceStatusUpdate('Paid')}>
+                                    <CheckCircle className="mr-2 h-4 w-4" /> Mark as Paid
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive">
+                                            <AlertTriangle className="mr-2 h-4 w-4" /> Reject Payment
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Reject Payment?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will set the invoice status back to "Upcoming". You can add a note for the user.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <Textarea 
+                                            placeholder="Optional: Reason for rejection (e.g., incorrect amount, unclear screenshot)..."
+                                            value={rejectionReason}
+                                            onChange={(e) => setRejectionReason(e.target.value)}
+                                        />
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleInvoiceStatusUpdate('Upcoming')}>Confirm Rejection</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                             </div>
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsManageInvoiceOpen(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         
         <AdminMyAccountDialog
             adminUser={adminUser}
@@ -1928,5 +2014,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    
