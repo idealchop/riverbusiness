@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -182,6 +183,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isManageInvoiceOpen, setIsManageInvoiceOpen] = React.useState(false);
     const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
     const [rejectionReason, setRejectionReason] = React.useState('');
+    const [isSanitationHistoryOpen, setIsSanitationHistoryOpen] = React.useState(false);
     const [isSanitationVisitDialogOpen, setIsSanitationVisitDialogOpen] = React.useState(false);
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
@@ -818,10 +820,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </div>
                                 </div>
                                 
-                                <TabsList className="grid w-full grid-cols-3">
+                                <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="profile">Profile</TabsTrigger>
                                     <TabsTrigger value="invoices">Invoices</TabsTrigger>
-                                    <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="profile">
                                     <div className="space-y-4 text-sm">
@@ -972,58 +973,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}
                                     </ScrollArea>
                                 </TabsContent>
-                                <TabsContent value="sanitation">
-                                    <div className="flex justify-end mb-2">
-                                        <Button size="sm" onClick={() => { setVisitToEdit(null); setIsSanitationVisitDialogOpen(true); }}>
-                                            <PlusCircle className="mr-2 h-4 w-4" /> Schedule Visit
-                                        </Button>
-                                    </div>
-                                    <ScrollArea className="h-72">
-                                        {sanitationVisitsLoading ? (
-                                            <p>Loading visits...</p>
-                                        ) : sanitationVisitsData && sanitationVisitsData.length > 0 ? (
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead>Status</TableHead>
-                                                        <TableHead>Assigned</TableHead>
-                                                        <TableHead className="text-right"></TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {sanitationVisitsData.map(visit => (
-                                                        <TableRow key={visit.id}>
-                                                            <TableCell>{format(new Date(visit.scheduledDate), 'PP')}</TableCell>
-                                                            <TableCell>
-                                                                <Badge
-                                                                    variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
-                                                                    className={cn('text-xs',
-                                                                        visit.status === 'Completed' && 'bg-green-100 text-green-800',
-                                                                        visit.status === 'Scheduled' && 'bg-blue-100 text-blue-800',
-                                                                        visit.status === 'Cancelled' && 'bg-red-100 text-red-800'
-                                                                    )}
-                                                                >{visit.status}</Badge>
-                                                            </TableCell>
-                                                            <TableCell>{visit.assignedTo}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
-                                                                    <DropdownMenuContent>
-                                                                        <DropdownMenuItem onClick={() => setVisitToEdit(visit)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                                        <DropdownMenuItem className="text-destructive" onClick={() => setVisitToDelete(visit)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        ) : (
-                                            <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
-                                        )}
-                                    </ScrollArea>
-                                </TabsContent>
                             </div>
 
                             {/* Right Column: Actions */}
@@ -1047,6 +996,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
                                         <History className="mr-2 h-4 w-4" />
                                         Delivery History
+                                    </Button>
+                                    <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline">
+                                        <FileHeart className="mr-2 h-4 w-4" />
+                                        Manage Sanitation
                                     </Button>
                                     <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
                                         <Building className="mr-2 h-4 w-4" />
@@ -2094,6 +2047,71 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Manage Sanitation for {selectedUser?.businessName}</DialogTitle>
+                    <DialogDescription>
+                        Schedule and track office sanitation visits.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end mb-4">
+                    <Button size="sm" onClick={() => { setVisitToEdit(null); setIsSanitationVisitDialogOpen(true); }}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Schedule Visit
+                    </Button>
+                </div>
+                 <ScrollArea className="h-72">
+                    {sanitationVisitsLoading ? (
+                        <p>Loading visits...</p>
+                    ) : sanitationVisitsData && sanitationVisitsData.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Assigned</TableHead>
+                                    <TableHead className="text-right"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sanitationVisitsData.map(visit => (
+                                    <TableRow key={visit.id}>
+                                        <TableCell>{format(new Date(visit.scheduledDate), 'PP')}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
+                                                className={cn('text-xs',
+                                                    visit.status === 'Completed' && 'bg-green-100 text-green-800',
+                                                    visit.status === 'Scheduled' && 'bg-blue-100 text-blue-800',
+                                                    visit.status === 'Cancelled' && 'bg-red-100 text-red-800'
+                                                )}
+                                            >{visit.status}</Badge>
+                                        </TableCell>
+                                        <TableCell>{visit.assignedTo}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuItem onClick={() => setVisitToEdit(visit)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => setVisitToDelete(visit)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
+                    )}
+                </ScrollArea>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="secondary">Close</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
         <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); sanitationVisitForm.reset(); } setIsSanitationVisitDialogOpen(open);}}>
             <DialogContent>
                 <DialogHeader>
