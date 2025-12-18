@@ -365,7 +365,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                             <div>
                                 <h4 className="font-semibold mb-2">Plan Details</h4>
                                 <ul className="space-y-1 text-muted-foreground text-sm">
-                                    <li><strong>Billing:</strong> Pay-as-you-go based on consumption.</li>
+                                    <li><strong>Billing:</strong> Pay based on consumption.</li>
                                     <li><strong>Deliveries:</strong> On-demand, request refills as needed.</li>
                                 </ul>
                             </div>

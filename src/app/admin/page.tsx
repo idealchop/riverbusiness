@@ -805,6 +805,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </CardHeader>
                                             {selectedUser.plan?.isConsumptionBased ? (
                                                 <CardContent className="space-y-2 text-sm pt-0">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Billing Model:</span>
+                                                        <span className="font-medium">Pay based on consumption</span>
+                                                    </div>
                                                      <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
                                                         <span className="text-foreground">Estimated Cost This Month:</span>
                                                         <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1520,7 +1524,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
                                         ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
                                         : 'N/A';
-                                    const autoRefillEnabled = user.plan?.isConsumptionBased ? false : (user.customPlanDetails?.autoRefillEnabled ?? true);
+                                    const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
                                     return (
                                     <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
@@ -1528,7 +1532,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableCell>
                                             <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
                                                 {user.plan?.isConsumptionBased ? (
-                                                     <Badge variant="secondary">On-demand</Badge>
+                                                     autoRefillEnabled ? (
+                                                        <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive">Disabled</Badge>
+                                                    )
                                                 ) : autoRefillEnabled ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
                                                 ) : (
@@ -1536,7 +1544,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="whitespace-nowrap">{user.plan?.isConsumptionBased ? 'On-demand' : schedule}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{user.plan?.isConsumptionBased && !autoRefillEnabled ? 'On-demand' : schedule}</TableCell>
                                         <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                     </TableRow>
                                 )})}
