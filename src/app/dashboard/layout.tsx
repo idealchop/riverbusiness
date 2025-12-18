@@ -289,7 +289,13 @@ export default function DashboardLayout({
                 variant="outline"
                 className="rounded-full relative"
               >
-                <span className="mr-2 hidden sm:inline">Need Support?</span>
+                <span className="relative flex items-center mr-2">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                </span>
+                <span className="mr-2 hidden sm:inline">Live Support</span>
                 <LifeBuoy className="h-4 w-4" />
                  {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
