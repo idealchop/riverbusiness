@@ -26,7 +26,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery } from '@/lib/types';
-import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -160,7 +160,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const consumptionDetails = React.useMemo(() => {
     const now = new Date();
     const cycleStart = startOfMonth(now);
-    const cycleEnd = endOfMonth(now);
+    const cycleEnd = addMonths(cycleStart, 1);
 
     if (!user?.plan || !deliveries) {
         return { estimatedCost: 0 };
@@ -545,7 +545,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                       <TableHeader>
                           <TableRow>
                               <TableHead>Invoice ID</TableHead>
-                              <TableHead>Date</TableHead>
+                              <TableHead>Month</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">Amount</TableHead>
                           </TableRow>
@@ -553,7 +553,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                       <TableBody>
                             <TableRow className="bg-muted/50 font-semibold">
                                 <TableCell>{currentMonthInvoice.id}</TableCell>
-                                <TableCell>{format(new Date(currentMonthInvoice.date), 'MMM dd, yyyy')}</TableCell>
+                                <TableCell>{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</TableCell>
                                 <TableCell>
                                     <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
                                         {currentMonthInvoice.status}
@@ -565,7 +565,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             paymentHistory.map((invoice) => (
                               <TableRow key={invoice.id}>
                                   <TableCell>{invoice.id}</TableCell>
-                                  <TableCell>{format(new Date(invoice.date), 'MMM dd, yyyy')}</TableCell>
+                                  <TableCell>{format(new Date(invoice.date), 'MMMM yyyy')}</TableCell>
                                   <TableCell>
                                     <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
                                         invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
