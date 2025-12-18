@@ -59,7 +59,9 @@ type NewStationFormValues = z.infer<typeof newStationSchema>;
 
 const complianceReportSchema = z.object({
     name: z.string().min(1, "Report name is required."),
-    status: z.enum(['Compliant', 'Non-compliant', 'Pending Review']),
+    reportType: z.enum(['DOH Bacteriological Test', 'Sanitary Permit', 'Business Permit']),
+    resultId: z.string().min(1, 'Result ID is required.'),
+    status: z.enum(['Passed', 'Failed', 'Pending Review']),
     results: z.string().optional(),
     reportFile: z.any().optional(),
 });
@@ -415,6 +417,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (complianceReportToEdit) {
             complianceReportForm.reset({
                 name: complianceReportToEdit.name,
+                reportType: complianceReportToEdit.reportType,
+                resultId: complianceReportToEdit.resultId || '',
                 status: complianceReportToEdit.status,
                 results: complianceReportToEdit.results || '',
             });
@@ -833,11 +837,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         try {
             const reportData = {
-                name: values.name,
-                status: values.status,
-                results: values.results || '',
+                ...values,
+                name: `${values.reportType} - ${format(new Date(), 'MMM yyyy')}`,
                 date: serverTimestamp(),
             };
+            
+            delete (reportData as any).reportFile;
     
             let reportRef: DocumentReference;
             if (complianceReportToEdit) {
@@ -853,7 +858,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const path = `stations/${stationToUpdate.id}/compliance/${reportRef.id}-${file.name}`;
                 await handleFileUpload(file, path, `compliance-${reportRef.id}`);
-                // The cloud function will update the reportUrl
             }
     
             setIsComplianceReportDialogOpen(false);
@@ -1977,10 +1981,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
-                                                    variant={report.status === 'Compliant' ? 'default' : report.status === 'Non-compliant' ? 'destructive' : 'secondary'}
+                                                    variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'}
                                                     className={cn(
-                                                        report.status === 'Compliant' && 'bg-green-100 text-green-800',
-                                                        report.status === 'Non-compliant' && 'bg-red-100 text-red-800',
+                                                        report.status === 'Passed' && 'bg-green-100 text-green-800',
+                                                        report.status === 'Failed' && 'bg-red-100 text-red-800',
                                                         report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800'
                                                     )}
                                                 >{report.status}</Badge>
@@ -2107,10 +2111,24 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogHeader>
                 <Form {...complianceReportForm}>
                     <form onSubmit={complianceReportForm.handleSubmit(handleComplianceReportSubmit)} className="space-y-4 py-4">
-                        <FormField control={complianceReportForm.control} name="name" render={({ field }) => (
+                        <FormField control={complianceReportForm.control} name="reportType" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Report Name</FormLabel>
-                                <FormControl><Input placeholder="e.g., Monthly Bacteriological Test - June" {...field} disabled={isSubmitting} /></FormControl>
+                                <FormLabel>Report Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a report type" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="DOH Bacteriological Test">DOH Bacteriological Test</SelectItem>
+                                        <SelectItem value="Sanitary Permit">Sanitary Permit</SelectItem>
+                                        <SelectItem value="Business Permit">Business Permit</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={complianceReportForm.control} name="resultId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Result ID Number</FormLabel>
+                                <FormControl><Input placeholder="e.g., DOH-2024-12345" {...field} disabled={isSubmitting} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
@@ -2120,8 +2138,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="Compliant">Compliant</SelectItem>
-                                        <SelectItem value="Non-compliant">Non-compliant</SelectItem>
+                                        <SelectItem value="Passed">Passed</SelectItem>
+                                        <SelectItem value="Failed">Failed</SelectItem>
                                         <SelectItem value="Pending Review">Pending Review</SelectItem>
                                     </SelectContent>
                                 </Select>

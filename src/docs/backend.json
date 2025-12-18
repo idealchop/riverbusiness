@@ -79,13 +79,15 @@
       "description": "Represents a water quality compliance report.",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string", "description": "Name or type of the compliance document (e.g., 'Bacteriological Test')." },
+        "name": { "type": "string", "description": "Name of the report (e.g., 'DOH Bacteriological Test - June 2024')." },
+        "reportType": { "type": "string", "enum": ["DOH Bacteriological Test", "Sanitary Permit", "Business Permit"], "description": "The type of compliance report." },
+        "resultId": { "type": "string", "description": "The official result ID number from the testing body." },
         "date": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Compliant", "Non-compliant", "Pending Review"] },
+        "status": { "type": "string", "enum": ["Passed", "Failed", "Pending Review"] },
         "reportUrl": { "type": "string", "format": "uri" },
         "results": { "type": "string", "description": "Admin-entered notes or results of the inspection." }
       },
-      "required": ["id", "name", "date", "status"]
+      "required": ["id", "name", "reportType", "resultId", "date", "status"]
     },
     "SanitationChecklistItem": {
         "title": "SanitationChecklistItem",

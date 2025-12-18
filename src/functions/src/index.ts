@@ -7,6 +7,12 @@ import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
 
+// Import all exports from billing.ts
+import * as billing from './billing';
+
+// Export all billing functions so they are deployed
+export * from './billing';
+
 // Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
@@ -28,6 +34,7 @@ async function createNotification(userId: string, notificationData: any) {
   };
   await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
+
 
 /**
  * Cloud Function to create a notification when a delivery is first created.
@@ -168,12 +175,13 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
                 partnershipAgreementUrl: url,
             });
             logger.log(`Updated partnership agreement for station: ${stationId}`);
-
         } else if (docType === "compliance") {
-            const reportId = path.basename(filePath).split('-')[0];
-            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportId);
+            const reportKey = path.basename(filePath).split('-')[0];
+            
+            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportKey);
+
             await reportRef.update({ reportUrl: url });
-            logger.log(`Updated compliance report URL for report: ${reportId} in station: ${stationId}`);
+            logger.log(`Updated compliance report URL for report '${reportKey}' for station: ${stationId}`);
         }
         return;
     }
