@@ -26,7 +26,9 @@
         "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
         "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
         "contractStatus": { "type": "string", "description": "Status of the user's contract." },
-        "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." }
+        "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." },
+        "pendingPlan": { "type": "object", "description": "Details of a pending plan change." },
+        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },

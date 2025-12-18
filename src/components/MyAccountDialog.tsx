@@ -25,8 +25,8 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking } from '@/
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
-import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle } from 'lucide-react';
+import { format, startOfMonth, addMonths } from 'date-fns';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -238,21 +238,20 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
 
   const handleConfirmPlanChange = () => {
     if (!authUser || !firestore || !state.selectedNewPlan) return;
+    
+    const now = new Date();
+    const firstDayOfNextMonth = startOfMonth(addMonths(now, 1));
+
     const userDocRef = doc(firestore, 'users', authUser.uid);
 
     updateDocumentNonBlocking(userDocRef, {
-        plan: state.selectedNewPlan,
-        customPlanDetails: {
-            ...user?.customPlanDetails,
-            autoRefillEnabled: true,
-            deliveryDay: 'Any',
-            deliveryTime: 'Any'
-        }
+        pendingPlan: state.selectedNewPlan,
+        planChangeEffectiveDate: firstDayOfNextMonth,
     });
 
     toast({
-        title: 'Plan Change Successful',
-        description: `You have successfully switched to the ${state.selectedNewPlan.name}.`,
+        title: 'Plan Change Scheduled',
+        description: `Your plan will switch to ${state.selectedNewPlan.name} on ${format(firstDayOfNextMonth, 'MMMM d, yyyy')}.`,
     });
 
     dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false});
@@ -470,7 +469,6 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                           )}
                           <Button variant="outline" onClick={() => {
                             dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true});
-                            dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: user.plan});
                           }}>
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
@@ -610,87 +608,107 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
           <DialogHeader>
             <DialogTitle>Change Your Plan</DialogTitle>
             <DialogDescription>
-              Compare your current plan with our Flow Plan and switch with one click.
+              Compare your current plan with our Flow Plan and schedule the change.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card 
-                  className={cn(
-                      "flex flex-col",
-                      state.selectedNewPlan?.name === user.plan?.name ? "border-primary border-2" : ""
-                  )}
-              >
-                  <CardHeader>
-                      <CardTitle className="flex justify-between items-center">
-                        Your Current Plan
-                        {state.selectedNewPlan?.name === user.plan?.name && <CheckCircle className="h-5 w-5 text-primary" />}
-                      </CardTitle>
-                      <CardDescription>{user.plan?.name}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                      <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/month</p>
-                      <Separator className="my-2" />
-                      <ul className="text-sm space-y-1 text-muted-foreground">
-                          <li><strong>Billing:</strong> Fixed monthly bill.</li>
-                          <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
-                          <li><strong>Bonus Liters:</strong> {user.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
-                      </ul>
-                  </CardContent>
-              </Card>
-              {flowPlan && (
-                  <Card 
-                      onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
-                      className={cn(
-                          "cursor-pointer hover:border-primary flex flex-col",
-                          state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
-                      )}
-                  >
-                      <CardHeader>
-                          <CardTitle className="flex justify-between items-center">
-                            {flowPlan.name}
-                            {state.selectedNewPlan?.name === flowPlan.name && <CheckCircle className="h-5 w-5 text-primary" />}
-                          </CardTitle>
-                          <CardDescription>{flowPlan.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-1">
-                          <p className="font-bold text-lg">₱{flowPlan.price}/liter</p>
-                          <Separator className="my-2" />
-                          <ul className="text-sm space-y-1 text-muted-foreground">
-                              <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
-                              <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
-                              <li><strong>Deliveries:</strong> On-demand or automated.</li>
-                          </ul>
-                      </CardContent>
-                  </Card>
-              )}
-          </div>
-           <Separator className="my-4" />
-           <div className="space-y-4">
-                <div>
-                    <h3 className="font-semibold">Included in Every Plan</h3>
-                    <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
+            {user.pendingPlan ? (
+                <div className="py-4 text-center">
+                    <Card className="max-w-md mx-auto">
+                        <CardHeader>
+                            <CardTitle className="flex items-center justify-center gap-2">
+                                <AlertCircle className="h-6 w-6 text-blue-500" />
+                                Plan Change Scheduled
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <p className="text-muted-foreground">Your plan is scheduled to switch to</p>
+                            <p className="font-bold text-lg">{user.pendingPlan.name}</p>
+                            <p className="text-muted-foreground">on</p>
+                            <p className="font-bold text-lg">{format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy')}</p>
+                        </CardContent>
+                    </Card>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                    {includedFeatures.map((feature, index) => {
-                        const Icon = feature.icon;
-                        return (
-                            <div key={index} className="flex items-start gap-3">
-                                <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                                <div>
-                                    <h4 className="font-medium text-sm">{feature.title}</h4>
-                                    <p className="text-xs text-muted-foreground">{feature.description}</p>
-                                </div>
-                            </div>
-                        );
-                    })}
+            ) : (
+                <>
+                <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card 
+                        onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: user.plan})}
+                        className={cn(
+                            "flex flex-col cursor-pointer",
+                            state.selectedNewPlan?.name === user.plan?.name ? "border-primary border-2" : ""
+                        )}
+                    >
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center">
+                              Your Current Plan
+                              {state.selectedNewPlan?.name === user.plan?.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                            </CardTitle>
+                            <CardDescription>{user.plan?.name}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                            <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/month</p>
+                            <Separator className="my-2" />
+                            <ul className="text-sm space-y-1 text-muted-foreground">
+                                <li><strong>Billing:</strong> Fixed monthly bill.</li>
+                                <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                            </ul>
+                        </CardContent>
+                    </Card>
+                    {flowPlan && (
+                        <Card 
+                            onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
+                            className={cn(
+                                "cursor-pointer hover:border-primary flex flex-col",
+                                state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
+                            )}
+                        >
+                            <CardHeader>
+                                <CardTitle className="flex justify-between items-center">
+                                  {flowPlan.name}
+                                  {state.selectedNewPlan?.name === flowPlan.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                                </CardTitle>
+                                <CardDescription>{flowPlan.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-1">
+                                <p className="font-bold text-lg">₱{flowPlan.price}/liter</p>
+                                <Separator className="my-2" />
+                                <ul className="text-sm space-y-1 text-muted-foreground">
+                                    <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
+                                    <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
-            </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
-            <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name}>
-              Confirm and Switch Plan
-            </Button>
-          </DialogFooter>
+                <Separator className="my-4" />
+                <div className="space-y-4">
+                      <div>
+                          <h3 className="font-semibold">Included in Every Plan</h3>
+                          <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                          {includedFeatures.map((feature, index) => {
+                              const Icon = feature.icon;
+                              return (
+                                  <div key={index} className="flex items-start gap-3">
+                                      <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                                      <div>
+                                          <h4 className="font-medium text-sm">{feature.title}</h4>
+                                          <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
+                  <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name}>
+                    Schedule Plan Change
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
         </DialogContent>
       </Dialog>
 

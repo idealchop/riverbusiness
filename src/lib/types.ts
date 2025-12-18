@@ -1,4 +1,5 @@
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -72,6 +73,8 @@ export interface AppUser {
     contractStatus?: string;
     contractUploadedDate?: any;
     lastDeliveryStatus?: 'Delivered' | 'In Transit' | 'Pending' | 'No Delivery';
+    pendingPlan?: any;
+    planChangeEffectiveDate?: any;
 }
 
 export interface LoginLog {
