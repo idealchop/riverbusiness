@@ -637,8 +637,9 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                 You're on the Flow Plan!
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-2">
-                            <p className="text-muted-foreground">You are currently on our most flexible consumption-based plan. No further changes are needed.</p>
+                        <CardContent className="space-y-4 pt-4">
+                            <p className="text-muted-foreground">You are currently on our most flexible consumption-based plan.</p>
+                            <p className="text-sm text-muted-foreground">If you need to make special arrangements or customize your plan further, please contact our support team at <a href="mailto:support@riverph.com" className="text-primary hover:underline">support@riverph.com</a>.</p>
                         </CardContent>
                     </Card>
                 </div>
