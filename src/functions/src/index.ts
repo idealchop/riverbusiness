@@ -1,28 +1,90 @@
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
+import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
 
+// Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
 const storage = getStorage();
 
 /**
- * A generic Cloud Function that triggers on any file being finalized in Firebase Storage.
- * It determines the file type based on its path and
- * updates the corresponding Firestore document with a public URL.
- *
- * This function uses a path-driven approach to be robust and flexible.
+ * Creates a notification document in a user's notification subcollection.
+ */
+async function createNotification(userId: string, notificationData: any) {
+  if (!userId) {
+    logger.warn("User ID is missing, cannot create notification.");
+    return;
+  }
+  const notification = {
+    ...notificationData,
+    userId: userId,
+    date: FieldValue.serverTimestamp(),
+    isRead: false,
+  };
+  await db.collection('users').doc(userId).collection('notifications').add(notification);
+}
+
+/**
+ * Cloud Function to create a notification when a delivery is first created.
+ */
+export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const delivery = event.data.data();
+
+    const notification = {
+        type: 'delivery',
+        title: 'Delivery Scheduled',
+        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
+
+/**
+ * Cloud Function to create a notification when a delivery is updated.
+ */
+export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Only notify if the status has changed.
+    if (before.status === after.status) {
+        return;
+    }
+    
+    const userId = event.params.userId;
+    const delivery = after;
+
+    const notification = {
+        type: 'delivery',
+        title: `Delivery ${delivery.status}`,
+        description: `Your delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
+
+/**
+ * Generic Cloud Function for file uploads.
  */
 export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) => {
   const fileBucket = event.data.bucket;
   const filePath = event.data.name;
   const contentType = event.data.contentType;
 
-  // Exit if this is a folder creation event or file path is missing.
   if (!filePath || contentType?.startsWith('application/x-directory')) {
     logger.log(`Ignoring event for folder: ${filePath}`);
     return;
@@ -34,13 +96,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   const getPublicUrl = async () => {
     const [downloadURL] = await file.getSignedUrl({
       action: "read",
-      expires: "01-01-2500", // A far-future expiration date
+      expires: "01-01-2500",
     });
     return downloadURL;
   };
 
   try {
-    // --- User Profile Photo ---
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -50,7 +111,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // --- User Contract ---
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -64,11 +124,9 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // --- Delivery Proof ---
     if (filePath.startsWith("users/") && filePath.includes("/deliveries/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
-        // Filename is expected to be `DELIVERY_ID-original_filename.ext`
         const deliveryId = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
@@ -78,26 +136,31 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // --- Payment Proof ---
     if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
-        // Filename is expected to be `PAYMENT_ID-original_filename.ext`
         const paymentId = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("payments").doc(paymentId).update({
+        const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
+        await paymentRef.update({
             proofOfPaymentUrl: url,
             status: "Pending Review",
         });
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
+        
+        await createNotification(userId, {
+            type: 'payment',
+            title: 'Payment Under Review',
+            description: `Your payment proof for invoice ${paymentId} has been received and is now pending review.`,
+            data: { paymentId: paymentId }
+        });
         return;
     }
 
-    // --- Water Station Documents (Agreement & Compliance) ---
     if (filePath.startsWith("stations/")) {
         const parts = filePath.split("/");
         const stationId = parts[1];
-        const docType = parts[2]; // e.g., 'agreement' or 'compliance'
+        const docType = parts[2];
         const url = await getPublicUrl();
 
         if (docType === "agreement") {
@@ -106,12 +169,11 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             });
             logger.log(`Updated partnership agreement for station: ${stationId}`);
         } else if (docType === "compliance") {
-            // Filename is expected to be `docKey-original_filename.pdf` (e.g., 'businessPermit-some_file.pdf')
-            const reportKey = path.basename(filePath).split('-')[0]; // 'businessPermit'
+            const reportKey = path.basename(filePath).split('-')[0];
             const formattedName = reportKey.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
             
             const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports");
-            const reportDocId = reportKey; // Use the key as the document ID for idempotency
+            const reportDocId = reportKey;
 
             await reportRef.doc(reportDocId).set({
                 id: reportDocId,
