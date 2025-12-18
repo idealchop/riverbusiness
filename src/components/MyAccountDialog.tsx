@@ -26,7 +26,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -150,7 +150,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   const storage = useStorage();
   const auth = useAuth();
   
-  const flowPlans = React.useMemo(() => enterprisePlans.filter(p => p.isConsumptionBased), []);
+  const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
 
   useEffect(() => {
     if (user) {
@@ -468,7 +468,10 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                   Contract Not Available
                               </Button>
                           )}
-                          <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true})}>
+                          <Button variant="outline" onClick={() => {
+                            dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true});
+                            dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: user.plan});
+                          }}>
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
                           </Button>
@@ -607,47 +610,65 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
           <DialogHeader>
             <DialogTitle>Change Your Plan</DialogTitle>
             <DialogDescription>
-              Switch to a consumption-based Flow Plan.
+              Compare your current plan with our Flow Plan and switch with one click.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {flowPlans.map(plan => {
-                  const image = PlaceHolderImages.find(p => p.id === plan.imageId);
-                  const isSelected = state.selectedNewPlan?.name === plan.name;
-                  return (
-                      <Card 
-                          key={plan.name}
-                          onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: plan})}
-                          className={cn(
-                              "cursor-pointer hover:border-primary flex flex-col",
-                              isSelected && "border-primary border-2"
-                          )}
-                      >
-                           {image && (
-                              <div className="relative h-40 w-full">
-                                  <Image src={image.imageUrl} alt={plan.name} fill className="object-cover" data-ai-hint={image.imageHint} />
-                              </div>
-                            )}
-                          <CardHeader>
-                              <CardTitle>{plan.name}</CardTitle>
-                              <CardDescription>{plan.description}</CardDescription>
-                          </CardHeader>
-                          <CardContent className="flex-1">
-                              <ul className="text-sm space-y-1 text-muted-foreground">
-                                  {plan.details.map((detail, i) => (
-                                      <li key={i}><strong>{detail.label}:</strong> {detail.value}</li>
-                                  ))}
-                              </ul>
-                          </CardContent>
-                      </Card>
-                  )
-              })}
+              <Card 
+                  className={cn(
+                      "flex flex-col",
+                      state.selectedNewPlan?.name === user.plan?.name ? "border-primary border-2" : ""
+                  )}
+              >
+                  <CardHeader>
+                      <CardTitle className="flex justify-between items-center">
+                        Your Current Plan
+                        {state.selectedNewPlan?.name === user.plan?.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                      </CardTitle>
+                      <CardDescription>{user.plan?.name}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1">
+                      <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/month</p>
+                      <Separator className="my-2" />
+                      <ul className="text-sm space-y-1 text-muted-foreground">
+                          <li><strong>Billing:</strong> Fixed monthly bill.</li>
+                          <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                          <li><strong>Bonus Liters:</strong> {user.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
+                      </ul>
+                  </CardContent>
+              </Card>
+              {flowPlan && (
+                  <Card 
+                      onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
+                      className={cn(
+                          "cursor-pointer hover:border-primary flex flex-col",
+                          state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
+                      )}
+                  >
+                      <CardHeader>
+                          <CardTitle className="flex justify-between items-center">
+                            {flowPlan.name}
+                            {state.selectedNewPlan?.name === flowPlan.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                          </CardTitle>
+                          <CardDescription>{flowPlan.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex-1">
+                          <p className="font-bold text-lg">₱{flowPlan.price}/liter</p>
+                          <Separator className="my-2" />
+                          <ul className="text-sm space-y-1 text-muted-foreground">
+                              <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
+                              <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
+                              <li><strong>Deliveries:</strong> On-demand or automated.</li>
+                          </ul>
+                      </CardContent>
+                  </Card>
+              )}
           </div>
            <Separator className="my-4" />
            <div className="space-y-4">
                 <div>
                     <h3 className="font-semibold">Included in Every Plan</h3>
-                    <p className="text-sm text-muted-foreground">Every subscription plan includes full access to our growing network of partner perks.</p>
+                    <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                     {includedFeatures.map((feature, index) => {
@@ -666,7 +687,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
             </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
-            <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan}>
+            <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name}>
               Confirm and Switch Plan
             </Button>
           </DialogFooter>
