@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +27,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -47,6 +48,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -71,13 +73,36 @@ const deliveryFormSchema = z.object({
 });
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
+const sanitationChecklistItemSchema = z.object({
+    item: z.string(),
+    checked: z.boolean(),
+    remarks: z.string(),
+});
+
 const sanitationVisitSchema = z.object({
-    scheduledDate: z.date({ required_error: 'Date is required.'}),
+    scheduledDate: z.date({ required_error: 'Date is required.' }),
     status: z.enum(['Scheduled', 'Completed', 'Cancelled']),
     assignedTo: z.string().min(1, "Please assign a team member."),
     reportUrl: z.string().url().optional().or(z.literal('')),
+    checklist: z.array(sanitationChecklistItemSchema),
 });
+
 type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
+
+const defaultChecklistItems: Omit<SanitationChecklistItem, 'id'>[] = [
+    { item: 'Exterior surfaces inspected for dust, dirt, or spills.', checked: false, remarks: '' },
+    { item: 'Dispenser exterior cleaned and disinfected.', checked: false, remarks: '' },
+    { item: 'Drip tray checked, cleaned, and sanitized.', checked: false, remarks: '' },
+    { item: 'Dispensing nozzles cleaned and checked for blockage.', checked: false, remarks: '' },
+    { item: 'Internal water lines flushed (if applicable).', checked: false, remarks: '' },
+    { item: 'Refillable bottles/containers inspected for cracks or contamination.', checked: false, remarks: '' },
+    { item: 'Bottle caps cleaned and checked for proper sealing.', checked: false, remarks: '' },
+    { item: 'Inspection for mold, algae, or discoloration.', checked: false, remarks: '' },
+    { item: 'The surrounding area was cleaned and kept dry.', checked: false, remarks: '' },
+    { item: 'Temperature settings (hot/cold) verified.', checked: false, remarks: '' },
+    { item: 'Sanitation date and responsible personnel documented.', checked: false, remarks: '' },
+];
+
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -329,8 +354,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: {
             status: 'Scheduled',
             assignedTo: '',
-            reportUrl: ''
+            reportUrl: '',
+            checklist: defaultChecklistItems,
         }
+    });
+
+    const { fields: checklistFields } = useFieldArray({
+        control: sanitationVisitForm.control,
+        name: "checklist",
     });
 
     React.useEffect(() => {
@@ -340,12 +371,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 status: visitToEdit.status,
                 assignedTo: visitToEdit.assignedTo,
                 reportUrl: visitToEdit.reportUrl || '',
+                checklist: visitToEdit.checklist || defaultChecklistItems,
             });
             setIsSanitationVisitDialogOpen(true);
         } else {
-            sanitationVisitForm.reset();
+            sanitationVisitForm.reset({
+                status: 'Scheduled',
+                assignedTo: '',
+                reportUrl: '',
+                checklist: defaultChecklistItems,
+            });
         }
     }, [visitToEdit, sanitationVisitForm]);
+
 
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
@@ -2113,7 +2151,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         </Dialog>
         
         <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); sanitationVisitForm.reset(); } setIsSanitationVisitDialogOpen(open);}}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
                     <DialogDescription>
@@ -2121,55 +2159,109 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...sanitationVisitForm}>
-                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4">
-                        <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Scheduled Date</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Assigned To</FormLabel>
-                                <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                        <SelectItem value="Completed">Completed</SelectItem>
-                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                         <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Report URL (Optional)</FormLabel>
-                                <FormControl><Input placeholder="https://example.com/report.pdf" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <DialogFooter>
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4">
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Scheduled Date</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Assigned To</FormLabel>
+                                        <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Status</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                                <SelectItem value="Completed">Completed</SelectItem>
+                                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                 <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Report URL (Optional)</FormLabel>
+                                        <FormControl><Input placeholder="https://example.com/report.pdf" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-sm">Sanitation Checklist</h4>
+                                <ScrollArea className="h-72 border rounded-md p-4">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-8"></TableHead>
+                                            <TableHead>Item</TableHead>
+                                            <TableHead>Remarks</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {checklistFields.map((field, index) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell>
+                                                    <FormField
+                                                        control={sanitationVisitForm.control}
+                                                        name={`checklist.${index}.checked`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormControl>
+                                                                    <Checkbox
+                                                                        checked={field.value}
+                                                                        onCheckedChange={field.onChange}
+                                                                    />
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-xs">{field.item}</TableCell>
+                                                <TableCell>
+                                                    <FormField
+                                                        control={sanitationVisitForm.control}
+                                                        name={`checklist.${index}.remarks`}
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormControl>
+                                                                    <Input {...field} className="h-7 text-xs" />
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                </ScrollArea>
+                            </div>
+                        </div>
+                        <DialogFooter className="pt-6">
                             <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
                         </DialogFooter>
@@ -2248,3 +2340,4 @@ export default function AdminPage() {
         </div>
     )
 }
+

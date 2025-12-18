@@ -1,0 +1,219 @@
+
+{
+  "entities": {
+    "AppUser": {
+      "title": "AppUser",
+      "type": "object",
+      "description": "Represents a user of the River Business application.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the user (matches Auth UID)." },
+        "clientId": { "type": "string", "description": "Manually assigned client identifier." },
+        "name": { "type": "string", "description": "User's full name." },
+        "email": { "type": "string", "format": "email", "description": "User's login email address." },
+        "businessEmail": { "type": "string", "format": "email", "description": "User's business contact email address." },
+        "businessName": { "type": "string", "description": "User's business name." },
+        "address": { "type": "string", "description": "User's address." },
+        "contactNumber": { "type": "string", "description": "User's phone number." },
+        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters. Represents the user's current inventory." },
+        "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
+        "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
+        "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the user was created." },
+        "onboardingComplete": { "type": "boolean", "description": "Flag indicating if user has completed onboarding." },
+        "plan": { "type": "object", "description": "User's subscription plan details." },
+        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
+        "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
+        "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
+        "contractStatus": { "type": "string", "description": "Status of the user's contract." },
+        "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." },
+        "pendingPlan": { "type": "object", "description": "Details of a pending plan change." },
+        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." }
+      },
+      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
+    },
+    "WaterStation": {
+      "title": "WaterStation",
+      "type": "object",
+      "description": "Represents a water refilling station.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the station." },
+        "name": { "type": "string", "description": "Name of the station." },
+        "location": { "type": "string", "description": "Location of the station." },
+        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." }
+      },
+      "required": ["id", "name", "location"]
+    },
+    "Delivery": {
+      "title": "Delivery",
+      "type": "object",
+      "description": "Represents a water delivery record.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the delivery, can be used as a tracking number." },
+        "userId": { "type": "string", "description": "ID of the user receiving the delivery." },
+        "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
+        "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers. This is used for deduction." },
+        "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },
+        "proofOfDeliveryUrl": { "type": "string", "format": "uri", "description": "URL to the proof of delivery image." },
+        "adminNotes": { "type": "string", "description": "Notes from the admin about the delivery." }
+      },
+      "required": ["id", "userId", "date", "volumeContainers", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "type": "object",
+      "description": "Represents a payment or invoice.",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review"] },
+        "proofOfPaymentUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["id", "date", "description", "amount", "status"]
+    },
+    "ComplianceReport": {
+      "title": "ComplianceReport",
+      "type": "object",
+      "description": "Represents a water quality compliance report.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "Name or type of the compliance document (e.g., 'Bacteriological Test')." },
+        "date": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Compliant", "Non-compliant", "Pending Review"] },
+        "reportUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["id", "name", "date", "status", "reportUrl"]
+    },
+    "SanitationChecklistItem": {
+        "title": "SanitationChecklistItem",
+        "type": "object",
+        "description": "Represents a single item in a sanitation checklist.",
+        "properties": {
+            "item": { "type": "string", "description": "The text of the checklist item." },
+            "checked": { "type": "boolean", "description": "Whether the item has been checked off." },
+            "remarks": { "type": "string", "description": "Optional remarks for the checklist item." }
+        },
+        "required": ["item", "checked", "remarks"]
+    },
+    "SanitationVisit": {
+      "title": "SanitationVisit",
+      "type": "object",
+      "description": "Represents a sanitation visit record for a client's office.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "ID of the user whose office is being visited." },
+        "scheduledDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
+        "assignedTo": { "type": "string" },
+        "reportUrl": { "type": "string", "format": "uri" },
+        "checklist": {
+            "type": "array",
+            "description": "An array of checklist items for the sanitation visit.",
+            "items": {
+                "$ref": "#/entities/SanitationChecklistItem"
+            }
+        }
+      },
+      "required": ["id", "userId", "scheduledDate", "status"]
+    },
+    "Schedule": {
+      "title": "Schedule",
+      "type": "object",
+      "description": "Represents the global delivery schedule.",
+      "properties": {
+        "deliveryDate": { "type": "string", "format": "date" },
+        "cutOffTime": { "type": "string", "format": "time" },
+        "notes": { "type": "string" }
+      }
+    },
+    "ConsumptionHistory": {
+      "title": "ConsumptionHistory",
+      "type": "object",
+      "description": "Represents a single water consumption entry for a user.",
+      "properties": {
+        "date": { "type": "string", "format": "date-time" },
+        "amountLiters": { "type": "number" },
+        "metric": { "type": "string", "enum": ["liters", "gallons"] }
+      }
+    },
+    "RefillRequest": {
+      "title": "RefillRequest",
+      "type": "object",
+      "description": "Represents a user's request for a one-time water refill.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the refill request." },
+        "userId": { "type": "string", "description": "ID of the user requesting the refill." },
+        "userName": { "type": "string", "description": "Name of the user." },
+        "businessName": { "type": "string", "description": "Business name of the user." },
+        "clientId": { "type": "string", "description": "Client ID of the user." },
+        "requestedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the request was made." },
+        "status": { "type": "string", "enum": ["Pending", "Completed"], "description": "The current status of the refill request." }
+      },
+      "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a user notification.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["delivery", "compliance", "sanitation", "payment", "general"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "isRead": { "type": "boolean" },
+        "data": { "type": "object", "description": "Optional data related to the notification." }
+      },
+      "required": ["id", "userId", "type", "title", "description", "date", "isRead"]
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/AppUser" },
+      "description": "Stores user profile information."
+    },
+    "/users/{userId}/deliveries/{deliveryId}": {
+      "schema": { "$ref": "#/entities/Delivery" },
+      "description": "Subcollection for a user's delivery records."
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Subcollection for a user's payment history."
+    },
+    "/users/{userId}/consumptionHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/ConsumptionHistory" },
+      "description": "Subcollection for a user's consumption history."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Subcollection for user-specific notifications."
+    },
+    "/users/{userId}/sanitationVisits/{visitId}": {
+      "schema": { "$ref": "#/entities/SanitationVisit" },
+      "description": "Subcollection for a client's scheduled office sanitation visits."
+    },
+    "/waterStations/{stationId}": {
+      "schema": { "$ref": "#/entities/WaterStation" },
+      "description": "Top-level collection for all water stations."
+    },
+    "/waterStations/{stationId}/complianceReports/{reportId}": {
+      "schema": { "$ref": "#/entities/ComplianceReport" },
+      "description": "Subcollection for a station's compliance reports."
+    },
+    "/schedules/currentSchedule": {
+      "schema": { "$ref": "#/entities/Schedule" },
+      "description": "A single document to hold the current global delivery schedule."
+    },
+    "/refillRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/RefillRequest" },
+      "description": "Stores user requests for one-time refills."
+    }
+  }
+}
+

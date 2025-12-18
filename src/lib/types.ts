@@ -25,6 +25,12 @@ export interface ComplianceReport {
   reportUrl: string;
 }
 
+export interface SanitationChecklistItem {
+    item: string;
+    checked: boolean;
+    remarks: string;
+}
+
 export interface SanitationVisit {
   id: string;
   userId: string;
@@ -32,6 +38,7 @@ export interface SanitationVisit {
   status: 'Completed' | 'Scheduled' | 'Cancelled';
   assignedTo: string;
   reportUrl?: string;
+  checklist?: SanitationChecklistItem[];
 }
 
 export interface WaterStation {
