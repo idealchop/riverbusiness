@@ -1,6 +1,6 @@
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
-import { onDocumentUpdated } from "firebase-functions/v2/firestore";
+import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
@@ -28,6 +28,27 @@ async function createNotification(userId: string, notificationData: any) {
   };
   await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
+
+
+/**
+ * Cloud Function to create a notification when a delivery is first created.
+ */
+export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const delivery = event.data.data();
+
+    const notification = {
+        type: 'delivery',
+        title: 'Delivery Scheduled',
+        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
 
 /**
  * Cloud Function to create a notification when a delivery is updated.

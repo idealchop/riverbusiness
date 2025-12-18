@@ -1,3 +1,4 @@
+
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -15,136 +16,182 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onFileUpload = void 0;
-const functions = __importStar(require("firebase-functions"));
-const admin = __importStar(require("firebase-admin"));
+exports.onfileupload = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
+const storage_1 = require("firebase-functions/v2/storage");
+const firestore_1 = require("firebase-functions/v2/firestore");
+const storage_2 = require("firebase-admin/storage");
+const firestore_2 = require("firebase-admin/firestore");
+const logger = __importStar(require("firebase-functions/logger"));
+const app_1 = require("firebase-admin/app");
 const path = __importStar(require("path"));
-// Initialize the Firebase Admin SDK.
-admin.initializeApp();
-const db = admin.firestore();
-const storage = admin.storage();
+// Initialize Firebase Admin SDK
+(0, app_1.initializeApp)();
+const db = (0, firestore_2.getFirestore)();
+const storage = (0, storage_2.getStorage)();
 /**
- * A generic Cloud Function that triggers on any file being finalized in
- * Firebase Storage. It determines the file type based on its path and
- * updates the corresponding Firestore document with a public URL.
+ * Creates a notification document in a user's notification subcollection.
  */
-exports.onFileUpload = functions.storage.object().onFinalize(async (object) => {
-    const filePath = object.name;
-    const bucket = storage.bucket(object.bucket);
-    const file = bucket.file(filePath);
-    // Ensure filePath is valid
-    if (!filePath) {
-        functions.logger.warn("File path is undefined.");
+async function createNotification(userId, notificationData) {
+    if (!userId) {
+        logger.warn("User ID is missing, cannot create notification.");
         return;
     }
+    const notification = {
+        ...notificationData,
+        userId: userId,
+        date: firestore_2.FieldValue.serverTimestamp(),
+        isRead: false,
+    };
+    await db.collection('users').doc(userId).collection('notifications').add(notification);
+}
+/**
+ * Cloud Function to create a notification when a delivery is first created.
+ */
+exports.ondeliverycreate = (0, firestore_1.onDocumentCreated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data)
+        return;
+    const userId = event.params.userId;
+    const delivery = event.data.data();
+    const notification = {
+        type: 'delivery',
+        title: 'Delivery Scheduled',
+        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    await createNotification(userId, notification);
+});
+/**
+ * Cloud Function to create a notification when a delivery is updated.
+ */
+exports.ondeliveryupdate = (0, firestore_1.onDocumentUpdated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data)
+        return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    // Only notify if the status has changed.
+    if (before.status === after.status) {
+        return;
+    }
+    const userId = event.params.userId;
+    const delivery = after;
+    const notification = {
+        type: 'delivery',
+        title: `Delivery ${delivery.status}`,
+        description: `Your delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    await createNotification(userId, notification);
+});
+/**
+ * Generic Cloud Function for file uploads.
+ */
+exports.onfileupload = (0, storage_1.onObjectFinalized)({ cpu: "memory" }, async (event) => {
+    const fileBucket = event.data.bucket;
+    const filePath = event.data.name;
+    const contentType = event.data.contentType;
+    if (!filePath || contentType?.startsWith('application/x-directory')) {
+        logger.log(`Ignoring event for folder: ${filePath}`);
+        return;
+    }
+    const bucket = storage.bucket(fileBucket);
+    const file = bucket.file(filePath);
     const getPublicUrl = async () => {
         const [downloadURL] = await file.getSignedUrl({
             action: "read",
-            expires: "01-01-2500", // A far-future expiration date
+            expires: "01-01-2500",
         });
         return downloadURL;
     };
     try {
-        // --- User Profile Photo ---
         if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
             const parts = filePath.split("/");
             const userId = parts[1];
             const url = await getPublicUrl();
             await db.collection("users").doc(userId).update({ photoURL: url });
-            functions.logger.log(`Updated profile photo for user: ${userId}`);
+            logger.log(`Updated profile photo for user: ${userId}`);
             return;
         }
-        // --- User Contract ---
         if (filePath.startsWith("userContracts/")) {
             const parts = filePath.split("/");
             const userId = parts[1];
             const url = await getPublicUrl();
             await db.collection("users").doc(userId).update({
                 currentContractUrl: url,
-                contractUploadedDate: admin.firestore.FieldValue.serverTimestamp(),
+                contractUploadedDate: firestore_2.FieldValue.serverTimestamp(),
                 contractStatus: "Active",
             });
-            functions.logger.log(`Updated contract for user: ${userId}`);
+            logger.log(`Updated contract for user: ${userId}`);
             return;
         }
-        // --- Delivery Proof ---
         if (filePath.startsWith("users/") && filePath.includes("/deliveries/")) {
             const parts = filePath.split("/");
             const userId = parts[1];
-            const deliveryId = parts[3];
+            const deliveryId = path.basename(filePath).split('-')[0];
             const url = await getPublicUrl();
             await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
                 proofOfDeliveryUrl: url,
             });
-            functions.logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId}`);
+            logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId}`);
             return;
         }
-        // --- Payment Proof ---
         if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
             const parts = filePath.split("/");
             const userId = parts[1];
-            const paymentId = parts[3];
+            const paymentId = path.basename(filePath).split('-')[0];
             const url = await getPublicUrl();
-            await db.collection("users").doc(userId).collection("payments").doc(paymentId).update({
+            const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
+            await paymentRef.update({
                 proofOfPaymentUrl: url,
                 status: "Pending Review",
             });
-            functions.logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
+            logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
+            await createNotification(userId, {
+                type: 'payment',
+                title: 'Payment Under Review',
+                description: `Your payment proof for invoice ${paymentId} has been received and is now pending review.`,
+                data: { paymentId: paymentId }
+            });
             return;
         }
-        // --- Water Station Documents (Agreement & Compliance) ---
         if (filePath.startsWith("stations/")) {
             const parts = filePath.split("/");
             const stationId = parts[1];
-            const docType = parts[2]; // e.g., 'agreement' or 'compliance'
-            const fileName = path.basename(filePath);
+            const docType = parts[2];
             const url = await getPublicUrl();
             if (docType === "agreement") {
                 await db.collection("waterStations").doc(stationId).update({
                     partnershipAgreementUrl: url,
                 });
-                functions.logger.log(`Updated partnership agreement for station: ${stationId}`);
+                logger.log(`Updated partnership agreement for station: ${stationId}`);
             }
             else if (docType === "compliance") {
-                // Example filename: 'businessPermit-some_file.pdf'
-                const reportName = fileName.split("-")[0]; // 'businessPermit'
-                const formattedName = reportName.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+                const reportKey = path.basename(filePath).split('-')[0];
+                const formattedName = reportKey.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
                 const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports");
-                // Create a unique ID from the report name to avoid duplicates
-                const reportDocId = reportName;
+                const reportDocId = reportKey;
                 await reportRef.doc(reportDocId).set({
                     id: reportDocId,
                     name: formattedName,
-                    date: admin.firestore.FieldValue.serverTimestamp(),
+                    date: firestore_2.FieldValue.serverTimestamp(),
                     status: "Pending Review",
                     reportUrl: url,
                 }, { merge: true });
-                functions.logger.log(`Updated compliance report '${formattedName}' for station: ${stationId}`);
+                logger.log(`Updated compliance report '${formattedName}' for station: ${stationId}`);
             }
             return;
         }
-        functions.logger.log(`File path ${filePath} did not match any handler.`);
+        logger.log(`File path ${filePath} did not match any handler.`);
     }
     catch (error) {
-        functions.logger.error(`Failed to process upload for ${filePath}.`, error);
+        logger.error(`Failed to process upload for ${filePath}.`, error);
     }
 });
 //# sourceMappingURL=index.js.map
