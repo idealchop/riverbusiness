@@ -170,7 +170,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   
   const handleProfilePhotoUpload = async () => {
     if (!state.profilePhotoFile || !authUser || !storage || !auth) return;
-  
+    
     const filePath = `users/${authUser.uid}/profile/profile-photo-${Date.now()}`;
     
     startTransition(async () => {
@@ -178,12 +178,11 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
       try {
         await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
         toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
-        console.log('[UPLOAD] Promise from uploadFileWithProgress resolved.');
       } catch (error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
         console.error('[UPLOAD] Promise from uploadFileWithProgress rejected:', error);
       } finally {
-        console.log('[UPLOAD] Upload process finished (in finally block).');
+        console.log('[UPLOAD] Upload process finished.');
         dispatch({ type: 'RESET_UPLOAD' });
         setUploadProgress(0);
       }
@@ -196,8 +195,6 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     startTransition(async () => {
         const userDocRef = doc(firestore, 'users', authUser.uid);
         try {
-            // The Cloud Function doesn't handle deletion, so we just clear the URL.
-            // A more robust solution would involve a separate function to delete the file from storage.
             await updateDoc(userDocRef, { photoURL: null });
             toast({ title: 'Profile Photo Removed' });
         } catch (error) {
@@ -238,7 +235,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                 <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
                                 <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
                               </Avatar>
-                              {(isPending) && (
+                              {(isPending || uploadProgress > 0) && (
                                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                                     <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
                                 </div>

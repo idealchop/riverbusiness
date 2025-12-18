@@ -173,12 +173,11 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       try {
         await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
         toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
-        console.log('[UPLOAD] Promise from uploadFileWithProgress resolved.');
       } catch (error) {
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
         console.error('[UPLOAD] Promise from uploadFileWithProgress rejected:', error);
       } finally {
-        console.log('[UPLOAD] Upload process finished (in finally block).');
+        console.log('[UPLOAD] Upload process finished.');
         dispatch({ type: 'RESET_UPLOAD' });
         setUploadProgress(0);
       }
@@ -222,7 +221,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                             <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
                             <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            {(isPending) && (
+                            {(isPending || uploadProgress > 0) && (
                                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                                     <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
                                 </div>
