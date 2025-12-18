@@ -510,29 +510,33 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {paymentHistory.map((invoice) => (
-                          <TableRow key={invoice.id}>
-                              <TableCell>{invoice.id}</TableCell>
-                              <TableCell>{format(new Date(invoice.date), 'MMM dd, yyyy')}</TableCell>
-                              <TableCell>
-                                <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
-                                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
-                                )}>
-                                    {invoice.status}
-                                </span>
+                          {paymentHistory.length > 0 ? (
+                            paymentHistory.map((invoice) => (
+                              <TableRow key={invoice.id}>
+                                  <TableCell>{invoice.id}</TableCell>
+                                  <TableCell>{format(new Date(invoice.date), 'MMM dd, yyyy')}</TableCell>
+                                  <TableCell>
+                                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                        invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                        invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                        invoice.status === 'Pending Review' ? 'bg-blue-100 text-blue-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    )}>
+                                        {invoice.status}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                              </TableRow>
+                              ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
+                                  No invoices have been generated yet.
                               </TableCell>
-                              <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
-                          </TableRow>
-                          ))}
+                            </TableRow>
+                          )}
                       </TableBody>
                   </Table>
-                  {paymentHistory.length === 0 && (
-                      <div className="text-center py-10 text-sm text-muted-foreground">
-                          No invoices have been generated yet.
-                      </div>
-                  )}
                 </TabsContent>
               </Tabs>
             </div>
