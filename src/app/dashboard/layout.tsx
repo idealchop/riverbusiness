@@ -247,40 +247,6 @@ export default function DashboardLayout({
       return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [user]);
 
-    const generatedInvoices = useMemo(() => {
-        if (!user?.createdAt || !user.plan || user.plan.isConsumptionBased) return [];
-        
-        const invoices: Payment[] = [];
-        const now = new Date();
-        const createdAt = user.createdAt;
-        const startDate = typeof (createdAt as any)?.toDate === 'function' 
-            ? (createdAt as any).toDate() 
-            : new Date(createdAt as string);
-        
-        if (isNaN(startDate.getTime())) return [];
-        
-        const months = differenceInMonths(now, startDate);
-    
-        for (let i = 0; i <= months; i++) {
-            const invoiceDate = addMonths(startDate, i);
-            invoices.push({
-            id: `INV-${format(invoiceDate, 'yyyyMM')}`,
-            date: invoiceDate.toISOString(),
-            description: `${user.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
-            amount: user.plan.price,
-            status: 'Upcoming', 
-            });
-        }
-
-        const mergedInvoices = invoices.map(inv => {
-            const dbInvoice = paymentHistoryFromDb?.find(p => p.id === inv.id);
-            return dbInvoice ? { ...inv, ...dbInvoice } : inv;
-        });
-
-        return mergedInvoices.reverse();
-    }, [user, paymentHistoryFromDb]);
-
-
   if (isUserLoading || isUserDocLoading || !isMounted) {
     return <div>Loading...</div>
   }
@@ -425,7 +391,7 @@ export default function DashboardLayout({
             user={user}
             authUser={authUser}
             planImage={planImage}
-            generatedInvoices={generatedInvoices}
+            paymentHistory={paymentHistoryFromDb || []}
             onLogout={handleLogout}
           >
             <div className="flex items-center gap-3 cursor-pointer">

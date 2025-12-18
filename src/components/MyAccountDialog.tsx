@@ -136,12 +136,12 @@ interface MyAccountDialogProps {
   user: AppUser | null;
   authUser: User | null;
   planImage: ImagePlaceholder | null;
-  generatedInvoices: Payment[];
+  paymentHistory: Payment[];
   onLogout: () => void;
   children: React.ReactNode;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, onLogout, children }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onLogout, children }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -510,7 +510,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {generatedInvoices.map((invoice) => (
+                          {paymentHistory.map((invoice) => (
                           <TableRow key={invoice.id}>
                               <TableCell>{invoice.id}</TableCell>
                               <TableCell>{format(new Date(invoice.date), 'MMM dd, yyyy')}</TableCell>
@@ -528,6 +528,11 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                           ))}
                       </TableBody>
                   </Table>
+                  {paymentHistory.length === 0 && (
+                      <div className="text-center py-10 text-sm text-muted-foreground">
+                          No invoices have been generated yet.
+                      </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>

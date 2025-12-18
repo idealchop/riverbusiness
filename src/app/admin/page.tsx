@@ -71,6 +71,14 @@ const deliveryFormSchema = z.object({
 });
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
+const invoiceFormSchema = z.object({
+    id: z.string().min(1, 'Invoice ID is required'),
+    description: z.string().min(1, 'Description is required'),
+    amount: z.coerce.number().min(0.01, 'Amount is required'),
+    status: z.enum(['Paid', 'Upcoming', 'Overdue', 'Pending Review']),
+});
+type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
+
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -164,6 +172,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [contractFile, setContractFile] = React.useState<File | null>(null);
     const [agreementFile, setAgreementFile] = React.useState<File | null>(null);
     const [complianceFiles, setComplianceFiles] = React.useState<Record<string, File>>({});
+    const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = React.useState(false);
+    const [invoiceToEdit, setInvoiceToEdit] = React.useState<Payment | null>(null);
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
@@ -273,39 +283,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
 
-    const generatedInvoices = React.useMemo(() => {
-        if (!selectedUser?.createdAt || !selectedUser.plan || selectedUser.plan.isConsumptionBased) return [];
-        
-        const invoices: Payment[] = [];
-        const now = new Date();
-        const createdAt = selectedUser.createdAt;
-        const startDate = typeof (createdAt as any)?.toDate === 'function' 
-            ? (createdAt as any).toDate() 
-            : new Date(selectedUser.createdAt as string);
-        
-        if (isNaN(startDate.getTime())) return [];
-
-        const months = differenceInMonths(now, startDate);
-    
-        for (let i = 0; i <= months; i++) {
-          const invoiceDate = addMonths(startDate, i);
-          invoices.push({
-            id: `INV-${format(invoiceDate, 'yyyyMM')}`,
-            date: invoiceDate.toISOString(),
-            description: `${selectedUser.plan.name} - ${format(invoiceDate, 'MMMM yyyy')}`,
-            amount: selectedUser.plan.price,
-            status: 'Upcoming', 
-          });
-        }
-  
-        const mergedInvoices = invoices.map(inv => {
-          const dbInvoice = userPaymentsData?.find(p => p.id === inv.id);
-          return dbInvoice ? { ...inv, ...dbInvoice } : inv;
-        });
-  
-        return mergedInvoices.reverse();
-    }, [selectedUser, userPaymentsData]);
-
     React.useEffect(() => {
         const openAccountDialog = () => {
           setIsAccountDialogOpen(true);
@@ -326,6 +303,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const deliveryForm = useForm<DeliveryFormValues>({
         resolver: zodResolver(deliveryFormSchema),
         defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending', adminNotes: '' },
+    });
+    
+    const invoiceForm = useForm<InvoiceFormValues>({
+        resolver: zodResolver(invoiceFormSchema),
     });
 
     const editDeliveryForm = useForm<DeliveryFormValues>({
@@ -359,6 +340,17 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsEditDeliveryOpen(true);
         }
     }, [deliveryToEdit, editDeliveryForm]);
+    
+    React.useEffect(() => {
+        if (isCreateInvoiceOpen) {
+            if (invoiceToEdit) {
+                invoiceForm.reset(invoiceToEdit);
+            } else {
+                 const newInvoiceId = `INV-${format(new Date(), 'yyyyMMddHHmm')}`;
+                 invoiceForm.reset({ id: newInvoiceId, description: '', amount: 0, status: 'Upcoming' });
+            }
+        }
+    }, [isCreateInvoiceOpen, invoiceToEdit, invoiceForm]);
 
     const handleSaveStation = async (values: NewStationFormValues) => {
         if (!firestore || !stationToUpdate) return;
@@ -581,6 +573,30 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
     
         setDeliveryToDelete(null);
+    };
+    
+    const handleSaveInvoice = async (values: InvoiceFormValues) => {
+        if (!selectedUser || !firestore) return;
+
+        const invoiceRef = doc(firestore, 'users', selectedUser.id, 'payments', values.id);
+        const invoiceData: Payment = {
+            id: values.id,
+            description: values.description,
+            amount: values.amount,
+            status: values.status,
+            date: new Date().toISOString(),
+        };
+
+        await setDocumentNonBlocking(invoiceRef, invoiceData, { merge: true });
+        
+        toast({
+            title: invoiceToEdit ? 'Invoice Updated' : 'Invoice Created',
+            description: `Invoice ${values.id} has been successfully saved.`,
+        });
+
+        setIsCreateInvoiceOpen(false);
+        setInvoiceToEdit(null);
+        invoiceForm.reset();
     };
 
     React.useEffect(() => {
@@ -865,8 +881,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="invoices">
+                                    <div className="flex justify-end mb-4">
+                                        <Button size="sm" onClick={() => { setInvoiceToEdit(null); setIsCreateInvoiceOpen(true); }} disabled={!isAdmin}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Create Invoice
+                                        </Button>
+                                    </div>
                                     <ScrollArea className="h-72">
-                                    {generatedInvoices.length > 0 ? (
+                                    {userPaymentsData && userPaymentsData.length > 0 ? (
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -876,8 +898,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {generatedInvoices.map((invoice) => (
-                                                    <TableRow key={invoice.id}>
+                                                {userPaymentsData.map((invoice) => (
+                                                    <TableRow key={invoice.id} className="cursor-pointer" onClick={() => { setInvoiceToEdit(invoice); setIsCreateInvoiceOpen(true); }}>
                                                         <TableCell>
                                                             <div className="font-medium">{invoice.id}</div>
                                                             <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
@@ -885,7 +907,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell>
                                                             <Badge
                                                                 variant={invoice.status === 'Paid' ? 'default' : (invoice.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                                className={invoice.status === 'Paid' ? 'bg-green-100 text-green-800' : invoice.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                                className={cn(
+                                                                    'text-xs',
+                                                                    invoice.status === 'Paid' && 'bg-green-100 text-green-800',
+                                                                    invoice.status === 'Upcoming' && 'bg-yellow-100 text-yellow-800',
+                                                                    invoice.status === 'Overdue' && 'bg-red-100 text-red-800',
+                                                                    invoice.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
+                                                                )}
                                                             >{invoice.status}</Badge>
                                                         </TableCell>
                                                         <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
@@ -895,10 +923,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </Table>
                                     ) : (
                                          <div className="text-center text-muted-foreground py-10">
-                                            {selectedUser.plan?.isConsumptionBased 
-                                                ? "Invoices are generated based on consumption at the end of the billing cycle."
-                                                : "No invoices found for this user."
-                                            }
+                                            No invoices found for this user.
                                         </div>
                                     )}
                                     </ScrollArea>
@@ -1438,6 +1463,61 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         {isSubmitting ? 'Uploading...' : 'Attach'}
                     </Button>
                 </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isCreateInvoiceOpen} onOpenChange={setIsCreateInvoiceOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{invoiceToEdit ? 'Edit' : 'Create'} Invoice</DialogTitle>
+                    <DialogDescription>
+                        {invoiceToEdit ? `Update invoice ${invoiceToEdit.id}` : `Create a new invoice for ${selectedUser?.name}`}
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...invoiceForm}>
+                    <form onSubmit={invoiceForm.handleSubmit(handleSaveInvoice)} className="space-y-4 py-4">
+                        <FormField control={invoiceForm.control} name="id" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Invoice ID</FormLabel>
+                                <FormControl><Input {...field} disabled={!!invoiceToEdit} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={invoiceForm.control} name="description" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl><Input placeholder="e.g., Monthly Subscription - July" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={invoiceForm.control} name="amount" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Amount (PHP)</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={invoiceForm.control} name="status" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Upcoming">Upcoming</SelectItem>
+                                        <SelectItem value="Paid">Paid</SelectItem>
+                                        <SelectItem value="Overdue">Overdue</SelectItem>
+                                        <SelectItem value="Pending Review">Pending Review</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+                            <Button type="submit">{invoiceToEdit ? 'Save Changes' : 'Create Invoice'}</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
         
