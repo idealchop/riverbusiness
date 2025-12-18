@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -363,6 +362,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const complianceReportForm = useForm<ComplianceReportFormValues>({
         resolver: zodResolver(complianceReportSchema),
+        defaultValues: {
+            reportType: 'DOH Bacteriological Test (Monthly)',
+            resultId: '',
+            status: 'Pending Review',
+            results: '',
+        }
     });
 
     const sanitationVisitForm = useForm<SanitationVisitFormValues>({
@@ -413,16 +418,26 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [stationToUpdate, stationForm, isStationProfileOpen]);
 
     React.useEffect(() => {
-        if (complianceReportToEdit) {
-            complianceReportForm.reset({
-                reportType: complianceReportToEdit.reportType,
-                resultId: complianceReportToEdit.resultId || '',
-                status: complianceReportToEdit.status,
-                results: complianceReportToEdit.results || '',
-            });
-            setIsComplianceReportDialogOpen(true);
+        if (isComplianceReportDialogOpen) {
+            if (complianceReportToEdit) {
+                complianceReportForm.reset({
+                    reportType: complianceReportToEdit.reportType,
+                    resultId: complianceReportToEdit.resultId || '',
+                    status: complianceReportToEdit.status,
+                    results: complianceReportToEdit.results || '',
+                });
+            } else {
+                // Reset for creating a new one to avoid holding old values
+                complianceReportForm.reset({
+                    reportType: 'DOH Bacteriological Test (Monthly)',
+                    resultId: '',
+                    status: 'Pending Review',
+                    results: '',
+                    reportFile: null
+                });
+            }
         }
-    }, [complianceReportToEdit, complianceReportForm]);
+    }, [complianceReportToEdit, isComplianceReportDialogOpen, complianceReportForm]);
 
     
     React.useEffect(() => {
@@ -2113,7 +2128,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <FormField control={complianceReportForm.control} name="reportType" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Report Type</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a report type" /></SelectTrigger></FormControl>
                                     <SelectContent>
                                         <SelectItem value="DOH Bacteriological Test (Monthly)">DOH Bacteriological Test (Monthly)</SelectItem>
@@ -2149,7 +2164,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <FormField control={complianceReportForm.control} name="results" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Results / Notes</FormLabel>
-                                <FormControl><Textarea placeholder="Enter inspection results or notes..." {...field} disabled={isSubmitting} /></FormControl>
+                                <FormControl><Textarea placeholder="Enter inspection results or notes..." {...field} value={field.value ?? ''} disabled={isSubmitting} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
@@ -2292,7 +2307,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                  <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Report URL (Optional)</FormLabel>
-                                        <FormControl><Input placeholder="https://example.com/report.pdf" {...field} /></FormControl>
+                                        <FormControl><Input placeholder="https://example.com/report.pdf" {...field} value={field.value ?? ''} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
@@ -2434,3 +2449,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
