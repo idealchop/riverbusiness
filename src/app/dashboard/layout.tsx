@@ -323,7 +323,8 @@ export default function DashboardLayout({
                               </div>
                               <div>
                                 <p className="font-semibold">Viber Support</p>
-                                <p className="text-sm text-muted-foreground">Contact Jayvee Victor Co</p>
+                                <p className="text-sm text-muted-foreground">Jayvee | Account Manager & Customer Success</p>
+                                <p className="text-sm text-muted-foreground">09182719091</p>
                               </div>
                           </div>
                           <div className="flex items-center gap-4 rounded-md border p-4">
