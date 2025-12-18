@@ -895,7 +895,7 @@ export default function DashboardPage() {
                                      <>
                                         <div>
                                             <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>
-                                            <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+                                            <p className="font-semibold text-sm">{nextRefillDay !== 'Not set' ? `Next ${nextRefillDay}`: 'Not set'}</p>
                                         </div>
                                         <div>
                                             <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
@@ -1154,4 +1154,5 @@ export default function DashboardPage() {
     </div>
     );
 }
+
 

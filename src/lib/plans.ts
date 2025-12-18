@@ -66,7 +66,7 @@ export const enterprisePlans = [
         imageId: 'plan-enterprise-flowing',
         details: [
             { label: 'Pricing', value: 'P2.5 per Liter' },
-            { label: 'Deliveries', value: 'On-demand' },
+            { label: 'Deliveries', value: 'Automated or On-demand' },
             { label: 'Billing', value: 'Pay based on consumption' },
         ]
     },
@@ -79,7 +79,7 @@ export const enterprisePlans = [
         imageId: 'plan-enterprise-flowing',
         details: [
             { label: 'Pricing', value: 'P3 per Liter' },
-            { label: 'Deliveries', value: 'On-demand' },
+            { label: 'Deliveries', value: 'Automated or On-demand' },
             { label: 'Billing', value: 'Pay based on consumption' },
         ]
     }
