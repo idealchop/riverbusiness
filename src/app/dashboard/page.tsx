@@ -553,7 +553,11 @@ export default function DashboardPage() {
                                         ) : complianceReports?.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.name}</TableCell>
-                                            <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
+                                            <TableCell>
+                                                {report.date && typeof (report.date as any).toDate === 'function' 
+                                                    ? format((report.date as any).toDate(), 'MMM yyyy') 
+                                                    : 'Processing...'}
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'}
@@ -878,104 +882,108 @@ export default function DashboardPage() {
         </Dialog>
 
         <Dialog open={isSanitationReportOpen} onOpenChange={setIsSanitationReportOpen}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Sanitation Visit Report</DialogTitle>
                     <DialogDescription>
                         Full report for the visit on {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PP') : ''}.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                    {selectedSanitationVisit ? (
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h4 className="font-semibold">Visit Details</h4>
+                <div className="py-4 grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <h4 className="font-semibold">Visit Details</h4>
+                        <Card>
+                            <CardContent className="pt-6 text-sm space-y-2">
+                                <div className="flex justify-between"><span className="text-muted-foreground">Date:</span> <span>{selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PPP') : ''}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Quality Officer:</span> <span>{selectedSanitationVisit?.assignedTo}</span></div>
+                                <div className="flex justify-between items-center"><span className="text-muted-foreground">Status:</span>
+                                    {selectedSanitationVisit && <Badge variant={selectedSanitationVisit.status === 'Completed' ? 'default' : 'secondary'} className={cn(selectedSanitationVisit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800')}>
+                                        {selectedSanitationVisit.status}
+                                    </Badge>}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {selectedSanitationVisit?.status === 'Completed' && (
+                            <>
+                                <h4 className="font-semibold">Results</h4>
                                 <Card>
-                                    <CardContent className="pt-6 text-sm space-y-2">
-                                        <div className="flex justify-between"><span className="text-muted-foreground">Date:</span> <span>{format(new Date(selectedSanitationVisit.scheduledDate), 'PPP')}</span></div>
-                                        <div className="flex justify-between"><span className="text-muted-foreground">Quality Officer:</span> <span>{selectedSanitationVisit.assignedTo}</span></div>
-                                        <div className="flex justify-between items-center"><span className="text-muted-foreground">Status:</span>
-                                            <Badge variant={selectedSanitationVisit.status === 'Completed' ? 'default' : 'secondary'} className={cn(selectedSanitationVisit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800')}>
-                                                {selectedSanitationVisit.status}
-                                            </Badge>
+                                    <CardContent className="pt-6 space-y-4">
+                                        <div className="text-center">
+                                            <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
+                                            <p className="text-sm text-muted-foreground">Overall Sanitation Result</p>
                                         </div>
+                                        <div>
+                                            <Progress value={sanitationReportStats.passRate} className="h-2"/>
+                                            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                                <span>{sanitationReportStats.passed} / {sanitationReportStats.total} Items Passed</span>
+                                                <span>{sanitationReportStats.passRate.toFixed(0)}%</span>
+                                            </div>
+                                        </div>
+                                        {(sanitationReportStats.overallStatus === 'Excellent' || sanitationReportStats.overallStatus === 'Good') && (
+                                            <p className="text-xs text-muted-foreground text-center pt-2">
+                                                Based on our inspection, your drinking water is clean and safe.
+                                            </p>
+                                        )}
                                     </CardContent>
                                 </Card>
-
-                                {selectedSanitationVisit.status === 'Completed' && (
-                                    <>
-                                        <h4 className="font-semibold">Results</h4>
-                                        <Card>
-                                            <CardContent className="pt-6 space-y-4">
-                                                <div className="text-center">
-                                                    <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
-                                                    <p className="text-sm text-muted-foreground">Overall Sanitation Result</p>
-                                                </div>
-                                                <div>
-                                                    <Progress value={sanitationReportStats.passRate} className="h-2"/>
-                                                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                                                        <span>{sanitationReportStats.passed} / {sanitationReportStats.total} Items Passed</span>
-                                                        <span>{sanitationReportStats.passRate.toFixed(0)}%</span>
-                                                    </div>
-                                                </div>
-                                                {(sanitationReportStats.overallStatus === 'Excellent' || sanitationReportStats.overallStatus === 'Good') && (
-                                                    <p className="text-xs text-muted-foreground text-center pt-2">
-                                                        Based on our inspection, your drinking water is clean and safe.
-                                                    </p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </>
-                                )}
-
-                                {selectedSanitationVisit.reportUrl && (
-                                    <Button asChild className="w-full" onClick={() => setAttachmentToView(selectedSanitationVisit.reportUrl || 'pending')}>
-                                        <a><Download className="mr-2 h-4 w-4" /> View Official Report</a>
-                                    </Button>
-                                )}
-                            </div>
-                            <div className="space-y-4">
-                                <h4 className="font-semibold">Checklist Results</h4>
-                                <ScrollArea className="h-72 border rounded-md p-2">
-                                    <Table>
-                                        <TableBody>
-                                            {selectedSanitationVisit.checklist?.map((item, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {selectedSanitationVisit.status === 'Scheduled' ? (
-                                                             <UITooltip>
-                                                                <UITooltipTrigger>
-                                                                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
-                                                                </UITooltipTrigger>
-                                                                <UITooltipContent>
-                                                                    <p>Result will be available after the visit is completed.</p>
-                                                                </UITooltipContent>
-                                                            </UITooltip>
-                                                        ) : item.checked ? (
-                                                            <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
-                                                        ) : (
-                                                            <Popover>
-                                                                <PopoverTrigger asChild>
-                                                                    <Badge variant="destructive" className="cursor-pointer whitespace-nowrap">Failed</Badge>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-60 text-sm">
-                                                                    <p className="font-bold">Remarks:</p>
-                                                                    <p>{item.remarks || "No remarks provided."}</p>
-                                                                </PopoverContent>
-                                                            </Popover>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </ScrollArea>
-                            </div>
+                            </>
+                        )}
+                        
+                        <div>
+                            <h4 className="font-semibold mb-2">Official Report</h4>
+                            {selectedSanitationVisit?.reportUrl ? (
+                                <div className="p-2 border rounded-lg">
+                                    <Image src={selectedSanitationVisit.reportUrl} alt="Sanitation Report" width={400} height={600} className="rounded-md w-full h-auto object-contain" />
+                                </div>
+                            ) : (
+                                <div className="p-6 border rounded-lg bg-muted/50 flex flex-col items-center justify-center text-center">
+                                    <Hourglass className="h-10 w-10 text-muted-foreground mb-2" />
+                                    <p className="text-sm font-medium">Attachment Pending</p>
+                                    <p className="text-xs text-muted-foreground">The report is being processed and will be available here soon.</p>
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <p className="text-center text-muted-foreground">No visit details to show.</p>
-                    )}
+
+                    </div>
+                    <div className="space-y-4">
+                        <h4 className="font-semibold">Checklist Results</h4>
+                        <ScrollArea className="h-[450px] border rounded-md p-2">
+                            <Table>
+                                <TableBody>
+                                    {selectedSanitationVisit?.checklist?.map((item, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
+                                            <TableCell className="text-right">
+                                                {selectedSanitationVisit.status === 'Scheduled' ? (
+                                                        <UITooltip>
+                                                        <UITooltipTrigger>
+                                                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
+                                                        </UITooltipTrigger>
+                                                        <UITooltipContent>
+                                                            <p>Result will be available after the visit is completed.</p>
+                                                        </UITooltipContent>
+                                                    </UITooltip>
+                                                ) : item.checked ? (
+                                                    <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
+                                                ) : (
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Badge variant="destructive" className="cursor-pointer whitespace-nowrap">Failed</Badge>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-60 text-sm">
+                                                            <p className="font-bold">Remarks:</p>
+                                                            <p>{item.remarks || "No remarks provided."}</p>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
@@ -1303,4 +1311,5 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
+
 
