@@ -29,12 +29,12 @@ import Link from 'next/link';
 import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
 import { format, differenceInMonths, addMonths, subHours } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -45,14 +45,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useMounted } from '@/hooks/use-mounted';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 
-type Notification = {
-    id: string;
-    type: 'delivery' | 'invoice' | 'compliance' | 'sanitation';
-    title: string;
-    description: string;
-    date: string;
-    icon: React.ElementType;
-    data: Delivery | Payment | ComplianceReport | SanitationVisit;
+const ICONS: { [key: string]: React.ElementType } = {
+  delivery: Truck,
+  compliance: ShieldCheck,
+  sanitation: FileHeart,
+  payment: Receipt,
+  general: Info,
 };
 
 export default function DashboardLayout({
@@ -72,7 +70,6 @@ export default function DashboardLayout({
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
   const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
-
   const paymentOptions: PaymentOption[] = [
       { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
       { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
@@ -80,101 +77,28 @@ export default function DashboardLayout({
       { name: 'Credit Card', qr: cardQr }
   ];
 
-
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
   const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
   const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
-  
-  const deliveriesQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'deliveries') : null, [firestore, authUser]);
-  const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
 
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
   const { data: paymentHistoryFromDb } = useCollection<Payment>(paymentsQuery);
   
-  const complianceReportsQuery = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user]);
-  const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
-
-  const sanitationVisitsQuery = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'sanitationVisits') : null, [firestore, user]);
-  const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'notifications') : null, [firestore, authUser]);
+  const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
-  const [notifications, setNotifications] = React.useState<Notification[]>([]);
-  const [lastNotificationCheck, setLastNotificationCheck] = useState<Date | null>(null);
-
-  useEffect(() => {
-    if (!isMounted) return;
-    const lastCheck = localStorage.getItem('lastNotificationCheck');
-    // If no last check, default to 24 hours ago to show recent activity, otherwise use stored time
-    setLastNotificationCheck(lastCheck ? new Date(lastCheck) : subHours(new Date(), 24));
-  }, [isMounted]);
-
-  useEffect(() => {
-    // Wait until we have a check date and the component is mounted
-    if (!lastNotificationCheck || !isMounted) return;
-
-    const newNotifications: Notification[] = [];
-
-    // Delivery Notifications - check if delivery date is after last check
-    deliveries?.forEach(d => {
-        const deliveryDate = new Date(d.date);
-        if (deliveryDate > lastNotificationCheck) {
-            newNotifications.push({
-                id: `delivery-${d.id}`,
-                type: 'delivery',
-                title: `Delivery ${d.status}`,
-                description: `Your delivery of ${d.volumeContainers} containers is now ${d.status}.`,
-                date: d.date,
-                icon: Truck,
-                data: d,
-            });
-        }
-    });
-
-    // Compliance Report Notifications
-    complianceReports?.forEach(r => {
-        const reportDate = new Date(r.date);
-        if (reportDate > lastNotificationCheck) {
-            newNotifications.push({
-                id: `compliance-${r.id}`,
-                type: 'compliance',
-                title: `New Compliance Report`,
-                description: `A new ${r.name} report is available for your station.`,
-                date: r.date,
-                icon: ShieldCheck,
-                data: r,
-            });
-        }
-    });
-    
-    // Sanitation Visit Notifications
-    sanitationVisits?.forEach(v => {
-        const visitDate = new Date(v.scheduledDate);
-        if (visitDate > lastNotificationCheck) {
-            newNotifications.push({
-                id: `sanitation-${v.id}`,
-                type: 'sanitation',
-                title: `Sanitation Visit ${v.status}`,
-                description: `A sanitation visit has been ${v.status.toLowerCase()}.`,
-                date: v.scheduledDate,
-                icon: FileHeart,
-                data: v,
-            });
-        }
-    });
-
-    // Sort by date and update state
-    const sortedNotifications = newNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setNotifications(sortedNotifications);
-
-  }, [deliveries, complianceReports, sanitationVisits, lastNotificationCheck, isMounted]);
+  const unreadNotifications = useMemo(() => notifications?.filter(n => !n.isRead) || [], [notifications]);
 
   const handleNotificationOpenChange = (open: boolean) => {
-    if (!open && isMounted) {
-        const now = new Date().toISOString();
-        localStorage.setItem('lastNotificationCheck', now);
-        setLastNotificationCheck(new Date(now));
-        setNotifications([]); // Clear notifications after they've been seen
+    if (!open && unreadNotifications.length > 0 && firestore && authUser) {
+        const batch = writeBatch(firestore);
+        unreadNotifications.forEach(notif => {
+            const notifRef = doc(firestore, 'users', authUser.uid, 'notifications', notif.id);
+            batch.update(notifRef, { isRead: true });
+        });
+        batch.commit().catch(err => console.error("Failed to mark notifications as read:", err));
     }
   };
   
@@ -197,7 +121,6 @@ export default function DashboardLayout({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
   ]);
-
   
   React.useEffect(() => {
     if (isUserLoading) return;
@@ -317,7 +240,7 @@ export default function DashboardLayout({
       return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [user]);
 
-    const generatedInvoices = React.useMemo(() => {
+    const generatedInvoices = useMemo(() => {
         if (!user?.createdAt || !user.plan || user.plan.isConsumptionBased) return [];
         
         const invoices: Payment[] = [];
@@ -368,19 +291,16 @@ export default function DashboardLayout({
           <div className="flex-1" />
           <Dialog onOpenChange={(open) => !open && setHasNewMessage(false)}>
             <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="rounded-full relative"
-              >
+               <Button variant="outline" className="rounded-full relative">
                 <span className="relative flex items-center mr-2">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
                 </span>
                 <span className="mr-2 hidden sm:inline">Live Support</span>
                 <LifeBuoy className="h-4 w-4" />
-                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
+                {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
              <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col">
@@ -448,9 +368,9 @@ export default function DashboardLayout({
                   className="relative rounded-full"
               >
                   <Bell className="h-4 w-4" />
-                   {notifications.length > 0 && (
+                   {unreadNotifications.length > 0 && (
                         <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-xs">
-                          {notifications.length}
+                          {unreadNotifications.length}
                         </Badge>
                    )}
               </Button>
@@ -459,9 +379,9 @@ export default function DashboardLayout({
               <div className="space-y-2">
                   <div className="flex justify-between items-center">
                   <h4 className="font-medium text-sm">Notifications</h4>
-                   {notifications.length > 0 && (
+                   {unreadNotifications.length > 0 && (
                       <Badge variant="secondary" className="rounded-sm">
-                          {notifications.length} New
+                          {unreadNotifications.length} New
                       </Badge>
                    )}
                   </div>
@@ -471,9 +391,9 @@ export default function DashboardLayout({
               </div>
               <Separator className="my-4" />
                 <div className="space-y-4 max-h-80 overflow-y-auto">
-                    {notifications.length > 0 ? (
-                        notifications.map((notification) => {
-                            const Icon = notification.icon;
+                    {notifications && notifications.length > 0 ? (
+                        notifications.sort((a,b) => (b.date as any).seconds - (a.date as any).seconds).map((notification) => {
+                            const Icon = ICONS[notification.type] || Info;
                             return (
                                 <div key={notification.id} className="grid grid-cols-[25px_1fr] items-start gap-4">
                                     <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -484,7 +404,7 @@ export default function DashboardLayout({
                                         <p className="text-sm text-muted-foreground">
                                             {notification.description}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">{format(new Date(notification.date), 'PP')}</p>
+                                        <p className="text-xs text-muted-foreground">{format(new Date((notification.date as any).seconds * 1000), 'PP')}</p>
                                     </div>
                                 </div>
                             );

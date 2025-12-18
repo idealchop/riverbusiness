@@ -131,6 +131,22 @@
         "status": { "type": "string", "enum": ["Pending", "Completed"], "description": "The current status of the refill request." }
       },
       "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a user notification.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["delivery", "compliance", "sanitation", "payment", "general"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "isRead": { "type": "boolean" },
+        "data": { "type": "object", "description": "Optional data related to the notification." }
+      },
+      "required": ["id", "userId", "type", "title", "description", "date", "isRead"]
     }
   },
   "auth": {
@@ -152,6 +168,10 @@
     "/users/{userId}/consumptionHistory/{historyId}": {
       "schema": { "$ref": "#/entities/ConsumptionHistory" },
       "description": "Subcollection for a user's consumption history."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Subcollection for user-specific notifications."
     },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
@@ -175,5 +195,3 @@
     }
   }
 }
-
-    

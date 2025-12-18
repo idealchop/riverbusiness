@@ -37,6 +37,13 @@ service cloud.firestore {
       allow create, update: if isAdmin();
     }
 
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, list: if isOwner(userId);
+      allow update: if isOwner(userId); // Allow user to mark as read
+      // Creation should be handled by backend/functions.
+      allow create, delete: if isAdmin(); 
+    }
+
     match /waterStations/{stationId} {
       allow read: if request.auth != null;
       allow create, update, delete: if isAdmin();
