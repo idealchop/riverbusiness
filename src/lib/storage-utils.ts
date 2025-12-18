@@ -30,34 +30,31 @@ export function uploadFileWithProgress(
     if (!auth.currentUser) {
       const authError = new Error("User not authenticated.");
       console.error("[UPLOAD] Error: User is not authenticated. Upload blocked.", authError);
+      onProgress(0); // Reset progress on error
       return reject(authError);
     }
     
     console.log("[UPLOAD] function called for user:", auth.currentUser.uid);
     console.log("[UPLOAD] file:", file);
+    console.log("[UPLOAD] path:", path);
+
 
     const storageRef = ref(storage, path);
-    
-    // The custom metadata is an empty object because the V2 Cloud Function
-    // infers all necessary information from the file path itself.
     const uploadTask = uploadBytesResumable(storageRef, file, {});
 
     uploadTask.on(
       'state_changed',
       (snapshot) => {
-        // Observe state change events such as progress, pause, and resume
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         console.log('[UPLOAD] state:', snapshot.state, 'progress:', progress);
         onProgress(progress);
       },
       (error) => {
-        // Handle unsuccessful uploads
         console.error("[UPLOAD] error:", error);
+        onProgress(0); // Reset progress on error
         reject(error);
       },
       () => {
-        // Handle successful uploads on complete.
-        // The `onfileupload` Cloud Function will handle the rest.
         console.log('[UPLOAD] completed');
         onProgress(100);
         resolve(); // Resolve the promise ONLY when the upload is complete.

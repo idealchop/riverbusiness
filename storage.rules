@@ -4,33 +4,26 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Helper function to check if the user is an admin.
-    // This should match the logic in your firestore.rules.
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
 
-    // User-specific files (profile photos, proofs, etc.)
+    // A user can only write to their own folder.
     match /users/{userId}/{allPaths=**} {
-      // A user can read, write, and delete files ONLY in their own folder.
-      // An admin can do anything in any user's folder.
-      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow read: if request.auth != null; // Allow any auth'd user to read (e.g. for profile pics)
+      allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
-    // Station-specific files (agreements, compliance documents)
+    // Admins can manage station documents. Any auth'd user can read them.
     match /stations/{stationId}/{allPaths=**} {
-      // Any authenticated user can view station documents (e.g., for compliance).
       allow read: if request.auth != null;
-      // Only admins can upload/modify station documents.
       allow write: if isAdmin();
     }
     
-    // Contract files uploaded by an admin
+    // Only admins can upload contracts. The specific user can also read their own contract.
     match /userContracts/{userId}/{allPaths=**} {
-      // An admin can upload contracts for any user.
-      allow write: if isAdmin();
-      // The user to whom the contract belongs and admins can read it.
       allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow write: if isAdmin();
     }
   }
 }
