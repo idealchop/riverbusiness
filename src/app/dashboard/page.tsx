@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TooltipProvider, Tooltip as UITooltip, TooltipTrigger as UITooltipTrigger, TooltipContent as UITooltipContent } from '@/components/ui/tooltip';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -131,6 +132,7 @@ export default function DashboardPage() {
     const [isRefillRequesting, setIsRefillRequesting] = useState(false);
     const [isSanitationReportOpen, setIsSanitationReportOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
+    const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -479,6 +481,7 @@ export default function DashboardPage() {
     }
 
     return (
+    <TooltipProvider>
     <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between gap-2">
             <div>
@@ -563,12 +566,21 @@ export default function DashboardPage() {
                                                 >{report.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                            <Button variant="outline" size="sm" asChild>
-                                                <a href={report.reportUrl} target="_blank" rel="noopener noreferrer">
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                View
-                                                </a>
-                                            </Button>
+                                                {report.reportUrl ? (
+                                                    <Button variant="outline" size="sm" onClick={() => setAttachmentToView(report.reportUrl!)}>
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        View
+                                                    </Button>
+                                                ) : (
+                                                    <UITooltip>
+                                                        <UITooltipTrigger>
+                                                            <Badge variant="secondary">Pending...</Badge>
+                                                        </UITooltipTrigger>
+                                                        <UITooltipContent>
+                                                            <p>Our team is processing the attachment. It will be available here shortly.</p>
+                                                        </UITooltipContent>
+                                                    </UITooltip>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                         ))}
@@ -1273,6 +1285,19 @@ export default function DashboardPage() {
                 </Card>
             </div>
         </div>
+        <Dialog open={!!attachmentToView} onOpenChange={(open) => !open && setAttachmentToView(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Attachment Viewer</DialogTitle>
+                </DialogHeader>
+                {attachmentToView && (
+                    <div className="py-4 flex justify-center">
+                        <Image src={attachmentToView} alt="Attachment" width={400} height={600} className="rounded-md object-contain" />
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
     </div>
+    </TooltipProvider>
     );
 }
