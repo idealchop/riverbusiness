@@ -929,10 +929,8 @@ export default function DashboardPage() {
                                 )}
 
                                 {selectedSanitationVisit.reportUrl && (
-                                    <Button asChild className="w-full">
-                                        <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
-                                            <Download className="mr-2 h-4 w-4" /> Download Official Report PDF
-                                        </a>
+                                    <Button asChild className="w-full" onClick={() => setAttachmentToView(selectedSanitationVisit.reportUrl || 'pending')}>
+                                        <a><Download className="mr-2 h-4 w-4" /> View Official Report</a>
                                     </Button>
                                 )}
                             </div>
@@ -946,7 +944,14 @@ export default function DashboardPage() {
                                                     <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
                                                     <TableCell className="text-right">
                                                         {selectedSanitationVisit.status === 'Scheduled' ? (
-                                                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
+                                                             <UITooltip>
+                                                                <UITooltipTrigger>
+                                                                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
+                                                                </UITooltipTrigger>
+                                                                <UITooltipContent>
+                                                                    <p>Result will be available after the visit is completed.</p>
+                                                                </UITooltipContent>
+                                                            </UITooltip>
                                                         ) : item.checked ? (
                                                             <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
                                                         ) : (
@@ -1298,3 +1303,4 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
+

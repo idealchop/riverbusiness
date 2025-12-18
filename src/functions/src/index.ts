@@ -163,6 +163,18 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         });
         return;
     }
+    
+    if (filePath.startsWith("users/") && filePath.includes("/sanitationVisits/")) {
+        const parts = filePath.split("/");
+        const userId = parts[1];
+        const visitId = parts[3];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
+            reportUrl: url,
+        });
+        logger.log(`Updated report URL for sanitation visit: ${visitId} for user: ${userId}`);
+        return;
+    }
 
     if (filePath.startsWith("stations/")) {
         const parts = filePath.split("/");

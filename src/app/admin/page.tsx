@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -92,7 +93,7 @@ const sanitationVisitSchema = z.object({
     scheduledDate: z.date({ required_error: 'Date is required.' }),
     status: z.enum(['Scheduled', 'Completed', 'Cancelled']),
     assignedTo: z.string().min(1, "Please assign a team member."),
-    reportUrl: z.string().url().optional().or(z.literal('')),
+    reportFile: z.any().optional(),
     checklist: z.array(sanitationChecklistItemSchema),
 });
 
@@ -376,7 +377,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: {
             status: 'Scheduled',
             assignedTo: '',
-            reportUrl: '',
             checklist: defaultChecklistItems,
         }
     });
@@ -394,7 +394,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 scheduledDate: new Date(visitToEdit.scheduledDate),
                 status: visitToEdit.status,
                 assignedTo: visitToEdit.assignedTo,
-                reportUrl: visitToEdit.reportUrl || '',
                 checklist: visitToEdit.checklist || defaultChecklistItems,
             });
             setIsSanitationVisitDialogOpen(true);
@@ -402,8 +401,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             sanitationVisitForm.reset({
                 status: 'Scheduled',
                 assignedTo: '',
-                reportUrl: '',
                 checklist: defaultChecklistItems,
+                reportFile: null
             });
         }
     }, [visitToEdit, sanitationVisitForm]);
@@ -804,26 +803,32 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
         if (!firestore || !selectedUser) return;
         setIsSubmitting(true);
-
+    
         try {
-            const visitData = {
+            const visitData: Partial<SanitationVisit> = {
                 ...values,
                 scheduledDate: values.scheduledDate.toISOString(),
                 userId: selectedUser.id,
             };
-
+            delete (visitData as any).reportFile;
+    
+            let visitRef: DocumentReference;
+    
             if (visitToEdit) {
-                // Update existing visit
-                const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
+                visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
                 await updateDocumentNonBlocking(visitRef, visitData);
                 toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
             } else {
-                // Create new visit
-                const visitsCollection = collection(firestore, 'users', selectedUser.id, 'sanitationVisits');
-                await addDocumentNonBlocking(visitsCollection, visitData);
+                visitRef = await addDocumentNonBlocking(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
             }
-
+    
+            const file = values.reportFile?.[0];
+            if (file) {
+                const path = `users/${selectedUser.id}/sanitationVisits/${visitRef.id}/${file.name}`;
+                await handleFileUpload(file, path, `sanitation-${visitRef.id}`);
+            }
+    
             setIsSanitationVisitDialogOpen(false);
             setVisitToEdit(null);
             sanitationVisitForm.reset();
@@ -2343,13 +2348,24 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
-                                 <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Report URL (Optional)</FormLabel>
-                                        <FormControl><Input placeholder="https://example.com/report.pdf" {...field} value={field.value ?? ''} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
+                                 <FormField
+                                    control={sanitationVisitForm.control}
+                                    name="reportFile"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Attach Report (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="file"
+                                                    accept="application/pdf,image/*"
+                                                    onChange={(e) => field.onChange(e.target.files)}
+                                                    disabled={isSubmitting}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <h4 className="font-semibold text-sm">Sanitation Checklist</h4>
@@ -2489,4 +2505,3 @@ export default function AdminPage() {
     )
 }
 
-    

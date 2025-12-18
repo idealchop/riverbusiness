@@ -110,7 +110,7 @@
         "scheduledDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
         "assignedTo": { "type": "string" },
-        "reportUrl": { "type": "string", "format": "uri" },
+        "reportUrl": { "type": "string", "format": "uri", "description": "URL to the sanitation report attachment." },
         "checklist": {
             "type": "array",
             "description": "An array of checklist items for the sanitation visit.",
