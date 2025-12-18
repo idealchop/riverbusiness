@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useReducer, useEffect, useTransition } from 'react';
@@ -25,7 +26,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, subMonths } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
