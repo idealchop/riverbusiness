@@ -1970,7 +1970,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     {complianceReports?.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.name}</TableCell>
-                                            <TableCell>{format(new Date(report.date), 'PP')}</TableCell>
+                                            <TableCell>
+                                                {report.date && typeof (report.date as any).toDate === 'function' 
+                                                    ? format((report.date as any).toDate(), 'PP') 
+                                                    : 'Processing...'}
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant={report.status === 'Compliant' ? 'default' : report.status === 'Non-compliant' ? 'destructive' : 'secondary'}
