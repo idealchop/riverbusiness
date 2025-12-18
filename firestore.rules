@@ -8,17 +8,14 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // UPDATED: Check for the admin's email instead of a custom claim.
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      // Allow create for any authenticated user during onboarding.
       allow create: if request.auth != null;
       allow update: if isOwner(userId) || isAdmin();
-      // Admin should not delete users from the client.
       allow delete: if isOwner(userId);
     }
     
@@ -29,7 +26,8 @@ service cloud.firestore {
 
     match /users/{userId}/payments/{paymentId} {
       allow read, list: if isOwner(userId) || isAdmin();
-      allow create, update: if isOwner(userId) || isAdmin();
+      // Only backend functions can create/update invoices
+      allow create, update: if false; 
     }
     
     match /users/{userId}/consumptionHistory/{historyId} {
@@ -66,3 +64,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

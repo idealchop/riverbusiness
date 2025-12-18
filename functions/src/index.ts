@@ -7,6 +7,12 @@ import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
 
+// Import all exports from billing.ts
+import * as billing from './billing';
+
+// Export all billing functions so they are deployed
+export * from './billing';
+
 // Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
@@ -194,3 +200,5 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    

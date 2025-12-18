@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -70,15 +69,6 @@ const deliveryFormSchema = z.object({
     adminNotes: z.string().optional(),
 });
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
-
-const invoiceFormSchema = z.object({
-    id: z.string().min(1, 'Invoice ID is required'),
-    description: z.string().min(1, 'Description is required'),
-    amount: z.coerce.number().min(0.01, 'Amount is required'),
-    status: z.enum(['Paid', 'Upcoming', 'Overdue', 'Pending Review']),
-});
-type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
-
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -172,8 +162,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [contractFile, setContractFile] = React.useState<File | null>(null);
     const [agreementFile, setAgreementFile] = React.useState<File | null>(null);
     const [complianceFiles, setComplianceFiles] = React.useState<Record<string, File>>({});
-    const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = React.useState(false);
-    const [invoiceToEdit, setInvoiceToEdit] = React.useState<Payment | null>(null);
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
@@ -305,10 +293,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { trackingNumber: '', volumeContainers: 0, status: 'Pending', adminNotes: '' },
     });
     
-    const invoiceForm = useForm<InvoiceFormValues>({
-        resolver: zodResolver(invoiceFormSchema),
-    });
-
     const editDeliveryForm = useForm<DeliveryFormValues>({
         resolver: zodResolver(deliveryFormSchema),
     });
@@ -340,17 +324,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsEditDeliveryOpen(true);
         }
     }, [deliveryToEdit, editDeliveryForm]);
-    
-    React.useEffect(() => {
-        if (isCreateInvoiceOpen) {
-            if (invoiceToEdit) {
-                invoiceForm.reset(invoiceToEdit);
-            } else {
-                 const newInvoiceId = `INV-${format(new Date(), 'yyyyMMddHHmm')}`;
-                 invoiceForm.reset({ id: newInvoiceId, description: '', amount: 0, status: 'Upcoming' });
-            }
-        }
-    }, [isCreateInvoiceOpen, invoiceToEdit, invoiceForm]);
 
     const handleSaveStation = async (values: NewStationFormValues) => {
         if (!firestore || !stationToUpdate) return;
@@ -573,30 +546,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
     
         setDeliveryToDelete(null);
-    };
-    
-    const handleSaveInvoice = async (values: InvoiceFormValues) => {
-        if (!selectedUser || !firestore) return;
-
-        const invoiceRef = doc(firestore, 'users', selectedUser.id, 'payments', values.id);
-        const invoiceData: Payment = {
-            id: values.id,
-            description: values.description,
-            amount: values.amount,
-            status: values.status,
-            date: new Date().toISOString(),
-        };
-
-        await setDocumentNonBlocking(invoiceRef, invoiceData, { merge: true });
-        
-        toast({
-            title: invoiceToEdit ? 'Invoice Updated' : 'Invoice Created',
-            description: `Invoice ${values.id} has been successfully saved.`,
-        });
-
-        setIsCreateInvoiceOpen(false);
-        setInvoiceToEdit(null);
-        invoiceForm.reset();
     };
 
     React.useEffect(() => {
@@ -881,12 +830,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="invoices">
-                                    <div className="flex justify-end mb-4">
-                                        <Button size="sm" onClick={() => { setInvoiceToEdit(null); setIsCreateInvoiceOpen(true); }} disabled={!isAdmin}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Create Invoice
-                                        </Button>
-                                    </div>
                                     <ScrollArea className="h-72">
                                     {userPaymentsData && userPaymentsData.length > 0 ? (
                                         <Table>
@@ -899,7 +842,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableHeader>
                                             <TableBody>
                                                 {userPaymentsData.map((invoice) => (
-                                                    <TableRow key={invoice.id} className="cursor-pointer" onClick={() => { setInvoiceToEdit(invoice); setIsCreateInvoiceOpen(true); }}>
+                                                    <TableRow key={invoice.id}>
                                                         <TableCell>
                                                             <div className="font-medium">{invoice.id}</div>
                                                             <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
@@ -1466,61 +1409,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={isCreateInvoiceOpen} onOpenChange={setIsCreateInvoiceOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{invoiceToEdit ? 'Edit' : 'Create'} Invoice</DialogTitle>
-                    <DialogDescription>
-                        {invoiceToEdit ? `Update invoice ${invoiceToEdit.id}` : `Create a new invoice for ${selectedUser?.name}`}
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...invoiceForm}>
-                    <form onSubmit={invoiceForm.handleSubmit(handleSaveInvoice)} className="space-y-4 py-4">
-                        <FormField control={invoiceForm.control} name="id" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Invoice ID</FormLabel>
-                                <FormControl><Input {...field} disabled={!!invoiceToEdit} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={invoiceForm.control} name="description" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description</FormLabel>
-                                <FormControl><Input placeholder="e.g., Monthly Subscription - July" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={invoiceForm.control} name="amount" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Amount (PHP)</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={invoiceForm.control} name="status" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Upcoming">Upcoming</SelectItem>
-                                        <SelectItem value="Paid">Paid</SelectItem>
-                                        <SelectItem value="Overdue">Overdue</SelectItem>
-                                        <SelectItem value="Pending Review">Pending Review</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                            <Button type="submit">{invoiceToEdit ? 'Save Changes' : 'Create Invoice'}</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
-        
         <AdminMyAccountDialog
             adminUser={adminUser}
             isOpen={isAccountDialogOpen}
@@ -1611,12 +1499,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                         <TableCell>
                                             <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
-                                                {user.plan?.isConsumptionBased ? (
-                                                     autoRefillEnabled ? (
-                                                        <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive">Disabled</Badge>
-                                                    )
+                                                {user.plan?.isConsumptionBased && !autoRefillEnabled ? (
+                                                     <Badge variant="outline">On-Demand</Badge>
                                                 ) : autoRefillEnabled ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
                                                 ) : (
@@ -2044,3 +1928,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
