@@ -83,7 +83,7 @@ export function LiveChat({ messages, onMessageSubmit, user }: LiveChatProps) {
                 </div>
                 {m.role === 'user' && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.photoURL} alt={user?.name || ''} />
+                    <AvatarImage src={user?.photoURL ?? undefined} alt={user?.name || ''} />
                     <AvatarFallback>
                       <User />
                     </AvatarFallback>

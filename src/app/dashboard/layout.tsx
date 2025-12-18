@@ -300,15 +300,14 @@ export default function DashboardLayout({
                  {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-             <DialogContent className="sm:max-w-4xl h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
+             <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="flex-1">
-                  <div className="grid md:grid-cols-2 gap-8 py-4 pr-6">
+                <div className="grid md:grid-cols-2 gap-8 py-4 pr-6 flex-1 min-h-0">
                       <div className="space-y-8 flex flex-col">
                         <div className="space-y-4">
                           <div className="flex items-center gap-4 rounded-md border p-4">
@@ -317,7 +316,7 @@ export default function DashboardLayout({
                               </div>
                               <div>
                                 <p className="font-semibold">Viber Support</p>
-                                <p className="text-sm text-muted-foreground">Jayvee | Account Manager &amp; Customer Success</p>
+                                <p className="text-sm text-muted-foreground">Jayvee | Account Manager & Customer Success</p>
                                 <p className="text-sm text-muted-foreground">09182719091</p>
                               </div>
                           </div>
@@ -346,15 +345,14 @@ export default function DashboardLayout({
                           <p className="text-xs text-muted-foreground">By Smart Refill</p>
                         </div>
                       </div>
-                      <div className="flex flex-col h-[60vh] md:h-auto">
+                      <div className="flex flex-col min-h-0">
                           <LiveChat
                             messages={chatMessages}
                             onMessageSubmit={handleMessageSubmit}
                             user={user}
                           />
                       </div>
-                  </div>
-                </ScrollArea>
+                </div>
               </DialogContent>
           </Dialog>
           <Popover>
