@@ -2,10 +2,38 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // WARNING: Broad rule for debugging purposes.
-    // Allows any authenticated user to write anywhere.
-    match /{allPaths=**} {
-      allow write: if request.auth != null;
+
+    // Helper function to check if the user is an admin.
+    // This should match the logic in your firestore.rules.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
+
+    // User-specific files (profile photos, proofs, etc.)
+    match /users/{userId}/{allPaths=**} {
+      // A user can read, write, and delete files ONLY in their own folder.
+      // An admin can do anything.
+      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+
+    // Station-specific files (agreements, compliance documents)
+    match /stations/{stationId}/{allPaths=**} {
+      // Any authenticated user can view station documents (e.g., for compliance).
+      allow read: if request.auth != null;
+      // Only admins can upload/modify station documents.
+      allow write: if isAdmin();
+    }
+    
+    // Contract files
+    match /userContracts/{userId}/{allPaths=**} {
+       // An admin can upload contracts for any user
+      allow write: if isAdmin();
+       // The user to whom the contract belongs can read it.
+      allow read: if (request.auth != null && request.auth.uid == userId);
+    }
+
+    // Fallback: Deny all other access by default.
+    // This is implicit, but good to remember. No other paths are writable
+    // unless explicitly defined above.
   }
 }
