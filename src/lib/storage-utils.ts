@@ -1,7 +1,7 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata, getDownloadURL } from 'firebase/storage';
 import type { Auth } from 'firebase/auth';
 
 /**

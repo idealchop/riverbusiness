@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service firebase.storage {
@@ -12,7 +13,7 @@ service firebase.storage {
     // User-specific files (profile photos, proofs, etc.)
     match /users/{userId}/{allPaths=**} {
       // A user can read, write, and delete files ONLY in their own folder.
-      // An admin can do anything.
+      // An admin can do anything in any user's folder.
       allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
@@ -24,16 +25,12 @@ service firebase.storage {
       allow write: if isAdmin();
     }
     
-    // Contract files
+    // Contract files uploaded by an admin
     match /userContracts/{userId}/{allPaths=**} {
-       // An admin can upload contracts for any user
+      // An admin can upload contracts for any user.
       allow write: if isAdmin();
-       // The user to whom the contract belongs can read it.
-      allow read: if (request.auth != null && request.auth.uid == userId);
+      // The user to whom the contract belongs and admins can read it.
+      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
-
-    // Fallback: Deny all other access by default.
-    // This is implicit, but good to remember. No other paths are writable
-    // unless explicitly defined above.
   }
 }
