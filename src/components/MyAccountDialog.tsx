@@ -27,7 +27,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 
@@ -419,6 +419,29 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                     </CardContent>
                   </Card>
                    <Card>
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-2 gap-2">
+                          {user.currentContractUrl ? (
+                              <Button variant="outline" asChild>
+                                  <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
+                                      <FileText className="mr-2 h-4 w-4" />
+                                      View Contract
+                                  </a>
+                              </Button>
+                          ) : (
+                              <Button variant="outline" disabled>
+                                  <FileX className="mr-2 h-4 w-4" />
+                                  Contract Not Available
+                              </Button>
+                          )}
+                          <Button variant="outline" onClick={() => toast({ title: 'Coming Soon!', description: 'This feature will be available shortly.' })}>
+                              <Repeat className="mr-2 h-4 w-4" />
+                              Change Plan
+                          </Button>
+                        </div>
+                      </CardContent>
+                  </Card>
+                   <Card>
                         <CardContent className="p-6 space-y-4">
                             <div>
                                 <h3 className="font-semibold">Included in Every Plan</h3>
@@ -546,5 +569,3 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     </AlertDialog>
   );
 }
-
-    
