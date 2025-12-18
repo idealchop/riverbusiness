@@ -100,7 +100,6 @@ const defaultChecklistItems: Omit<SanitationChecklistItem, 'id'>[] = [
     { item: 'Inspection for mold, algae, or discoloration.', checked: false, remarks: '' },
     { item: 'The surrounding area was cleaned and kept dry.', checked: false, remarks: '' },
     { item: 'Temperature settings (hot/cold) verified.', checked: false, remarks: '' },
-    { item: 'Sanitation date and responsible personnel documented.', checked: false, remarks: '' },
 ];
 
 
@@ -2244,7 +2243,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 </TableCell>
                                                 <TableCell className="text-xs">{field.item}</TableCell>
                                                 <TableCell>
-                                                    {!watchedChecklist[index]?.checked && (
+                                                    {watchedChecklist[index]?.checked ? (
+                                                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                                            <CheckCircle className="h-3 w-3 mr-1"/>
+                                                            Passed
+                                                        </Badge>
+                                                    ) : (
                                                         <FormField
                                                             control={sanitationVisitForm.control}
                                                             name={`checklist.${index}.remarks`}
@@ -2344,3 +2348,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
