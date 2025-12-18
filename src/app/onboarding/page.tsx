@@ -152,8 +152,8 @@ export default function OnboardingPage() {
   };
 
   const handleEnterprisePlanSelect = (plan: any) => {
-    if (plan.name === 'Flow Plan') {
-      setSelectedPlan({ name: 'Flow Plan', price: plan.price, isConsumptionBased: true });
+    if (plan.isConsumptionBased) {
+      setSelectedPlan({ name: plan.name, price: plan.price, isConsumptionBased: true });
       setCustomPlanDetails({
         deliveryFrequency: 'On-demand',
         deliveryDay: 'Any',
@@ -314,11 +314,11 @@ export default function OnboardingPage() {
                         <h3 className="font-bold text-lg">Step 2.5: Select Enterprise Plan</h3>
                     </div>
                     <p className="text-muted-foreground">Choose the enterprise model that fits your business.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {enterprisePlans.map((plan) => {
                             const image = PlaceHolderImages.find(p => p.id === plan.imageId);
                             return (
-                            <Card key={plan.name} onClick={() => handleEnterprisePlanSelect(plan)} className="cursor-pointer hover:border-primary overflow-hidden">
+                            <Card key={plan.name} onClick={() => handleEnterprisePlanSelect(plan)} className="cursor-pointer hover:border-primary overflow-hidden flex flex-col">
                                 {image && (
                                 <div className="relative h-40 w-full">
                                     <Image src={image.imageUrl} alt={plan.name} fill className="object-cover" data-ai-hint={image.imageHint} />
@@ -328,7 +328,7 @@ export default function OnboardingPage() {
                                     <CardTitle>{plan.name}</CardTitle>
                                     <CardDescription>{plan.description}</CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="flex-1">
                                     <ul className="text-sm space-y-1 text-muted-foreground">
                                         {plan.details.map((detail, i) => (
                                             <li key={i}><strong>{detail.label}:</strong> {detail.value}</li>
@@ -358,7 +358,7 @@ export default function OnboardingPage() {
                                 <div className="p-6">
                                     <CardTitle className="text-xl">{selectedPlan.name} ({selectedClientType})</CardTitle>
                                     {selectedPlan.isConsumptionBased ? (
-                                        <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString()} / liter</CardDescription>
+                                        <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter</CardDescription>
                                     ) : (
                                         <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString()}/month</CardDescription>
                                     )}
@@ -529,3 +529,5 @@ export default function OnboardingPage() {
     </div>
   );
 }
+
+    

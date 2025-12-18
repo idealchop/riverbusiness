@@ -58,9 +58,22 @@ export const enterprisePlans = [
         ]
     },
     {
-        name: 'Flow Plan',
+        name: 'Flow Plan (P2.5/L)',
+        price: 2.5, // Price per liter
+        description: 'Usage-based plan at P2.5 per liter.',
+        recommended: false,
+        isConsumptionBased: true,
+        imageId: 'plan-enterprise-flowing',
+        details: [
+            { label: 'Pricing', value: 'P2.5 per Liter' },
+            { label: 'Deliveries', value: 'On-demand' },
+            { label: 'Billing', value: 'Pay-as-you-go' },
+        ]
+    },
+    {
+        name: 'Flow Plan (P3/L)',
         price: 3, // Price per liter
-        description: 'For pure usage-based, pay-as-you-go enterprise clients.',
+        description: 'Usage-based plan at P3 per liter.',
         recommended: false,
         isConsumptionBased: true,
         imageId: 'plan-enterprise-flowing',
@@ -71,3 +84,5 @@ export const enterprisePlans = [
         ]
     }
 ];
+
+    
