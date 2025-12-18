@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing, Hourglass } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing, Hourglass, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -448,6 +448,30 @@ export default function DashboardPage() {
         });
         setIsSaveLitersDialogOpen(false);
     };
+
+    const sanitationReportStats = useMemo(() => {
+        if (!selectedSanitationVisit || !selectedSanitationVisit.checklist) {
+            return { passed: 0, total: 0, passRate: 0, overallStatus: '', statusColor: '' };
+        }
+        const total = selectedSanitationVisit.checklist.length;
+        const passed = selectedSanitationVisit.checklist.filter(item => item.checked).length;
+        const passRate = total > 0 ? (passed / total) * 100 : 0;
+
+        let overallStatus = 'Failed';
+        let statusColor = 'text-red-500';
+        if (passRate === 100) {
+            overallStatus = 'Excellent';
+            statusColor = 'text-green-500';
+        } else if (passRate >= 80) {
+            overallStatus = 'Good';
+            statusColor = 'text-green-500';
+        } else if (passRate >= 60) {
+            overallStatus = 'Needs Improvement';
+            statusColor = 'text-yellow-500';
+        }
+
+        return { passed, total, passRate, overallStatus, statusColor };
+    }, [selectedSanitationVisit]);
     
     if (isAuthLoading || isUserDocLoading) {
       return <DashboardSkeleton />
@@ -874,6 +898,28 @@ export default function DashboardPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
+
+                                {selectedSanitationVisit.status === 'Completed' && (
+                                    <>
+                                        <h4 className="font-semibold">Results</h4>
+                                        <Card>
+                                            <CardContent className="pt-6 space-y-4">
+                                                <div className="text-center">
+                                                    <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
+                                                    <p className="text-sm text-muted-foreground">Overall Sanitation Result</p>
+                                                </div>
+                                                <div>
+                                                    <Progress value={sanitationReportStats.passRate} className="h-2"/>
+                                                    <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                                        <span>{sanitationReportStats.passed} / {sanitationReportStats.total} Items Passed</span>
+                                                        <span>{sanitationReportStats.passRate.toFixed(0)}%</span>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </>
+                                )}
+
                                 {selectedSanitationVisit.reportUrl && (
                                     <Button asChild className="w-full">
                                         <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
