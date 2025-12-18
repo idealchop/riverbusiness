@@ -55,6 +55,12 @@ type Notification = {
     data: Delivery | Payment | ComplianceReport | SanitationVisit;
 };
 
+const ViberIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17.1 21.8c-2.4 0-4.6-1-6.1-2.9C9.3 17.2 9 14.8 9 12.8c0-2.2 0.3-4.1 1-5.4c0.7-1.3 1.8-2.3 3.3-3c1.5-0.7 3-1 4.7-1c2.2 0 4.1 0.7 5.5 2.1c1.4 1.4 2.1 3.2 2.1 5.5c0 2.4-0.7 4.5-2.1 6.1c-1.4 1.6-3.3 2.4-5.5 2.4h-0.1z M17.1 5.2c-1.3 0-2.4 0.3-3.3 1c-0.9 0.7-1.5 1.6-1.5 2.8c0 1.2 0.5 2.2 1.5 2.8c0.9 0.7 2.1 1 3.3 1s2.4-0.3 3.3-1c0.9-0.7 1.5-1.6 1.5-2.8c0-1.2-0.5-2.2-1.5-2.8c-0.9-0.6-2.1-1-3.3-1z M17.1 13.9c-2.3 0-4.1 1.8-4.1 4.1c0 2.3 1.8 4.1 4.1 4.1s4.1-1.8 4.1-4.1c0-2.3-1.8-4.1-4.1-4.1z M6.4 3.3c-1.1 0-2 0.9-2 2v10.9c0 1.1 0.9 2 2 2h1.3l-1.9 2.5c-0.6 0.8-0.5 1.9 0.3 2.5c0.8 0.6 1.9 0.5 2.5-0.3l2-2.7h0.5c1.1 0 2-0.9 2-2V5.3c0-1.1-0.9-2-2-2H6.4z"/>
+    </svg>
+);
+
 export default function DashboardLayout({
   children,
 }: {
@@ -313,11 +319,11 @@ export default function DashboardLayout({
                         <div className="space-y-4">
                           <div className="flex items-center gap-4 rounded-md border p-4">
                               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                              <Phone className="h-6 w-6" />
+                                <ViberIcon className="h-6 w-6" />
                               </div>
                               <div>
-                              <p className="font-semibold">Jayvee Victor Co</p>
-                              <a href="tel:09182719091" className="text-sm text-muted-foreground hover:text-primary">09182719091</a>
+                                <p className="font-semibold">Viber Support</p>
+                                <p className="text-sm text-muted-foreground">Contact Jayvee Victor Co</p>
                               </div>
                           </div>
                           <div className="flex items-center gap-4 rounded-md border p-4">
