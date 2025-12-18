@@ -306,7 +306,6 @@ export default function DashboardLayout({
                   </span>
                 </span>
                 <span className="mr-2 hidden sm:inline">Live Support</span>
-                <LifeBuoy className="h-4 w-4" />
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
