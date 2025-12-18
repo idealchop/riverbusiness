@@ -359,10 +359,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     });
 
-    const { fields: checklistFields } = useFieldArray({
+    const { fields: checklistFields, control: checklistControl } = useFieldArray({
         control: sanitationVisitForm.control,
         name: "checklist",
     });
+
+    const watchedChecklist = sanitationVisitForm.watch("checklist");
 
     React.useEffect(() => {
         if (visitToEdit) {
@@ -2242,17 +2244,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 </TableCell>
                                                 <TableCell className="text-xs">{field.item}</TableCell>
                                                 <TableCell>
-                                                    <FormField
-                                                        control={sanitationVisitForm.control}
-                                                        name={`checklist.${index}.remarks`}
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormControl>
-                                                                    <Input {...field} className="h-7 text-xs" />
-                                                                </FormControl>
-                                                            </FormItem>
-                                                        )}
-                                                    />
+                                                    {!watchedChecklist[index]?.checked && (
+                                                        <FormField
+                                                            control={sanitationVisitForm.control}
+                                                            name={`checklist.${index}.remarks`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormControl>
+                                                                        <Input {...field} placeholder="Remarks..." className="h-7 text-xs" />
+                                                                    </FormControl>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -2340,4 +2344,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
