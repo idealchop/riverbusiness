@@ -566,21 +566,10 @@ export default function DashboardPage() {
                                                 >{report.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {report.reportUrl ? (
-                                                    <Button variant="outline" size="sm" onClick={() => setAttachmentToView(report.reportUrl!)}>
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        View
-                                                    </Button>
-                                                ) : (
-                                                    <UITooltip>
-                                                        <UITooltipTrigger>
-                                                            <Badge variant="secondary">Pending...</Badge>
-                                                        </UITooltipTrigger>
-                                                        <UITooltipContent>
-                                                            <p>Our team is processing the attachment. It will be available here shortly.</p>
-                                                        </UITooltipContent>
-                                                    </UITooltip>
-                                                )}
+                                                <Button variant="outline" size="sm" onClick={() => setAttachmentToView(report.reportUrl || 'pending')}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    View
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                         ))}
@@ -1290,9 +1279,17 @@ export default function DashboardPage() {
                 <DialogHeader>
                     <DialogTitle>Attachment Viewer</DialogTitle>
                 </DialogHeader>
-                {attachmentToView && (
+                {attachmentToView && attachmentToView !== 'pending' ? (
                     <div className="py-4 flex justify-center">
                         <Image src={attachmentToView} alt="Attachment" width={400} height={600} className="rounded-md object-contain" />
+                    </div>
+                ) : (
+                    <div className="py-10 flex flex-col items-center justify-center text-center gap-4">
+                        <Hourglass className="h-12 w-12 text-muted-foreground" />
+                        <h3 className="font-semibold">Attachment Not Yet Available</h3>
+                        <p className="text-sm text-muted-foreground max-w-xs">
+                            Our team is processing the attachment. It will be available here shortly. Thank you for your patience.
+                        </p>
                     </div>
                 )}
             </DialogContent>
