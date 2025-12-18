@@ -93,7 +93,88 @@ export default function DashboardLayout({
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
   const { data: paymentHistoryFromDb } = useCollection<Payment>(paymentsQuery);
   
+  const complianceReportsQuery = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user]);
+  const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
+
+  const sanitationVisitsQuery = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'sanitationVisits') : null, [firestore, user]);
+  const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+  
   const [notifications, setNotifications] = React.useState<Notification[]>([]);
+  const [lastNotificationCheck, setLastNotificationCheck] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const lastCheck = localStorage.getItem('lastNotificationCheck');
+    setLastNotificationCheck(lastCheck ? new Date(lastCheck) : null);
+  }, [isMounted]);
+
+  useEffect(() => {
+    if (!lastNotificationCheck || !isMounted) return;
+
+    const newNotifications: Notification[] = [];
+
+    // Delivery Notifications
+    deliveries?.forEach(d => {
+        const deliveryDate = new Date(d.date);
+        if (deliveryDate > lastNotificationCheck) {
+            newNotifications.push({
+                id: `delivery-${d.id}`,
+                type: 'delivery',
+                title: `Delivery ${d.status}`,
+                description: `Your delivery of ${d.volumeContainers} containers is now ${d.status}.`,
+                date: d.date,
+                icon: Truck,
+                data: d,
+            });
+        }
+    });
+
+    // Compliance Report Notifications
+    complianceReports?.forEach(r => {
+        const reportDate = new Date(r.date);
+        if (reportDate > lastNotificationCheck) {
+            newNotifications.push({
+                id: `compliance-${r.id}`,
+                type: 'compliance',
+                title: `New Compliance Report`,
+                description: `A new ${r.name} report is available for your station.`,
+                date: r.date,
+                icon: ShieldCheck,
+                data: r,
+            });
+        }
+    });
+    
+    // Sanitation Visit Notifications
+    sanitationVisits?.forEach(v => {
+        const visitDate = new Date(v.scheduledDate);
+        if (visitDate > lastNotificationCheck) {
+            newNotifications.push({
+                id: `sanitation-${v.id}`,
+                type: 'sanitation',
+                title: `Sanitation Visit ${v.status}`,
+                description: `A sanitation visit has been ${v.status.toLowerCase()}.`,
+                date: v.scheduledDate,
+                icon: FileHeart,
+                data: v,
+            });
+        }
+    });
+
+    // Sort by date and update state
+    const sortedNotifications = newNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setNotifications(sortedNotifications);
+
+  }, [deliveries, complianceReports, sanitationVisits, lastNotificationCheck, isMounted]);
+
+  const handleNotificationOpenChange = (open: boolean) => {
+    if (!open && isMounted) {
+        const now = new Date().toISOString();
+        localStorage.setItem('lastNotificationCheck', now);
+        setLastNotificationCheck(new Date(now));
+        setNotifications([]);
+    }
+  };
   
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
   const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
@@ -357,7 +438,7 @@ export default function DashboardLayout({
                 </div>
               </DialogContent>
           </Dialog>
-          <Popover>
+          <Popover onOpenChange={handleNotificationOpenChange}>
               <PopoverTrigger asChild>
               <Button
                   variant="outline"
@@ -529,3 +610,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
