@@ -1,7 +1,7 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata, getDownloadURL } from 'firebase/storage';
 import type { Auth } from 'firebase/auth';
 
 /**
@@ -15,7 +15,7 @@ import type { Auth } from 'firebase/auth';
  * @param file The file object to upload.
  * @param metadata The custom metadata to attach to the file, if any.
  * @param onProgress A callback function to report the upload progress (0-100).
- * @returns A promise that resolves when the upload is 100% complete. It does not return a value.
+ * @returns A promise that resolves when the upload is 100% complete.
  */
 export function uploadFileWithProgress(
   storage: FirebaseStorage,
@@ -55,6 +55,10 @@ export function uploadFileWithProgress(
       () => {
         console.log('[UPLOAD] completed');
         onProgress(100);
+        // The getDownloadURL is not strictly needed by the client, but confirming
+        // the task is complete is the most important part.
+        // We resolve without a URL, as the client doesn't need it.
+        // The Cloud Function is responsible for getting the URL and updating Firestore.
         resolve(); // Resolve the promise ONLY when the upload is complete.
       }
     );
