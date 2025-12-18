@@ -643,6 +643,27 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                   )
               })}
           </div>
+           <Separator className="my-4" />
+           <div className="space-y-4">
+                <div>
+                    <h3 className="font-semibold">Included in Every Plan</h3>
+                    <p className="text-sm text-muted-foreground">Every subscription plan includes full access to our growing network of partner perks.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    {includedFeatures.map((feature, index) => {
+                        const Icon = feature.icon;
+                        return (
+                            <div key={index} className="flex items-start gap-3">
+                                <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                                <div>
+                                    <h4 className="font-medium text-sm">{feature.title}</h4>
+                                    <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
             <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan}>
