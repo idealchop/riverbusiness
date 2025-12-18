@@ -34,9 +34,8 @@ export function uploadFileWithProgress(
       return reject(authError);
     }
     
-    console.log("[UPLOAD] function called for user:", auth.currentUser.uid);
-    console.log("[UPLOAD] file:", file);
-    console.log("[UPLOAD] path:", path);
+    console.log('[UPLOAD] Auth user confirmed:', auth.currentUser.uid);
+    console.log('[UPLOAD] Starting upload for file:', file.name, 'to path:', path);
 
 
     const storageRef = ref(storage, path);

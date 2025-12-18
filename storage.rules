@@ -8,13 +8,15 @@ service firebase.storage {
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
 
-    // A user can only write to their own folder.
+    // Users can only write to their own folder.
+    // Any authenticated user can read files (e.g., for viewing profile pictures).
     match /users/{userId}/{allPaths=**} {
-      allow read: if request.auth != null; // Allow any auth'd user to read (e.g. for profile pics)
+      allow read: if request.auth != null;
       allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
-    // Admins can manage station documents. Any auth'd user can read them.
+    // Admins can manage all station documents.
+    // Any authenticated user can read station documents (e.g., compliance reports).
     match /stations/{stationId}/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
