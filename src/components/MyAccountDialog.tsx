@@ -499,7 +499,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="invoices" className="py-4">
+                 <TabsContent value="invoices" className="py-4">
                   <Table>
                       <TableHeader>
                           <TableRow>
@@ -637,26 +637,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         </CardContent>
                     </Card>
                 </div>
-            ) : user.plan?.isConsumptionBased ? (
-                <div className="py-4 text-center">
-                    <Card className="max-w-md mx-auto">
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-center gap-2">
-                                <CheckCircle className="h-6 w-6 text-green-500" />
-                                You're on the Flow Plan!
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 pt-4">
-                            <p className="text-muted-foreground">You are currently on our most flexible consumption-based plan.</p>
-                            <p className="text-sm text-muted-foreground">If you need to make special arrangements or customize your plan further, please contact our support team at <a href="mailto:support@riverph.com" className="text-primary hover:underline">support@riverph.com</a>.</p>
-                        </CardContent>
-                    </Card>
-                </div>
             ) : (
                 <>
                 <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card 
-                        className="flex flex-col cursor-default"
+                        className="flex flex-col cursor-default border-primary border-2"
                     >
                         <CardHeader>
                             <CardTitle className="flex justify-between items-center">
@@ -666,15 +651,28 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             <CardDescription>{user.plan?.name}</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1">
-                            <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/month</p>
-                            <Separator className="my-2" />
-                            <ul className="text-sm space-y-1 text-muted-foreground">
-                                <li><strong>Billing:</strong> Fixed monthly bill.</li>
-                                <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
-                            </ul>
+                            {user.plan?.isConsumptionBased ? (
+                                <>
+                                  <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/liter</p>
+                                  <Separator className="my-2" />
+                                  <ul className="text-sm space-y-1 text-muted-foreground">
+                                    <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
+                                    <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
+                                  </ul>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/month</p>
+                                    <Separator className="my-2" />
+                                    <ul className="text-sm space-y-1 text-muted-foreground">
+                                        <li><strong>Billing:</strong> Fixed monthly bill.</li>
+                                        <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                                    </ul>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
-                    {flowPlan && (
+                    {flowPlan && !user.plan?.isConsumptionBased && (
                         <Card 
                             onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
                             className={cn(
@@ -723,7 +721,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                   </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
-                  <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name}>
+                  <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name || user.plan?.isConsumptionBased}>
                     Confirm and Switch Plan
                   </Button>
                 </DialogFooter>
