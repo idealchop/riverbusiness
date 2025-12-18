@@ -2183,7 +2183,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 )}/>
                                 <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Sanitation Officer</FormLabel>
+                                        <FormLabel>Quality Officer</FormLabel>
                                         <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
