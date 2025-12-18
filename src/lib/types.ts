@@ -27,6 +27,7 @@ export interface ComplianceReport {
 
 export interface SanitationVisit {
   id: string;
+  userId: string;
   scheduledDate: string;
   status: 'Completed' | 'Scheduled' | 'Cancelled';
   assignedTo: string;

@@ -89,15 +89,16 @@
     "SanitationVisit": {
       "title": "SanitationVisit",
       "type": "object",
-      "description": "Represents a sanitation visit record.",
+      "description": "Represents a sanitation visit record for a client's office.",
       "properties": {
         "id": { "type": "string" },
+        "userId": { "type": "string", "description": "ID of the user whose office is being visited." },
         "scheduledDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
         "assignedTo": { "type": "string" },
         "reportUrl": { "type": "string", "format": "uri" }
       },
-      "required": ["id", "scheduledDate", "status"]
+      "required": ["id", "userId", "scheduledDate", "status"]
     },
     "Schedule": {
       "title": "Schedule",
@@ -175,6 +176,10 @@
       "schema": { "$ref": "#/entities/Notification" },
       "description": "Subcollection for user-specific notifications."
     },
+    "/users/{userId}/sanitationVisits/{visitId}": {
+      "schema": { "$ref": "#/entities/SanitationVisit" },
+      "description": "Subcollection for a client's scheduled office sanitation visits."
+    },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
@@ -182,10 +187,6 @@
     "/waterStations/{stationId}/complianceReports/{reportId}": {
       "schema": { "$ref": "#/entities/ComplianceReport" },
       "description": "Subcollection for a station's compliance reports."
-    },
-    "/waterStations/{stationId}/sanitationVisits/{visitId}": {
-      "schema": { "$ref": "#/entities/SanitationVisit" },
-      "description": "Subcollection for a station's sanitation visits."
     },
     "/schedules/currentSchedule": {
       "schema": { "$ref": "#/entities/Schedule" },

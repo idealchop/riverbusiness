@@ -44,6 +44,11 @@ service cloud.firestore {
       allow create, delete: if isAdmin(); 
     }
 
+    match /users/{userId}/sanitationVisits/{visitId} {
+      allow read, list: if isOwner(userId) || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /waterStations/{stationId} {
       allow read: if request.auth != null;
       allow create, update, delete: if isAdmin();

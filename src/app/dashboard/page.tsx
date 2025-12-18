@@ -143,10 +143,10 @@ export default function DashboardPage() {
     const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
 
     const sanitationVisitsQuery = useMemoFirebase(() => 
-        (firestore && user?.assignedWaterStationId) 
-        ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'sanitationVisits') 
+        (firestore && authUser) 
+        ? collection(firestore, 'users', authUser.uid, 'sanitationVisits') 
         : null, 
-        [firestore, user?.assignedWaterStationId]
+        [firestore, authUser]
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
@@ -482,20 +482,20 @@ export default function DashboardPage() {
                     <DialogTrigger asChild>
                         <Button variant="outline" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
                             <ShieldCheck className="h-4 w-4 sm:mr-2" />
-                            <span className="hidden sm:inline">Water Quality &amp; Sanitation</span>
+                            <span className="hidden sm:inline">Compliance &amp; Sanitation</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-4xl">
                         <DialogHeader>
-                            <DialogTitle>Water Quality & Sanitation</DialogTitle>
+                            <DialogTitle>Compliance & Sanitation</DialogTitle>
                             <DialogDescription>
-                                Compliance reports and sanitation visits for {waterStation?.name || 'your assigned station'}.
+                                View water quality reports from your assigned station and scheduled sanitation visits for your office.
                             </DialogDescription>
                         </DialogHeader>
                         <Tabs defaultValue="compliance" className="flex flex-col gap-4 pt-4">
                             <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto">
-                                <TabsTrigger value="compliance">Compliance Reports</TabsTrigger>
-                                <TabsTrigger value="sanitation">Sanitation Visits</TabsTrigger>
+                                <TabsTrigger value="compliance">Water Quality Reports</TabsTrigger>
+                                <TabsTrigger value="sanitation">Office Sanitation Visits</TabsTrigger>
                             </TabsList>
                             
                             <TabsContent value="compliance">
@@ -545,7 +545,7 @@ export default function DashboardPage() {
                                         ))}
                                         {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-center text-muted-foreground">No upcoming reports scheduled.</TableCell>
+                                                <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -557,8 +557,8 @@ export default function DashboardPage() {
                             <TabsContent value="sanitation">
                                 <Card>
                                 <CardHeader>
-                                    <CardTitle>Sanitation Visits</CardTitle>
-                                    <CardDescription>Manage scheduling and records of sanitation visits for {waterStation?.name || 'your assigned station'}.</CardDescription>
+                                    <CardTitle>Office Sanitation Visits</CardTitle>
+                                    <CardDescription>Records of scheduled sanitation and cleaning for your office dispensers.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
                                         ))}
                                         {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center text-muted-foreground">No upcoming visits scheduled.</TableCell>
+                                                <TableCell colSpan={5} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
