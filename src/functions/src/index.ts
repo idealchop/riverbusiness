@@ -168,21 +168,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
                 partnershipAgreementUrl: url,
             });
             logger.log(`Updated partnership agreement for station: ${stationId}`);
-        } else if (docType === "compliance") {
-            const reportKey = path.basename(filePath).split('-')[0];
-            const formattedName = reportKey.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
-            
-            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports");
-            const reportDocId = reportKey;
 
-            await reportRef.doc(reportDocId).set({
-                id: reportDocId,
-                name: formattedName,
-                date: FieldValue.serverTimestamp(),
-                status: "Pending Review",
-                reportUrl: url,
-            }, { merge: true });
-            logger.log(`Updated compliance report '${formattedName}' for station: ${stationId}`);
+        } else if (docType === "compliance") {
+            const reportId = path.basename(filePath).split('-')[0];
+            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportId);
+            await reportRef.update({ reportUrl: url });
+            logger.log(`Updated compliance report URL for report: ${reportId} in station: ${stationId}`);
         }
         return;
     }

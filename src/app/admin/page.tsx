@@ -57,6 +57,15 @@ const newStationSchema = z.object({
 
 type NewStationFormValues = z.infer<typeof newStationSchema>;
 
+const complianceReportSchema = z.object({
+    name: z.string().min(1, "Report name is required."),
+    status: z.enum(['Compliant', 'Non-compliant', 'Pending Review']),
+    results: z.string().optional(),
+    reportFile: z.any().optional(),
+});
+type ComplianceReportFormValues = z.infer<typeof complianceReportSchema>;
+
+
 const adjustConsumptionSchema = z.object({
     amount: z.coerce.number().min(0, 'Amount must be a positive number'),
     containers: z.coerce.number().optional(),
@@ -194,7 +203,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
     const [contractFile, setContractFile] = React.useState<File | null>(null);
     const [agreementFile, setAgreementFile] = React.useState<File | null>(null);
-    const [complianceFiles, setComplianceFiles] = React.useState<Record<string, File>>({});
+    
+    const [isComplianceReportDialogOpen, setIsComplianceReportDialogOpen] = React.useState(false);
+    const [complianceReportToEdit, setComplianceReportToEdit] = React.useState<ComplianceReport | null>(null);
+
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [uploadingFiles, setUploadingFiles] = React.useState<Record<string, number>>({});
@@ -348,6 +360,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: { amount: 0, containers: 0 },
     });
 
+    const complianceReportForm = useForm<ComplianceReportFormValues>({
+        resolver: zodResolver(complianceReportSchema),
+    });
+
     const sanitationVisitForm = useForm<SanitationVisitFormValues>({
         resolver: zodResolver(sanitationVisitSchema),
         defaultValues: {
@@ -392,9 +408,20 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         } else {
             stationForm.reset({ name: '', location: '' });
             setAgreementFile(null);
-            setComplianceFiles({});
         }
     }, [stationToUpdate, stationForm, isStationProfileOpen]);
+
+    React.useEffect(() => {
+        if (complianceReportToEdit) {
+            complianceReportForm.reset({
+                name: complianceReportToEdit.name,
+                status: complianceReportToEdit.status,
+                results: complianceReportToEdit.results || '',
+            });
+            setIsComplianceReportDialogOpen(true);
+        }
+    }, [complianceReportToEdit, complianceReportForm]);
+
     
     React.useEffect(() => {
         if (deliveryToEdit) {
@@ -712,30 +739,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return refillRequests?.filter(req => req.status === 'Pending') || [];
     }, [refillRequests]);
 
-    const complianceFields: { key: string, label: string }[] = [
-        { key: 'businessPermit', label: 'Business Permit' },
-        { key: 'dohPermit', label: 'DOH Permit' },
-        { key: 'sanitaryPermit', label: 'Sanitary Permit' },
-    ];
-      
     const selectedUserPlanImage = React.useMemo(() => {
         if (!selectedUser?.clientType) return null;
         const clientTypeDetails = clientTypes.find(ct => ct.name === selectedUser.clientType);
         if (!clientTypeDetails) return null;
         return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [selectedUser]);
-
-    const handleComplianceFileSelect = (key: string, file: File | null) => {
-        setComplianceFiles(prev => {
-            const newState = {...prev};
-            if (file) {
-                newState[key] = file;
-            } else {
-                delete newState[key];
-            }
-            return newState;
-        })
-    }
     
     const handleCreateStation = async (values: NewStationFormValues) => {
         if (!firestore) return;
@@ -747,26 +756,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             };
             const newStationRef = await addDocumentNonBlocking(collection(firestore, 'waterStations'), newStationData);
             
-            const uploadPromises: Promise<any>[] = [];
-            const stationId = newStationRef.id;
-
             if (agreementFile) {
-                const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                uploadPromises.push(handleFileUpload(agreementFile, path, `agreement-${stationId}`));
+                const path = `stations/${newStationRef.id}/agreement/${agreementFile.name}`;
+                await handleFileUpload(agreementFile, path, `agreement-${newStationRef.id}`);
             }
-
-            Object.entries(complianceFiles).forEach(([key, file]) => {
-                const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                uploadPromises.push(handleFileUpload(file, path, `${key}-${stationId}`));
-            });
-
-            await Promise.all(uploadPromises);
 
             toast({ title: "Station Created", description: `Station "${values.name}" and its documents are being processed.` });
             setIsStationProfileOpen(false);
             stationForm.reset();
             setAgreementFile(null);
-            setComplianceFiles({});
 
         } catch (error) {
             console.error(error);
@@ -828,6 +826,49 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
         setVisitToDelete(null);
     };
+
+    const handleComplianceReportSubmit = async (values: ComplianceReportFormValues) => {
+        if (!firestore || !stationToUpdate) return;
+        setIsSubmitting(true);
+    
+        try {
+            const reportData = {
+                name: values.name,
+                status: values.status,
+                results: values.results || '',
+                date: serverTimestamp(),
+            };
+    
+            let reportRef: DocumentReference;
+            if (complianceReportToEdit) {
+                reportRef = doc(firestore, 'waterStations', stationToUpdate.id, 'complianceReports', complianceReportToEdit.id);
+                await updateDocumentNonBlocking(reportRef, reportData);
+                toast({ title: 'Report Updated', description: 'The compliance report has been updated.' });
+            } else {
+                reportRef = await addDocumentNonBlocking(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
+                toast({ title: 'Report Created', description: 'A new compliance report has been created.' });
+            }
+    
+            const file = values.reportFile?.[0];
+            if (file) {
+                const path = `stations/${stationToUpdate.id}/compliance/${reportRef.id}-${file.name}`;
+                await handleFileUpload(file, path, `compliance-${reportRef.id}`);
+                // The cloud function will update the reportUrl
+            }
+    
+            setIsComplianceReportDialogOpen(false);
+            setComplianceReportToEdit(null);
+            complianceReportForm.reset();
+            setComplianceRefresher(c => c + 1);
+    
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Operation Failed', description: 'Could not save the compliance report.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
 
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
@@ -1905,89 +1946,57 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <Separator />
                         
                         <div>
-                            <h3 className="font-semibold text-base mb-1">Compliance Documents</h3>
-                            <p className="text-sm text-muted-foreground mb-4">
-                                Submit your latest permits. All documents are required for full partner verification.
-                            </p>
-                            <Table>
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="font-semibold text-base">Compliance Documents</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Manage and track monthly compliance reports.
+                                    </p>
+                                </div>
+                                <Button size="sm" onClick={() => { setComplianceReportToEdit(null); setIsComplianceReportDialogOpen(true); }} disabled={!stationToUpdate}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Create Report
+                                </Button>
+                            </div>
+                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Document Type</TableHead>
+                                        <TableHead>Report Name</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {complianceFields.map(field => {
-                                        const report = complianceReports?.find(r => r.name === field.label);
-                                        const stagedFile = complianceFiles[field.key];
-                                        const progress = uploadingFiles[`${field.key}-${stationToUpdate?.id}`] || 0;
-                                        const isUploadingFile = progress > 0 && progress < 100;
-                                        
-                                        const onUpload = async (fileToUpload: File) => {
-                                            if (!stationToUpdate || !storage) return;
-                                            const docKey = field.key;
-                                            const stationId = stationToUpdate.id;
-                                            const path = `stations/${stationId}/compliance/${docKey}-${fileToUpload.name}`;
-                                            const uploadKey = `${docKey}-${stationId}`;
-                                            try {
-                                                await handleFileUpload(fileToUpload, path, uploadKey);
-                                                toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
-                                                setComplianceRefresher(c => c + 1);
-                                                handleComplianceFileSelect(docKey, null);
-                                            } catch (err) {
-                                                console.error(err);
-                                                toast({variant: 'destructive', title: 'Upload Failed'});
-                                            } finally {
-                                                setUploadingFiles(prev => {
-                                                    const newState = {...prev};
-                                                    delete newState[uploadKey];
-                                                    return newState;
-                                                });
-                                            }
-                                        };
-
-                                        return (
-                                        <TableRow key={field.key}>
-                                            <TableCell className="font-medium">{field.label}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {isUploadingFile ? (
-                                                      <Progress value={progress} className="w-24 h-2" />
-                                                    ) : report ? (
-                                                        <Button asChild variant="outline" size="sm">
-                                                            <a href={report.reportUrl} target="_blank" rel="noopener noreferrer">
-                                                                <Eye className="mr-2 h-4 w-4" /> View
-                                                            </a>
-                                                        </Button>
-                                                    ) : stagedFile ? (
-                                                        <>
-                                                            <span className="text-sm text-muted-foreground truncate max-w-[120px]">{stagedFile.name}</span>
-                                                            <Button size="sm" disabled={isSubmitting || !stationToUpdate} onClick={() => onUpload(stagedFile)}>
-                                                                <Upload className="mr-2 h-4 w-4" /> Upload
-                                                            </Button>
-                                                            <Button size="icon" variant="ghost" onClick={() => handleComplianceFileSelect(field.key, null)} disabled={isSubmitting}>
-                                                                <X className="h-4 w-4"/>
-                                                            </Button>
-                                                        </>
-                                                    ) : (
-                                                        <Button asChild type="button" variant="outline" size="sm" disabled={!isAdmin || isSubmitting}>
-                                                            <Label className={cn("flex items-center", (isAdmin && !isSubmitting) ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                                <Paperclip className="mr-2 h-4 w-4" /> Attach
-                                                                <Input type="file" accept="application/pdf,image/*" className="hidden" disabled={!isAdmin || isSubmitting} onChange={(e) => {
-                                                                    const file = e.target.files?.[0];
-                                                                    if (file) handleComplianceFileSelect(field.key, file);
-                                                                }} />
-                                                            </Label>
-                                                        </Button>
+                                    {complianceReports?.map((report) => (
+                                        <TableRow key={report.id}>
+                                            <TableCell className="font-medium">{report.name}</TableCell>
+                                            <TableCell>{format(new Date(report.date), 'PP')}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant={report.status === 'Compliant' ? 'default' : report.status === 'Non-compliant' ? 'destructive' : 'secondary'}
+                                                    className={cn(
+                                                        report.status === 'Compliant' && 'bg-green-100 text-green-800',
+                                                        report.status === 'Non-compliant' && 'bg-red-100 text-red-800',
+                                                        report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800'
                                                     )}
-                                                </div>
+                                                >{report.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="sm" onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
-                                    )})}
+                                    ))}
+                                    {(!complianceReports || complianceReports.length === 0) && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center text-muted-foreground">No reports found.</TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
-                        
+
                         <Separator />
 
                         <div>
@@ -2085,6 +2094,62 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+        <Dialog open={isComplianceReportDialogOpen} onOpenChange={(open) => { if(!open) setComplianceReportToEdit(null); setIsComplianceReportDialogOpen(open); }}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{complianceReportToEdit ? 'Edit' : 'Create'} Compliance Report</DialogTitle>
+                    <DialogDescription>Fill out the details for the compliance report.</DialogDescription>
+                </DialogHeader>
+                <Form {...complianceReportForm}>
+                    <form onSubmit={complianceReportForm.handleSubmit(handleComplianceReportSubmit)} className="space-y-4 py-4">
+                        <FormField control={complianceReportForm.control} name="name" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Report Name</FormLabel>
+                                <FormControl><Input placeholder="e.g., Monthly Bacteriological Test - June" {...field} disabled={isSubmitting} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={complianceReportForm.control} name="status" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a status" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Compliant">Compliant</SelectItem>
+                                        <SelectItem value="Non-compliant">Non-compliant</SelectItem>
+                                        <SelectItem value="Pending Review">Pending Review</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={complianceReportForm.control} name="results" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Results / Notes</FormLabel>
+                                <FormControl><Textarea placeholder="Enter inspection results or notes..." {...field} disabled={isSubmitting} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={complianceReportForm.control} name="reportFile" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Attach Report File (Optional)</FormLabel>
+                                <FormControl><Input type="file" accept="application/pdf,image/*" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} /></FormControl>
+                                <FormDescription>
+                                    {complianceReportToEdit?.reportUrl ? "Attaching a new file will replace the existing one." : "Attach the official report document."}
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Report'}</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+
 
         <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
             <DialogContent className="sm:max-w-2xl">
@@ -2108,7 +2173,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <TableRow>
                                     <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Assigned</TableHead>
+                                    <TableHead>Quality Officer</TableHead>
                                     <TableHead className="text-right"></TableHead>
                                 </TableRow>
                             </TableHeader>

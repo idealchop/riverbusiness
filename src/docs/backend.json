@@ -82,9 +82,10 @@
         "name": { "type": "string", "description": "Name or type of the compliance document (e.g., 'Bacteriological Test')." },
         "date": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Compliant", "Non-compliant", "Pending Review"] },
-        "reportUrl": { "type": "string", "format": "uri" }
+        "reportUrl": { "type": "string", "format": "uri" },
+        "results": { "type": "string", "description": "Admin-entered notes or results of the inspection." }
       },
-      "required": ["id", "name", "date", "status", "reportUrl"]
+      "required": ["id", "name", "date", "status"]
     },
     "SanitationChecklistItem": {
         "title": "SanitationChecklistItem",
@@ -216,4 +217,3 @@
     }
   }
 }
-

@@ -23,6 +23,7 @@ export interface ComplianceReport {
   date: string;
   status: 'Compliant' | 'Non-compliant' | 'Pending Review';
   reportUrl: string;
+  results?: string;
 }
 
 export interface SanitationChecklistItem {
