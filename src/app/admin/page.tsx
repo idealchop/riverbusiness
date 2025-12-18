@@ -37,7 +37,6 @@ import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
 import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
-import { type UploadTask } from 'firebase/storage';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -408,16 +407,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleFileUpload = async (
       file: File,
       path: string,
-      metadata: any,
       uploadKey: string,
-    ): Promise<UploadTask> => {
-      if (!storage) throw new Error("Storage not initialized");
+    ) => {
+      if (!storage || !auth) throw new Error("Firebase not initialized");
       
       return uploadFileWithProgress(
         storage,
+        auth,
         path,
         file,
-        metadata,
+        {}, // Metadata can be empty
         (progress) => {
           setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
         }
@@ -432,10 +431,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         try {
             const path = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}-${deliveryProofFile.name}`;
-            const metadata = {}; // The backend function now infers this
-            await handleFileUpload(deliveryProofFile, path, metadata, uploadKey);
+            await handleFileUpload(deliveryProofFile, path, uploadKey);
             
-            toast({ title: 'Proof Uploaded', description: 'The proof of delivery is being processed.' });
+            toast({ title: 'Upload Complete', description: 'The proof of delivery is being processed.' });
             setDeliveryToUpdate(null);
             setDeliveryProofFile(null);
     
@@ -461,10 +459,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         try {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
-            const metadata = {};
-            await handleFileUpload(contractFile, path, metadata, uploadKey);
+            await handleFileUpload(contractFile, path, uploadKey);
     
-            toast({ title: 'Contract Uploaded', description: 'The contract is being processed.' });
+            toast({ title: 'Upload Complete', description: 'The contract is being processed.' });
             setIsUploadContractOpen(false);
             setContractFile(null);
         } catch (error) {
@@ -500,8 +497,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const uploadKey = `delivery-${values.trackingNumber}`;
                 const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
-                const metadata = {}; // Backend infers this now
-                await handleFileUpload(file, path, metadata, uploadKey);
+                await handleFileUpload(file, path, uploadKey);
             }
     
             if (values.status === 'Delivered') {
@@ -695,12 +691,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
             if (agreementFile) {
                 const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                uploadPromises.push(handleFileUpload(agreementFile, path, {}, `agreement-${stationId}`));
+                uploadPromises.push(handleFileUpload(agreementFile, path, `agreement-${stationId}`));
             }
 
             Object.entries(complianceFiles).forEach(([key, file]) => {
                 const path = `stations/${stationId}/compliance/${key}-${file.name}`;
-                uploadPromises.push(handleFileUpload(file, path, {}, `${key}-${stationId}`));
+                uploadPromises.push(handleFileUpload(file, path, `${key}-${stationId}`));
             });
 
             await Promise.all(uploadPromises);
@@ -1712,7 +1708,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             const path = `stations/${stationId}/compliance/${docKey}-${fileToUpload.name}`;
                                             const uploadKey = `${docKey}-${stationId}`;
                                             try {
-                                                await handleFileUpload(fileToUpload, path, {}, uploadKey);
+                                                await handleFileUpload(fileToUpload, path, uploadKey);
                                                 toast({ title: 'Document Uploaded', description: `${field.label} is being processed.` });
                                                 setComplianceRefresher(c => c + 1);
                                                 handleComplianceFileSelect(docKey, null);
@@ -1784,7 +1780,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         const path = `stations/${stationId}/agreement/${agreementFile.name}`;
                                         const uploadKey = `${docKey}-${stationId}`;
                                         try {
-                                            await handleFileUpload(agreementFile, path, {}, uploadKey);
+                                            await handleFileUpload(agreementFile, path, uploadKey);
                                             toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
                                             setAgreementFile(null);
                                         } catch (err) {
@@ -1924,5 +1920,3 @@ export default function AdminPage() {
         </div>
     )
 }
-
-    

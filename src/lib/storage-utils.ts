@@ -15,7 +15,7 @@ import type { Auth } from 'firebase/auth';
  * @param file The file object to upload.
  * @param metadata The custom metadata to attach to the file, if any.
  * @param onProgress A callback function to report the upload progress (0-100).
- * @returns A promise that resolves when the upload is 100% complete.
+ * @returns A promise that resolves when the upload is 100% complete, or rejects on failure.
  */
 export function uploadFileWithProgress(
   storage: FirebaseStorage,
