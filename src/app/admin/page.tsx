@@ -70,6 +70,14 @@ const deliveryFormSchema = z.object({
 });
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
+const sanitationVisitSchema = z.object({
+    scheduledDate: z.date({ required_error: 'Date is required.'}),
+    status: z.enum(['Scheduled', 'Completed', 'Cancelled']),
+    assignedTo: z.string().min(1, "Please assign a team member."),
+    reportUrl: z.string().url().optional().or(z.literal('')),
+});
+type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
+
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 
@@ -174,6 +182,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isManageInvoiceOpen, setIsManageInvoiceOpen] = React.useState(false);
     const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
     const [rejectionReason, setRejectionReason] = React.useState('');
+    const [isSanitationVisitDialogOpen, setIsSanitationVisitDialogOpen] = React.useState(false);
+    const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
+    const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
     const ITEMS_PER_PAGE = 20;
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -190,6 +201,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return collection(firestore, 'users', selectedUser.id, 'payments');
     }, [firestore, selectedUser]);
     const { data: userPaymentsData, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
+
+    const sanitationVisitsQuery = useMemoFirebase(() => {
+        if (!firestore || !selectedUser) return null;
+        return collection(firestore, 'users', selectedUser.id, 'sanitationVisits');
+    }, [firestore, selectedUser]);
+    const { data: sanitationVisitsData, isLoading: sanitationVisitsLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -304,6 +321,29 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(adjustConsumptionSchema),
         defaultValues: { amount: 0, containers: 0 },
     });
+
+    const sanitationVisitForm = useForm<SanitationVisitFormValues>({
+        resolver: zodResolver(sanitationVisitSchema),
+        defaultValues: {
+            status: 'Scheduled',
+            assignedTo: '',
+            reportUrl: ''
+        }
+    });
+
+    React.useEffect(() => {
+        if (visitToEdit) {
+            sanitationVisitForm.reset({
+                scheduledDate: new Date(visitToEdit.scheduledDate),
+                status: visitToEdit.status,
+                assignedTo: visitToEdit.assignedTo,
+                reportUrl: visitToEdit.reportUrl || '',
+            });
+            setIsSanitationVisitDialogOpen(true);
+        } else {
+            sanitationVisitForm.reset();
+        }
+    }, [visitToEdit, sanitationVisitForm]);
 
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
@@ -704,6 +744,50 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsManageInvoiceOpen(false);
     };
 
+    const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
+        if (!firestore || !selectedUser) return;
+        setIsSubmitting(true);
+
+        try {
+            const visitData = {
+                ...values,
+                scheduledDate: values.scheduledDate.toISOString(),
+                userId: selectedUser.id,
+            };
+
+            if (visitToEdit) {
+                // Update existing visit
+                const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
+                await updateDocumentNonBlocking(visitRef, visitData);
+                toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
+            } else {
+                // Create new visit
+                const visitsCollection = collection(firestore, 'users', selectedUser.id, 'sanitationVisits');
+                await addDocumentNonBlocking(visitsCollection, visitData);
+                toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
+            }
+
+            setIsSanitationVisitDialogOpen(false);
+            setVisitToEdit(null);
+            sanitationVisitForm.reset();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: "Operation Failed", description: "Could not save the sanitation visit." });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteSanitationVisit = async () => {
+        if (!firestore || !selectedUser || !visitToDelete) return;
+        
+        const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToDelete.id);
+        await deleteDocumentNonBlocking(visitRef);
+        
+        toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
+        setVisitToDelete(null);
+    };
+
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
     }
@@ -734,9 +818,10 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </div>
                                 </div>
                                 
-                                <TabsList className="grid w-full grid-cols-2">
+                                <TabsList className="grid w-full grid-cols-3">
                                     <TabsTrigger value="profile">Profile</TabsTrigger>
-                                    <TabsTrigger value="invoices">Invoice History</TabsTrigger>
+                                    <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                                    <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="profile">
                                     <div className="space-y-4 text-sm">
@@ -885,6 +970,58 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             No invoices found for this user.
                                         </div>
                                     )}
+                                    </ScrollArea>
+                                </TabsContent>
+                                <TabsContent value="sanitation">
+                                    <div className="flex justify-end mb-2">
+                                        <Button size="sm" onClick={() => { setVisitToEdit(null); setIsSanitationVisitDialogOpen(true); }}>
+                                            <PlusCircle className="mr-2 h-4 w-4" /> Schedule Visit
+                                        </Button>
+                                    </div>
+                                    <ScrollArea className="h-72">
+                                        {sanitationVisitsLoading ? (
+                                            <p>Loading visits...</p>
+                                        ) : sanitationVisitsData && sanitationVisitsData.length > 0 ? (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead>Status</TableHead>
+                                                        <TableHead>Assigned</TableHead>
+                                                        <TableHead className="text-right"></TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {sanitationVisitsData.map(visit => (
+                                                        <TableRow key={visit.id}>
+                                                            <TableCell>{format(new Date(visit.scheduledDate), 'PP')}</TableCell>
+                                                            <TableCell>
+                                                                <Badge
+                                                                    variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
+                                                                    className={cn('text-xs',
+                                                                        visit.status === 'Completed' && 'bg-green-100 text-green-800',
+                                                                        visit.status === 'Scheduled' && 'bg-blue-100 text-blue-800',
+                                                                        visit.status === 'Cancelled' && 'bg-red-100 text-red-800'
+                                                                    )}
+                                                                >{visit.status}</Badge>
+                                                            </TableCell>
+                                                            <TableCell>{visit.assignedTo}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuItem onClick={() => setVisitToEdit(visit)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                                        <DropdownMenuItem className="text-destructive" onClick={() => setVisitToDelete(visit)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
+                                        )}
                                     </ScrollArea>
                                 </TabsContent>
                             </div>
@@ -1957,6 +2094,85 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); sanitationVisitForm.reset(); } setIsSanitationVisitDialogOpen(open);}}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
+                    <DialogDescription>
+                        {visitToEdit ? 'Update the details for this sanitation visit.' : `Schedule a new sanitation visit for ${selectedUser?.businessName}.`}
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...sanitationVisitForm}>
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4">
+                        <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Scheduled Date</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Assigned To</FormLabel>
+                                <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                         <FormField control={sanitationVisitForm.control} name="reportUrl" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Report URL (Optional)</FormLabel>
+                                <FormControl><Input placeholder="https://example.com/report.pdf" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+         <AlertDialog open={!!visitToDelete} onOpenChange={(open) => !open && setVisitToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
