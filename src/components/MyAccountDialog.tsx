@@ -522,7 +522,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         <CardContent className="p-6 space-y-4">
                             <div>
                                 <h3 className="font-semibold">Included in Every Plan</h3>
-                                <p className="text-sm text-muted-foreground">Every subscription plan includes full access to our growing network of partner perks.</p>
+                                <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                                 {includedFeatures.map((feature, index) => {
@@ -545,7 +545,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                   <Table>
                       <TableHeader>
                           <TableRow>
-                              <TableHead>Invoice ID</TableHead>
                               <TableHead>Month</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">Amount</TableHead>
@@ -554,7 +553,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                       </TableHeader>
                       <TableBody>
                             <TableRow className="bg-muted/50 font-semibold">
-                                <TableCell>{currentMonthInvoice.id}</TableCell>
                                 <TableCell>{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</TableCell>
                                 <TableCell>
                                     <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
@@ -569,7 +567,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           {paymentHistory.length > 0 ? (
                             paymentHistory.map((invoice) => (
                               <TableRow key={invoice.id}>
-                                  <TableCell>{invoice.id}</TableCell>
                                   <TableCell>{format(new Date(invoice.date), 'MMMM yyyy')}</TableCell>
                                   <TableCell>
                                     <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
