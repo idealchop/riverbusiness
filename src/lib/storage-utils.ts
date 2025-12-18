@@ -25,6 +25,9 @@ export function uploadFileWithProgress(
   metadata: UploadMetadata,
   onProgress: (progress: number) => void
 ): Promise<void> {
+    
+  console.log('[UPLOAD] function called');
+  
   return new Promise((resolve, reject) => {
     // Critical Step: Ensure user is authenticated before attempting upload.
     if (!auth.currentUser) {
@@ -38,7 +41,7 @@ export function uploadFileWithProgress(
     console.log('[UPLOAD] Starting upload for file:', file.name, 'to path:', path);
 
     const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file, {});
+    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
     uploadTask.on(
       'state_changed',
@@ -50,9 +53,10 @@ export function uploadFileWithProgress(
       (error) => {
         console.error("[UPLOAD] error:", error);
         onProgress(0); // Reset progress on error
-        reject(error);
+        reject(error); // Make sure to reject the promise on error
       },
       () => {
+        // Handle successful uploads on complete
         console.log('[UPLOAD] completed');
         onProgress(100);
         // The getDownloadURL is not strictly needed by the client, but confirming

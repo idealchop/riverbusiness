@@ -10,17 +10,19 @@ service firebase.storage {
 
     // Users can only read/write to their own folder.
     match /users/{userId}/{allPaths=**} {
+      // Any authenticated user can read (e.g. for profile pics)
       allow read: if request.auth != null;
-      allow write: if (request.auth != null && request.auth.uid == userId);
+      // Only the owner can write to their own folder
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Admins can manage user-specific top-level folders and station folders.
-    // Any authenticated user can read from these folders (e.g. to see another user's profile pic)
+
+    // Admins can manage user contracts. Any auth'd user can read.
     match /userContracts/{userId}/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
     }
 
+    // Admins can manage station documents. Any auth'd user can read.
     match /stations/{stationId}/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
