@@ -1963,7 +1963,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Report Name</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>Month</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -1974,13 +1974,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableCell className="font-medium">{report.name}</TableCell>
                                             <TableCell>
                                                 {report.date && typeof (report.date as any).toDate === 'function' 
-                                                    ? format((report.date as any).toDate(), 'PP') 
+                                                    ? format((report.date as any).toDate(), 'MMM yyyy') 
                                                     : 'Processing...'}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'}
                                                     className={cn(
+                                                        'text-xs',
                                                         report.status === 'Passed' && 'bg-green-100 text-green-800',
                                                         report.status === 'Failed' && 'bg-red-100 text-red-800',
                                                         report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800'

@@ -537,7 +537,7 @@ export default function DashboardPage() {
                                     <TableHeader>
                                         <TableRow>
                                         <TableHead>Report Name</TableHead>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>Month</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Attachment</TableHead>
                                         </TableRow>
@@ -550,16 +550,17 @@ export default function DashboardPage() {
                                         ) : complianceReports?.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.name}</TableCell>
-                                            <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'PP') : 'Processing...'}</TableCell>
+                                            <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
                                             <TableCell>
-                                            <Badge variant={report.status === 'Passed' ? 'default' : 'destructive'}
-                                            className={
-                                                report.status === 'Passed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                                : report.status === 'Failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
-                                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
-                                            }>
-                                                {report.status}
-                                            </Badge>
+                                                <Badge
+                                                    variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'}
+                                                    className={cn(
+                                                        'text-xs',
+                                                        report.status === 'Passed' && 'bg-green-100 text-green-800',
+                                                        report.status === 'Failed' && 'bg-red-100 text-red-800',
+                                                        report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800'
+                                                    )}
+                                                >{report.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
                                             <Button variant="outline" size="sm" asChild>
