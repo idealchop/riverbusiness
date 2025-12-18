@@ -150,6 +150,8 @@ export default function DashboardPage() {
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
+    const isFlowPlan = user?.plan?.name === 'Flow Plan';
+
     const consumptionDetails = useMemo(() => {
         const now = new Date();
         const emptyState = {
@@ -161,28 +163,39 @@ export default function DashboardPage() {
             currentBalance: 0,
             consumedPercentage: 0,
             remainingPercentage: 100,
+            estimatedCost: 0,
         };
 
-        if (!user || !user.plan || !deliveries || !user.createdAt) {
+        if (!user || !user.plan || !deliveries) {
             return emptyState;
         }
 
-        const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
-            ? (user.createdAt as any).toDate() 
-            : new Date(user.createdAt as string);
-    
         const cycleStart = startOfMonth(now);
         const cycleEnd = endOfMonth(now);
-        
-        const lastMonth = subMonths(now, 1);
-        const lastCycleStart = startOfMonth(lastMonth);
-        const lastCycleEnd = endOfMonth(lastMonth);
 
         const deliveriesThisCycle = deliveries.filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
         });
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        
+        if (isFlowPlan) {
+            return {
+                ...emptyState,
+                consumedLitersThisMonth,
+                estimatedCost: consumedLitersThisMonth * (user.plan.price || 3),
+            };
+        }
+
+        if (!user.createdAt) return emptyState;
+
+        const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
+            ? (user.createdAt as any).toDate() 
+            : new Date(user.createdAt as string);
+    
+        const lastMonth = subMonths(now, 1);
+        const lastCycleStart = startOfMonth(lastMonth);
+        const lastCycleEnd = endOfMonth(lastMonth);
 
         const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
@@ -190,7 +203,6 @@ export default function DashboardPage() {
     
         let rolloverLiters = 0;
         
-        // Calculate rollover only if the user was created before the start of the previous month
         if (createdAtDate < lastCycleStart) {
             const deliveriesLastCycle = deliveries.filter(d => {
                 const deliveryDate = new Date(d.date);
@@ -198,13 +210,11 @@ export default function DashboardPage() {
             });
             const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
             
-            // Rollover is the total allocation from last month minus what was consumed last month. Cannot be negative.
             rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
         }
     
         const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
-
         const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
         const remainingPercentage = 100 - consumedPercentage;
     
@@ -217,8 +227,9 @@ export default function DashboardPage() {
             currentBalance,
             consumedPercentage,
             remainingPercentage,
+            estimatedCost: user.plan.price,
         };
-    }, [user, deliveries]);
+    }, [user, deliveries, isFlowPlan]);
 
     useEffect(() => {
         const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
@@ -846,57 +857,82 @@ export default function DashboardPage() {
 
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="flex flex-col">
-                <CardHeader>
-                    <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Total for this Month
-                        <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1">
-                    <p className="text-3xl font-bold mb-2">{consumptionDetails.totalLitersForMonth.toLocaleString()} L</p>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex justify-between"><span>Monthly Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
-                        <div className="flex justify-between"><span>Bonus Liters:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
-                        <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
-                    </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                    <Progress value={100} className="h-2"/>
-                </CardFooter>
-            </Card>
-            <Card className="flex flex-col">
-                <CardHeader>
-                    <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Consumed This Month
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-2">
-                    <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
-                    <Progress value={consumptionDetails.consumedPercentage} className="h-2"/>
-                </CardContent>
-                <CardFooter>
-                    <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsConsumptionHistoryOpen(true)}>
-                        View History
-                    </Button>
-                </CardFooter>
-            </Card>
-            <Card className="flex flex-col">
-                <CardHeader>
-                    <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                        Available Liters
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-2">
-                    <p className="text-3xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} L</p>
-                    <Progress value={consumptionDetails.remainingPercentage} className="h-2" />
-                </CardContent>
-                <CardFooter>
-                    <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>
-                        Save Liters
-                    </Button>
-                </CardFooter>
-            </Card>
+            {isFlowPlan ? (
+                <>
+                    <Card className="flex flex-col col-span-1 lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
+                                Current Plan: Flow
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                            <p className="text-3xl font-bold mb-2">₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                                <div className="flex justify-between"><span>Consumed this month:</span> <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span></div>
+                                <div className="flex justify-between"><span>Rate:</span> <span>₱{user?.plan?.price || 3}/Liter</span></div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="pt-0">
+                           <p className="text-xs text-muted-foreground">Billed at the end of the month based on consumption.</p>
+                        </CardFooter>
+                    </Card>
+                </>
+            ) : (
+                <>
+                    <Card className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
+                                Total for this Month
+                                <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                            <p className="text-3xl font-bold mb-2">{consumptionDetails.totalLitersForMonth.toLocaleString()} L</p>
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                                <div className="flex justify-between"><span>Monthly Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
+                                <div className="flex justify-between"><span>Bonus Liters:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
+                                <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="pt-0">
+                            <Progress value={100} className="h-2"/>
+                        </CardFooter>
+                    </Card>
+                    <Card className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
+                                Consumed This Month
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 space-y-2">
+                            <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
+                            <Progress value={consumptionDetails.consumedPercentage} className="h-2"/>
+                        </CardContent>
+                        <CardFooter>
+                            <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsConsumptionHistoryOpen(true)}>
+                                View History
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                    <Card className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
+                                Available Liters
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 space-y-2">
+                            <p className="text-3xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} L</p>
+                            <Progress value={consumptionDetails.remainingPercentage} className="h-2" />
+                        </CardContent>
+                        <CardFooter>
+                            <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setIsSaveLitersDialogOpen(true)}>
+                                Save Liters
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </>
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -906,13 +942,13 @@ export default function DashboardPage() {
                 <CardContent className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                         <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
-                        <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
+                        <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} disabled={isFlowPlan} />
                     </div>
                      <p className="text-xs text-muted-foreground">
-                        {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
+                        {isFlowPlan ? "Auto-refill is not applicable for Flow Plan." : autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
                     </p>
                     <div className="border-t pt-3 space-y-2">
-                        {autoRefill ? (
+                        {autoRefill && !isFlowPlan ? (
                              <>
                                 <div>
                                     <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>

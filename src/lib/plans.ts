@@ -58,13 +58,14 @@ export const enterprisePlans = [
         ]
     },
     {
-        name: 'Flowing Plan',
-        price: 0,
+        name: 'Flow Plan',
+        price: 3, // Price per liter
         description: 'For pure usage-based, pay-as-you-go enterprise clients.',
         recommended: false,
+        isConsumptionBased: true,
         imageId: 'plan-enterprise-flowing',
         details: [
-            { label: 'Liters/Month', value: 'Usage-based' },
+            { label: 'Pricing', value: 'P3 per Liter' },
             { label: 'Deliveries', value: 'On-demand' },
             { label: 'Billing', value: 'Pay-as-you-go' },
         ]

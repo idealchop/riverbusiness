@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { AppUser, ImagePlaceholder } from '@/lib/types';
-import { clientTypes } from '@/lib/plans';
+import { clientTypes, enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -62,7 +62,7 @@ export default function OnboardingPage() {
   const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<any | null>(null);
   const [selectedClientType, setSelectedClientType] = React.useState<string | null>(null);
-  const [customPlanDetails, setCustomPlanDetails] = React.useState<CustomPlanDetails | null>(null);
+  const [customPlanDetails, setCustomPlanDetails] = React.useState<Partial<CustomPlanDetails> | null>(null);
   const [customLiters, setCustomLiters] = React.useState<number>(0);
   const [bonusLiters, setBonusLiters] = React.useState<number>(0);
   const [selectedDay, setSelectedDay] = React.useState<string>('');
@@ -141,14 +141,35 @@ export default function OnboardingPage() {
     setGallonPrice(0);
     setDispenserQuantity(0);
     setDispenserPrice(0);
-    setIsPlanDialogOpen(true);
+    
+    const isEnterprise = clientTypeName === 'Enterprise';
+    if(isEnterprise) {
+        setCurrentStep(2.5); // Go to enterprise plan selection
+    } else {
+        setIsPlanDialogOpen(true);
+    }
+  };
+
+  const handleEnterprisePlanSelect = (plan: any) => {
+    if (plan.name === 'Flow Plan') {
+      setSelectedPlan({ name: 'Flow Plan', price: plan.price, isConsumptionBased: true });
+      setCustomPlanDetails({
+        deliveryFrequency: 'On-demand',
+        deliveryDay: 'Any',
+        deliveryTime: 'Any',
+      });
+      setCurrentStep(3); // Skip customization dialog
+    } else {
+      // For "Customized Plan", open the dialog
+      setIsPlanDialogOpen(true);
+    }
   };
   
   const handleSaveCustomization = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (customLiters > 0 && deliveryFrequency && selectedDay && deliveryTime) {
-        const planDetails = {
+        const planDetails: CustomPlanDetails = {
             litersPerMonth: customLiters,
             bonusLiters: bonusLiters,
             deliveryFrequency: deliveryFrequency,
@@ -283,11 +304,45 @@ export default function OnboardingPage() {
                     </div>
                 </div>
               )}
+
+            {currentStep === 2.5 && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => setCurrentStep(2)}><ArrowLeft className="h-4 w-4" /></Button>
+                        <h3 className="font-bold text-lg">Step 2.5: Select Enterprise Plan</h3>
+                    </div>
+                    <p className="text-muted-foreground">Choose the enterprise model that fits your business.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {enterprisePlans.map((plan) => {
+                            const image = PlaceHolderImages.find(p => p.id === plan.imageId);
+                            return (
+                            <Card key={plan.name} onClick={() => handleEnterprisePlanSelect(plan)} className="cursor-pointer hover:border-primary overflow-hidden">
+                                {image && (
+                                <div className="relative h-40 w-full">
+                                    <Image src={image.imageUrl} alt={plan.name} fill className="object-cover" data-ai-hint={image.imageHint} />
+                                </div>
+                                )}
+                                <CardHeader>
+                                    <CardTitle>{plan.name}</CardTitle>
+                                    <CardDescription>{plan.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ul className="text-sm space-y-1 text-muted-foreground">
+                                        {plan.details.map((detail, i) => (
+                                            <li key={i}><strong>{detail.label}:</strong> {detail.value}</li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                            </Card>
+                        )})}
+                    </div>
+                </div>
+              )}
               
                 {currentStep === 3 && selectedPlan && customPlanDetails && (
                     <div className="space-y-6">
                         <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => setCurrentStep(2)}><ArrowLeft className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setCurrentStep(selectedClientType === 'Enterprise' ? 2.5 : 2)}><ArrowLeft className="h-4 w-4" /></Button>
                             <h3 className="text-lg font-semibold">Step 3: Confirm Your Plan</h3>
                         </div>
                         
@@ -300,25 +355,41 @@ export default function OnboardingPage() {
                                 )}
                                 <div className="p-6">
                                     <CardTitle className="text-xl">{selectedPlan.name} ({selectedClientType})</CardTitle>
-                                    <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString()}/month</CardDescription>
+                                    {selectedPlan.isConsumptionBased ? (
+                                        <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString()} / liter</CardDescription>
+                                    ) : (
+                                        <CardDescription className="text-lg font-bold text-foreground">₱{selectedPlan.price.toLocaleString()}/month</CardDescription>
+                                    )}
                                     
                                     <Separator className="my-4" />
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                      {selectedPlan.isConsumptionBased ? (
                                         <div>
                                             <h4 className="font-semibold mb-2">Plan Details</h4>
                                             <ul className="space-y-1 text-muted-foreground">
-                                                <li><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth.toLocaleString()} ({Math.round(customPlanDetails.litersPerMonth / 19.5)} containers)</li>
-                                                <li><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters.toLocaleString()}</li>
+                                                <li><strong>Billing:</strong> Pay-as-you-go</li>
+                                                <li><strong>Deliveries:</strong> On-demand</li>
                                             </ul>
                                         </div>
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Equipment</h4>
-                                            <ul className="space-y-1 text-muted-foreground">
-                                                <li><strong>Containers:</strong> {customPlanDetails.gallonQuantity}</li>
-                                                <li><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</li>
-                                            </ul>
-                                        </div>
+                                      ) : (
+                                        <>
+                                            <div>
+                                                <h4 className="font-semibold mb-2">Plan Details</h4>
+                                                <ul className="space-y-1 text-muted-foreground">
+                                                    <li><strong>Liters/Month:</strong> {customPlanDetails.litersPerMonth?.toLocaleString()} ({Math.round((customPlanDetails.litersPerMonth || 0) / 19.5)} containers)</li>
+                                                    <li><strong>Bonus Liters:</strong> {customPlanDetails.bonusLiters?.toLocaleString()}</li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold mb-2">Equipment</h4>
+                                                <ul className="space-y-1 text-muted-foreground">
+                                                    <li><strong>Containers:</strong> {customPlanDetails.gallonQuantity}</li>
+                                                    <li><strong>Dispensers:</strong> {customPlanDetails.dispenserQuantity}</li>
+                                                </ul>
+                                            </div>
+                                        </>
+                                      )}
                                     </div>
                                     
                                     <div className="mt-4">

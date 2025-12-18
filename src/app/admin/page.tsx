@@ -199,29 +199,40 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             totalLitersForMonth: 0,
             consumedLitersThisMonth: 0,
             currentBalance: 0,
+            estimatedCost: 0,
         };
     
-        if (!selectedUser || !selectedUser.plan || !userDeliveriesData || !selectedUser.createdAt) {
+        if (!selectedUser || !selectedUser.plan || !userDeliveriesData) {
             return { ...emptyState, currentBalance: selectedUser?.totalConsumptionLiters || 0 };
         }
     
-        const createdAtDate = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
-            ? (selectedUser.createdAt as any).toDate() 
-            : new Date(selectedUser.createdAt as string);
-
         const cycleStart = startOfMonth(now);
         const cycleEnd = endOfMonth(now);
         
-        const lastMonth = subMonths(now, 1);
-        const lastCycleStart = startOfMonth(lastMonth);
-        const lastCycleEnd = endOfMonth(lastMonth);
-
         const deliveriesThisCycle = userDeliveriesData.filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
         });
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
+        if (selectedUser.plan.isConsumptionBased) {
+            return {
+                ...emptyState,
+                consumedLitersThisMonth,
+                estimatedCost: consumedLitersThisMonth * (selectedUser.plan.price || 3),
+            };
+        }
+
+        if (!selectedUser.createdAt) return emptyState;
+
+        const createdAtDate = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
+            ? (selectedUser.createdAt as any).toDate() 
+            : new Date(selectedUser.createdAt as string);
+
+        const lastMonth = subMonths(now, 1);
+        const lastCycleStart = startOfMonth(lastMonth);
+        const lastCycleEnd = endOfMonth(lastMonth);
+        
         const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
         const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
@@ -242,6 +253,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
     
         return {
+            ...emptyState,
             monthlyPlanLiters,
             bonusLiters,
             rolloverLiters,
@@ -262,7 +274,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     const generatedInvoices = React.useMemo(() => {
-        if (!selectedUser?.createdAt || !selectedUser.plan) return [];
+        if (!selectedUser?.createdAt || !selectedUser.plan || selectedUser.plan.isConsumptionBased) return [];
         
         const invoices: Payment[] = [];
         const now = new Date();
@@ -791,78 +803,100 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <CardHeader className="pb-2">
                                                 <CardTitle className="text-base">Consumption Details</CardTitle>
                                             </CardHeader>
-                                             <CardContent className="space-y-2 text-sm pt-0">
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Auto Refill:</span>
-                                                    {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
-                                                        <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive">Disabled</Badge>
-                                                    )}
-                                                </div>
-                                                <Separator/>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Monthly Plan Liters:</span>
-                                                    <span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Bonus Liters:</span>
-                                                    <span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Rollover from Last Month:</span>
-                                                    <span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
-                                                </div>
-                                                <div className="flex justify-between font-semibold border-t pt-2 mt-1">
-                                                    <span className="text-foreground">Total for this Month:</span>
-                                                    <span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span>
-                                                </div>
-                                                 <Separator/>
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Consumed this Month:</span>
-                                                    <span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
-                                                </div>
-                                                <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
-                                                    <span className="text-foreground">Current Balance:</span>
-                                                    <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
-                                                </div>
-                                            </CardContent>
+                                            {selectedUser.plan?.isConsumptionBased ? (
+                                                <CardContent className="space-y-2 text-sm pt-0">
+                                                     <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
+                                                        <span className="text-foreground">Estimated Cost This Month:</span>
+                                                        <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <Separator/>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Consumed this Month:</span>
+                                                        <span className="font-medium text-red-600">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Rate:</span>
+                                                        <span className="font-medium">₱{selectedUser.plan.price}/Liter</span>
+                                                    </div>
+                                                </CardContent>
+                                            ) : (
+                                                <CardContent className="space-y-2 text-sm pt-0">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Auto Refill:</span>
+                                                        {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
+                                                            <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                        ) : (
+                                                            <Badge variant="destructive">Disabled</Badge>
+                                                        )}
+                                                    </div>
+                                                    <Separator/>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Monthly Plan Liters:</span>
+                                                        <span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Bonus Liters:</span>
+                                                        <span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Rollover from Last Month:</span>
+                                                        <span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-semibold border-t pt-2 mt-1">
+                                                        <span className="text-foreground">Total for this Month:</span>
+                                                        <span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span>
+                                                    </div>
+                                                    <Separator/>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Consumed this Month:</span>
+                                                        <span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
+                                                        <span className="text-foreground">Current Balance:</span>
+                                                        <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
+                                                    </div>
+                                                </CardContent>
+                                            )}
                                         </Card>
                                     </div>
                                 </TabsContent>
                                 <TabsContent value="invoices">
                                     <ScrollArea className="h-72">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Invoice</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead className="text-right">Amount</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {generatedInvoices.map((invoice) => (
-                                                <TableRow key={invoice.id}>
-                                                    <TableCell>
-                                                        <div className="font-medium">{invoice.id}</div>
-                                                        <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge
-                                                            variant={invoice.status === 'Paid' ? 'default' : (invoice.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                            className={invoice.status === 'Paid' ? 'bg-green-100 text-green-800' : invoice.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                                        >{invoice.status}</Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {generatedInvoices.length === 0 && (
+                                    {generatedInvoices.length > 0 ? (
+                                        <Table>
+                                            <TableHeader>
                                                 <TableRow>
-                                                    <TableCell colSpan={3} className="text-center">No invoices found.</TableCell>
+                                                    <TableHead>Invoice</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead className="text-right">Amount</TableHead>
                                                 </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {generatedInvoices.map((invoice) => (
+                                                    <TableRow key={invoice.id}>
+                                                        <TableCell>
+                                                            <div className="font-medium">{invoice.id}</div>
+                                                            <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                variant={invoice.status === 'Paid' ? 'default' : (invoice.status === 'Upcoming' ? 'secondary' : 'outline')}
+                                                                className={invoice.status === 'Paid' ? 'bg-green-100 text-green-800' : invoice.status === 'Upcoming' ? 'bg-yellow-100 text-yellow-800' : ''}
+                                                            >{invoice.status}</Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    ) : (
+                                         <div className="text-center text-muted-foreground py-10">
+                                            {selectedUser.plan?.isConsumptionBased 
+                                                ? "Invoices are generated based on consumption at the end of the billing cycle."
+                                                : "No invoices found for this user."
+                                            }
+                                        </div>
+                                    )}
                                     </ScrollArea>
                                 </TabsContent>
                             </div>
@@ -899,7 +933,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </Button>
                                      <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="outline">
+                                            <Button variant="outline" disabled={selectedUser.plan?.isConsumptionBased}>
                                                 <Repeat className="mr-2 h-4 w-4" />
                                                 Adjust Consumption
                                             </Button>
@@ -1486,21 +1520,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
                                         ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
                                         : 'N/A';
-                                    const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
+                                    const autoRefillEnabled = user.plan?.isConsumptionBased ? false : (user.customPlanDetails?.autoRefillEnabled ?? true);
                                     return (
                                     <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                         <TableCell>
                                             <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
-                                                {autoRefillEnabled ? (
+                                                {user.plan?.isConsumptionBased ? (
+                                                     <Badge variant="secondary">On-demand</Badge>
+                                                ) : autoRefillEnabled ? (
                                                     <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
                                                 ) : (
                                                     <Badge variant="destructive">Disabled</Badge>
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="whitespace-nowrap">{schedule}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{user.plan?.isConsumptionBased ? 'On-demand' : schedule}</TableCell>
                                         <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                     </TableRow>
                                 )})}
