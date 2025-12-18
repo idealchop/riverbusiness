@@ -89,7 +89,14 @@ export default function DashboardLayout({
   const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'notifications') : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
-  const unreadNotifications = useMemo(() => notifications?.filter(n => !n.isRead) || [], [notifications]);
+  const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
+
+  useEffect(() => {
+    if (notifications) {
+      setUnreadNotifications(notifications.filter(n => !n.isRead));
+    }
+  }, [notifications]);
+
 
   const handleNotificationOpenChange = (open: boolean) => {
     if (!open && unreadNotifications.length > 0 && firestore && authUser) {
@@ -303,7 +310,7 @@ export default function DashboardLayout({
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-             <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col">
+             <DialogContent className="sm:max-w-4xl h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
