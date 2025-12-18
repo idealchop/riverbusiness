@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
-import { format, differenceInMonths, addMonths } from 'date-fns';
+import { format, differenceInMonths, addMonths, subHours } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -105,15 +105,17 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!isMounted) return;
     const lastCheck = localStorage.getItem('lastNotificationCheck');
-    setLastNotificationCheck(lastCheck ? new Date(lastCheck) : null);
+    // If no last check, default to 24 hours ago to show recent activity, otherwise use stored time
+    setLastNotificationCheck(lastCheck ? new Date(lastCheck) : subHours(new Date(), 24));
   }, [isMounted]);
 
   useEffect(() => {
+    // Wait until we have a check date and the component is mounted
     if (!lastNotificationCheck || !isMounted) return;
 
     const newNotifications: Notification[] = [];
 
-    // Delivery Notifications
+    // Delivery Notifications - check if delivery date is after last check
     deliveries?.forEach(d => {
         const deliveryDate = new Date(d.date);
         if (deliveryDate > lastNotificationCheck) {
@@ -172,7 +174,7 @@ export default function DashboardLayout({
         const now = new Date().toISOString();
         localStorage.setItem('lastNotificationCheck', now);
         setLastNotificationCheck(new Date(now));
-        setNotifications([]);
+        setNotifications([]); // Clear notifications after they've been seen
     }
   };
   
@@ -610,5 +612,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
