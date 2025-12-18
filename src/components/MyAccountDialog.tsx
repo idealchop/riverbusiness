@@ -27,7 +27,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
 import { format } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 
@@ -375,32 +375,45 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                 </li>
                               </ul>
                             </div>
-                          ) : user.customPlanDetails ? (
-                            <>
-                              <div>
+                          ) : (
+                            <div>
                                 <h4 className="font-semibold mb-2">Water Plan</h4>
                                 <ul className="space-y-1 text-muted-foreground">
-                                  <li><strong>Liters/Month:</strong> {user.customPlanDetails.litersPerMonth?.toLocaleString()} L</li>
-                                  <li><strong>Bonus Liters:</strong> {user.customPlanDetails.bonusLiters?.toLocaleString()} L</li>
+                                  <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                                  <li><strong>Bonus Liters:</strong> {user.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
                                 </ul>
-                              </div>
-                              <div>
+                            </div>
+                          )}
+
+                          {user.customPlanDetails && (
+                            <div>
                                 <h4 className="font-semibold mb-2">Equipment</h4>
                                 <ul className="space-y-1 text-muted-foreground">
-                                  <li><strong>Containers:</strong> {user.customPlanDetails.gallonQuantity || 0}</li>
-                                  <li><strong>Dispensers:</strong> {user.customPlanDetails.dispenserQuantity || 0}</li>
+                                    <li className="flex items-center gap-2">
+                                        <Package className="h-4 w-4"/>
+                                        <span>
+                                            {user.customPlanDetails.gallonQuantity || 0} Containers 
+                                            ({user.customPlanDetails.gallonPrice > 0 ? `₱${user.customPlanDetails.gallonPrice}/mo` : 'Free'})
+                                        </span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Package className="h-4 w-4"/>
+                                        <span>
+                                            {user.customPlanDetails.dispenserQuantity || 0} Dispensers 
+                                            ({user.customPlanDetails.dispenserPrice > 0 ? `₱${user.customPlanDetails.dispenserPrice}/mo` : 'Free'})
+                                        </span>
+                                    </li>
                                 </ul>
-                              </div>
-                              <div className="sm:col-span-2">
-                                <h4 className="font-semibold mb-2">Delivery Schedule</h4>
-                                <p className="text-muted-foreground">
-                                  {user.customPlanDetails.deliveryFrequency} on {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}
-                                </p>
-                              </div>
-                            </>
-                          ) : (
-                            <p className="text-sm text-muted-foreground sm:col-span-2">Plan details are not fully configured.</p>
-                          )}
+                            </div>
+                           )}
+
+                          <div className="sm:col-span-2">
+                            <h4 className="font-semibold mb-2">Delivery Schedule</h4>
+                            <p className="text-muted-foreground">
+                              {user.customPlanDetails?.deliveryFrequency} on {user.customPlanDetails?.deliveryDay} at {user.customPlanDetails?.deliveryTime}
+                            </p>
+                          </div>
+
                         </div>
                       </div>
                     </CardContent>
@@ -533,3 +546,5 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
     </AlertDialog>
   );
 }
+
+    
