@@ -150,7 +150,7 @@ export default function DashboardPage() {
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
-    const isFlowPlan = user?.plan?.name === 'Flow Plan';
+    const isFlowPlan = user?.plan?.isConsumptionBased;
 
     const consumptionDetails = useMemo(() => {
         const now = new Date();
@@ -351,7 +351,7 @@ export default function DashboardPage() {
         if (checked) {
             toast({
                 title: "Auto-Refill Enabled",
-                description: "Your next delivery will be scheduled automatically when your balance is low.",
+                description: "Your next delivery will be scheduled automatically.",
             });
         } else {
             toast({
@@ -862,7 +862,7 @@ export default function DashboardPage() {
                     <Card className="flex flex-col col-span-1 lg:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                                Current Plan: Flow
+                                Current Plan: {user?.plan?.name}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="flex-1">
@@ -875,6 +875,28 @@ export default function DashboardPage() {
                         <CardFooter className="pt-0">
                            <p className="text-xs text-muted-foreground">Billed at the end of the month based on consumption.</p>
                         </CardFooter>
+                    </Card>
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Auto Refill
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
+                                <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} disabled={isFlowPlan} />
+                            </div>
+                             <p className="text-xs text-muted-foreground">
+                                {isFlowPlan ? "Auto-refill is not applicable for Flow Plan. Request refills as needed." : autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
+                            </p>
+                             <div className="border-t pt-3 space-y-2">
+                                <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    Schedule Delivery
+                                </Button>
+                            </div>
+                        </CardContent>
                     </Card>
                 </>
             ) : (
@@ -930,50 +952,49 @@ export default function DashboardPage() {
                             </Button>
                         </CardFooter>
                     </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Auto Refill
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
+                                <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} disabled={isFlowPlan} />
+                            </div>
+                             <p className="text-xs text-muted-foreground">
+                                {isFlowPlan ? "Auto-refill is not applicable for Flow Plan." : autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
+                            </p>
+                            <div className="border-t pt-3 space-y-2">
+                                {autoRefill && !isFlowPlan ? (
+                                     <>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>
+                                            <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
+                                            <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
+                                        </div>
+                                        <Button variant="outline" size="sm" className="w-full" onClick={() => setIsUpdateScheduleOpen(true)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Update Schedule
+                                        </Button>
+                                     </>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            Schedule Delivery
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </>
             )}
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Auto Refill
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
-                        <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} disabled={isFlowPlan} />
-                    </div>
-                     <p className="text-xs text-muted-foreground">
-                        {isFlowPlan ? "Auto-refill is not applicable for Flow Plan." : autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
-                    </p>
-                    <div className="border-t pt-3 space-y-2">
-                        {autoRefill && !isFlowPlan ? (
-                             <>
-                                <div>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3"/>Next Refill Schedule</p>
-                                    <p className="font-semibold text-sm">Next {nextRefillDay}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Info className="h-3 w-3"/>Est. Water for Delivery</p>
-                                    <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
-                                </div>
-                                <Button variant="outline" size="sm" className="w-full" onClick={() => setIsUpdateScheduleOpen(true)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Update Schedule
-                                </Button>
-                             </>
-                        ) : (
-                            <div className="flex flex-col gap-2">
-                                <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    Schedule Delivery
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

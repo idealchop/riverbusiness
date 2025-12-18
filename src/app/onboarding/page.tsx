@@ -47,6 +47,7 @@ interface CustomPlanDetails {
     gallonPrice: number;
     dispenserQuantity: number;
     dispenserPrice: number;
+    autoRefillEnabled?: boolean;
 }
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -179,6 +180,7 @@ export default function OnboardingPage() {
             gallonPrice: gallonPrice,
             dispenserQuantity: dispenserQuantity,
             dispenserPrice: dispenserPrice,
+            autoRefillEnabled: true,
         };
         setCustomPlanDetails(planDetails);
         
