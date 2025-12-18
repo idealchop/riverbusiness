@@ -593,7 +593,7 @@ export default function DashboardPage() {
                                         <TableRow>
                                         <TableHead>Scheduled Date</TableHead>
                                         <TableHead>Status</TableHead>
-                                        <TableHead>Assigned To</TableHead>
+                                        <TableHead>Sanitation Inspector</TableHead>
                                         <TableHead className="text-right">Report</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -890,7 +890,7 @@ export default function DashboardPage() {
                                 <Card>
                                     <CardContent className="pt-6 text-sm space-y-2">
                                         <div className="flex justify-between"><span className="text-muted-foreground">Date:</span> <span>{format(new Date(selectedSanitationVisit.scheduledDate), 'PPP')}</span></div>
-                                        <div className="flex justify-between"><span className="text-muted-foreground">Assigned To:</span> <span>{selectedSanitationVisit.assignedTo}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Sanitation Inspector:</span> <span>{selectedSanitationVisit.assignedTo}</span></div>
                                         <div className="flex justify-between items-center"><span className="text-muted-foreground">Status:</span>
                                             <Badge variant={selectedSanitationVisit.status === 'Completed' ? 'default' : 'secondary'} className={cn(selectedSanitationVisit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800')}>
                                                 {selectedSanitationVisit.status}
@@ -1275,3 +1275,4 @@ export default function DashboardPage() {
     );
 }
 
+    
