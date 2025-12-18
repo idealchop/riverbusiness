@@ -1,10 +1,9 @@
-
 'use client';
 
 import React, { useReducer, useEffect, useTransition } from 'react';
 import Image from 'next/image';
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
 } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
@@ -13,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage, useAuth } from '@/firebase';
+import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment } from '@/lib/types';
@@ -30,12 +29,16 @@ import { format } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { enterprisePlans } from '@/lib/plans';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 // State Management with useReducer
 type State = {
   isEditingDetails: boolean;
   isPasswordDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
+  isChangePlanDialogOpen: boolean;
+  selectedNewPlan: any | null;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
   editableFormData: Partial<AppUser>;
@@ -51,6 +54,8 @@ type Action =
   | { type: 'SET_EDIT_DETAILS'; payload: boolean }
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
+  | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
+  | { type: 'SET_SELECTED_NEW_PLAN'; payload: any | null }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
   | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
@@ -63,6 +68,8 @@ const initialState: State = {
   isEditingDetails: false,
   isPasswordDialogOpen: false,
   isPhotoPreviewOpen: false,
+  isChangePlanDialogOpen: false,
+  selectedNewPlan: null,
   profilePhotoFile: null,
   profilePhotoPreview: null,
   editableFormData: {},
@@ -79,6 +86,8 @@ function reducer(state: State, action: Action): State {
     case 'SET_EDIT_DETAILS': return { ...state, isEditingDetails: action.payload };
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
+    case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
+    case 'SET_SELECTED_NEW_PLAN': return { ...state, selectedNewPlan: action.payload };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
     case 'UPDATE_FORM_DATA': return { ...state, editableFormData: { ...state.editableFormData, [action.payload.name]: action.payload.value } };
@@ -140,6 +149,8 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
   const firestore = useFirestore();
   const storage = useStorage();
   const auth = useAuth();
+  
+  const flowPlans = React.useMemo(() => enterprisePlans.filter(p => p.isConsumptionBased), []);
 
   useEffect(() => {
     if (user) {
@@ -223,6 +234,29 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
             toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
         }
     });
+  };
+
+  const handleConfirmPlanChange = () => {
+    if (!authUser || !firestore || !state.selectedNewPlan) return;
+    const userDocRef = doc(firestore, 'users', authUser.uid);
+
+    updateDocumentNonBlocking(userDocRef, {
+        plan: state.selectedNewPlan,
+        customPlanDetails: {
+            ...user?.customPlanDetails,
+            autoRefillEnabled: true,
+            deliveryDay: 'Any',
+            deliveryTime: 'Any'
+        }
+    });
+
+    toast({
+        title: 'Plan Change Successful',
+        description: `You have successfully switched to the ${state.selectedNewPlan.name}.`,
+    });
+
+    dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false});
+    dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: null});
   };
 
   if (!user) return <>{children}</>;
@@ -434,7 +468,7 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
                                   Contract Not Available
                               </Button>
                           )}
-                          <Button variant="outline" onClick={() => toast({ title: 'Coming Soon!', description: 'This feature will be available shortly.' })}>
+                          <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true})}>
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
                           </Button>
@@ -566,6 +600,58 @@ export function MyAccountDialog({ user, authUser, planImage, generatedInvoices, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Change Plan Dialog */}
+      <Dialog open={state.isChangePlanDialogOpen} onOpenChange={(isOpen) => dispatch({ type: 'SET_CHANGE_PLAN_DIALOG', payload: isOpen })}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Change Your Plan</DialogTitle>
+            <DialogDescription>
+              Switch to a consumption-based Flow Plan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {flowPlans.map(plan => {
+                  const image = PlaceHolderImages.find(p => p.id === plan.imageId);
+                  const isSelected = state.selectedNewPlan?.name === plan.name;
+                  return (
+                      <Card 
+                          key={plan.name}
+                          onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: plan})}
+                          className={cn(
+                              "cursor-pointer hover:border-primary flex flex-col",
+                              isSelected && "border-primary border-2"
+                          )}
+                      >
+                           {image && (
+                              <div className="relative h-40 w-full">
+                                  <Image src={image.imageUrl} alt={plan.name} fill className="object-cover" data-ai-hint={image.imageHint} />
+                              </div>
+                            )}
+                          <CardHeader>
+                              <CardTitle>{plan.name}</CardTitle>
+                              <CardDescription>{plan.description}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="flex-1">
+                              <ul className="text-sm space-y-1 text-muted-foreground">
+                                  {plan.details.map((detail, i) => (
+                                      <li key={i}><strong>{detail.label}:</strong> {detail.value}</li>
+                                  ))}
+                              </ul>
+                          </CardContent>
+                      </Card>
+                  )
+              })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
+            <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan}>
+              Confirm and Switch Plan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AlertDialog>
   );
 }
