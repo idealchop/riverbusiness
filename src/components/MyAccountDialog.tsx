@@ -26,7 +26,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -143,9 +143,10 @@ interface MyAccountDialogProps {
   paymentHistory: Payment[];
   onLogout: () => void;
   children: React.ReactNode;
+  onPayNow: (invoice: Payment) => void;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onLogout, children }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onLogout, children, onPayNow }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -160,7 +161,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const consumptionDetails = React.useMemo(() => {
     const now = new Date();
     const cycleStart = startOfMonth(now);
-    const cycleEnd = addMonths(cycleStart, 1);
+    const cycleEnd = endOfMonth(now);
 
     if (!user?.plan || !deliveries) {
         return { estimatedCost: 0 };
@@ -548,6 +549,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                               <TableHead>Month</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">Amount</TableHead>
+                              <TableHead className="text-right">Action</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -560,6 +562,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     </span>
                                 </TableCell>
                                 <TableCell className="text-right">₱{currentMonthInvoice.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
+                                </TableCell>
                             </TableRow>
                           {paymentHistory.length > 0 ? (
                             paymentHistory.map((invoice) => (
@@ -577,11 +582,18 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     </span>
                                   </TableCell>
                                   <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">
+                                    {invoice.status === 'Upcoming' || invoice.status === 'Overdue' ? (
+                                      <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">{invoice.status}</span>
+                                    )}
+                                  </TableCell>
                               </TableRow>
                               ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-10 text-sm text-muted-foreground">
                                   No past invoices found.
                               </TableCell>
                             </TableRow>
@@ -684,7 +696,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             <p className="text-muted-foreground">Your plan is scheduled to switch to</p>
                             <p className="font-bold text-lg">{user.pendingPlan.name}</p>
                             <p className="text-muted-foreground">on</p>
-                            <p className="font-bold text-lg">{format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy')}</p>
+                            <p className="font-bold text-lg">{user.planChangeEffectiveDate ? format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy') : ''}</p>
                         </CardContent>
                     </Card>
                 </div>

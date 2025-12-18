@@ -44,6 +44,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMounted } from '@/hooks/use-mounted';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 const ICONS: { [key: string]: React.ElementType } = {
   delivery: Truck,
@@ -64,6 +65,7 @@ export default function DashboardLayout({
   const firestore = useFirestore();
   const isMounted = useMounted();
   const auth = useAuth();
+  const storage = useStorage();
 
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
@@ -124,6 +126,7 @@ export default function DashboardLayout({
   const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -175,6 +178,7 @@ export default function DashboardLayout({
     if (!isPaymentDialogOpen) {
       setSelectedPaymentMethod(null);
       setPaymentProofFile(null);
+      setSelectedInvoice(null);
     }
   }, [isPaymentDialogOpen]);
 
@@ -186,7 +190,28 @@ export default function DashboardLayout({
   }
 
   const handleProofUpload = async () => {
-    // This logic needs to be revisited, using a more robust upload utility
+    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth) return;
+
+    setIsSubmittingProof(true);
+    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${paymentProofFile.name}`;
+
+    try {
+        await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, {}, setUploadProgress);
+        
+        toast({ title: 'Upload Complete', description: 'Your proof of payment is being processed and will be reviewed shortly.' });
+        setIsPaymentDialogOpen(false);
+
+    } catch (error: any) {
+        console.error("Proof upload failed", error);
+        toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: "There was a problem uploading your payment proof. Please try again."
+        });
+    } finally {
+        setIsSubmittingProof(false);
+        setUploadProgress(0);
+    }
   };
 
   const handleFeedbackSubmit = () => {
@@ -246,6 +271,11 @@ export default function DashboardLayout({
       if (!clientTypeDetails) return null;
       return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
     }, [user]);
+    
+    const handlePayNow = (invoice: Payment) => {
+        setSelectedInvoice(invoice);
+        setIsPaymentDialogOpen(true);
+    };
 
   if (isUserLoading || isUserDocLoading || !isMounted) {
     return <div>Loading...</div>
@@ -376,7 +406,7 @@ export default function DashboardLayout({
                                         <p className="text-sm text-muted-foreground">
                                             {notification.description}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">{format(new Date((notification.date as any).seconds * 1000), 'PP')}</p>
+                                        <p className="text-xs text-muted-foreground">{notification.date ? format(new Date((notification.date as any).seconds * 1000), 'PP') : ''}</p>
                                     </div>
                                 </div>
                             );
@@ -393,6 +423,7 @@ export default function DashboardLayout({
             planImage={planImage}
             paymentHistory={paymentHistoryFromDb || []}
             onLogout={handleLogout}
+            onPayNow={handlePayNow}
           >
             <div className="flex items-center gap-3 cursor-pointer">
               <div className="flex items-center gap-2">
@@ -488,21 +519,75 @@ export default function DashboardLayout({
             </DialogContent>
         </Dialog>
 
-        <AlertDialog open={isVerificationDialogOpen} onOpenChange={setIsVerificationDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Payment Verification In Progress</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Your payment is currently being verified by our team. You will be notified once the process is complete. Thank you for your patience.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={() => setIsVerificationDialogOpen(false)}>OK</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>
+                        {selectedPaymentMethod ? `Pay with ${selectedPaymentMethod.name}` : `Pay Invoice ${selectedInvoice?.id}`}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {selectedPaymentMethod ? `Scan the QR code and upload your proof of payment.` : `Your bill is ₱${selectedInvoice?.amount.toFixed(2)}. Please select a payment method.`}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 grid md:grid-cols-2 gap-8">
+                    {!selectedPaymentMethod ? (
+                        <div className="space-y-4">
+                            <h4 className="font-semibold">Select a Payment Method</h4>
+                            {paymentOptions.map((option) => (
+                                <Card key={option.name} className="cursor-pointer hover:border-primary" onClick={() => handlePaymentOptionClick(option)}>
+                                    <CardContent className="p-4 flex items-center gap-4">
+                                        {option.qr && (
+                                            <div className="relative h-10 w-10">
+                                                <Image src={option.qr.imageUrl} alt={option.name} fill className="object-contain" data-ai-hint={option.qr.imageHint}/>
+                                            </div>
+                                        )}
+                                        <p className="font-medium">{option.name}</p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <Button variant="outline" size="sm" onClick={() => setSelectedPaymentMethod(null)}>
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Payment Options
+                            </Button>
+                            {selectedPaymentMethod.qr && (
+                                <div className="p-4 border rounded-lg flex flex-col items-center gap-4">
+                                    <div className="relative w-48 h-48">
+                                        <Image src={selectedPaymentMethod.qr.imageUrl} alt={`${selectedPaymentMethod.name} QR Code`} fill className="object-contain" data-ai-hint={selectedPaymentMethod.qr.imageHint} />
+                                    </div>
+                                    {selectedPaymentMethod.details && (
+                                        <div className="text-center text-sm">
+                                            <p>Account Name: <span className="font-semibold">{selectedPaymentMethod.details.accountName}</span></p>
+                                            <p>Account Number: <span className="font-semibold">{selectedPaymentMethod.details.accountNumber}</span></p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="space-y-4">
+                         <h4 className="font-semibold">Upload Proof of Payment</h4>
+                         <p className="text-sm text-muted-foreground">
+                            After paying, please upload a screenshot of your receipt. Your payment will be marked as "Pending Review" until an admin verifies it.
+                         </p>
+                        <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <Label htmlFor="payment-proof">Receipt Screenshot</Label>
+                            <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmittingProof} />
+                        </div>
+                        {uploadProgress > 0 && (
+                            <div className="w-full bg-muted rounded-full h-2.5">
+                                <div className="bg-primary h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                            </div>
+                        )}
+                        <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmittingProof}>
+                            {isSubmittingProof ? 'Uploading...' : 'Submit Proof'}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
       </div>
   );
 }
-
-    
