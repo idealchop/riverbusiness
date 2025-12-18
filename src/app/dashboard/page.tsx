@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -549,12 +550,12 @@ export default function DashboardPage() {
                                         ) : complianceReports?.map((report) => (
                                         <TableRow key={report.id}>
                                             <TableCell className="font-medium">{report.name}</TableCell>
-                                            <TableCell>{new Date(report.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                                            <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'PP') : 'Processing...'}</TableCell>
                                             <TableCell>
-                                            <Badge variant={report.status === 'Compliant' ? 'default' : 'destructive'}
+                                            <Badge variant={report.status === 'Passed' ? 'default' : 'destructive'}
                                             className={
-                                                report.status === 'Compliant' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-                                                : report.status === 'Non-compliant' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
+                                                report.status === 'Passed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                                                : report.status === 'Failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
                                                 : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'
                                             }>
                                                 {report.status}

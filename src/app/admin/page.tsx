@@ -58,8 +58,7 @@ const newStationSchema = z.object({
 type NewStationFormValues = z.infer<typeof newStationSchema>;
 
 const complianceReportSchema = z.object({
-    name: z.string().min(1, "Report name is required."),
-    reportType: z.enum(['DOH Bacteriological Test', 'Sanitary Permit', 'Business Permit']),
+    reportType: z.enum(['DOH Bacteriological Test (Monthly)', 'DOH Bacteriological Test (Semi-Annual)', 'Sanitary Permit', 'Business Permit']),
     resultId: z.string().min(1, 'Result ID is required.'),
     status: z.enum(['Passed', 'Failed', 'Pending Review']),
     results: z.string().optional(),
@@ -416,7 +415,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     React.useEffect(() => {
         if (complianceReportToEdit) {
             complianceReportForm.reset({
-                name: complianceReportToEdit.name,
                 reportType: complianceReportToEdit.reportType,
                 resultId: complianceReportToEdit.resultId || '',
                 status: complianceReportToEdit.status,
@@ -2117,7 +2115,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a report type" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="DOH Bacteriological Test">DOH Bacteriological Test</SelectItem>
+                                        <SelectItem value="DOH Bacteriological Test (Monthly)">DOH Bacteriological Test (Monthly)</SelectItem>
+                                        <SelectItem value="DOH Bacteriological Test (Semi-Annual)">DOH Bacteriological Test (Semi-Annual)</SelectItem>
                                         <SelectItem value="Sanitary Permit">Sanitary Permit</SelectItem>
                                         <SelectItem value="Business Permit">Business Permit</SelectItem>
                                     </SelectContent>

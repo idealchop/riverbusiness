@@ -80,7 +80,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string", "description": "Name of the report (e.g., 'DOH Bacteriological Test - June 2024')." },
-        "reportType": { "type": "string", "enum": ["DOH Bacteriological Test", "Sanitary Permit", "Business Permit"], "description": "The type of compliance report." },
+        "reportType": { "type": "string", "enum": ["DOH Bacteriological Test (Monthly)", "DOH Bacteriological Test (Semi-Annual)", "Sanitary Permit", "Business Permit"], "description": "The type of compliance report." },
         "resultId": { "type": "string", "description": "The official result ID number from the testing body." },
         "date": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Passed", "Failed", "Pending Review"] },

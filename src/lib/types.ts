@@ -20,11 +20,11 @@ export interface Delivery {
 export interface ComplianceReport {
   id:string;
   name: string;
-  reportType: 'DOH Bacteriological Test' | 'Sanitary Permit' | 'Business Permit';
+  reportType: 'DOH Bacteriological Test (Monthly)' | 'DOH Bacteriological Test (Semi-Annual)' | 'Sanitary Permit' | 'Business Permit';
   resultId: string;
-  date: string;
+  date: any;
   status: 'Passed' | 'Failed' | 'Pending Review';
-  reportUrl: string;
+  reportUrl?: string;
   results?: string;
 }
 
