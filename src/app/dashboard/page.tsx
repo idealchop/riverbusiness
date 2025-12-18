@@ -27,6 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -127,6 +128,8 @@ export default function DashboardPage() {
     const [isComplianceDialogOpen, setIsComplianceDialogOpen] = useState(false);
     const [isSaveLitersDialogOpen, setIsSaveLitersDialogOpen] = useState(false);
     const [isRefillRequesting, setIsRefillRequesting] = useState(false);
+    const [isSanitationReportOpen, setIsSanitationReportOpen] = useState(false);
+    const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -317,7 +320,7 @@ export default function DashboardPage() {
         const csvRows = [headers.join(',')];
 
         filteredDeliveries.forEach(delivery => {
-            const liters = containerToLiter(delivery.volumeContainers);
+            const liters = containerToLiter(delivery.volumeContainers || 0);
             const row = [
                 delivery.id,
                 format(new Date(delivery.date), 'PP'),
@@ -564,7 +567,6 @@ export default function DashboardPage() {
                                     <Table>
                                     <TableHeader>
                                         <TableRow>
-                                        <TableHead>Visit ID</TableHead>
                                         <TableHead>Scheduled Date</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Assigned To</TableHead>
@@ -574,11 +576,10 @@ export default function DashboardPage() {
                                     <TableBody>
                                         {sanitationLoading ? (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center">Loading visits...</TableCell>
+                                                <TableCell colSpan={4} className="text-center">Loading visits...</TableCell>
                                             </TableRow>
                                         ) : sanitationVisits?.map((visit) => (
                                         <TableRow key={visit.id}>
-                                            <TableCell className="font-medium">{visit.id}</TableCell>
                                             <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                                             <TableCell>
                                             <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
@@ -592,22 +593,16 @@ export default function DashboardPage() {
                                             </TableCell>
                                             <TableCell>{visit.assignedTo}</TableCell>
                                             <TableCell className="text-right">
-                                            {visit.reportUrl ? (
-                                                <Button variant="outline" size="sm" asChild>
-                                                <a href={visit.reportUrl} target="_blank" rel="noopener noreferrer">
+                                                <Button variant="outline" size="sm" onClick={() => { setSelectedSanitationVisit(visit); setIsSanitationReportOpen(true); }}>
                                                     <FileText className="mr-2 h-4 w-4" />
                                                     View Report
-                                                </a>
                                                 </Button>
-                                            ) : (
-                                                <span className="text-muted-foreground text-sm">Upcoming</span>
-                                            )}
                                             </TableCell>
                                         </TableRow>
                                         ))}
                                         {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
+                                                <TableCell colSpan={4} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -851,6 +846,78 @@ export default function DashboardPage() {
                         <Button variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button onClick={handleSaveLiters}>Confirm &amp; Save</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isSanitationReportOpen} onOpenChange={setIsSanitationReportOpen}>
+            <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Sanitation Visit Report</DialogTitle>
+                    <DialogDescription>
+                        Full report for the visit on {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PP') : ''}.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {selectedSanitationVisit ? (
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h4 className="font-semibold">Visit Details</h4>
+                                <Card>
+                                    <CardContent className="pt-6 text-sm space-y-2">
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Date:</span> <span>{format(new Date(selectedSanitationVisit.scheduledDate), 'PPP')}</span></div>
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Assigned To:</span> <span>{selectedSanitationVisit.assignedTo}</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-muted-foreground">Status:</span>
+                                            <Badge variant={selectedSanitationVisit.status === 'Completed' ? 'default' : 'secondary'} className={cn(selectedSanitationVisit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800')}>
+                                                {selectedSanitationVisit.status}
+                                            </Badge>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                {selectedSanitationVisit.reportUrl && (
+                                    <Button asChild className="w-full">
+                                        <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
+                                            <Download className="mr-2 h-4 w-4" /> Download Official Report PDF
+                                        </a>
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="space-y-4">
+                                <h4 className="font-semibold">Checklist Results</h4>
+                                <ScrollArea className="h-72 border rounded-md p-2">
+                                    <Table>
+                                        <TableBody>
+                                            {selectedSanitationVisit.checklist?.map((item, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        {item.checked ? (
+                                                            <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
+                                                        ) : (
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <Badge variant="destructive" className="cursor-pointer whitespace-nowrap">Failed</Badge>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-60 text-sm">
+                                                                    <p className="font-bold">Remarks:</p>
+                                                                    <p>{item.remarks || "No remarks provided."}</p>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </ScrollArea>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-center text-muted-foreground">No visit details to show.</p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1154,5 +1221,3 @@ export default function DashboardPage() {
     </div>
     );
 }
-
-
