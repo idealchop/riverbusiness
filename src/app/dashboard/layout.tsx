@@ -363,7 +363,7 @@ export default function DashboardLayout({
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-             <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[85vh] flex flex-col">
+             <DialogContent className="sm:max-w-4xl min-h-[85vh] w-full sm:h-auto sm:max-h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
@@ -668,3 +668,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
