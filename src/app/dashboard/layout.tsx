@@ -305,6 +305,36 @@ export default function DashboardLayout({
         setIsPaymentDialogOpen(true);
     };
 
+    const handleNotificationClick = (notification: NotificationType) => {
+        if (!notification.data) return;
+
+        let eventName: string | null = null;
+        let eventDetail: any = {};
+
+        switch (notification.type) {
+            case 'payment':
+                eventName = 'open-payment-dialog';
+                eventDetail = { invoiceId: notification.data.paymentId };
+                break;
+            case 'delivery':
+                eventName = 'open-delivery-history';
+                eventDetail = { deliveryId: notification.data.deliveryId };
+                break;
+            case 'sanitation':
+                eventName = 'open-compliance-dialog';
+                eventDetail = { tab: 'sanitation' };
+                break;
+            case 'compliance':
+                 eventName = 'open-compliance-dialog';
+                 eventDetail = { tab: 'compliance' };
+                 break;
+        }
+
+        if (eventName) {
+            window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
+        }
+    }
+
   if (isUserLoading || isUserDocLoading || !isMounted || !auth) {
     return <DashboardLayoutSkeleton />;
   }
@@ -434,7 +464,7 @@ export default function DashboardLayout({
                         }).map((notification) => {
                             const Icon = ICONS[notification.type] || Info;
                             const date = notification.date instanceof Timestamp ? notification.date.toDate() : null;
-                            const isActionable = notification.type === 'payment' || notification.type === 'delivery';
+                            const isActionable = notification.type === 'payment' || notification.type === 'delivery' || notification.type === 'sanitation' || notification.type === 'compliance';
 
                             return (
                                 <div key={notification.id} className="grid grid-cols-[25px_1fr] items-start gap-4">
@@ -448,7 +478,9 @@ export default function DashboardLayout({
                                         </p>
                                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                                            <span>{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</span>
-                                           {isActionable && <Link href="/dashboard" className="font-medium text-primary hover:underline">View details</Link>}
+                                           {isActionable && 
+                                             <button onClick={() => handleNotificationClick(notification)} className="font-medium text-primary hover:underline">View details</button>
+                                           }
                                         </div>
                                     </div>
                                 </div>

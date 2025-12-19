@@ -127,8 +127,8 @@ async function generateInvoiceForUser(
         // Create notification for the new invoice
         const notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
             type: 'payment',
-            title: 'New Invoice Generated',
-            description: `Your invoice for ${billingPeriod} amounting to ₱${amount.toFixed(2)} is now available.`,
+            title: 'New Invoice',
+            description: `Your invoice for ${billingPeriod} (₱${amount.toFixed(2)}) is available.`,
             data: { paymentId: invoiceId }
         };
 

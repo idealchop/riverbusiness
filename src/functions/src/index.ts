@@ -51,7 +51,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: 'Delivery Scheduled',
-        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
+        description: `Delivery of ${delivery.volumeContainers} containers is scheduled.`,
         data: { deliveryId: event.params.deliveryId }
     };
     
@@ -79,7 +79,7 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: `Delivery ${delivery.status}`,
-        description: `Your delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
+        description: `Delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
         data: { deliveryId: event.params.deliveryId }
     };
     
@@ -161,7 +161,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         await createNotification(userId, {
             type: 'payment',
             title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} has been received and is now pending review.`,
+            description: `Your payment proof for invoice ${paymentId} is under review.`,
             data: { paymentId: paymentId }
         });
         return;

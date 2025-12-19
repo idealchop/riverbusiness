@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -169,7 +170,7 @@ export default function DashboardPage() {
   const [isRefillRequesting, setIsRefillRequesting] = useState(false);
 
 
-  const openDialog = (dialog: keyof typeof dialogState) => {
+  const openDialog = (dialog: keyof typeof dialogState, tab?: string) => {
     if (dialog === 'requestRefill' && hasPendingRefill) {
       setDialogState((prev) => ({ ...prev, refillStatus: true }));
     } else {
@@ -177,6 +178,22 @@ export default function DashboardPage() {
     }
   };
   const closeDialog = (dialog: keyof typeof dialogState) => setDialogState((prev) => ({ ...prev, [dialog]: false }));
+
+  useEffect(() => {
+    const handleOpenDelivery = () => openDialog('deliveryHistory');
+    const handleOpenCompliance = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        openDialog('compliance', customEvent.detail?.tab);
+    }
+
+    window.addEventListener('open-delivery-history', handleOpenDelivery);
+    window.addEventListener('open-compliance-dialog', handleOpenCompliance);
+
+    return () => {
+        window.removeEventListener('open-delivery-history', handleOpenDelivery);
+        window.removeEventListener('open-compliance-dialog', handleOpenCompliance);
+    };
+  }, []); // Empty dependency array ensures this runs only once
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -222,8 +239,8 @@ export default function DashboardPage() {
       
       await createNotification(authUser.uid, {
         type: 'delivery',
-        title: 'Refill Request Sent!',
-        description: `Your one-time refill request has been sent to the admin for processing.`,
+        title: 'Refill Request Sent',
+        description: `Request for ${containers} containers on ${date.toLocaleDateString()} sent.`,
         data: { requestId: newDocRef.id },
       });
 
@@ -272,7 +289,7 @@ export default function DashboardPage() {
         await createNotification(authUser.uid, {
             type: 'delivery',
             title: 'ASAP Refill Request Sent!',
-            description: `Your immediate refill request has been sent to the admin for processing.`,
+            description: `Your immediate refill request has been sent.`,
             data: { requestId: newDocRef.id },
         });
 
