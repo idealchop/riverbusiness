@@ -526,82 +526,15 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">{greeting}, {user?.businessName}. Here is an overview of your water consumption.</p>
             </div>
              <div className="hidden sm:flex items-center gap-2">
-                <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-                    <UITooltip>
-                        <UITooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="default"
-                                    className="w-auto h-auto px-4 py-2"
-                                    disabled={isRefillRequesting}
-                                    onClick={handleRequestRefill}
-                                >
-                                    <BellRing className="mr-2 h-4 w-4" />
-                                    {hasPendingRefill ? 'Check Request Status' : 'Request Refill'}
-                                </Button>
-                            </AlertDialogTrigger>
-                        </UITooltipTrigger>
-                        <UITooltipContent>
-                            <p>{hasPendingRefill ? 'A refill request is already in progress. Click to view status.' : 'Request a one-time refill.'}</p>
-                        </UITooltipContent>
-                    </UITooltip>
-                    <AlertDialogContent className="sm:max-w-xl">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Refill Request Status</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Here's the current progress of your refill request.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        {activeRefillRequest ? (
-                            <ul className="py-6 space-y-8">
-                                {statusOrder.map((status, index) => {
-                                    const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
-                                    const isCompleted = index < currentStatusIndex;
-                                    const isCurrent = index === currentStatusIndex;
-                                    const statusHistoryEntry = activeRefillRequest.statusHistory?.find(h => h.status === status);
-
-                                    const Icon = statusConfig[status].icon;
-
-                                    return (
-                                        <li key={status} className="flex items-start gap-4">
-                                            <div className="flex flex-col items-center">
-                                                <div className={cn(
-                                                    "h-10 w-10 rounded-full flex items-center justify-center border-2",
-                                                    isCompleted ? "bg-primary border-primary text-primary-foreground" :
-                                                    isCurrent ? "bg-primary/20 border-primary text-primary animate-pulse" :
-                                                    "bg-muted border-muted-foreground/30 text-muted-foreground"
-                                                )}>
-                                                    <Icon className="h-5 w-5" />
-                                                </div>
-                                                {index < statusOrder.length - 1 && (
-                                                    <div className={cn(
-                                                        "w-0.5 h-8 mt-2",
-                                                        isCompleted ? "bg-primary" : "bg-muted-foreground/30"
-                                                    )}></div>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 pt-1.5">
-                                                <p className={cn(
-                                                    "font-semibold",
-                                                    (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
-                                                )}>
-                                                    {statusConfig[status].label}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow(new Date(statusHistoryEntry.timestamp as string), { addSuffix: true })}` : 'Pending'}
-                                                </p>
-                                            </div>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        ) : (
-                            <div className="py-10 text-center">
-                                <p>Loading status...</p>
-                            </div>
-                        )}
-                    </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                    variant="default"
+                    className="w-auto h-auto px-4 py-2"
+                    disabled={isRefillRequesting}
+                    onClick={handleRequestRefill}
+                >
+                    <BellRing className="mr-2 h-4 w-4" />
+                    {hasPendingRefill ? 'Check Request Status' : 'Request Refill'}
+                </Button>
                 <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
@@ -1408,20 +1341,18 @@ export default function DashboardPage() {
                     <p>Urgent refill, {user?.name?.split(' ')[0]}? Pindot lang dito!</p>
                 </div>
             </div>
-            <AlertDialog>
+            <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
                 <UITooltip>
                     <UITooltipTrigger asChild>
-                        <div tabIndex={-1}>
-                            <AlertDialogTrigger asChild>
-                                <Button
-                                    className="rounded-full h-14 w-14 shadow-lg"
-                                    disabled={isRefillRequesting || hasPendingRefill}
-                                    onClick={handleRequestRefill}
-                                >
-                                    <BellRing className="h-6 w-6" />
-                                </Button>
-                            </AlertDialogTrigger>
-                        </div>
+                        <AlertDialogTrigger asChild>
+                            <Button
+                                className="rounded-full h-14 w-14 shadow-lg"
+                                disabled={isRefillRequesting}
+                                onClick={handleRequestRefill}
+                            >
+                                <BellRing className="h-6 w-6" />
+                            </Button>
+                        </AlertDialogTrigger>
                     </UITooltipTrigger>
                     {hasPendingRefill && (
                         <UITooltipContent>
@@ -1540,6 +1471,3 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
-
-
-    
