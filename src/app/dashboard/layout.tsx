@@ -447,64 +447,54 @@ export default function DashboardLayout({
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl h-full w-full rounded-none border-none sm:rounded-lg sm:max-h-[85vh]">
+            <DialogContent className="sm:max-w-4xl h-full w-full rounded-none border-none sm:rounded-lg sm:max-h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="pr-6 -mr-6">
-                  <div className="grid md:grid-cols-2 gap-8 py-4">
-                        <div className="flex flex-col space-y-8">
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-4 rounded-md border p-3 md:p-4">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                  <Phone className="h-6 w-6" />
-                                </div>
-                                <div>
-                                  <p className="font-semibold">Viber Support</p>
-                                  <p className="text-sm font-medium">Jayvee Co</p>
-                                  <p className="text-xs text-muted-foreground">Account Manager & Customer Success</p>
-                                  <p className="text-sm text-muted-foreground mt-1">09182719091</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 rounded-md border p-3 md:p-4">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                <Mail className="h-6 w-6" />
-                                </div>
-                                <div>
-                                <p className="font-semibold">Email Support</p>
-                                <a href="mailto:jayvee@riverph.com" className="text-sm text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
-                                </div>
-                            </div>
-                          </div>
-                          <div className="mt-auto pt-4 text-center text-sm space-y-4">
-                            <div className="flex justify-center gap-2">
-                                <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 min-h-0">
+                         <LiveChat
+                            messages={chatMessages}
+                            onMessageSubmit={handleMessageSubmit}
+                            user={user}
+                         />
+                    </div>
+                    <div className="shrink-0 pt-4 mt-auto border-t">
+                        <div className="flex justify-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setIsFeedbackDialogOpen(true)}>
                                   <MessageSquare className="h-4 w-4 mr-2" />
                                   Submit Feedback
                                 </Button>
-                                <Button variant="outline" onClick={() => setIsSwitchProviderDialogOpen(true)}>
+                                <Button variant="outline" size="sm" onClick={() => setIsSwitchProviderDialogOpen(true)}>
                                   <FileUp className="h-4 w-4 mr-2" />
                                   Switch Provider
                                 </Button>
+                        </div>
+                        <div className="flex items-center gap-4 rounded-md p-3 md:p-4 justify-center mt-4">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                  <Phone className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-sm">Viber Support</p>
+                                  <p className="text-xs text-muted-foreground">09182719091</p>
+                                </div>
                             </div>
-                            <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
-                            <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline">
-                                By River Philippines
-                            </a>
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                <Mail className="h-5 w-5" />
+                                </div>
+                                <div>
+                                <p className="font-semibold text-sm">Email Support</p>
+                                <a href="mailto:jayvee@riverph.com" className="text-xs text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
+                                </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col min-h-0">
-                            <LiveChat
-                              messages={chatMessages}
-                              onMessageSubmit={handleMessageSubmit}
-                              user={user}
-                            />
-                        </div>
-                  </div>
-                </ScrollArea>
+                    </div>
+                </div>
               </DialogContent>
           </Dialog>
           <Popover onOpenChange={handleNotificationOpenChange}>
