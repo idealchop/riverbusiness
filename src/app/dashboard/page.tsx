@@ -144,7 +144,7 @@ export default function DashboardPage() {
     const complianceReportsQuery = useMemoFirebase(() => 
         (firestore && user?.assignedWaterStationId) 
         ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') 
-        : null, 
+        : null, -
         [firestore, user?.assignedWaterStationId]
     );
     const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
@@ -512,16 +512,16 @@ export default function DashboardPage() {
                 <h1 className="text-3xl font-bold">Dashboard</h1>
                 <p className="text-muted-foreground">{greeting}, {user?.businessName}. Here is an overview of your water consumption.</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
                  <AlertDialog>
                     <UITooltip>
                         <UITooltipTrigger asChild>
-                           <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillRequesting}>
+                           <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillRequesting || hasPendingRefill}>
                                 <BellRing className="mr-2 h-4 w-4" />
                                 {isRefillRequesting ? "Requesting..." : "Request Refill"}
                             </Button>
                         </UITooltipTrigger>
-                        {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
+                        {hasPendingRefill && <UITooltipContent><p>Don't worry, {user?.name}, our refill team is already on your previous request.</p></UITooltipContent>}
                     </UITooltip>
                     <AlertDialogContent>
                         <AlertDialogHeader>
@@ -909,7 +909,7 @@ export default function DashboardPage() {
         </Dialog>
 
         <Dialog open={isSanitationReportOpen} onOpenChange={setIsSanitationReportOpen}>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Sanitation Visit Report</DialogTitle>
                     <DialogDescription>
@@ -959,7 +959,7 @@ export default function DashboardPage() {
                         
                         <div>
                            <h4 className="font-semibold mb-2">Official Report</h4>
-                            <div className="p-2 border rounded-lg">
+                           <div className="p-2 border rounded-lg">
                                 {selectedSanitationVisit?.reportUrl ? (
                                     <Image src={selectedSanitationVisit.reportUrl} alt="Sanitation Report" width={400} height={600} className="rounded-md w-full h-auto object-contain" />
                                 ) : (
@@ -1334,6 +1334,36 @@ export default function DashboardPage() {
                 )}
             </DialogContent>
         </Dialog>
+
+        {/* Floating Action Button for Mobile */}
+        <div className="sm:hidden fixed bottom-4 right-4 z-50">
+            <AlertDialog>
+                <UITooltip>
+                    <UITooltipTrigger asChild>
+                        <Button 
+                            className="rounded-full h-14 w-14 shadow-lg"
+                            onClick={handleRequestRefill} 
+                            disabled={isRefillRequesting || hasPendingRefill}
+                        >
+                            <BellRing className="h-6 w-6" />
+                        </Button>
+                    </UITooltipTrigger>
+                    {hasPendingRefill && <UITooltipContent><p>Request pending</p></UITooltipContent>}
+                </UITooltip>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will notify the refill team that you require an immediate one-time refill. Are you sure you want to proceed?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRequestRefill}>Yes, Send Request</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     </div>
     </TooltipProvider>
     );
