@@ -137,17 +137,17 @@ export function StatCards({
   const isFlowPlan = user?.plan?.isConsumptionBased;
 
   return (
-    <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
       {isFlowPlan ? (
         <>
-          <Card className="flex flex-col col-span-2 lg:col-span-2">
-            <CardHeader>
+          <Card className="flex flex-col col-span-2">
+            <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 Current Plan: {user?.plan?.name}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
-              <p className="text-3xl font-bold mb-2">
+              <p className="text-2xl md:text-3xl font-bold mb-2">
                 ₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <div className="space-y-1 text-xs text-muted-foreground">
@@ -163,13 +163,13 @@ export function StatCards({
               <p className="text-xs text-muted-foreground">Billed at the end of the month based on consumption.</p>
             </CardFooter>
           </Card>
-          <Card className="col-span-2 lg:col-span-2">
-            <CardHeader>
+          <Card className="col-span-2">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
+                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill</Label>
                 <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -179,11 +179,11 @@ export function StatCards({
                 {autoRefill ? (
                   <>
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill Schedule</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
                       <p className="font-semibold text-sm">{nextRefillDay !== 'Not set' ? `Next ${nextRefillDay}` : 'Not set'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Water for Delivery</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Delivery</p>
                       <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
                     </div>
                     <Button variant="outline" size="sm" className="w-full" onClick={onUpdateScheduleClick}>
@@ -206,17 +206,16 @@ export function StatCards({
       ) : (
         <>
           <Card className="flex flex-col">
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                Total for this Month
-                <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+                Total for Month
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
-              <p className="text-3xl font-bold mb-2">{consumptionDetails.totalLitersForMonth.toLocaleString()} L</p>
+              <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.totalLitersForMonth.toLocaleString()} L</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex justify-between"><span>Monthly Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
-                <div className="flex justify-between"><span>Bonus Liters:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
+                <div className="flex justify-between"><span>Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
+                <div className="flex justify-between"><span>Bonus:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
                 <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
               </div>
             </CardContent>
@@ -225,64 +224,56 @@ export function StatCards({
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">Consumed This Month</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Consumed</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 space-y-2">
-              <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
+              <p className="text-2xl md:text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
               <Progress value={consumptionDetails.consumedPercentage} className="h-2" />
             </CardContent>
             <CardFooter>
-              <Button variant="link" size="sm" className="h-auto p-0" onClick={onConsumptionHistoryClick}>View History</Button>
+              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onConsumptionHistoryClick}>View History</Button>
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">Available Liters</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Available</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 space-y-2">
-              <p className="text-3xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} L</p>
+              <p className="text-2xl md:text-3xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} L</p>
               <Progress value={consumptionDetails.remainingPercentage} className="h-2" />
             </CardContent>
             <CardFooter>
-              <Button variant="link" size="sm" className="h-auto p-0" onClick={onSaveLitersClick}>Save Liters</Button>
+              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onSaveLitersClick}>Save Liters</Button>
             </CardFooter>
           </Card>
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill Activated</Label>
+                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill</Label>
                 <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
               </div>
               <p className="text-xs text-muted-foreground">
-                {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
+                {autoRefill ? "Deliveries will be auto-scheduled based on your plan." : "Deliveries are paused. Schedule manually."}
               </p>
               <div className="border-t pt-3 space-y-2">
                 {autoRefill ? (
                   <>
-                    <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill Schedule</p>
-                      <p className="font-semibold text-sm">Next {nextRefillDay}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Water for Delivery</p>
-                      <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
-                    </div>
-                    <Button variant="outline" size="sm" className="w-full" onClick={onUpdateScheduleClick}>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
+                    <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+                    <Button variant="outline" size="sm" className="w-full text-xs" onClick={onUpdateScheduleClick}>
                       <Edit className="mr-2 h-4 w-4" />
                       Update Schedule
                     </Button>
                   </>
                 ) : (
-                  <div className="flex flex-col gap-2">
-                    <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      Request Refill
-                    </Button>
-                  </div>
+                  <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    Request Refill
+                  </Button>
                 )}
               </div>
             </CardContent>
