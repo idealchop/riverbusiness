@@ -922,19 +922,7 @@ export default function DashboardPage() {
                 </DialogHeader>
                 <div className="py-4 grid md:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                        <h4 className="font-semibold">Visit Details</h4>
-                        <Card>
-                            <CardContent className="pt-6 text-sm space-y-2">
-                                <div className="flex justify-between"><span className="text-muted-foreground">Date:</span> <span>{selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PPP') : ''}</span></div>
-                                <div className="flex justify-between"><span className="text-muted-foreground">Quality Officer:</span> <span>{selectedSanitationVisit?.assignedTo}</span></div>
-                                <div className="flex justify-between items-center"><span className="text-muted-foreground">Status:</span>
-                                    {selectedSanitationVisit && <Badge variant={selectedSanitationVisit.status === 'Completed' ? 'default' : 'secondary'} className={cn(selectedSanitationVisit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800')}>
-                                        {selectedSanitationVisit.status}
-                                    </Badge>}
-                                </div>
-                            </CardContent>
-                        </Card>
-                         <div className="space-y-2">
+                        <div className="space-y-2">
                            <h4 className="font-semibold">Official Report</h4>
                            <div className="p-2 border rounded-lg min-h-[100px] flex items-center justify-center bg-muted/20">
                                 {selectedSanitationVisit?.reportUrl ? (
@@ -951,7 +939,19 @@ export default function DashboardPage() {
 
                     </div>
                     <div className="space-y-4">
-                        <h4 className="font-semibold">Checklist Results</h4>
+                        <h4 className="font-semibold">Visit Details</h4>
+                        <Card>
+                            <CardContent className="pt-6 text-sm space-y-2">
+                                <div className="flex justify-between"><span className="text-muted-foreground">Date:</span> <span>{selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PPP') : ''}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Quality Officer:</span> <span>{selectedSanitationVisit?.assignedTo}</span></div>
+                                <div className="flex justify-between items-center"><span className="text-muted-foreground">Status:</span>
+                                    {selectedSanitationVisit && <Badge variant={selectedSanitationVisit.status === 'Completed' ? 'default' : 'secondary'} className={cn(selectedSanitationVisit.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800')}>
+                                        {selectedSanitationVisit.status}
+                                    </Badge>}
+                                </div>
+                            </CardContent>
+                        </Card>
+                         <h4 className="font-semibold">Checklist Results</h4>
                         <Card>
                             <CardContent className="p-2">
                                  {selectedSanitationVisit?.status === 'Completed' && (
@@ -974,7 +974,7 @@ export default function DashboardPage() {
                                         )}
                                     </div>
                                 )}
-                                <ScrollArea className={cn(selectedSanitationVisit?.status === 'Completed' ? "h-[250px]" : "h-[400px]")}>
+                                <ScrollArea className={cn(selectedSanitationVisit?.status === 'Completed' ? "h-[190px]" : "h-[400px]")}>
                                     <Table>
                                         <TableBody>
                                             {selectedSanitationVisit?.checklist?.map((item, index) => (
@@ -1376,5 +1376,6 @@ export default function DashboardPage() {
     </div>
     </TooltipProvider>
     );
+}
 
     
