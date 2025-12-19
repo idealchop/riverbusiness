@@ -35,7 +35,8 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Water Refill History', pageWidth - 14, 17, { align: 'right' });
+  doc.text('Water Refill History', 36, 17);
+  doc.text('River Philippines', pageWidth - 14, 17, { align: 'right' });
 
 
   // 2. Add Personalized Greeting and Info
