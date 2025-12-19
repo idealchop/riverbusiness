@@ -67,7 +67,11 @@ service cloud.firestore {
     match /refillRequests/{requestId} {
       // Any authenticated user can create a request.
       allow create: if request.auth != null;
-      allow read, list, update: if isAdmin();
+      // Admins can read/list all requests.
+      allow read, update, list: if isAdmin();
+      // A user can read/list their own requests.
+      allow list: if request.auth != null && request.query.get("userId") == request.auth.uid;
+      allow read: if request.auth != null && get(/databases/$(database)/documents/refillRequests/$(requestId)).data.userId == request.auth.uid;
     }
   }
 }
