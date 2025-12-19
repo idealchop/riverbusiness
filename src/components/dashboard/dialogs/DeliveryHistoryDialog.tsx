@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -76,15 +77,15 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Delivery History for {userName}</DialogTitle>
           <DialogDescription>A log of all past deliveries for this user.</DialogDescription>
         </DialogHeader>
-        <div className="flex items-center gap-2 py-4">
+        <div className="flex flex-col sm:flex-row items-center gap-2 py-4">
           <Popover>
             <PopoverTrigger asChild>
-              <Button id="date" variant={"outline"} className={cn("w-[300px] justify-start text-left font-normal", !deliveryDateRange && "text-muted-foreground")}>
+              <Button id="date" variant={"outline"} className={cn("w-full sm:w-[300px] justify-start text-left font-normal", !deliveryDateRange && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {deliveryDateRange?.from ? (deliveryDateRange.to ? (<> {format(deliveryDateRange.from, "LLL dd, y")} - {format(deliveryDateRange.to, "LLL dd, y")} </>) : (format(deliveryDateRange.from, "LLL dd, y"))) : (<span>Pick a date range</span>)}
               </Button>
@@ -93,7 +94,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
               <Calendar initialFocus mode="range" defaultMonth={deliveryDateRange?.from} selected={deliveryDateRange} onSelect={setDeliveryDateRange} numberOfMonths={2} />
             </PopoverContent>
           </Popover>
-          <Button onClick={handleDownloadDeliveries} disabled={filteredDeliveries.length === 0}>
+          <Button onClick={handleDownloadDeliveries} disabled={filteredDeliveries.length === 0} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             Download CSV
           </Button>
