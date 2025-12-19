@@ -27,7 +27,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -374,49 +374,45 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   };
 
   const availableMonths = useMemo(() => {
-    if (!user?.createdAt) return [];
-    
-    const today = new Date();
-    const createdAt = (user.createdAt as any).toDate ? (user.createdAt as any).toDate() : new Date(user.createdAt);
-    const startOfCreationMonth = startOfMonth(createdAt);
-    
-    const months = [];
-    
-    // Check for special Dec 2023 - Jan 2024 SOA
-    const jan2024EndDate = endOfMonth(new Date(2024, 0, 1)); // End of Jan 2024
-    if (isAfter(today, jan2024EndDate) || isSameDay(today, jan2024EndDate)) {
-        if (createdAt < jan2024EndDate) {
-            months.push({
-                value: '2024-01',
-                label: 'Dec 2023 - Jan 2024'
-            });
-        }
-    }
-
-    // Generate monthly SOAs from Feb 2024 onwards
-    let current = startOfMonth(new Date(2024, 1, 1)); // Start from Feb 2024
-    const endLoop = startOfMonth(today);
-
-    while(current <= endLoop) {
-        const endOfCurrentMonthLoop = endOfMonth(current);
-        if (isAfter(today, endOfCurrentMonthLoop) || isSameDay(today, endOfCurrentMonthLoop)) {
-            months.push({
-                value: format(current, 'yyyy-MM'),
-                label: format(current, 'MMMM yyyy'),
-            });
-        }
-        current = addMonths(current, 1);
-    }
-    
-    return months.sort((a, b) => b.value.localeCompare(a.value));
-
-  }, [user]);
+    if (!deliveries || deliveries.length === 0) return [];
+  
+    const deliveryMonths = new Set<string>();
+    deliveries.forEach(d => {
+      deliveryMonths.add(format(new Date(d.date), 'yyyy-MM'));
+    });
+  
+    // Always include the current month
+    deliveryMonths.add(format(new Date(), 'yyyy-MM'));
+  
+    return Array.from(deliveryMonths)
+      .map(monthStr => {
+        const date = new Date(monthStr + '-02T00:00:00'); // Use 2nd day to avoid timezone issues
+        return {
+          value: monthStr,
+          label: format(date, 'MMMM yyyy'),
+        };
+      })
+      .sort((a, b) => b.value.localeCompare(a.value));
+  }, [deliveries]);
+  
+  const isSoaReady = useMemo(() => {
+    if (!soaMonth) return false;
+    const today = endOfDay(new Date());
+    const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
+    return isAfter(today, endOfSelectedMonth);
+  }, [soaMonth]);
+  
+  const soaNotReadyMessage = useMemo(() => {
+    if (isSoaReady || !soaMonth) return '';
+    const date = new Date(soaMonth + '-02T00:00:00');
+    return `Hi ${user?.name?.split(' ')[0] || 'there'}, your SOA for ${format(date, 'MMMM yyyy')} will be available for download at the end of the month.`;
+  }, [isSoaReady, soaMonth, user]);
 
   useEffect(() => {
-    if(availableMonths.length > 0) {
+    if(availableMonths.length > 0 && !soaMonth) {
       setSoaMonth(availableMonths[0].value);
     }
-  }, [availableMonths]);
+  }, [availableMonths, soaMonth]);
 
 
   if (!user) return <>{children}</>;
@@ -922,7 +918,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
               Select the month for which you'd like to download the SOA.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="py-4 space-y-2">
             <div className="grid gap-2">
                 <Label htmlFor="soa-month">Month</Label>
                 <Select value={soaMonth} onValueChange={setSoaMonth}>
@@ -938,10 +934,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                     </SelectContent>
                 </Select>
             </div>
+            {!isSoaReady && soaNotReadyMessage && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
+                    {soaNotReadyMessage}
+                </div>
+            )}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleDownloadMonthlySOA} disabled={availableMonths.length === 0}>Download SOA</Button>
+            <Button onClick={handleDownloadMonthlySOA} disabled={!isSoaReady}>Download SOA</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
