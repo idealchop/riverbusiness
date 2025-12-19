@@ -89,7 +89,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl rounded-lg max-h-[85vh] flex flex-col p-0">
+      <DialogContent className="sm:max-w-3xl rounded-lg max-h-[85vh] flex flex-col">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Delivery History for {userName}</DialogTitle>
           <DialogDescription>A log of all past deliveries for this user.</DialogDescription>
@@ -111,87 +111,85 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
             Download CSV
           </Button>
         </div>
-        <div className="flex-1 px-6 py-4 min-h-0">
-          <ScrollArea className="h-full">
-            {/* Desktop Table View */}
-            <Table className="hidden md:table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ref ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Liters / Containers</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Attachment</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedDeliveries.map(delivery => {
-                  const statusInfo = getStatusInfo(delivery.status);
-                  const liters = containerToLiter(delivery.volumeContainers || 0);
-                  const containers = delivery.volumeContainers || 0;
-                  return (
-                    <TableRow key={delivery.id}>
-                      <TableCell>{delivery.id}</TableCell>
-                      <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
-                      <TableCell>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L / {containers} containers</TableCell>
-                      <TableCell>
-                        <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {delivery.proofOfDeliveryUrl ? (
-                          <Button variant="link" size="sm" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>View</Button>
-                        ) : (
-                          <Badge variant="secondary">Upcoming</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {(deliveries || []).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-
-            {/* Mobile Card View */}
-            <div className="space-y-4 md:hidden">
+        <ScrollArea className="px-6 py-4 h-[60vh]">
+          {/* Desktop Table View */}
+          <Table className="hidden md:table">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ref ID</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Liters / Containers</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Attachment</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {paginatedDeliveries.map(delivery => {
                 const statusInfo = getStatusInfo(delivery.status);
                 const liters = containerToLiter(delivery.volumeContainers || 0);
                 const containers = delivery.volumeContainers || 0;
                 return (
-                  <Card key={delivery.id}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-semibold">{format(new Date(delivery.date), 'PP')}</p>
-                          <p className="text-xs text-muted-foreground">ID: {delivery.id}</p>
-                        </div>
-                        <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
-                      </div>
-                      <div className="text-sm">
-                        <p>
-                          <strong>Volume:</strong> {liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L ({containers} containers)
-                        </p>
-                      </div>
-                      {delivery.proofOfDeliveryUrl && (
-                        <Button variant="outline" size="sm" className="w-full" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Attachment
-                        </Button>
+                  <TableRow key={delivery.id}>
+                    <TableCell>{delivery.id}</TableCell>
+                    <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
+                    <TableCell>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L / {containers} containers</TableCell>
+                    <TableCell>
+                      <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {delivery.proofOfDeliveryUrl ? (
+                        <Button variant="link" size="sm" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>View</Button>
+                      ) : (
+                        <Badge variant="secondary">Upcoming</Badge>
                       )}
-                    </CardContent>
-                  </Card>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
               {(deliveries || []).length === 0 && (
-                  <div className="text-center text-muted-foreground py-10">No delivery history found.</div>
-                )}
-            </div>
-          </ScrollArea>
-        </div>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Mobile Card View */}
+          <div className="space-y-4 md:hidden">
+            {paginatedDeliveries.map(delivery => {
+              const statusInfo = getStatusInfo(delivery.status);
+              const liters = containerToLiter(delivery.volumeContainers || 0);
+              const containers = delivery.volumeContainers || 0;
+              return (
+                <Card key={delivery.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold">{format(new Date(delivery.date), 'PP')}</p>
+                        <p className="text-xs text-muted-foreground">ID: {delivery.id}</p>
+                      </div>
+                      <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
+                    </div>
+                    <div className="text-sm">
+                      <p>
+                        <strong>Volume:</strong> {liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L ({containers} containers)
+                      </p>
+                    </div>
+                    {delivery.proofOfDeliveryUrl && (
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Attachment
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {(deliveries || []).length === 0 && (
+                <div className="text-center text-muted-foreground py-10">No delivery history found.</div>
+              )}
+          </div>
+        </ScrollArea>
         <DialogFooter className="border-t p-6 pt-4 flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
             <div className="flex items-center justify-center space-x-2">
