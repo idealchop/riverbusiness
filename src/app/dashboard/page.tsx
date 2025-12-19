@@ -432,7 +432,7 @@ export default function DashboardPage() {
             return;
         }
         if (hasPendingRefill) {
-            toast({
+             toast({
                 title: "Request Already Pending",
                 description: `Don't worry, ${user.name}, our refill team is already on your previous request.`,
                 variant: "default", 
@@ -454,7 +454,7 @@ export default function DashboardPage() {
 
         try {
             await addDocumentNonBlocking(refillRef, newRequest);
-            toast({
+             toast({
                 title: "Refill Request Sent!",
                 description: `Thank you, ${user.name}! The refill team has been notified and will process your request shortly.`,
             });
@@ -518,17 +518,19 @@ export default function DashboardPage() {
             </div>
             <div className="hidden sm:flex items-center gap-2">
                 <AlertDialog>
-                    <UITooltip>
-                        <UITooltipTrigger asChild>
-                            <div tabIndex={hasPendingRefill ? 0 : -1}>
-                                <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillRequesting || hasPendingRefill}>
-                                    <BellRing className="mr-2 h-4 w-4" />
-                                    {isRefillRequesting ? "Requesting..." : "Request Refill"}
-                                </Button>
-                            </div>
-                        </UITooltipTrigger>
-                        {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
-                    </UITooltip>
+                    <div tabIndex={hasPendingRefill ? 0 : -1}>
+                        <UITooltip>
+                            <UITooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="default" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting || hasPendingRefill}>
+                                        <BellRing className="mr-2 h-4 w-4" />
+                                        Request Refill
+                                    </Button>
+                                </AlertDialogTrigger>
+                            </UITooltipTrigger>
+                            {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
+                        </UITooltip>
+                    </div>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
@@ -544,7 +546,7 @@ export default function DashboardPage() {
                 </AlertDialog>
                 <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
+                        <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
                             <ShieldCheck className="h-4 w-4 sm:mr-2" />
                             <span className="hidden sm:inline">Compliance &amp; Sanitation</span>
                         </Button>
@@ -1349,20 +1351,21 @@ export default function DashboardPage() {
                 </div>
             </div>
             <AlertDialog>
-                <UITooltip>
-                    <UITooltipTrigger asChild>
-                        <div tabIndex={hasPendingRefill ? 0 : -1}>
-                            <Button 
-                                className="rounded-full h-14 w-14 shadow-lg"
-                                onClick={handleRequestRefill}
-                                disabled={isRefillRequesting || hasPendingRefill}
-                            >
-                                <BellRing className="h-6 w-6" />
-                            </Button>
-                        </div>
-                    </UITooltipTrigger>
-                    {hasPendingRefill && <UITooltipContent><p>Request pending</p></UITooltipContent>}
-                </UITooltip>
+                <div tabIndex={hasPendingRefill ? 0 : -1}>
+                    <UITooltip>
+                        <UITooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                                <Button 
+                                    className="rounded-full h-14 w-14 shadow-lg"
+                                    disabled={isRefillRequesting || hasPendingRefill}
+                                >
+                                    <BellRing className="h-6 w-6" />
+                                </Button>
+                            </AlertDialogTrigger>
+                        </UITooltipTrigger>
+                        {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
+                    </UITooltip>
+                </div>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
