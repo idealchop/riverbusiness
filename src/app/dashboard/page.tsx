@@ -3,24 +3,24 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing, Hourglass, AlertCircle } from 'lucide-react';
+import { LifeBuoy, Droplet, Truck, MessageSquare, Waves, Droplets, History, Star, Send, ArrowUp, ArrowDown, ArrowRight, CheckCircle, Clock, Info, PackageCheck, Package, Lightbulb, Gift, ExternalLink, MapPin, FileText, Eye, Download, Calendar as CalendarIcon, Edit, ShieldCheck, FileHeart, Shield, Save, Wrench, PlusCircle, BellRing, Hourglass, AlertCircle, RefreshCw, Box, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, ConsumptionHistory, RefillRequest } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, RefillRequestStatus, StatusHistoryEntry } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, isWithinInterval, subMonths, formatDistanceToNow } from 'date-fns';
 import Image from 'next/image';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, serverTimestamp, query, where } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, where, Timestamp, arrayUnion } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -103,6 +103,16 @@ function DashboardSkeleton() {
     );
 }
 
+const statusConfig: Record<RefillRequestStatus, { label: string; icon: React.ElementType; message: string; }> = {
+    'Requested': { label: 'Request Sent', icon: Send, message: 'We've received your refill request and our team will begin processing it shortly.' },
+    'In Production': { label: 'In Production', icon: Settings, message: 'Your water is being prepared and quality-checked at the station.' },
+    'Out for Delivery': { label: 'Out for Delivery', icon: Truck, message: 'Your fresh water is on its way to you! Expect it to arrive soon.' },
+    'Completed': { label: 'Delivery Complete', icon: CheckCircle, message: 'Your water has been delivered. Stay hydrated!' },
+    'Cancelled': { label: 'Request Cancelled', icon: FileX, message: 'This request has been cancelled.' },
+};
+
+const statusOrder: RefillRequestStatus[] = ['Requested', 'In Production', 'Out for Delivery', 'Completed'];
+
 export default function DashboardPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -132,8 +142,9 @@ export default function DashboardPage() {
     const [isSanitationReportOpen, setIsSanitationReportOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
     const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
-    const [hasPendingRefill, setHasPendingRefill] = useState(false);
     const [showFabBubble, setShowFabBubble] = useState(false);
+    const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+
 
     useEffect(() => {
         const bubbleInterval = setInterval(() => {
@@ -161,19 +172,16 @@ export default function DashboardPage() {
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
-    const pendingRefillQuery = useMemoFirebase(() => 
+    const activeRefillQuery = useMemoFirebase(() => 
         (firestore && authUser)
-        ? query(collection(firestore, 'refillRequests'), where('userId', '==', authUser.uid), where('status', '==', 'Pending'))
+        ? query(collection(firestore, 'refillRequests'), where('userId', '==', authUser.uid), where('status', 'in', ['Requested', 'In Production', 'Out for Delivery']))
         : null,
         [firestore, authUser]
     );
-    const { data: pendingRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(pendingRefillQuery);
+    const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
+    
+    const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0) ? activeRefills[0] : null, [activeRefills]);
 
-    useEffect(() => {
-        if(!isRefillLoading) {
-            setHasPendingRefill((pendingRefills?.length || 0) > 0);
-        }
-    }, [pendingRefills, isRefillLoading]);
 
     const isFlowPlan = user?.plan?.isConsumptionBased;
 
@@ -427,37 +435,35 @@ export default function DashboardPage() {
     };
 
     const handleRequestRefill = async () => {
+        if (activeRefillRequest) {
+            setIsStatusDialogOpen(true);
+            return;
+        }
         if (!user || !firestore) {
             toast({ variant: "destructive", title: "Error", description: "Cannot process request. User not found." });
             return;
         }
-        if (hasPendingRefill) {
-             toast({
-                title: "Request Already Pending",
-                description: `Don't worry, ${user.name}, our refill team is already on your previous request.`,
-                variant: "default", 
-                className: "bg-blue-100 border-blue-200 text-blue-800"
-            });
-            return;
-        }
 
         setIsRefillRequesting(true);
-        const refillRef = collection(firestore, 'refillRequests');
-        const newRequest: Omit<RefillRequest, 'id'> = {
+        const newRequestData: Omit<RefillRequest, 'id'> = {
             userId: user.id,
             userName: user.name,
             businessName: user.businessName,
             clientId: user.clientId || '',
             requestedAt: serverTimestamp(),
-            status: 'Pending'
+            status: 'Requested',
+            statusHistory: [
+                { status: 'Requested', timestamp: serverTimestamp() }
+            ]
         };
 
         try {
-            await addDocumentNonBlocking(refillRef, newRequest);
+            await addDocumentNonBlocking(collection(firestore, 'refillRequests'), newRequestData);
              toast({
                 title: "Refill Request Sent!",
-                description: `Thank you, ${user.name}! The refill team has been notified and will process your request shortly.`,
+                description: `Thank you, ${user.name}! You can track the progress of your request by clicking the 'Request Refill' button again.`,
             });
+            setIsStatusDialogOpen(true);
         } catch (error) {
             toast({
                 variant: "destructive",
@@ -517,33 +523,10 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">{greeting}, {user?.businessName}. Here is an overview of your water consumption.</p>
             </div>
             <div className="hidden sm:flex items-center gap-2">
-                <AlertDialog>
-                    <div tabIndex={hasPendingRefill ? 0 : -1}>
-                        <UITooltip>
-                            <UITooltipTrigger asChild>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="default" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting || hasPendingRefill}>
-                                        <BellRing className="mr-2 h-4 w-4" />
-                                        Request Refill
-                                    </Button>
-                                </AlertDialogTrigger>
-                            </UITooltipTrigger>
-                            {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
-                        </UITooltip>
-                    </div>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will notify the refill team that you require an immediate one-time refill. Are you sure you want to proceed?
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleRequestRefill}>Yes, Send Request</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                 <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillLoading}>
+                    <BellRing className="mr-2 h-4 w-4" />
+                    {activeRefillRequest ? 'Check Request Status' : 'Request Refill'}
+                </Button>
                 <Dialog open={isComplianceDialogOpen} onOpenChange={setIsComplianceDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={() => setIsComplianceDialogOpen(true)}>
@@ -1350,36 +1333,78 @@ export default function DashboardPage() {
                     <p>Urgent refill, {user?.name?.split(' ')[0]}? Pindot lang dito!</p>
                 </div>
             </div>
-            <AlertDialog>
-                <div tabIndex={hasPendingRefill ? 0 : -1}>
-                    <UITooltip>
-                        <UITooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                                <Button 
-                                    className="rounded-full h-14 w-14 shadow-lg"
-                                    disabled={isRefillRequesting || hasPendingRefill}
-                                >
-                                    <BellRing className="h-6 w-6" />
-                                </Button>
-                            </AlertDialogTrigger>
-                        </UITooltipTrigger>
-                        {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
-                    </UITooltip>
-                </div>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will notify the refill team that you require an immediate one-time refill. Are you sure you want to proceed?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleRequestRefill}>Yes, Send Request</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <div tabIndex={-1}>
+                <Button 
+                    className="rounded-full h-14 w-14 shadow-lg"
+                    onClick={handleRequestRefill}
+                    disabled={isRefillLoading}
+                >
+                    <BellRing className="h-6 w-6" />
+                </Button>
+            </div>
         </div>
+
+        {/* Refill Status Dialog */}
+        <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Refill Request Status</DialogTitle>
+                    <DialogDescription>
+                        Here's the current progress of your refill request.
+                    </DialogDescription>
+                </DialogHeader>
+                {activeRefillRequest ? (
+                    <div className="py-6">
+                        <ul className="space-y-8">
+                            {statusOrder.map((status, index) => {
+                                const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
+                                const isCompleted = index < currentStatusIndex;
+                                const isCurrent = index === currentStatusIndex;
+                                const statusHistoryEntry = activeRefillRequest.statusHistory?.find(h => h.status === status);
+
+                                const Icon = statusConfig[status].icon;
+
+                                return (
+                                    <li key={status} className="flex items-start gap-4">
+                                        <div className="flex flex-col items-center">
+                                            <div className={cn(
+                                                "h-10 w-10 rounded-full flex items-center justify-center border-2",
+                                                isCompleted ? "bg-primary border-primary text-primary-foreground" :
+                                                isCurrent ? "bg-primary/20 border-primary text-primary animate-pulse" :
+                                                "bg-muted border-muted-foreground/30 text-muted-foreground"
+                                            )}>
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            {index < statusOrder.length - 1 && (
+                                                <div className={cn(
+                                                    "w-0.5 h-8 mt-2",
+                                                    isCompleted ? "bg-primary" : "bg-muted-foreground/30"
+                                                )}></div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 pt-1.5">
+                                            <p className={cn(
+                                                "font-semibold",
+                                                (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
+                                            )}>
+                                                {statusConfig[status].label}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow((statusHistoryEntry.timestamp as Timestamp).toDate(), { addSuffix: true })}` : 'Pending'}
+                                            </p>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                ) : (
+                    <div className="py-10 text-center">
+                        <p>Loading status...</p>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
     </div>
     </TooltipProvider>
     );

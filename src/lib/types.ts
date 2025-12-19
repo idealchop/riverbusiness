@@ -145,6 +145,13 @@ export interface ConsumptionHistory {
   metric: 'liters' | 'gallons';
 }
 
+export type RefillRequestStatus = 'Requested' | 'In Production' | 'Out for Delivery' | 'Completed' | 'Cancelled';
+
+export interface StatusHistoryEntry {
+    status: RefillRequestStatus;
+    timestamp: FieldValue | Timestamp;
+}
+
 export interface RefillRequest {
   id: string;
   userId: string;
@@ -152,7 +159,8 @@ export interface RefillRequest {
   businessName: string;
   clientId: string;
   requestedAt: FieldValue | Timestamp;
-  status: 'Pending' | 'Completed';
+  status: RefillRequestStatus;
+  statusHistory?: StatusHistoryEntry[];
 }
 
 export interface Notification {

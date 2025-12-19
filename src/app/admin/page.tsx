@@ -27,7 +27,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -37,7 +37,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference, arrayUnion } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -744,15 +744,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
-    const handleCompleteRefillRequest = (requestId: string) => {
+    const handleRefillStatusUpdate = (requestId: string, newStatus: RefillRequestStatus) => {
         if (!firestore) return;
         const requestRef = doc(firestore, 'refillRequests', requestId);
-        updateDocumentNonBlocking(requestRef, { status: 'Completed' });
-        toast({ title: 'Request Completed', description: 'The refill request has been marked as completed.' });
+        updateDocumentNonBlocking(requestRef, {
+            status: newStatus,
+            statusHistory: arrayUnion({ status: newStatus, timestamp: serverTimestamp() })
+        });
+        toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };
 
-    const pendingRefillRequests = React.useMemo(() => {
-        return refillRequests?.filter(req => req.status === 'Pending') || [];
+
+    const activeRefillRequests = React.useMemo(() => {
+        return refillRequests?.filter(req => req.status !== 'Completed' && req.status !== 'Cancelled') || [];
     }, [refillRequests]);
 
     const selectedUserPlanImage = React.useMemo(() => {
@@ -1708,18 +1712,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <CardHeader>
                     <CardTitle className="relative flex items-center">
                         <Users className="mr-2 h-4 w-4"/>User Management
-                        {pendingRefillRequests.length > 0 && (
-                            <Badge className="ml-2 h-5 w-5 justify-center p-0">{pendingRefillRequests.length}</Badge>
+                        {activeRefillRequests.length > 0 && (
+                            <Badge className="ml-2 h-5 w-5 justify-center p-0">{activeRefillRequests.length}</Badge>
                         )}
                     </CardTitle>
                     <CardDescription>Manage all user accounts and their details.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                     {pendingRefillRequests.length > 0 && (
+                     {activeRefillRequests.length > 0 && (
                         <Card className="bg-amber-50 border-amber-200">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/>Pending Refill Requests</CardTitle>
-                                <CardDescription>This is a queue for the refill team. Users have requested a one-time water refill.</CardDescription>
+                                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/>Active Refill Requests</CardTitle>
+                                <CardDescription>This is the queue for the refill team. Update the status as the request progresses.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -1728,23 +1732,34 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Client ID</TableHead>
                                             <TableHead>Business Name</TableHead>
                                             <TableHead>Requested</TableHead>
+                                            <TableHead>Current Status</TableHead>
                                             <TableHead className="text-right">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {refillRequestsLoading ? (
-                                            <TableRow><TableCell colSpan={4} className="text-center">Loading requests...</TableCell></TableRow>
-                                        ) : pendingRefillRequests.map((request) => (
+                                            <TableRow><TableCell colSpan={5} className="text-center">Loading requests...</TableCell></TableRow>
+                                        ) : activeRefillRequests.map((request) => (
                                             <TableRow key={request.id}>
                                                 <TableCell>{request.clientId}</TableCell>
                                                 <TableCell>{request.businessName}</TableCell>
                                                 <TableCell>
-                                                    {request.requestedAt ? formatDistanceToNow(new Date((request.requestedAt as any).seconds * 1000), { addSuffix: true }) : 'Just now'}
+                                                    {request.requestedAt ? formatDistanceToNow((request.requestedAt as any).toDate(), { addSuffix: true }) : 'Just now'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{request.status}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button size="sm" onClick={() => handleCompleteRefillRequest(request.id)}>
-                                                        Mark as Complete
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild><Button size="sm">Update Status</Button></DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'In Production')} disabled={request.status !== 'Requested'}>Move to Production</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'Out for Delivery')} disabled={request.status !== 'In Production'}>Set to Delivery</DropdownMenuItem>
+                                                            <DropdownMenuSeparator/>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'Completed')}>Mark as Completed</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'Cancelled')} className="text-destructive">Cancel Request</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

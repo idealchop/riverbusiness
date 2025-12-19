@@ -79,12 +79,26 @@
       "description": "Represents a water quality compliance report.",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string", "description": "Name or type of the compliance document (e.g., 'Bacteriological Test')." },
+        "name": { "type": "string", "description": "Name of the report (e.g., 'DOH Bacteriological Test - June 2024')." },
+        "reportType": { "type": "string", "enum": ["DOH Bacteriological Test (Monthly)", "DOH Bacteriological Test (Semi-Annual)", "Sanitary Permit", "Business Permit"], "description": "The type of compliance report." },
+        "resultId": { "type": "string", "description": "The official result ID number from the testing body." },
         "date": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Compliant", "Non-compliant", "Pending Review"] },
-        "reportUrl": { "type": "string", "format": "uri" }
+        "status": { "type": "string", "enum": ["Passed", "Failed", "Pending Review"] },
+        "reportUrl": { "type": "string", "format": "uri" },
+        "results": { "type": "string", "description": "Admin-entered notes or results of the inspection." }
       },
-      "required": ["id", "name", "date", "status", "reportUrl"]
+      "required": ["id", "name", "reportType", "resultId", "date", "status"]
+    },
+    "SanitationChecklistItem": {
+        "title": "SanitationChecklistItem",
+        "type": "object",
+        "description": "Represents a single item in a sanitation checklist.",
+        "properties": {
+            "item": { "type": "string", "description": "The text of the checklist item." },
+            "checked": { "type": "boolean", "description": "Whether the item has been checked off." },
+            "remarks": { "type": "string", "description": "Optional remarks for the checklist item." }
+        },
+        "required": ["item", "checked", "remarks"]
     },
     "SanitationVisit": {
       "title": "SanitationVisit",
@@ -96,7 +110,14 @@
         "scheduledDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
         "assignedTo": { "type": "string" },
-        "reportUrl": { "type": "string", "format": "uri" }
+        "reportUrl": { "type": "string", "format": "uri", "description": "URL to the sanitation report attachment." },
+        "checklist": {
+            "type": "array",
+            "description": "An array of checklist items for the sanitation visit.",
+            "items": {
+                "$ref": "#/entities/SanitationChecklistItem"
+            }
+        }
       },
       "required": ["id", "userId", "scheduledDate", "status"]
     },
@@ -120,6 +141,15 @@
         "metric": { "type": "string", "enum": ["liters", "gallons"] }
       }
     },
+    "StatusHistoryEntry": {
+        "title": "StatusHistoryEntry",
+        "type": "object",
+        "properties": {
+            "status": { "type": "string", "enum": ["Requested", "In Production", "Out for Delivery", "Completed", "Cancelled"] },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["status", "timestamp"]
+    },
     "RefillRequest": {
       "title": "RefillRequest",
       "type": "object",
@@ -131,7 +161,11 @@
         "businessName": { "type": "string", "description": "Business name of the user." },
         "clientId": { "type": "string", "description": "Client ID of the user." },
         "requestedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the request was made." },
-        "status": { "type": "string", "enum": ["Pending", "Completed"], "description": "The current status of the refill request." }
+        "status": { "type": "string", "enum": ["Requested", "In Production", "Out for Delivery", "Completed", "Cancelled"], "description": "The current status of the refill request." },
+        "statusHistory": {
+            "type": "array",
+            "items": { "$ref": "#/entities/StatusHistoryEntry" }
+        }
       },
       "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
     },
