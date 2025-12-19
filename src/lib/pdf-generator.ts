@@ -140,7 +140,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
     
     doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text('River Business | customers@riverph.com', 14, 285);
+    doc.text('River Business | customers@riverph.com | www.riverph.com', 14, 285);
     doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, 285, { align: 'right' });
   }
 
