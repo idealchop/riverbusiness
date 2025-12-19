@@ -89,12 +89,12 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl rounded-lg max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl rounded-lg max-h-[85vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Delivery History for {userName}</DialogTitle>
           <DialogDescription>A log of all past deliveries for this user.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col sm:flex-row items-center gap-2 py-4">
+        <div className="flex flex-col sm:flex-row items-center gap-2 px-6 pt-4">
           <Popover>
             <PopoverTrigger asChild>
               <Button id="date" variant={"outline"} className={cn("w-full sm:w-[300px] justify-start text-left font-normal", !deliveryDateRange && "text-muted-foreground")}>
@@ -111,8 +111,8 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
             Download CSV
           </Button>
         </div>
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="py-4 pr-6">
+        <div className="flex-1 px-6 py-4 min-h-0">
+            <ScrollArea className="h-full">
             {/* Desktop Table View */}
             <Table className="hidden md:table">
               <TableHeader>
@@ -190,9 +190,9 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
                   <div className="text-center text-muted-foreground py-10">No delivery history found.</div>
                 )}
             </div>
-          </div>
-        </ScrollArea>
-        <DialogFooter className="border-t pt-4 flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
+          </ScrollArea>
+        </div>
+        <DialogFooter className="border-t p-6 pt-4 flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
             <div className="flex items-center justify-center space-x-2">
                 <Button
