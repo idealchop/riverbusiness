@@ -104,7 +104,7 @@ function DashboardSkeleton() {
 }
 
 const statusConfig: Record<RefillRequestStatus, { label: string; icon: React.ElementType; message: string; }> = {
-    'Requested': { label: 'Request Sent', icon: Send, message: 'We've received your refill request and our team will begin processing it shortly.' },
+    'Requested': { label: 'Request Sent', icon: Send, message: "We've received your refill request and our team will begin processing it shortly." },
     'In Production': { label: 'In Production', icon: Settings, message: 'Your water is being prepared and quality-checked at the station.' },
     'Out for Delivery': { label: 'Out for Delivery', icon: Truck, message: 'Your fresh water is on its way to you! Expect it to arrive soon.' },
     'Completed': { label: 'Delivery Complete', icon: CheckCircle, message: 'Your water has been delivered. Stay hydrated!' },
@@ -1409,3 +1409,6 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
+
+
+    
