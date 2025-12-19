@@ -596,7 +596,7 @@ export default function DashboardLayout({
         </Dialog>
 
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>
                         {selectedPaymentMethod ? `Pay with ${selectedPaymentMethod.name}` : `Pay Invoice ${selectedInvoice?.id}`}
@@ -664,8 +664,13 @@ export default function DashboardLayout({
                         </div>
                     </div>
                 </ScrollArea>
+                 <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
       </div>
   );
 }
+
+    
