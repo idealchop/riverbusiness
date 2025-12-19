@@ -253,7 +253,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
 
     const subtotal = totalAmount;
     const tax = totalAmount * 0.12;
-    const grandTotal = subtotal; // VAT is not added to the total amount due
+    const grandTotal = subtotal;
 
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.rect(14, startY, pageWidth - 28, 28, 'F');
@@ -273,6 +273,45 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.text(`₱ ${grandTotal.toFixed(2)}`, pageWidth - 18, startY + 22, { align: 'right' });
     
     startY += 40;
+
+    // --- PLAN & EQUIPMENT DETAILS ---
+    if (user.plan) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text('Subscription Details', 14, startY);
+        startY += 8;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0);
+
+        let planText = `Plan: ${user.plan.name}`;
+        if (user.clientType) {
+            planText += ` (${user.clientType})`;
+        }
+        doc.text(planText, 18, startY);
+        startY += 6;
+
+        if (user.customPlanDetails) {
+            const { gallonQuantity, dispenserQuantity } = user.customPlanDetails;
+            if (gallonQuantity > 0 || dispenserQuantity > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Equipment on Loan:', 18, startY);
+                startY += 6;
+                doc.setFont('helvetica', 'normal');
+                if (gallonQuantity > 0) {
+                    doc.text(`- ${gallonQuantity} x Water Containers`, 22, startY);
+                    startY += 5;
+                }
+                if (dispenserQuantity > 0) {
+                    doc.text(`- ${dispenserQuantity} x Water Dispensers`, 22, startY);
+                    startY += 5;
+                }
+            }
+        }
+        startY += 5; // Extra space before the next section
+    }
 
     // --- DELIVERIES SECTION ---
     if (deliveries.length > 0) {
