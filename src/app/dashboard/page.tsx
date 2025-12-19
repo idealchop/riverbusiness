@@ -1383,7 +1383,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div>
-                            <ol className="flex items-start justify-between w-full">
+                            <ol className="grid grid-cols-4 items-start">
                                 {statusOrder.map((status, index) => {
                                     const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
                                     const isCompleted = index < currentStatusIndex;
@@ -1391,7 +1391,7 @@ export default function DashboardPage() {
                                     const Icon = statusConfig[status].icon;
 
                                     return (
-                                        <li key={status} className="relative flex flex-col items-center justify-start flex-1">
+                                        <li key={status} className="relative flex flex-col items-center justify-start text-center">
                                             <div className={cn(
                                                 "w-10 h-10 rounded-full flex items-center justify-center border-2 z-10",
                                                 isCompleted ? "bg-primary border-primary text-primary-foreground" :
@@ -1401,7 +1401,7 @@ export default function DashboardPage() {
                                                 <Icon className="h-5 w-5" />
                                             </div>
                                             <p className={cn(
-                                                "font-semibold text-xs mt-2 text-center",
+                                                "font-semibold text-xs mt-2",
                                                 (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
                                             )}>
                                                 {statusConfig[status].label}
