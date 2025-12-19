@@ -596,7 +596,7 @@ export default function DashboardLayout({
         </Dialog>
 
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>
                         {selectedPaymentMethod ? `Pay with ${selectedPaymentMethod.name}` : `Pay Invoice ${selectedInvoice?.id}`}
@@ -606,63 +606,63 @@ export default function DashboardLayout({
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="pr-6 -mr-6">
-                <div className="py-4 grid md:grid-cols-2 gap-8">
-                    {!selectedPaymentMethod ? (
-                        <div className="space-y-4">
-                            <h4 className="font-semibold">Select a Payment Method</h4>
-                            {paymentOptions.map((option) => (
-                                <Card key={option.name} className="cursor-pointer hover:border-primary" onClick={() => handlePaymentOptionClick(option)}>
-                                    <CardContent className="p-4 flex items-center gap-4">
-                                        {option.qr && (
-                                            <div className="relative h-10 w-10">
-                                                <Image src={option.qr.imageUrl} alt={option.name} fill className="object-contain" data-ai-hint={option.qr.imageHint}/>
+                    <div className="py-4 grid md:grid-cols-2 gap-8">
+                        {!selectedPaymentMethod ? (
+                            <div className="space-y-4">
+                                <h4 className="font-semibold">Select a Payment Method</h4>
+                                {paymentOptions.map((option) => (
+                                    <Card key={option.name} className="cursor-pointer hover:border-primary" onClick={() => handlePaymentOptionClick(option)}>
+                                        <CardContent className="p-4 flex items-center gap-4">
+                                            {option.qr && (
+                                                <div className="relative h-10 w-10">
+                                                    <Image src={option.qr.imageUrl} alt={option.name} fill className="object-contain" data-ai-hint={option.qr.imageHint}/>
+                                                </div>
+                                            )}
+                                            <p className="font-medium">{option.name}</p>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <Button variant="outline" size="sm" onClick={() => setSelectedPaymentMethod(null)}>
+                                    <ArrowLeft className="mr-2 h-4 w-4" /> Back to Payment Options
+                                </Button>
+                                {selectedPaymentMethod.qr && (
+                                    <div className="p-4 border rounded-lg flex flex-col items-center gap-4">
+                                        <div className="relative w-48 h-48">
+                                            <Image src={selectedPaymentMethod.qr.imageUrl} alt={`${selectedPaymentMethod.name} QR Code`} fill className="object-contain" data-ai-hint={selectedPaymentMethod.qr.imageHint} />
+                                        </div>
+                                        {selectedPaymentMethod.details && (
+                                            <div className="text-center text-sm">
+                                                <p>Account Name: <span className="font-semibold">{selectedPaymentMethod.details.accountName}</span></p>
+                                                <p>Account Number: <span className="font-semibold">{selectedPaymentMethod.details.accountNumber}</span></p>
                                             </div>
                                         )}
-                                        <p className="font-medium">{option.name}</p>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <Button variant="outline" size="sm" onClick={() => setSelectedPaymentMethod(null)}>
-                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Payment Options
-                            </Button>
-                            {selectedPaymentMethod.qr && (
-                                <div className="p-4 border rounded-lg flex flex-col items-center gap-4">
-                                    <div className="relative w-48 h-48">
-                                        <Image src={selectedPaymentMethod.qr.imageUrl} alt={`${selectedPaymentMethod.name} QR Code`} fill className="object-contain" data-ai-hint={selectedPaymentMethod.qr.imageHint} />
                                     </div>
-                                    {selectedPaymentMethod.details && (
-                                        <div className="text-center text-sm">
-                                            <p>Account Name: <span className="font-semibold">{selectedPaymentMethod.details.accountName}</span></p>
-                                            <p>Account Number: <span className="font-semibold">{selectedPaymentMethod.details.accountNumber}</span></p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="space-y-4">
-                         <h4 className="font-semibold">Upload Proof of Payment</h4>
-                         <p className="text-sm text-muted-foreground">
-                            After paying, please upload a screenshot of your receipt. Your payment will be marked as "Pending Review" until an admin verifies it.
-                         </p>
-                        <div className="grid w-full max-w-sm items-center gap-1.5">
-                            <Label htmlFor="payment-proof">Receipt Screenshot</Label>
-                            <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmittingProof} />
-                        </div>
-                        {uploadProgress > 0 && (
-                            <div className="w-full bg-muted rounded-full h-2.5">
-                                <div className="bg-primary h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                                )}
                             </div>
                         )}
-                        <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmittingProof}>
-                            {isSubmittingProof ? 'Uploading...' : 'Submit Proof'}
-                        </Button>
+
+                        <div className="space-y-4">
+                             <h4 className="font-semibold">Upload Proof of Payment</h4>
+                             <p className="text-sm text-muted-foreground">
+                                After paying, please upload a screenshot of your receipt. Your payment will be marked as "Pending Review" until an admin verifies it.
+                             </p>
+                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                <Label htmlFor="payment-proof">Receipt Screenshot</Label>
+                                <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmittingProof} />
+                            </div>
+                            {uploadProgress > 0 && (
+                                <div className="w-full bg-muted rounded-full h-2.5">
+                                    <div className="bg-primary h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                                </div>
+                            )}
+                            <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmittingProof}>
+                                {isSubmittingProof ? 'Uploading...' : 'Submit Proof'}
+                            </Button>
+                        </div>
                     </div>
-                </div>
                 </ScrollArea>
             </DialogContent>
         </Dialog>
