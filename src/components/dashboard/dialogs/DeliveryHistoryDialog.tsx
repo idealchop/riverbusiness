@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,8 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Delivery } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { History, Calendar as CalendarIcon, Download, PackageCheck, Truck, Package } from 'lucide-react';
+import { History, Calendar as CalendarIcon, Download, PackageCheck, Truck, Package, Eye } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
+import { Card, CardContent } from '@/components/ui/card';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -100,14 +101,15 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
           </Button>
         </div>
         <div className="py-4 max-h-[60vh] overflow-y-auto">
-          <Table>
+          {/* Desktop Table View */}
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Ref ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Liters / Containers</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Attachment</TableHead>
+                <TableHead className="text-right">Attachment</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,7 +125,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
                     <TableCell>
                       <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       {delivery.proofOfDeliveryUrl ? (
                         <Button variant="link" size="sm" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>View</Button>
                       ) : (
@@ -140,7 +142,46 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
               )}
             </TableBody>
           </Table>
+
+          {/* Mobile Card View */}
+          <div className="space-y-4 md:hidden">
+            {filteredDeliveries.map(delivery => {
+              const statusInfo = getStatusInfo(delivery.status);
+              const liters = containerToLiter(delivery.volumeContainers || 0);
+              const containers = delivery.volumeContainers || 0;
+              return (
+                <Card key={delivery.id}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold">{format(new Date(delivery.date), 'PP')}</p>
+                        <p className="text-xs text-muted-foreground">ID: {delivery.id}</p>
+                      </div>
+                      <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
+                    </div>
+                    <div className="text-sm">
+                      <p>
+                        <strong>Volume:</strong> {liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L ({containers} containers)
+                      </p>
+                    </div>
+                    {delivery.proofOfDeliveryUrl && (
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Attachment
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+             {(deliveries || []).length === 0 && (
+                <div className="text-center text-muted-foreground py-10">No delivery history found.</div>
+              )}
+          </div>
         </div>
+        <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
