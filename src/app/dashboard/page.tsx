@@ -1371,58 +1371,64 @@ export default function DashboardPage() {
                         Here's the current progress of your refill request.
                     </DialogDescription>
                 </DialogHeader>
-                 {activeRefillRequest ? (
-                    <div className="py-6 grid md:grid-cols-2 gap-8 items-center">
-                        <div className="relative aspect-square w-full max-w-xs mx-auto">
-                           <Image
+                {activeRefillRequest ? (
+                    <div className="space-y-8 pt-6 pb-2">
+                        <div className="relative aspect-video w-full max-w-sm mx-auto">
+                            <Image
                                 src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Flow.png?alt=media&token=6b11f719-39e9-4ea4-b4a6-1bbe587bfa63"
                                 alt="Refill process"
                                 fill
                                 className="object-contain"
                             />
                         </div>
-                        <ul className="space-y-8">
-                            {statusOrder.map((status, index) => {
-                                const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
-                                const isCompleted = index < currentStatusIndex;
-                                const isCurrent = index === currentStatusIndex;
-                                const statusHistoryEntry = activeRefillRequest.statusHistory?.find(h => h.status === status);
 
-                                const Icon = statusConfig[status].icon;
+                        <div>
+                            <ol className="relative flex items-center justify-between w-full">
+                                {statusOrder.map((status, index) => {
+                                    const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
+                                    const isCompleted = index < currentStatusIndex;
+                                    const isCurrent = index === currentStatusIndex;
+                                    const Icon = statusConfig[status].icon;
 
-                                return (
-                                    <li key={status} className="flex items-start gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className={cn(
-                                                "h-10 w-10 rounded-full flex items-center justify-center border-2",
-                                                isCompleted ? "bg-primary border-primary text-primary-foreground" :
-                                                isCurrent ? "bg-primary/20 border-primary text-primary animate-pulse" :
-                                                "bg-muted border-muted-foreground/30 text-muted-foreground"
-                                            )}>
-                                                <Icon className="h-5 w-5" />
+                                    return (
+                                        <li key={status} className={cn("relative flex-1", index < statusOrder.length - 1 ? "pr-8 sm:pr-12" : "")}>
+                                            <div className="flex flex-col items-center text-center">
+                                                <div className={cn(
+                                                    "w-10 h-10 rounded-full flex items-center justify-center border-2",
+                                                    isCompleted ? "bg-primary border-primary text-primary-foreground" :
+                                                    isCurrent ? "bg-primary/20 border-primary text-primary animate-pulse" :
+                                                    "bg-muted border-muted-foreground/30 text-muted-foreground"
+                                                )}>
+                                                    <Icon className="h-5 w-5" />
+                                                </div>
+                                                <p className={cn(
+                                                    "font-semibold text-xs mt-2",
+                                                    (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
+                                                )}>
+                                                    {statusConfig[status].label}
+                                                </p>
                                             </div>
                                             {index < statusOrder.length - 1 && (
                                                 <div className={cn(
-                                                    "w-0.5 h-8 mt-2",
-                                                    isCompleted ? "bg-primary" : "bg-muted-foreground/30"
-                                                )}></div>
+                                                    "absolute top-5 left-1/2 w-full h-0.5 -translate-x-1/2 -z-10",
+                                                    isCompleted ? "bg-primary" : "bg-muted-foreground/30",
+                                                    index === 0 && "left-[calc(50%+1rem)] w-[calc(100%-2rem)]",
+                                                    index === statusOrder.length - 2 && "w-[calc(100%-2rem)]",
+                                                     // Shift the first line to start after the circle, and shorten the last
+                                                )} style={{
+                                                  left: index === 0 ? 'calc(50% + 1.25rem)' : '50%',
+                                                  width: index === 0 || index === statusOrder.length -2 ? 'calc(100% - 2.5rem)' : '100%',
+                                                }} />
                                             )}
-                                        </div>
-                                        <div className="flex-1 pt-1.5">
-                                            <p className={cn(
-                                                "font-semibold",
-                                                (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
-                                            )}>
-                                                {statusConfig[status].label}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow(new Date((statusHistoryEntry.timestamp as Timestamp).toDate()), { addSuffix: true })}` : 'Pending'}
-                                            </p>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                            <div className="mt-4 text-center text-sm text-muted-foreground">
+                                {statusConfig[activeRefillRequest.status]?.message}
+                            </div>
+                        </div>
+
                     </div>
                 ) : (
                     <div className="py-10 text-center">
