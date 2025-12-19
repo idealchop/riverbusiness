@@ -65,19 +65,20 @@ service cloud.firestore {
     }
 
     match /refillRequests/{requestId} {
-      // Any authenticated user can create a request.
-      allow create: if request.auth != null;
+      // Any authenticated user can create a request for themselves.
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       
       // Admins can read, list, and update all requests.
-      allow read, list, update: if isAdmin();
-
-      // An authenticated user can list (query for) their OWN requests.
-      // This is the key change to fix the permissions error.
-      // This rule allows a query like: where('userId', '==', auth.uid).where('status', '==', 'Pending')
-      allow list: if request.auth != null && request.query.userId == request.auth.uid;
+      allow read, update, list: if isAdmin();
       
-      // An authenticated user can read a specific request document if they are the owner.
+      // A user can read a specific request document if they are the owner.
       allow read: if request.auth != null && get(/databases/$(database)/documents/refillRequests/$(requestId)).data.userId == request.auth.uid;
+
+      // This is the crucial rule fix:
+      // Allow a user to LIST their own requests when querying by status.
+      // Firestore requires that queries are matched by security rules.
+      // The dashboard query is `where('userId', '==', auth.uid).where('status', 'in', ['...'])`
+      allow list: if request.auth != null && request.query.userId == request.auth.uid;
     }
   }
 }
