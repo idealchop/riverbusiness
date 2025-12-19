@@ -427,7 +427,6 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     results: complianceReportToEdit.results || '',
                 });
             } else {
-                // Reset for creating a new one to avoid holding old values
                 complianceReportForm.reset({
                     reportType: 'DOH Bacteriological Test (Monthly)',
                     resultId: '',
@@ -1719,8 +1718,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                      {pendingRefillRequests.length > 0 && (
                         <Card className="bg-amber-50 border-amber-200">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/> Pending Refill Requests</CardTitle>
-                                <CardDescription>Users who have requested a one-time refill.</CardDescription>
+                                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/>Pending Refill Requests</CardTitle>
+                                <CardDescription>This is a queue for the refill team. Users have requested a one-time water refill.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Table>
@@ -2504,4 +2503,3 @@ export default function AdminPage() {
         </div>
     )
 }
-

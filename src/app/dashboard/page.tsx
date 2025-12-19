@@ -423,8 +423,17 @@ export default function DashboardPage() {
     };
 
     const handleRequestRefill = async () => {
-        if (!user || !firestore || hasPendingRefill) {
-            toast({ variant: "destructive", title: "Error", description: "Cannot process request. You may already have a pending request." });
+        if (!user || !firestore) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot process request. User not found." });
+            return;
+        }
+        if (hasPendingRefill) {
+            toast({
+                title: "Request Already Pending",
+                description: `Don't worry, ${user.name}, our refill team is already on your previous request.`,
+                variant: "default", 
+                className: "bg-blue-100 border-blue-200 text-blue-800"
+            });
             return;
         }
 
@@ -442,8 +451,8 @@ export default function DashboardPage() {
         try {
             await addDocumentNonBlocking(refillRef, newRequest);
             toast({
-                title: "Refill Request Sent",
-                description: "The admin team has been notified. We will process your request shortly.",
+                title: "Refill Request Sent!",
+                description: "Our refill team has been notified and will process your request shortly.",
             });
         } catch (error) {
             toast({
@@ -507,12 +516,10 @@ export default function DashboardPage() {
                  <AlertDialog>
                     <UITooltip>
                         <UITooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="default" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting || hasPendingRefill}>
-                                    <BellRing className="mr-2 h-4 w-4" />
-                                    {isRefillRequesting ? "Requesting..." : "Request Refill"}
-                                </Button>
-                            </AlertDialogTrigger>
+                           <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillRequesting}>
+                                <BellRing className="mr-2 h-4 w-4" />
+                                {isRefillRequesting ? "Requesting..." : "Request Refill"}
+                            </Button>
                         </UITooltipTrigger>
                         {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
                     </UITooltip>
@@ -520,7 +527,7 @@ export default function DashboardPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This will notify the admin team that you require an immediate one-time refill. Are you sure you want to proceed?
+                                This will notify the refill team that you require an immediate one-time refill. Are you sure you want to proceed?
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -1331,4 +1338,3 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
-
