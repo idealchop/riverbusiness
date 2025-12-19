@@ -438,6 +438,18 @@ export default function DashboardPage() {
         setOneTimeDeliveryContainers(1);
     };
 
+    const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
+        if (!firestore) return;
+        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
+        const newNotification: Partial<Notification> = {
+            ...notification,
+            userId,
+            date: serverTimestamp(),
+            isRead: false
+        };
+        await addDocumentNonBlocking(notificationsCol, newNotification);
+    };
+
     const handleRequestRefill = async () => {
         if (!user || !firestore || !authUser) {
             toast({ variant: "destructive", title: "Error", description: "Cannot process request. User not found." });
@@ -466,18 +478,13 @@ export default function DashboardPage() {
             const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
             const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
 
-            const notificationsCol = collection(firestore, 'users', authUser.uid, 'notifications');
-            const notificationData: Partial<Notification> = {
+            await createNotification(authUser.uid, {
                 type: 'delivery',
                 title: 'Refill Request Sent!',
                 description: `Your one-time refill request has been sent to the admin for processing.`,
                 data: { requestId: newDocRef.id },
-                date: serverTimestamp(),
-                isRead: false,
-                userId: authUser.uid,
-            };
-            await addDocumentNonBlocking(notificationsCol, notificationData);
-
+            });
+            
              toast({
                 title: "Refill Request Sent!",
                 description: `Thank you, ${user.name}! You can track the progress of your request by clicking the 'Request Refill' button again.`,
@@ -544,7 +551,7 @@ export default function DashboardPage() {
                 <Button
                     variant="default"
                     className="w-auto h-auto px-4 py-2"
-                    disabled={isRefillRequesting || (isFlowPlan && autoRefill)}
+                    disabled={isRefillRequesting}
                     onClick={handleRequestRefill}
                 >
                     <BellRing className="mr-2 h-4 w-4" />
@@ -1441,6 +1448,7 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
+
 
 
 

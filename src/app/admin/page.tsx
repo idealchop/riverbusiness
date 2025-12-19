@@ -492,11 +492,19 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!selectedUser || !stationToAssign || !firestore) return;
 
         const userRef = doc(firestore, 'users', selectedUser.id);
+        const stationName = waterStations?.find(ws => ws.id === stationToAssign)?.name || 'a new station';
         updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
         
         setSelectedUser(prev => prev ? { ...prev, assignedWaterStationId: stationToAssign } : null);
 
-        toast({ title: 'Station Assigned', description: `A new water station has been assigned to ${selectedUser.name}.` });
+        createNotification(selectedUser.id, {
+            type: 'general',
+            title: 'Water Station Assigned',
+            description: `Your account has been assigned to the ${stationName} water station.`,
+            data: { stationId: stationToAssign }
+        });
+
+        toast({ title: 'Station Assigned', description: `${stationName} has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
     };
@@ -575,7 +583,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     const handleUploadContract = async () => {
-        if (!contractFile || !userForContract || !storage) return;
+        if (!contractFile || !userForContract || !storage || !firestore) return;
 
         setIsSubmitting(true);
         const uploadKey = `contract-${userForContract.id}`;
@@ -583,6 +591,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         try {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
             await handleFileUpload(contractFile, path, uploadKey);
+
+            createNotification(userForContract.id, {
+                type: 'general',
+                title: 'Contract Attached',
+                description: 'A new contract has been attached to your account.',
+                data: {}
+            });
     
             toast({ title: 'Upload Complete', description: 'The contract is being processed.' });
             setIsUploadContractOpen(false);
@@ -771,14 +786,12 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
         
-        if (newStatus === 'Completed' || newStatus === 'Cancelled') {
-            createNotification(request.userId, {
-                type: 'delivery',
-                title: `Refill Request ${newStatus}`,
-                description: `Your one-time refill request has been marked as ${newStatus}.`,
-                data: { requestId: request.id }
-            });
-        }
+        createNotification(request.userId, {
+            type: 'delivery',
+            title: `Refill Request: ${newStatus}`,
+            description: `Your one-time refill request is now ${newStatus}.`,
+            data: { requestId: request.id }
+        });
         
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };

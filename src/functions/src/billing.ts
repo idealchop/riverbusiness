@@ -137,7 +137,8 @@ async function generateInvoiceForUser(
         // Batch writes for invoice and notification
         const batch = db.batch();
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
-        batch.add(notificationsRef, { ...notification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id });
+        const notificationWithMeta = { ...notification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+        batch.set(notificationsRef.doc(), notificationWithMeta);
         
         return batch.commit();
     }
