@@ -9,10 +9,10 @@ import { FirebaseStorage } from 'firebase/storage';
 
 interface FirebaseProviderProps {
   children: ReactNode;
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
-  storage: FirebaseStorage;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
+  storage: FirebaseStorage | null;
 }
 
 // Internal state for user authentication
@@ -183,6 +183,10 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
 export const useUser = (): UserHookResult => {
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
+  const context = useContext(FirebaseContext);
+    if (context === undefined) {
+        throw new Error('useUser must be used within a FirebaseProvider.');
+    }
+  const { user, isUserLoading, userError } = context;
   return { user, isUserLoading, userError };
 };
