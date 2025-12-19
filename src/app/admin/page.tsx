@@ -1744,7 +1744,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <TableCell>{request.clientId}</TableCell>
                                                 <TableCell>{request.businessName}</TableCell>
                                                 <TableCell>
-                                                    {request.requestedAt ? formatDistanceToNow((request.requestedAt as any).toDate(), { addSuffix: true }) : 'Just now'}
+                                                    {request.requestedAt ? formatDistanceToNow(new Date(request.requestedAt as string), { addSuffix: true }) : 'Just now'}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge variant="secondary">{request.status}</Badge>
