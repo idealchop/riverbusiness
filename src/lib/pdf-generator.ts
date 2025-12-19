@@ -223,7 +223,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     };
     
     drawHeader();
-    startY = 90; // Start content below header
+    startY = 80;
 
     // --- BILLING & DATE INFO ---
     doc.setFontSize(9);
@@ -249,32 +249,32 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     startY += 40;
 
     // --- RENDER TABLES ---
-    const renderTable = (title: string, head: any[], body: any[][]) => {
-      if (body.length > 0) {
-        doc.autoTable({
-            head: head,
-            body: body,
-            startY: startY,
-            theme: 'striped',
-            headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
-            bodyStyles: { fontSize: 8, cellPadding: 4 },
-            margin: { left: margin, right: margin },
-            didDrawPage: (data) => {
-                drawHeader();
-                drawFooter(data.pageNumber);
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.text(title, margin, 80);
-            },
-            willDrawPage: (data) => {
-              if(data.pageNumber > 1) {
-                startY = 90;
-              }
-            }
-        });
-        startY = (doc as any).lastAutoTable.finalY + 20;
-      }
+    const renderTable = (title: string, head: any[], body: any[][], finalY?: number) => {
+        let tableFinalY = 0;
+        if (body.length > 0) {
+            doc.autoTable({
+                head: head,
+                body: body,
+                startY: finalY || startY,
+                theme: 'striped',
+                headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
+                bodyStyles: { fontSize: 8, cellPadding: 4 },
+                margin: { left: margin, right: margin },
+                didDrawPage: (data) => {
+                    if (data.pageNumber === 1) {
+                      drawHeader();
+                    } else {
+                        startY = 80;
+                    }
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                    doc.text(title, margin, startY - 10);
+                }
+            });
+            tableFinalY = (doc as any).lastAutoTable.finalY;
+        }
+        return tableFinalY;
     };
     
     // --- Subscription Details ---
@@ -287,46 +287,55 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
             if (gallonQuantity > 0) subscriptionBody.push(['Containers on Loan', `${gallonQuantity}`]);
             if (dispenserQuantity > 0) subscriptionBody.push(['Dispensers on Loan', `${dispenserQuantity}`]);
         }
-        renderTable('Subscription Details', [['Detail', 'Information']], subscriptionBody);
+        startY = renderTable('Subscription Details', [['Detail', 'Information']], subscriptionBody, startY);
+        startY = startY > 0 ? startY + 20 : 80;
     }
 
     // --- Deliveries ---
-    renderTable('Delivery History', 
-      [["Ref ID", "Date", "Containers", "Liters", "Status"]], 
-      deliveries.map(d => [d.id, format(new Date(d.date), 'PP'), d.volumeContainers, containerToLiter(d.volumeContainers).toFixed(1), d.status])
-    );
+    const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
+    const totalLitersConsumed = containerToLiter(totalContainers);
+    const deliveryBody = deliveries.map(d => [d.id, format(new Date(d.date), 'PP'), d.volumeContainers, containerToLiter(d.volumeContainers).toFixed(1), d.status]);
+    const deliverySummaryRow = [
+      { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
+      { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
+      { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold' } },
+      { content: '', styles: {} },
+    ];
+    deliveryBody.push(deliverySummaryRow as any);
+    startY = renderTable('Delivery History', [["Ref ID", "Date", "Containers", "Liters", "Status"]], deliveryBody, startY);
+    startY = startY > 0 ? startY + 20 : 80;
     
     // --- Sanitation ---
-    renderTable('Sanitation Visits', 
+    startY = renderTable('Sanitation Visits', 
       [["Scheduled Date", "Status", "Quality Officer"]],
-      sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo])
+      sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]),
+      startY
     );
+    startY = startY > 0 ? startY + 20 : 80;
     
     // --- Compliance ---
-    renderTable('Compliance Reports',
+    startY = renderTable('Compliance Reports',
       [["Report Name", "Date", "Status"]],
-      complianceReports.map(r => [r.name, r.date ? format((r.date as any).toDate(), 'PP') : 'N/A', r.status])
+      complianceReports.map(r => [r.name, r.date ? format((r.date as any).toDate(), 'PP') : 'N/A', r.status]),
+      startY
     );
-
+    startY = startY > 0 ? startY + 20 : 80;
 
     // --- FINANCIAL SUMMARY (AT THE END) ---
-    const finalY = (doc as any).lastAutoTable.finalY || startY;
-    if (finalY > pageHeight - 120) { // Check if we need a new page for the summary
+    if (startY > pageHeight - 140) { // Check if we need a new page for the summary
       doc.addPage();
-      drawHeader();
-      startY = 90;
-    } else {
-      startY = finalY;
+      startY = 80;
     }
 
-    const summaryX = pageWidth - margin - 200; // Position summary block on the right
+    const summaryX = pageWidth - margin - 200;
     doc.setFillColor(240, 240, 240);
-    doc.rect(summaryX - 10, startY - 10, 220, 60, 'F');
+    doc.rect(summaryX - 10, startY, 220, 80, 'F');
     
     const subtotal = totalAmount;
     const tax = totalAmount * 0.12;
-    const grandTotal = subtotal;
+    const grandTotal = subtotal; // As per instruction
 
+    startY += 15;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80);
@@ -344,6 +353,19 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.setTextColor(0);
     doc.text('Total Amount Due:', summaryX, startY + 38);
     doc.text(`₱ ${grandTotal.toFixed(2)}`, pageWidth - margin, startY + 38, { align: 'right' });
+    
+    // Saved Liters for fixed plans
+    if (user && !user.plan?.isConsumptionBased && user.customPlanDetails) {
+        const totalMonthlyAllocation = (user.customPlanDetails.litersPerMonth || 0) + (user.customPlanDetails.bonusLiters || 0);
+        const savedLiters = totalMonthlyAllocation - totalLitersConsumed;
+        if (savedLiters > 0) {
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text(`Saved Liters: ${savedLiters.toLocaleString(undefined, {maximumFractionDigits:0})} L will be added to next month's balance.`, summaryX, startY + 58);
+        }
+    }
+
 
     // Draw footer on the last page
     drawFooter((doc as any).internal.getNumberOfPages());
@@ -351,3 +373,4 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     // --- SAVE PDF ---
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(now, 'yyyy-MM')}.pdf`);
 };
+
