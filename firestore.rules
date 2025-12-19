@@ -69,7 +69,7 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       
       // A user can read a specific request document if they are the owner.
-      allow read: if request.auth != null && get(/databases/$(database)/documents/refillRequests/$(requestId)).data.userId == request.auth.uid;
+      allow get: if request.auth != null && get(/databases/$(database)/documents/refillRequests/$(requestId)).data.userId == request.auth.uid;
 
       // Admins can manage all requests.
       allow read, update, list: if isAdmin();

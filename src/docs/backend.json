@@ -141,6 +141,15 @@
         "metric": { "type": "string", "enum": ["liters", "gallons"] }
       }
     },
+    "StatusHistoryEntry": {
+        "title": "StatusHistoryEntry",
+        "type": "object",
+        "properties": {
+            "status": { "type": "string", "enum": ["Requested", "In Production", "Out for Delivery", "Completed", "Cancelled"] },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["status", "timestamp"]
+    },
     "RefillRequest": {
       "title": "RefillRequest",
       "type": "object",
@@ -152,7 +161,11 @@
         "businessName": { "type": "string", "description": "Business name of the user." },
         "clientId": { "type": "string", "description": "Client ID of the user." },
         "requestedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the request was made." },
-        "status": { "type": "string", "enum": ["Pending", "Completed"], "description": "The current status of the refill request." }
+        "status": { "type": "string", "enum": ["Requested", "In Production", "Out for Delivery", "Completed", "Cancelled"], "description": "The current status of the refill request." },
+        "statusHistory": {
+            "type": "array",
+            "items": { "$ref": "#/entities/StatusHistoryEntry" }
+        }
       },
       "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
     },
