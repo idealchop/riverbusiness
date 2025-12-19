@@ -610,7 +610,7 @@ export default function DashboardLayout({
                         {!selectedPaymentMethod ? (
                             <div>
                                 <h4 className="font-semibold mb-4">Select a Payment Method</h4>
-                                <div className="grid grid-cols-2 gap-4 md:grid-cols-1">
+                                <div className="grid grid-cols-2 gap-4">
                                 {paymentOptions.map((option) => (
                                     <Card key={option.name} className="cursor-pointer hover:border-primary" onClick={() => handlePaymentOptionClick(option)}>
                                         <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
@@ -675,4 +675,3 @@ export default function DashboardLayout({
   );
 }
 
-    
