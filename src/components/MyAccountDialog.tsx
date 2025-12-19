@@ -27,7 +27,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -156,7 +156,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [soaMonth, setSoaMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
+  const [soaMonth, setSoaMonth] = useState<string>('');
   const { toast } = useToast();
   const firestore = useFirestore();
   const storage = useStorage();
@@ -316,21 +316,30 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
   const handleDownloadMonthlySOA = () => {
     if (!user || !deliveries) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'User data or deliveries not available to generate SOA.',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'User data or deliveries not available.' });
       return;
     }
+    if (!soaMonth) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select a month to download.' });
+        return;
+    }
 
-    const selectedMonthDate = new Date(soaMonth + '-02'); // Use day 2 to avoid timezone issues
+    const [year, month] = soaMonth.split('-').map(Number);
+    const selectedMonthDate = new Date(year, month - 1, 2); 
     const start = startOfMonth(selectedMonthDate);
     const end = endOfMonth(selectedMonthDate);
+    
+    let dateRangeForPDF = { from: start, to: end };
+    
+    if (soaMonth === '2024-01') { // Special case for Dec-Jan
+      start.setMonth(start.getMonth() - 1);
+      dateRangeForPDF = { from: start, to: end };
+    }
 
-    const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), { start, end }));
-    const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), { start, end })) || [];
-    const monthlyCompliance = complianceReports?.filter(r => r.date && isWithinInterval((r.date as any).toDate(), { start, end })) || [];
+
+    const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), dateRangeForPDF));
+    const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), dateRangeForPDF)) || [];
+    const monthlyCompliance = complianceReports?.filter(r => r.date && isWithinInterval((r.date as any).toDate(), dateRangeForPDF)) || [];
 
     const consumedLitersThisMonth = monthlyDeliveries.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
@@ -340,6 +349,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     } else {
         totalAmount = user.plan?.price || 0;
     }
+    
+    if (soaMonth === '2024-01') { // Double the price for the two-month period
+        if (!user.plan?.isConsumptionBased) {
+            totalAmount *= 2;
+        }
+    }
+
 
     generateMonthlySOA({
       user,
@@ -360,22 +376,47 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const availableMonths = useMemo(() => {
     if (!user?.createdAt) return [];
     
+    const today = new Date();
     const createdAt = (user.createdAt as any).toDate ? (user.createdAt as any).toDate() : new Date(user.createdAt);
-    const start = startOfMonth(createdAt);
-    const end = startOfMonth(new Date());
+    const startOfCreationMonth = startOfMonth(createdAt);
+    
     const months = [];
-
-    let current = end;
-    while(current >= start) {
-        months.push({
-            value: format(current, 'yyyy-MM'),
-            label: format(current, 'MMMM yyyy'),
-        });
-        current = subMonths(current, 1);
+    
+    // Check for special Dec 2023 - Jan 2024 SOA
+    const jan2024EndDate = endOfMonth(new Date(2024, 0, 1)); // End of Jan 2024
+    if (isAfter(today, jan2024EndDate) || isSameDay(today, jan2024EndDate)) {
+        if (createdAt < jan2024EndDate) {
+            months.push({
+                value: '2024-01',
+                label: 'Dec 2023 - Jan 2024'
+            });
+        }
     }
-    return months;
+
+    // Generate monthly SOAs from Feb 2024 onwards
+    let current = startOfMonth(new Date(2024, 1, 1)); // Start from Feb 2024
+    const endLoop = startOfMonth(today);
+
+    while(current <= endLoop) {
+        const endOfCurrentMonthLoop = endOfMonth(current);
+        if (isAfter(today, endOfCurrentMonthLoop) || isSameDay(today, endOfCurrentMonthLoop)) {
+            months.push({
+                value: format(current, 'yyyy-MM'),
+                label: format(current, 'MMMM yyyy'),
+            });
+        }
+        current = addMonths(current, 1);
+    }
+    
+    return months.sort((a, b) => b.value.localeCompare(a.value));
 
   }, [user]);
+
+  useEffect(() => {
+    if(availableMonths.length > 0) {
+      setSoaMonth(availableMonths[0].value);
+    }
+  }, [availableMonths]);
 
 
   if (!user) return <>{children}</>;
@@ -886,21 +927,21 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                 <Label htmlFor="soa-month">Month</Label>
                 <Select value={soaMonth} onValueChange={setSoaMonth}>
                     <SelectTrigger id="soa-month">
-                        <SelectValue placeholder="Select a month" />
+                        <SelectValue placeholder="Select an available month..." />
                     </SelectTrigger>
                     <SelectContent>
-                        {availableMonths.map(month => (
+                        {availableMonths.length > 0 ? availableMonths.map(month => (
                             <SelectItem key={month.value} value={month.value}>
                                 {month.label}
                             </SelectItem>
-                        ))}
+                        )) : <SelectItem value="no-data" disabled>No reports available yet</SelectItem>}
                     </SelectContent>
                 </Select>
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleDownloadMonthlySOA}>Download SOA</Button>
+            <Button onClick={handleDownloadMonthlySOA} disabled={availableMonths.length === 0}>Download SOA</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -908,4 +949,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
