@@ -1,7 +1,7 @@
 
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import type { AppUser, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import type { DateRange } from 'react-day-picker';
 
@@ -225,30 +225,30 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     };
     
     drawHeader();
-    startY = 100;
+    let lastY = 100;
 
     // --- BILLING & DATE INFO ---
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('BILL TO:', margin, startY);
+    doc.text('BILL TO:', margin, lastY);
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(user.businessName || 'N/A', margin, startY + 12);
-    doc.text(user.address || 'No address provided', margin, startY + 22);
+    doc.text(user.businessName || 'N/A', margin, lastY + 12);
+    doc.text(user.address || 'No address provided', margin, lastY + 22);
     
     const now = new Date();
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('STATEMENT DATE:', pageWidth / 2, startY);
-    doc.text('BILLING PERIOD:', pageWidth / 2, startY + 12);
+    doc.text('STATEMENT DATE:', pageWidth / 2, lastY);
+    doc.text('BILLING PERIOD:', pageWidth / 2, lastY + 12);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(format(now, 'PP'), (pageWidth / 2) + 85, startY);
-    doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 85, startY + 12);
+    doc.text(format(now, 'PP'), (pageWidth / 2) + 85, lastY);
+    doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 85, lastY + 12);
     
-    startY += 50;
+    lastY += 50;
 
     // --- RENDER TABLES ---
     const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
@@ -273,8 +273,6 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         return tableFinalY;
     };
     
-    let lastY = startY;
-
     // --- Equipment Details ---
      if (user.customPlanDetails) {
         const { gallonQuantity, dispenserQuantity, litersPerMonth } = user.customPlanDetails;
@@ -326,13 +324,12 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         lastY += 20;
     }
 
-    // --- FINANCIAL SUMMARY (AT THE END) ---
-    if ((doc as any).lastAutoTable.finalY > pageHeight - 150) { 
+    // --- FINANCIAL SUMMARY ---
+    // Ensure there is enough space for the summary block, or add a new page
+    if (lastY > pageHeight - 150) { 
       doc.addPage();
       drawHeader();
       lastY = 100;
-    } else {
-        lastY = (doc as any).lastAutoTable.finalY + 30;
     }
 
     const summaryX = pageWidth - margin - 220; 
@@ -345,10 +342,10 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80);
     doc.text('Subtotal:', summaryX, lastY);
-    doc.text(`₱ ${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right' });
+    doc.text(`P ${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right' });
     
     doc.text('VAT (12%):', summaryX, lastY + 15);
-    doc.text(`₱ ${tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 15, { align: 'right' });
+    doc.text(`P ${tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 15, { align: 'right' });
 
     doc.setLineWidth(0.5);
     doc.line(summaryX - 5, lastY + 28, pageWidth - margin, lastY + 28);
@@ -357,7 +354,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0);
     doc.text('Total Amount Due:', summaryX, lastY + 42);
-    doc.text(`₱ ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 42, { align: 'right' });
+    doc.text(`P ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 42, { align: 'right' });
     
     // Saved Liters for fixed plans
     if (user && !user.plan?.isConsumptionBased && user.customPlanDetails) {
@@ -371,9 +368,13 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         }
     }
 
-    drawFooter((doc as any).internal.getNumberOfPages());
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for(let i=1; i <= totalPages; i++) {
+        doc.setPage(i);
+        drawFooter(i);
+    }
+    
 
     // --- SAVE PDF ---
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(now, 'yyyy-MM')}.pdf`);
 };
-
