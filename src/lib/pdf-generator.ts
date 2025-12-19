@@ -168,14 +168,15 @@ interface MonthlySOAProps {
     sanitationVisits: SanitationVisit[];
     complianceReports: ComplianceReport[];
     totalAmount: number;
+    billingPeriod: string;
 }
 
-export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount }: MonthlySOAProps) => {
+export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod }: MonthlySOAProps) => {
     const doc = new jsPDF('p', 'pt'); // Using points for finer control
     const primaryColor = [21, 99, 145];
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
-    let startY = 0;
+    let lastY = 0;
 
     const margin = 40;
 
@@ -198,7 +199,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const planText = user.plan ? `Plan: ${user.plan.name} (${user.clientType || 'N/A'})` : 'No Active Plan';
+      const planText = user.plan ? `Plan: ${user.plan.name}` : 'No Active Plan';
       doc.text(planText, pageWidth - margin, 55, { align: 'right' });
     };
 
@@ -225,7 +226,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     };
     
     drawHeader();
-    let lastY = 100;
+    lastY = 100;
 
     // --- BILLING & DATE INFO ---
     doc.setFontSize(9);
@@ -246,9 +247,9 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
     doc.text(format(now, 'PP'), (pageWidth / 2) + 85, lastY);
-    doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 85, lastY + 12);
+    doc.text(billingPeriod, (pageWidth / 2) + 85, lastY + 12);
     
-    lastY += 50;
+    lastY += 40;
 
     // --- RENDER TABLES ---
     const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
@@ -257,7 +258,8 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.text(title, margin, tableFinalY - 10);
+            doc.text(title, margin, tableFinalY);
+            tableFinalY += 15;
 
             doc.autoTable({
                 head: head,
@@ -273,7 +275,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         return tableFinalY;
     };
     
-    // --- Equipment Details ---
+     // --- Equipment Details ---
      if (user.customPlanDetails) {
         const { gallonQuantity, dispenserQuantity, litersPerMonth } = user.customPlanDetails;
         let equipmentBody: string[][] = [];
@@ -323,15 +325,15 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         );
         lastY += 20;
     }
-
-    // --- FINANCIAL SUMMARY ---
-    // Ensure there is enough space for the summary block, or add a new page
+    
+    // Auto-paging for summary
     if (lastY > pageHeight - 150) { 
-      doc.addPage();
-      drawHeader();
-      lastY = 100;
+        doc.addPage();
+        drawHeader();
+        lastY = 100;
     }
-
+    
+    // --- FINANCIAL SUMMARY ---
     const summaryX = pageWidth - margin - 220; 
     
     const subtotal = totalAmount;
@@ -374,7 +376,6 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         drawFooter(i);
     }
     
-
     // --- SAVE PDF ---
-    doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(now, 'yyyy-MM')}.pdf`);
+    doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`);
 };

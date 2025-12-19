@@ -27,7 +27,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -323,15 +323,21 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         toast({ variant: 'destructive', title: 'Error', description: 'Please select a month to download.' });
         return;
     }
-
-    const [year, month] = soaMonth.split('-').map(Number);
-    const selectedMonthDate = new Date(year, month - 1, 2); 
+    const currentYear = getYear(new Date());
     
-    let dateRangeForPDF = { from: startOfMonth(selectedMonthDate), to: endOfMonth(selectedMonthDate) };
+    let dateRangeForPDF: { from: Date; to: Date; };
+    let soaTitleMonth: string;
     
-    if (soaMonth === '2024-01') { 
-      const decStart = new Date(2023, 11, 1);
-      dateRangeForPDF = { from: decStart, to: endOfMonth(selectedMonthDate) };
+    if (soaMonth === `${currentYear}-01`) {
+        const decLastYear = new Date(currentYear - 1, 11, 1);
+        const janThisYear = new Date(currentYear, 0, 1);
+        dateRangeForPDF = { from: decLastYear, to: endOfMonth(janThisYear) };
+        soaTitleMonth = `Dec ${currentYear - 1} - Jan ${currentYear}`;
+    } else {
+        const [year, month] = soaMonth.split('-').map(Number);
+        const selectedMonthDate = new Date(year, month - 1, 2);
+        dateRangeForPDF = { from: startOfMonth(selectedMonthDate), to: endOfMonth(selectedMonthDate) };
+        soaTitleMonth = format(dateRangeForPDF.from, 'MMMM yyyy');
     }
 
     const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), dateRangeForPDF));
@@ -347,7 +353,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         totalAmount = user.plan?.price || 0;
     }
     
-    if (soaMonth === '2024-01' && !user.plan?.isConsumptionBased) {
+    if (soaMonth === `${currentYear}-01` && !user.plan?.isConsumptionBased) {
         totalAmount *= 2;
     }
 
@@ -357,11 +363,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
       sanitationVisits: monthlySanitation,
       complianceReports: monthlyCompliance,
       totalAmount,
+      billingPeriod: soaTitleMonth,
     });
 
     toast({
       title: 'Download Started',
-      description: `Your Statement of Account for ${format(dateRangeForPDF.from, 'MMMM yyyy')} is being generated.`,
+      description: `Your Statement of Account for ${soaTitleMonth} is being generated.`,
     });
     
     dispatch({type: 'SET_SOA_DIALOG', payload: false});
@@ -369,30 +376,34 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
   const availableMonths = useMemo(() => {
     if (!deliveries || deliveries.length === 0) return [];
-  
+    
+    const currentYear = getYear(new Date());
     const deliveryMonths = new Set<string>();
-    let hasDec2023 = false;
-    let hasJan2024 = false;
+    let hasDecLastYear = false;
+    let hasJanThisYear = false;
 
     deliveries.forEach(d => {
-      const deliveryMonth = format(new Date(d.date), 'yyyy-MM');
-      if (deliveryMonth === '2023-12') {
-        hasDec2023 = true;
-      } else if (deliveryMonth === '2024-01') {
-        hasJan2024 = true;
-      } else {
-        deliveryMonths.add(deliveryMonth);
-      }
+        const deliveryDate = new Date(d.date);
+        const deliveryYear = getYear(deliveryDate);
+        const deliveryMonth = format(deliveryDate, 'yyyy-MM');
+
+        if (deliveryYear === currentYear -1 && deliveryDate.getMonth() === 11) { // December of last year
+            hasDecLastYear = true;
+        } else if (deliveryYear === currentYear && deliveryDate.getMonth() === 0) { // January of this year
+            hasJanThisYear = true;
+        } else {
+            deliveryMonths.add(deliveryMonth);
+        }
     });
 
-    if (hasDec2023 || hasJan2024) {
-      deliveryMonths.add('2024-01'); // Special key for the combined report
+    if (hasDecLastYear || hasJanThisYear) {
+      deliveryMonths.add(`${currentYear}-01`); // Special key for the combined report
     }
     
     return Array.from(deliveryMonths)
       .map(monthStr => {
-        if (monthStr === '2024-01') {
-          return { value: '2024-01', label: 'Dec 2023 - Jan 2024' };
+        if (monthStr === `${currentYear}-01`) {
+          return { value: `${currentYear}-01`, label: `Dec ${currentYear - 1} - Jan ${currentYear}` };
         }
         const date = new Date(monthStr + '-02T00:00:00'); // Use second day to avoid timezone issues
         const label = format(date, 'MMMM yyyy');
@@ -405,14 +416,25 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const isSoaReady = useMemo(() => {
     if (!soaMonth) return false;
     const today = endOfDay(new Date());
+    
+    const currentYear = getYear(new Date());
+    if (soaMonth === `${currentYear}-01`) {
+        const endOfJan = endOfMonth(new Date(currentYear, 0, 1));
+        return isAfter(today, endOfJan);
+    }
+    
     const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
     return isAfter(today, endOfSelectedMonth);
   }, [soaMonth]);
   
   const soaNotReadyMessage = useMemo(() => {
     if (isSoaReady || !soaMonth || !user) return null;
-    const date = new Date(soaMonth + '-02T00:00:00');
-    const monthLabel = soaMonth === '2024-01' ? 'Dec 2023 - Jan 2024' : format(date, 'MMMM yyyy');
+    
+    const currentYear = getYear(new Date());
+    const monthLabel = soaMonth === `${currentYear}-01`
+        ? `Dec ${currentYear - 1} - Jan ${currentYear}`
+        : format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
+        
     const userName = user.name.split(' ')[0] || 'there';
 
     return (
@@ -966,5 +988,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
-    
