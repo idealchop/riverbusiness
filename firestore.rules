@@ -74,9 +74,8 @@ service cloud.firestore {
       // Admins can manage all requests.
       allow update: if isAdmin();
       
-      // Allow a user to LIST requests only when the query is filtered by their own userId.
-      // This is the correct way to authorize queries that check for user-owned documents.
-      allow list: if (request.auth != null && request.query.userId == request.auth.uid) || isAdmin();
+      // Allow a user to LIST requests only when the query is filtered by their own userId and a valid status.
+      allow list: if (request.auth != null && request.query.userId == request.auth.uid && request.query.status in ['Requested', 'In Production', 'Out for Delivery']) || isAdmin();
     }
   }
 }
