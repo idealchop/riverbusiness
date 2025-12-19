@@ -1,8 +1,8 @@
 
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { format } from 'date-fns';
-import type { AppUser, Delivery } from '@/lib/types';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import type { AppUser, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import type { DateRange } from 'react-day-picker';
 
 // Extend jsPDF with the autoTable method
@@ -147,7 +147,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
         doc.text('River Philippines', 14, pageHeight - 15);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(120);
-        doc.text('Turn Essential Needs Into Automatic Experience.', 45, pageHeight - 15);
+        doc.text('| Turn Essential Needs Into Automatic Experience.', 45, pageHeight - 15);
 
         // Contact Info
         const contactInfo = 'customers@riverph.com | www.riverph.com';
@@ -162,4 +162,194 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
 
   // 5. Save PDF
   doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+};
+
+interface MonthlySOAProps {
+    user: AppUser;
+    deliveries: Delivery[];
+    sanitationVisits: SanitationVisit[];
+    complianceReports: ComplianceReport[];
+    totalAmount: number;
+}
+
+export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount }: MonthlySOAProps) => {
+    const doc = new jsPDF();
+    const primaryColor = [21, 99, 145];
+    const accentColor = [240, 249, 255];
+    const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.width;
+    let startY = 0; // We'll manage this dynamically
+
+    // --- HEADER ---
+    const drawHeader = () => {
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, pageWidth, 25, 'F');
+      
+      const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+      try {
+         doc.addImage(logoUrl, 'JPEG', 14, 8, 18, 18);
+      } catch (e) {
+        console.error("Could not add logo to PDF:", e);
+      }
+      
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('Monthly Statement of Account', pageWidth - 14, 18, { align: 'right' });
+    };
+
+    // --- FOOTER ---
+    const drawFooter = (pageNumber: number) => {
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+      
+      doc.setFontSize(8);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('River Philippines', 14, pageHeight - 15);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120);
+      doc.text('| Turn Essential Needs Into Automatic Experience.', 45, pageHeight - 15);
+
+      const contactInfo = 'customers@riverph.com | www.riverph.com';
+      doc.text(contactInfo, 14, pageHeight - 10);
+      
+      doc.setTextColor(150);
+      doc.text(`Page ${pageNumber}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+    };
+    
+    drawHeader();
+    startY = 40;
+
+    // --- BILLING & DATE INFO ---
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Bill To:', 14, startY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+    doc.text(user.businessName || 'N/A', 14, startY + 5);
+    doc.text(user.address || 'No address provided', 14, startY + 10);
+    
+    const now = new Date();
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Statement Date:', pageWidth / 2, startY);
+    doc.text('Billing Period:', pageWidth / 2, startY + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+    doc.text(format(now, 'PP'), (pageWidth / 2) + 30, startY);
+    doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 30, startY + 5);
+    
+    startY += 25;
+
+    // --- FINANCIAL SUMMARY ---
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Account Summary', 14, startY);
+    startY += 6;
+
+    const subtotal = totalAmount;
+    const tax = totalAmount * 0.12;
+    const grandTotal = subtotal + tax;
+
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.rect(14, startY, pageWidth - 28, 28, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+    doc.text('Subtotal:', 18, startY + 7);
+    doc.text(`₱ ${subtotal.toFixed(2)}`, pageWidth - 18, startY + 7, { align: 'right' });
+    
+    doc.text('VAT (12%):', 18, startY + 14);
+    doc.text(`₱ ${tax.toFixed(2)}`, pageWidth - 18, startY + 14, { align: 'right' });
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total Amount Due:', 18, startY + 22);
+    doc.text(`₱ ${grandTotal.toFixed(2)}`, pageWidth - 18, startY + 22, { align: 'right' });
+    
+    startY += 40;
+
+    // --- DELIVERIES SECTION ---
+    if (deliveries.length > 0) {
+        doc.autoTable({
+            head: [["Ref ID", "Date", "Containers", "Liters", "Status"]],
+            body: deliveries.map(d => [
+                d.id,
+                format(new Date(d.date), 'PP'),
+                d.volumeContainers,
+                containerToLiter(d.volumeContainers),
+                d.status
+            ]),
+            startY: startY,
+            theme: 'striped',
+            headStyles: { fillColor: primaryColor },
+            didDrawPage: (data) => {
+                drawHeader();
+                drawFooter(data.pageNumber);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.text('Delivery History', 14, 35);
+            }
+        });
+        startY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // --- SANITATION VISITS SECTION ---
+    if (sanitationVisits.length > 0) {
+        doc.autoTable({
+            head: [["Scheduled Date", "Status", "Quality Officer"]],
+            body: sanitationVisits.map(v => [
+                format(new Date(v.scheduledDate), 'PP'),
+                v.status,
+                v.assignedTo
+            ]),
+            startY: startY,
+            theme: 'striped',
+            headStyles: { fillColor: primaryColor },
+            didDrawPage: (data) => {
+                drawHeader();
+                drawFooter(data.pageNumber);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.text('Sanitation Visits', 14, 35);
+            }
+        });
+        startY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // --- COMPLIANCE REPORTS SECTION ---
+    if (complianceReports.length > 0) {
+        doc.autoTable({
+            head: [["Report Name", "Date", "Status"]],
+            body: complianceReports.map(r => [
+                r.name,
+                r.date ? format((r.date as any).toDate(), 'PP') : 'N/A',
+                r.status
+            ]),
+            startY: startY,
+            theme: 'striped',
+            headStyles: { fillColor: primaryColor },
+            didDrawPage: (data) => {
+                drawHeader();
+                drawFooter(data.pageNumber);
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.text('Compliance Reports', 14, 35);
+            }
+        });
+    }
+
+    // Draw footer on the last page
+    drawFooter((doc as any).internal.getNumberOfPages());
+
+    // --- SAVE PDF ---
+    doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(now, 'yyyy-MM')}.pdf`);
 };

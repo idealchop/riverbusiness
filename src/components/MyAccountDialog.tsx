@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useReducer, useEffect, useTransition } from 'react';
+import React, { useReducer, useEffect, useTransition, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
@@ -25,13 +25,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery } from '@/lib/types';
+import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { generateMonthlySOA } from '@/lib/pdf-generator';
 
 // State Management with useReducer
 type State = {
@@ -157,6 +158,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
   const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
+
+  const sanitationVisitsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'sanitationVisits') : null, [firestore, authUser]);
+  const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+
+  const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
+  const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
+
 
   const consumptionDetails = React.useMemo(() => {
     const now = new Date();
@@ -299,6 +307,41 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false});
     dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: null});
   };
+
+  const handleDownloadMonthlySOA = () => {
+    if (!user || !deliveries) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'User data or deliveries not available to generate SOA.',
+      });
+      return;
+    }
+
+    const now = new Date();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
+
+    const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), { start, end }));
+    const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), { start, end })) || [];
+    const monthlyCompliance = complianceReports?.filter(r => r.date && isWithinInterval((r.date as any).toDate(), { start, end })) || [];
+
+    const totalAmount = consumptionDetails.estimatedCost;
+
+    generateMonthlySOA({
+      user,
+      deliveries: monthlyDeliveries,
+      sanitationVisits: monthlySanitation,
+      complianceReports: monthlyCompliance,
+      totalAmount,
+    });
+
+    toast({
+      title: 'Download Started',
+      description: `Your Statement of Account for ${format(now, 'MMMM yyyy')} is being generated.`,
+    });
+  };
+
 
   if (!user) return <>{children}</>;
 
@@ -495,7 +538,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                   </Card>
                    <Card>
                       <CardContent className="p-4">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {user.currentContractUrl ? (
                               <Button variant="outline" asChild>
                                   <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
@@ -506,7 +549,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           ) : (
                               <Button variant="outline" disabled>
                                   <FileX className="mr-2 h-4 w-4" />
-                                  Contract Not Available
+                                  No Contract
                               </Button>
                           )}
                           <Button variant="outline" onClick={() => {
@@ -514,6 +557,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           }}>
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
+                          </Button>
+                          <Button variant="default" onClick={handleDownloadMonthlySOA}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download SOA
                           </Button>
                         </div>
                       </CardContent>
