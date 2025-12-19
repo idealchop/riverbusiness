@@ -749,7 +749,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const requestRef = doc(firestore, 'refillRequests', requestId);
         updateDocumentNonBlocking(requestRef, {
             status: newStatus,
-            statusHistory: arrayUnion({ status: newStatus, timestamp: serverTimestamp() })
+            statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };

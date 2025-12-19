@@ -453,7 +453,7 @@ export default function DashboardPage() {
             requestedAt: serverTimestamp(),
             status: 'Requested',
             statusHistory: [
-                { status: 'Requested', timestamp: serverTimestamp() }
+                { status: 'Requested', timestamp: new Date().toISOString() }
             ]
         };
 
@@ -1409,5 +1409,3 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
-
-    
