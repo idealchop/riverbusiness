@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useReducer, useEffect, useTransition, useMemo } from 'react';
+import React, { useReducer, useEffect, useTransition, useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
@@ -27,7 +28,7 @@ import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -40,6 +41,7 @@ type State = {
   isPasswordDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
   isChangePlanDialogOpen: boolean;
+  isSoaDialogOpen: boolean;
   selectedNewPlan: any | null;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
@@ -57,6 +59,7 @@ type Action =
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
+  | { type: 'SET_SOA_DIALOG'; payload: boolean }
   | { type: 'SET_SELECTED_NEW_PLAN'; payload: any | null }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
@@ -71,6 +74,7 @@ const initialState: State = {
   isPasswordDialogOpen: false,
   isPhotoPreviewOpen: false,
   isChangePlanDialogOpen: false,
+  isSoaDialogOpen: false,
   selectedNewPlan: null,
   profilePhotoFile: null,
   profilePhotoPreview: null,
@@ -89,6 +93,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
+    case 'SET_SOA_DIALOG': return { ...state, isSoaDialogOpen: action.payload };
     case 'SET_SELECTED_NEW_PLAN': return { ...state, selectedNewPlan: action.payload };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
@@ -151,6 +156,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [soaMonth, setSoaMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
   const { toast } = useToast();
   const firestore = useFirestore();
   const storage = useStorage();
@@ -318,15 +324,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
       return;
     }
 
-    const now = new Date();
-    const start = startOfMonth(now);
-    const end = endOfMonth(now);
+    const selectedMonthDate = new Date(soaMonth + '-02'); // Use day 2 to avoid timezone issues
+    const start = startOfMonth(selectedMonthDate);
+    const end = endOfMonth(selectedMonthDate);
 
     const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), { start, end }));
     const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), { start, end })) || [];
     const monthlyCompliance = complianceReports?.filter(r => r.date && isWithinInterval((r.date as any).toDate(), { start, end })) || [];
 
-    const totalAmount = consumptionDetails.estimatedCost;
+    const consumedLitersThisMonth = monthlyDeliveries.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    
+    let totalAmount = 0;
+    if (user.plan?.isConsumptionBased) {
+        totalAmount = consumedLitersThisMonth * (user.plan.price || 0);
+    } else {
+        totalAmount = user.plan?.price || 0;
+    }
 
     generateMonthlySOA({
       user,
@@ -338,9 +351,31 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
     toast({
       title: 'Download Started',
-      description: `Your Statement of Account for ${format(now, 'MMMM yyyy')} is being generated.`,
+      description: `Your Statement of Account for ${format(start, 'MMMM yyyy')} is being generated.`,
     });
+    
+    dispatch({type: 'SET_SOA_DIALOG', payload: false});
   };
+
+  const availableMonths = useMemo(() => {
+    if (!user?.createdAt) return [];
+    
+    const createdAt = (user.createdAt as any).toDate ? (user.createdAt as any).toDate() : new Date(user.createdAt);
+    const start = startOfMonth(createdAt);
+    const end = startOfMonth(new Date());
+    const months = [];
+
+    let current = end;
+    while(current >= start) {
+        months.push({
+            value: format(current, 'yyyy-MM'),
+            label: format(current, 'MMMM yyyy'),
+        });
+        current = subMonths(current, 1);
+    }
+    return months;
+
+  }, [user]);
 
 
   if (!user) return <>{children}</>;
@@ -470,11 +505,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
                         {user.plan?.isConsumptionBased ? (
                             <p className="text-lg font-bold text-foreground">
-                                ₱{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
+                                P{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
                             </p>
                         ) : (
                             <p className="text-lg font-bold text-foreground">
-                                ₱{user.plan?.price.toLocaleString()}/month
+                                P{user.plan?.price.toLocaleString()}/month
                             </p>
                         )}
                         <Separator className="my-4" />
@@ -511,14 +546,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                         <Package className="h-4 w-4"/>
                                         <span>
                                             {user.customPlanDetails.gallonQuantity || 0} Containers 
-                                            ({user.customPlanDetails.gallonPrice > 0 ? `₱${user.customPlanDetails.gallonPrice}/mo` : 'Free'})
+                                            ({user.customPlanDetails.gallonPrice > 0 ? `P${user.customPlanDetails.gallonPrice}/mo` : 'Free'})
                                         </span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Package className="h-4 w-4"/>
                                         <span>
                                             {user.customPlanDetails.dispenserQuantity || 0} Dispensers 
-                                            ({user.customPlanDetails.dispenserPrice > 0 ? `₱${user.customPlanDetails.dispenserPrice}/mo` : 'Free'})
+                                            ({user.customPlanDetails.dispenserPrice > 0 ? `P${user.customPlanDetails.dispenserPrice}/mo` : 'Free'})
                                         </span>
                                     </li>
                                 </ul>
@@ -558,7 +593,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
                           </Button>
-                          <Button variant="default" onClick={handleDownloadMonthlySOA}>
+                          <Button variant="default" onClick={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
                               <Download className="mr-2 h-4 w-4" />
                               Download SOA
                           </Button>
@@ -606,7 +641,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                         {currentMonthInvoice.status}
                                     </span>
                                 </TableCell>
-                                <TableCell className="text-right">₱{currentMonthInvoice.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">P{currentMonthInvoice.amount.toFixed(2)}</TableCell>
                                 <TableCell className="text-right">
                                   <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
                                 </TableCell>
@@ -625,7 +660,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                         {invoice.status}
                                     </span>
                                   </TableCell>
-                                  <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">P{invoice.amount.toFixed(2)}</TableCell>
                                   <TableCell className="text-right">
                                     {invoice.status === 'Upcoming' || invoice.status === 'Overdue' ? (
                                       <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
@@ -760,7 +795,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         <CardContent className="flex-1">
                             {user.plan?.isConsumptionBased ? (
                                 <>
-                                  <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/liter</p>
+                                  <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/liter</p>
                                   <Separator className="my-2" />
                                   <ul className="text-sm space-y-1 text-muted-foreground">
                                     <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
@@ -769,7 +804,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 </>
                             ) : (
                                 <>
-                                    <p className="font-bold text-lg">₱{user.plan?.price.toLocaleString()}/month</p>
+                                    <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/month</p>
                                     <Separator className="my-2" />
                                     <ul className="text-sm space-y-1 text-muted-foreground">
                                         <li><strong>Billing:</strong> Fixed monthly bill.</li>
@@ -795,7 +830,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 <CardDescription>{flowPlan.description}</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1">
-                                <p className="font-bold text-lg">₱{flowPlan.price}/liter</p>
+                                <p className="font-bold text-lg">P{flowPlan.price}/liter</p>
                                 <Separator className="my-2" />
                                 <ul className="text-sm space-y-1 text-muted-foreground">
                                     <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
@@ -836,7 +871,41 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
             )}
         </DialogContent>
       </Dialog>
+      
+      {/* Download SOA Dialog */}
+      <Dialog open={state.isSoaDialogOpen} onOpenChange={(isOpen) => dispatch({ type: 'SET_SOA_DIALOG', payload: isOpen })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Download Statement of Account</DialogTitle>
+            <DialogDescription>
+              Select the month for which you'd like to download the SOA.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="grid gap-2">
+                <Label htmlFor="soa-month">Month</Label>
+                <Select value={soaMonth} onValueChange={setSoaMonth}>
+                    <SelectTrigger id="soa-month">
+                        <SelectValue placeholder="Select a month" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableMonths.map(month => (
+                            <SelectItem key={month.value} value={month.value}>
+                                {month.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleDownloadMonthlySOA}>Download SOA</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </AlertDialog>
   );
 }
+
