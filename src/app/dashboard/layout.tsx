@@ -352,6 +352,7 @@ export default function DashboardLayout({
   }
 
   const displayPhoto = user?.photoURL;
+  const userFirstName = user?.name?.split(' ')[0] || 'friend';
 
   return (
       <div className="flex flex-col h-full">
@@ -550,7 +551,7 @@ export default function DashboardLayout({
                     <Droplets className="h-8 w-8 text-primary-foreground" />
                 </Button>
                 <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
-                  <div className="tooltip-bubble">One-Tap Refill!</div>
+                  <div className="tooltip-bubble">Refill now, {userFirstName}?</div>
                 </div>
             </div>
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
@@ -648,7 +649,7 @@ export default function DashboardLayout({
                 <ScrollArea className="pr-6 -mr-6">
                     <div className="py-4 grid md:grid-cols-2 gap-8">
                         {!selectedPaymentMethod ? (
-                            <div>
+                            <div className="space-y-4">
                                 <h4 className="font-semibold mb-4">Select a Payment Method</h4>
                                 <div className="grid grid-cols-2 gap-4">
                                 {paymentOptions.map((option) => (
