@@ -59,9 +59,9 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0);
-  doc.text('River Business', pageWidth / 2, startY + 6);
-  doc.text('Filinvest Axis Tower 1 24th & 26th Flr', pageWidth / 2, startY + 11);
-  doc.text('304 Filinvest Ave, Alabang, Muntinlupa', pageWidth / 2, startY + 16);
+  doc.text('River Philippines', pageWidth / 2, startY + 6);
+  doc.text('Filinvest Axis Tower 1 24th & 26th Flr, 304 Filinvest Ave', pageWidth / 2, startY + 11);
+  doc.text('Alabang, Muntinlupa', pageWidth / 2, startY + 16);
 
   // 3. Add Document Details
   const docDetailsY = startY + 28;
@@ -140,10 +140,22 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
         doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
         
         doc.setFontSize(8);
+        
+        // Branding Message
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.setFont('helvetica', 'bold');
+        doc.text('River Philippines', 14, pageHeight - 15);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(120);
+        doc.text('Turn Essential Needs Into Automatic Experience.', 45, pageHeight - 15);
+
+        // Contact Info
+        const contactInfo = 'customers@riverph.com | www.riverph.com';
+        doc.text(contactInfo, 14, pageHeight - 10);
+        
+        // Page Number
         doc.setTextColor(150);
-        const footerText = 'River Business | customers@riverph.com | www.riverph.com';
-        doc.text(footerText, 14, pageHeight - 15);
-        doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 15, { align: 'right' });
+        doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
     }
   });
 
