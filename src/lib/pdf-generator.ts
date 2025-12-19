@@ -56,10 +56,12 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   doc.setTextColor(0);
   doc.text('River Philippines', 14, startY + 6);
   doc.text('Filinvest Axis Tower 1 24th & 26th Flr, 304 Filinvest Ave, Alabang, Muntinlupa', 14, startY + 11);
+  doc.text('www.riverph.com', 14, startY + 16);
+  doc.text('customer@riverph.com', 14, startY + 21);
   
 
   // 3. Add Document Details
-  const docDetailsY = startY + 23;
+  const docDetailsY = startY + 33;
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.text('Date Issued:', 14, docDetailsY);
