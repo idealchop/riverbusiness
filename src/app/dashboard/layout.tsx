@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
-import { format, differenceInMonths, addMonths, subHours } from 'date-fns';
+import { format, differenceInMonths, addMonths, subHours, formatDistanceToNow } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -433,6 +433,9 @@ export default function DashboardLayout({
                             return bSeconds - aSeconds; // Sort by most recent
                         }).map((notification) => {
                             const Icon = ICONS[notification.type] || Info;
+                            const date = notification.date instanceof Timestamp ? notification.date.toDate() : null;
+                            const isActionable = notification.type === 'payment' || notification.type === 'delivery';
+
                             return (
                                 <div key={notification.id} className="grid grid-cols-[25px_1fr] items-start gap-4">
                                     <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -443,7 +446,10 @@ export default function DashboardLayout({
                                         <p className="text-sm text-muted-foreground">
                                             {notification.description}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">{notification.date ? format(new Date((notification.date as any).seconds * 1000), 'PP') : ''}</p>
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                           <span>{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</span>
+                                           {isActionable && <Link href="/dashboard" className="font-medium text-primary hover:underline">View details</Link>}
+                                        </div>
                                     </div>
                                 </div>
                             );
