@@ -18,11 +18,10 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   const doc = new jsPDF();
   
   // 1. Add Logo and Header
-  const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
-  // Note: jsPDF has trouble with some PNGs. If it fails, using a JPG or ensuring the PNG is not interlaced can help.
-  // Since we cannot guarantee the format from the URL, we'll proceed and note this as a potential issue.
+  const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+  
   try {
-     doc.addImage(logoUrl, 'PNG', 14, 12, 24, 24);
+     doc.addImage(logoUrl, 'JPEG', 14, 12, 24, 24);
   } catch (e) {
     console.error("Could not add logo to PDF:", e);
   }
