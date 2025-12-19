@@ -27,42 +27,38 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   
   const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
   try {
-     doc.addImage(logoUrl, 'JPEG', 14, 8, 18, 18);
+     doc.addImage(logoUrl, 'JPEG', 14, 5, 18, 18);
   } catch (e) {
     console.error("Could not add logo to PDF:", e);
   }
   
-  doc.setFontSize(20);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Statement of Account', pageWidth - 14, 18, { align: 'right' });
+  doc.text('Water Refill History', pageWidth - 14, 17, { align: 'right' });
 
 
-  // 2. Add Client and Company Info
+  // 2. Add Personalized Greeting and Info
   let startY = 40;
   doc.setFontSize(10);
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Hi ${user.name}, here is your delivery history, produced for your convenience by River Business.`, 14, startY);
+  
+  startY += 15;
+
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('Bill To:', 14, startY);
+  doc.text('Company Information', 14, startY);
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0);
-  doc.text(user.businessName || 'N/A', 14, startY + 6);
-  doc.text(user.name, 14, startY + 11);
-  doc.text(user.address || 'No address provided', 14, startY + 16);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('From:', pageWidth / 2, startY);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0);
-  doc.text('River Philippines', pageWidth / 2, startY + 6);
-  doc.text('Filinvest Axis Tower 1 24th & 26th Flr, 304 Filinvest Ave', pageWidth / 2, startY + 11);
-  doc.text('Alabang, Muntinlupa', pageWidth / 2, startY + 16);
+  doc.text('River Philippines', 14, startY + 6);
+  doc.text('Filinvest Axis Tower 1 24th & 26th Flr, 304 Filinvest Ave, Alabang, Muntinlupa', 14, startY + 11);
+  
 
   // 3. Add Document Details
-  const docDetailsY = startY + 28;
+  const docDetailsY = startY + 23;
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.text('Date Issued:', 14, docDetailsY);
@@ -142,24 +138,17 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
         // Branding Message
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.setFont('helvetica', 'bold');
-        doc.text('River Philippines', 14, pageHeight - 15);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(120);
-        doc.text('| Turn Essential Needs Into Automatic Experience.', 45, pageHeight - 15);
-
-        // Contact Info
-        const contactInfo = 'customers@riverph.com | www.riverph.com';
-        doc.text(contactInfo, 14, pageHeight - 10);
+        doc.text('River Philippines: Turn Essential Needs Into an Automatic Experience.', 14, pageHeight - 12);
         
         // Page Number
         doc.setTextColor(150);
-        doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+        doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 12, { align: 'right' });
     }
   });
 
 
   // 5. Save PDF
-  doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  doc.save(`WaterRefillHistory_${user.businessName?.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 };
 
 interface MonthlySOAProps {
