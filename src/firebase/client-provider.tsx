@@ -1,26 +1,57 @@
 
 'use client';
 
-import React, { useMemo, type ReactNode } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeFirebase } from '@/firebase';
+import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { firebaseConfig } from './config';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
+interface FirebaseServices {
+  firebaseApp: FirebaseApp | null;
+  auth: Auth | null;
+  firestore: Firestore | null;
+  storage: FirebaseStorage | null;
+}
+
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const { firebaseApp, auth, firestore, storage } = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
-    return initializeFirebase();
+  const [services, setServices] = useState<FirebaseServices>({
+    firebaseApp: null,
+    auth: null,
+    firestore: null,
+    storage: null,
+  });
+
+  useEffect(() => {
+    // This effect runs only on the client, after the component has mounted.
+    if (typeof window !== 'undefined') {
+        let firebaseApp: FirebaseApp;
+        if (!getApps().length) {
+            firebaseApp = initializeApp(firebaseConfig);
+        } else {
+            firebaseApp = getApp();
+        }
+
+        const auth = getAuth(firebaseApp);
+        const firestore = getFirestore(firebaseApp);
+        const storage = getStorage(firebaseApp);
+      
+        setServices({ firebaseApp, auth, firestore, storage });
+    }
   }, []); // Empty dependency array ensures this runs only once on mount
 
   return (
     <FirebaseProvider
-      firebaseApp={firebaseApp}
-      auth={auth}
-      firestore={firestore}
-      storage={storage}
+      firebaseApp={services.firebaseApp}
+      auth={services.auth}
+      firestore={services.firestore}
+      storage={services.storage}
     >
       {children}
     </FirebaseProvider>

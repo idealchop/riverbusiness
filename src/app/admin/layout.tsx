@@ -11,6 +11,25 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser } from '@/lib/types';
 import { doc } from 'firebase/firestore';
 import { useMounted } from '@/hooks/use-mounted';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function AdminLayoutSkeleton() {
+    return (
+        <div className="flex flex-col h-screen">
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
+                <div className="flex-1" />
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+            </header>
+            <main className="flex-1 overflow-auto p-4 sm:p-6">
+                {/* Children will be rendered here */}
+            </main>
+        </div>
+    );
+}
+
 
 export default function AdminLayout({
   children,
@@ -36,16 +55,11 @@ export default function AdminLayout({
     window.dispatchEvent(new CustomEvent('admin-open-my-account'));
   };
 
-  if (!isMounted) {
+  if (!isMounted || !auth || isUserLoading) {
     return (
-      <div className="flex flex-col h-screen">
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-          <div className="flex-1" />
-        </header>
-        <main className="flex-1 overflow-auto p-4 sm:p-6">
+      <AdminLayoutSkeleton>
           {children}
-        </main>
-      </div>
+      </AdminLayoutSkeleton>
     );
   }
 

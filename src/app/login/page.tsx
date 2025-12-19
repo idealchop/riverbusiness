@@ -16,6 +16,7 @@ import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -23,6 +24,38 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+function LoginSkeleton() {
+    return (
+        <Card className="w-full max-w-5xl shadow-2xl overflow-hidden rounded-2xl">
+          <div className="grid lg:grid-cols-2">
+            <div className="flex flex-col items-center justify-center p-6 sm:p-12">
+              <div className="mx-auto grid w-full max-w-sm gap-6">
+                <div className="grid gap-2 text-center justify-center">
+                    <Skeleton className="h-20 w-20 mb-4 mx-auto rounded-full" />
+                    <Skeleton className="h-9 w-24 mx-auto" />
+                    <Skeleton className="h-5 w-64 mx-auto" />
+                </div>
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                      <Skeleton className="h-5 w-12" />
+                      <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="grid gap-2">
+                       <Skeleton className="h-5 w-16" />
+                       <Skeleton className="h-10 w-full" />
+                  </div>
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            </div>
+            <div className="hidden lg:flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800">
+                <Skeleton className="w-full h-full min-h-[400px]" />
+            </div>
+          </div>
+      </Card>
+    );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,6 +72,15 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Login service not ready',
+            description: 'Please wait a moment and try again.',
+        });
+        return;
+    }
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
@@ -61,6 +103,15 @@ export default function LoginPage() {
       });
     }
   };
+  
+  // Do not render the form until the auth service is available
+  if (!auth) {
+      return (
+        <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+            <LoginSkeleton />
+        </main>
+      );
+  }
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
