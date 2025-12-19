@@ -29,12 +29,12 @@ import Link from 'next/link';
 import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
 import { format, differenceInMonths, addMonths, subHours, formatDistanceToNow } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType, RefillRequest } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query } from 'firebase/firestore';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -120,6 +120,20 @@ export default function DashboardLayout({
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
+
+  const activeRefillQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(
+      collection(firestore, 'users', authUser.uid, 'refillRequests'),
+      where('status', 'in', ['Requested', 'In Production', 'Out for Delivery'])
+    );
+  }, [firestore, authUser]);
+
+  const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
+  const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0 ? activeRefills[0] : null), [activeRefills]);
+  const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
+  const [isRefillRequesting, setIsRefillRequesting] = useState(false);
+
 
   useEffect(() => {
     if (notifications) {
@@ -307,6 +321,68 @@ export default function DashboardLayout({
         setIsPaymentDialogOpen(true);
     };
 
+    const createNotification = async (userId: string, notification: Omit<NotificationType, 'id' | 'userId' | 'date' | 'isRead'>) => {
+        if (!firestore) return;
+        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
+        const newNotification: Partial<NotificationType> = {
+            ...notification,
+            userId,
+            date: serverTimestamp(),
+            isRead: false
+        };
+        await addDocumentNonBlocking(notificationsCol, newNotification);
+    };
+    
+    const handleOneClickRefill = async () => {
+        if (hasPendingRefill) {
+            window.dispatchEvent(new CustomEvent('open-refill-status'));
+            return;
+        }
+        if (!user || !firestore || !authUser) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
+            return;
+        }
+    
+        setIsRefillRequesting(true);
+        const newRequestData: Omit<RefillRequest, 'id'> = {
+            userId: user.id,
+            userName: user.name,
+            businessName: user.businessName,
+            clientId: user.clientId || '',
+            requestedAt: serverTimestamp(),
+            status: 'Requested',
+            statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+            requestedDate: new Date().toISOString(), // Use current date for ASAP
+        };
+    
+        try {
+            const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
+            const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+    
+            await createNotification(authUser.uid, {
+                type: 'delivery',
+                title: 'ASAP Refill Request Sent!',
+                description: `Your immediate refill request has been sent.`,
+                data: { requestId: newDocRef.id },
+            });
+
+            const userName = user?.name.split(' ')[0] || 'friend';
+            toast({
+                title: 'Request Sent!',
+                description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
+            });
+    
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Request Failed',
+                description: 'There was an issue sending your request. Please try again.',
+            });
+        } finally {
+            setIsRefillRequesting(false);
+        }
+      };
+
     const handleNotificationClick = (notification: NotificationType) => {
         if (!notification.data) return;
 
@@ -336,16 +412,6 @@ export default function DashboardLayout({
             window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
         }
     }
-
-    const handleOneClickRefill = () => {
-        const userName = user?.name.split(' ')[0] || 'friend';
-        toast({
-            title: 'Request Sent!',
-            description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
-        });
-        // This would eventually trigger the same logic as in DashboardPage
-        // For now, it just shows a toast.
-    };
 
   if (isUserLoading || isUserDocLoading || !isMounted || !auth) {
     return <DashboardLayoutSkeleton />;
@@ -532,7 +598,7 @@ export default function DashboardLayout({
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
             <div className="container mx-auto">
-              {children}
+              {React.cloneElement(children as React.ReactElement, { handleOneClickRefill, isRefillRequesting, hasPendingRefill })}
             </div>
           </main>
 
@@ -547,6 +613,7 @@ export default function DashboardLayout({
                     size="icon" 
                     className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-primary shadow-lg"
                     onClick={handleOneClickRefill}
+                    disabled={isRefillRequesting}
                     >
                     <Droplets className="h-8 w-8 text-primary-foreground" />
                 </Button>
@@ -637,7 +704,7 @@ export default function DashboardLayout({
         </Dialog>
 
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
+            <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col rounded-lg">
                 <DialogHeader>
                     <DialogTitle>
                         {selectedPaymentMethod ? `Pay with ${selectedPaymentMethod.name}` : `Pay Invoice ${selectedInvoice?.id}`}

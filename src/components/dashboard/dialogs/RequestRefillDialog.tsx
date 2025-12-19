@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,9 +12,10 @@ interface RequestRefillDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (date: Date, containers: number) => void;
+  isSubmitting: boolean;
 }
 
-export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit }: RequestRefillDialogProps) {
+export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitting }: RequestRefillDialogProps) {
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [containers, setContainers] = useState<number>(1);
 
@@ -36,7 +38,7 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit }: RequestR
               mode="single"
               selected={deliveryDate}
               onSelect={setDeliveryDate}
-              disabled={(date) => date < new Date()}
+              disabled={(date) => date < new Date() || isSubmitting}
               initialFocus
             />
           </div>
@@ -48,14 +50,17 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit }: RequestR
               value={containers}
               onChange={(e) => setContainers(Number(e.target.value))}
               min="1"
+              disabled={isSubmitting}
             />
           </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" disabled={isSubmitting}>Cancel</Button>
           </DialogClose>
-          <Button onClick={handleSubmit} disabled={!deliveryDate}>Confirm Delivery</Button>
+          <Button onClick={handleSubmit} disabled={!deliveryDate || isSubmitting}>
+            {isSubmitting ? 'Sending Request...' : 'Confirm Delivery'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
