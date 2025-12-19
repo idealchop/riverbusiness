@@ -842,94 +842,96 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                     </Card>
                 </div>
             ) : (
-                <>
-                <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card 
-                        className="flex flex-col cursor-default border-primary border-2"
-                    >
-                        <CardHeader>
-                            <CardTitle className="flex justify-between items-center">
-                              Your Current Plan
-                              <CheckCircle className="h-5 w-5 text-primary" />
-                            </CardTitle>
-                            <CardDescription>{user.plan?.name}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1">
-                            {user.plan?.isConsumptionBased ? (
-                                <>
-                                  <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/liter</p>
-                                  <Separator className="my-2" />
-                                  <ul className="text-sm space-y-1 text-muted-foreground">
-                                    <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
-                                    <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
-                                  </ul>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/month</p>
-                                    <Separator className="my-2" />
-                                    <ul className="text-sm space-y-1 text-muted-foreground">
-                                        <li><strong>Billing:</strong> Fixed monthly bill.</li>
-                                        <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
-                                    </ul>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                    {flowPlan && !user.plan?.isConsumptionBased && (
+                <ScrollArea className="max-h-[70vh]">
+                  <div className="pr-6 py-4 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Card 
-                            onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
-                            className={cn(
-                                "cursor-pointer hover:border-primary flex flex-col",
-                                state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
-                            )}
+                            className="flex flex-col cursor-default border-primary border-2"
                         >
                             <CardHeader>
                                 <CardTitle className="flex justify-between items-center">
-                                  {flowPlan.name}
-                                  {state.selectedNewPlan?.name === flowPlan.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                                  Your Current Plan
+                                  <CheckCircle className="h-5 w-5 text-primary" />
                                 </CardTitle>
-                                <CardDescription>{flowPlan.description}</CardDescription>
+                                <CardDescription>{user.plan?.name}</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1">
-                                <p className="font-bold text-lg">P{flowPlan.price}/liter</p>
-                                <Separator className="my-2" />
-                                <ul className="text-sm space-y-1 text-muted-foreground">
-                                    <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
-                                    <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
-                                </ul>
+                                {user.plan?.isConsumptionBased ? (
+                                    <>
+                                      <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/liter</p>
+                                      <Separator className="my-2" />
+                                      <ul className="text-sm space-y-1 text-muted-foreground">
+                                        <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
+                                        <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
+                                      </ul>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="font-bold text-lg">P{user.plan?.price.toLocaleString()}/month</p>
+                                        <Separator className="my-2" />
+                                        <ul className="text-sm space-y-1 text-muted-foreground">
+                                            <li><strong>Billing:</strong> Fixed monthly bill.</li>
+                                            <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                                        </ul>
+                                    </>
+                                )}
                             </CardContent>
                         </Card>
-                    )}
-                </div>
-                <Separator className="my-4" />
-                <div className="space-y-4">
-                      <div>
-                          <h3 className="font-semibold">Included in Every Plan</h3>
-                          <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                          {includedFeatures.map((feature, index) => {
-                              const Icon = feature.icon;
-                              return (
-                                  <div key={index} className="flex items-start gap-3">
-                                      <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                                      <div>
-                                          <h4 className="font-medium text-sm">{feature.title}</h4>
-                                          <p className="text-xs text-muted-foreground">{feature.description}</p>
+                        {flowPlan && !user.plan?.isConsumptionBased && (
+                            <Card 
+                                onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
+                                className={cn(
+                                    "cursor-pointer hover:border-primary flex flex-col",
+                                    state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
+                                )}
+                            >
+                                <CardHeader>
+                                    <CardTitle className="flex justify-between items-center">
+                                      {flowPlan.name}
+                                      {state.selectedNewPlan?.name === flowPlan.name && <CheckCircle className="h-5 w-5 text-primary" />}
+                                    </CardTitle>
+                                    <CardDescription>{flowPlan.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <p className="font-bold text-lg">P{flowPlan.price}/liter</p>
+                                    <Separator className="my-2" />
+                                    <ul className="text-sm space-y-1 text-muted-foreground">
+                                        <li><strong>Billing:</strong> Your monthly bill is not fixed.</li>
+                                        <li><strong>Flexibility:</strong> Pay only for what you consume.</li>
+                                    </ul>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                    <Separator />
+                    <div className="space-y-4">
+                          <div>
+                              <h3 className="font-semibold">Included in Every Plan</h3>
+                              <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                              {includedFeatures.map((feature, index) => {
+                                  const Icon = feature.icon;
+                                  return (
+                                      <div key={index} className="flex items-start gap-3">
+                                          <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                                          <div>
+                                              <h4 className="font-medium text-sm">{feature.title}</h4>
+                                              <p className="text-xs text-muted-foreground">{feature.description}</p>
+                                          </div>
                                       </div>
-                                  </div>
-                              );
-                          })}
+                                  );
+                              })}
+                          </div>
                       </div>
                   </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
-                  <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name || user.plan?.isConsumptionBased}>
-                    Confirm and Switch Plan
-                  </Button>
-                </DialogFooter>
-              </>
+                  <DialogFooter className="pr-6 pb-4 pt-2">
+                    <Button variant="outline" onClick={() => dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false})}>Cancel</Button>
+                    <Button onClick={handleConfirmPlanChange} disabled={!state.selectedNewPlan || state.selectedNewPlan.name === user.plan?.name || user.plan?.isConsumptionBased}>
+                      Confirm and Switch Plan
+                    </Button>
+                  </DialogFooter>
+                </ScrollArea>
             )}
         </DialogContent>
       </Dialog>
