@@ -450,7 +450,7 @@ export default function DashboardPage() {
             userName: user.name,
             businessName: user.businessName,
             clientId: user.clientId || '',
-            requestedAt: serverTimestamp(),
+            requestedAt: new Date().toISOString(),
             status: 'Requested',
             statusHistory: [
                 { status: 'Requested', timestamp: new Date().toISOString() }
@@ -1266,7 +1266,7 @@ export default function DashboardPage() {
                                                     <MapPin className="mr-2 h-4 w-4" />
                                                    Find Nearby
                                                 </a>
-                                            </Button>
+                                            Button>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -1337,7 +1337,7 @@ export default function DashboardPage() {
                 <Button 
                     className="rounded-full h-14 w-14 shadow-lg"
                     onClick={handleRequestRefill}
-                    disabled={isRefillLoading}
+                    disabled={isRefillLoading || !!activeRefillRequest}
                 >
                     <BellRing className="h-6 w-6" />
                 </Button>
@@ -1346,15 +1346,23 @@ export default function DashboardPage() {
 
         {/* Refill Status Dialog */}
         <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Refill Request Status</DialogTitle>
                     <DialogDescription>
                         Here's the current progress of your refill request.
                     </DialogDescription>
                 </DialogHeader>
-                {activeRefillRequest ? (
-                    <div className="py-6">
+                 {activeRefillRequest ? (
+                    <div className="py-6 grid md:grid-cols-2 gap-8 items-center">
+                        <div className="relative aspect-square w-full max-w-xs mx-auto">
+                           <Image
+                                src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Fwater_refill_Flow.png?alt=media&token=6b11f719-39e9-4ea4-b4a6-1bbe587bfa63"
+                                alt="Refill process"
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
                         <ul className="space-y-8">
                             {statusOrder.map((status, index) => {
                                 const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
@@ -1390,7 +1398,7 @@ export default function DashboardPage() {
                                                 {statusConfig[status].label}
                                             </p>
                                             <p className="text-sm text-muted-foreground">
-                                                {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow((statusHistoryEntry.timestamp as Timestamp).toDate(), { addSuffix: true })}` : 'Pending'}
+                                                {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow(new Date(statusHistoryEntry.timestamp as string), { addSuffix: true })}` : 'Pending'}
                                             </p>
                                         </div>
                                     </li>
@@ -1406,6 +1414,8 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
     </div>
+    
     </TooltipProvider>
     );
 }
+
