@@ -67,10 +67,15 @@ service cloud.firestore {
     match /refillRequests/{requestId} {
       // Any authenticated user can create a request.
       allow create: if request.auth != null;
-      // Admins can read/list all requests.
-      allow read, update, list: if isAdmin();
-      // A user can read/list their own requests.
-      allow list: if request.auth != null && request.query.get("userId") == request.auth.uid;
+      
+      // Admins can read, list, and update all requests.
+      allow read, list, update: if isAdmin();
+
+      // An authenticated user can list (query for) their OWN requests.
+      // This is the key change to fix the permissions error.
+      allow list: if request.auth != null && request.query.userId == request.auth.uid;
+      
+      // An authenticated user can read a specific request document if they are the owner.
       allow read: if request.auth != null && get(/databases/$(database)/documents/refillRequests/$(requestId)).data.userId == request.auth.uid;
     }
   }
