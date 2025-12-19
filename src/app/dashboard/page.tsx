@@ -458,7 +458,7 @@ export default function DashboardPage() {
             requestedAt: serverTimestamp(),
             status: 'Requested',
             statusHistory: [
-                { status: 'Requested', timestamp: serverTimestamp() }
+                { status: 'Requested', timestamp: new Date().toISOString() as any }
             ]
         };
 
@@ -1084,9 +1084,9 @@ export default function DashboardPage() {
                                      </>
                                 ) : (
                                     <div className="flex flex-col gap-2">
-                                        <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
+                                        <Button variant="default" size="sm" className="w-full" onClick={handleRequestRefill} disabled={isRefillRequesting}>
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            Schedule Delivery
+                                            Request Refill
                                         </Button>
                                     </div>
                                 )}
@@ -1179,9 +1179,9 @@ export default function DashboardPage() {
                                      </>
                                 ) : (
                                     <div className="flex flex-col gap-2">
-                                        <Button variant="default" size="sm" className="w-full" onClick={() => setIsScheduleOneTimeDeliveryOpen(true)}>
+                                        <Button variant="default" size="sm" className="w-full" onClick={handleRequestRefill} disabled={isRefillRequesting}>
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            Schedule Delivery
+                                            Request Refill
                                         </Button>
                                     </div>
                                 )}
@@ -1441,5 +1441,6 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
+
 
 
