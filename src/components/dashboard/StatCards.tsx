@@ -9,9 +9,9 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowRight, History, Edit, Calendar as CalendarIcon } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
-import { updateDocumentNonBlocking } from '@/firebase';
+import { updateDocumentNonBlocking, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { DocumentReference } from 'firebase/firestore';
+import { DocumentReference, doc } from 'firebase/firestore';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
