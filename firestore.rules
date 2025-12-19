@@ -73,6 +73,7 @@ service cloud.firestore {
 
       // An authenticated user can list (query for) their OWN requests.
       // This is the key change to fix the permissions error.
+      // This rule allows a query like: where('userId', '==', auth.uid).where('status', '==', 'Pending')
       allow list: if request.auth != null && request.query.userId == request.auth.uid;
       
       // An authenticated user can read a specific request document if they are the owner.
