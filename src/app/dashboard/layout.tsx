@@ -541,7 +541,7 @@ export default function DashboardLayout({
                 <History className="h-5 w-5" />
                 <span className="text-xs mt-1">History</span>
             </Button>
-            <div className="relative">
+            <div className="relative group">
                 <Button 
                     size="icon" 
                     className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-primary shadow-lg"
@@ -549,6 +549,9 @@ export default function DashboardLayout({
                     >
                     <Droplets className="h-8 w-8 text-primary-foreground" />
                 </Button>
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
+                  <div className="tooltip-bubble">One-Tap Refill!</div>
+                </div>
             </div>
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
                 <User className="h-5 w-5" />

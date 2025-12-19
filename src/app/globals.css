@@ -73,3 +73,35 @@
   }
 }
 
+@layer components {
+  .tooltip-bubble {
+    @apply absolute bottom-full mb-2 w-max px-3 py-1.5 text-xs font-semibold text-primary-foreground bg-primary rounded-full shadow-lg opacity-0 pointer-events-none;
+    animation: bounce-and-fade 10s infinite;
+  }
+
+  .tooltip-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: hsl(var(--primary)) transparent transparent transparent;
+  }
+}
+
+@keyframes bounce-and-fade {
+  0%, 20%, 100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  5% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
