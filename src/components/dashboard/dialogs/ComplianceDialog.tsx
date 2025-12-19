@@ -188,7 +188,7 @@ export function ComplianceDialog({
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-6">
-                {selectedSanitationVisit?.status === 'Completed' && (
+                {selectedSanitationVisit?.status === 'Completed' ? (
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base">Overall Result</CardTitle>
@@ -212,6 +212,14 @@ export function ComplianceDialog({
                             </TooltipProvider>
                         </CardContent>
                     </Card>
+                ) : (
+                    <Card className="border-dashed">
+                        <CardContent className="py-6 flex flex-col items-center justify-center text-center gap-2">
+                             <Hourglass className="h-8 w-8 text-muted-foreground" />
+                             <p className="font-semibold">Visit Not Yet Completed</p>
+                             <p className="text-sm text-muted-foreground">Checklist results will be available once the visit is marked as "Completed" by the admin.</p>
+                        </CardContent>
+                    </Card>
                 )}
                 
                 <div className="space-y-2">
@@ -231,7 +239,7 @@ export function ComplianceDialog({
                                             <TableRow key={index} className={cn(!item.checked && "bg-destructive/5")}>
                                                 <TableCell className="font-medium text-xs w-full">
                                                     {item.item}
-                                                    {!item.checked && item.remarks && (
+                                                    {selectedSanitationVisit.status === 'Completed' && !item.checked && item.remarks && (
                                                         <p className="text-destructive text-xs mt-1 pl-2 border-l-2 border-destructive">
                                                             <span className="font-bold">Remarks:</span> {item.remarks}
                                                         </p>
