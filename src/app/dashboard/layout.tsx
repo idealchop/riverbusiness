@@ -380,7 +380,7 @@ export default function DashboardLayout({
                               </div>
                               <div>
                                 <p className="font-semibold">Viber Support</p>
-                                <p className="text-sm font-medium">Jayvee</p>
+                                <p className="text-sm font-medium">Jayvee Co</p>
                                 <p className="text-xs text-muted-foreground">Account Manager & Customer Success</p>
                                 <p className="text-sm text-muted-foreground mt-1">09182719091</p>
                               </div>
