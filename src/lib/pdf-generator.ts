@@ -253,7 +253,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
 
     const subtotal = totalAmount;
     const tax = totalAmount * 0.12;
-    const grandTotal = subtotal + tax;
+    const grandTotal = subtotal; // VAT is not added to the total amount due
 
     doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.rect(14, startY, pageWidth - 28, 28, 'F');
