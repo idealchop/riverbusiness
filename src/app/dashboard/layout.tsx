@@ -29,12 +29,12 @@ import Link from 'next/link';
 import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
 import { format, differenceInMonths, addMonths, subHours, formatDistanceToNow } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType, RefillRequest } from '@/lib/types';
+import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType, RefillRequest, RefillRequestStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth, addDocumentNonBlocking } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, arrayUnion } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -334,54 +334,54 @@ export default function DashboardLayout({
     };
     
     const handleOneClickRefill = async () => {
-        if (hasPendingRefill) {
-            window.dispatchEvent(new CustomEvent('open-refill-status'));
-            return;
-        }
-        if (!user || !firestore || !authUser) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
-            return;
-        }
-    
-        setIsRefillRequesting(true);
-        const newRequestData: Omit<RefillRequest, 'id'> = {
-            userId: user.id,
-            userName: user.name,
-            businessName: user.businessName,
-            clientId: user.clientId || '',
-            requestedAt: serverTimestamp(),
-            status: 'Requested',
-            statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
-            requestedDate: new Date().toISOString(), // Use current date for ASAP
-        };
-    
-        try {
-            const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-            const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
-    
-            await createNotification(authUser.uid, {
-                type: 'delivery',
-                title: 'ASAP Refill Request Sent!',
-                description: `Your immediate refill request has been sent.`,
-                data: { requestId: newDocRef.id },
-            });
-
-            const userName = user?.name.split(' ')[0] || 'friend';
-            toast({
-                title: 'Request Sent!',
-                description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
-            });
-    
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Request Failed',
-                description: 'There was an issue sending your request. Please try again.',
-            });
-        } finally {
-            setIsRefillRequesting(false);
-        }
+      if (hasPendingRefill) {
+          window.dispatchEvent(new CustomEvent('open-refill-status'));
+          return;
+      }
+      if (!user || !firestore || !authUser) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
+          return;
+      }
+  
+      setIsRefillRequesting(true);
+      const newRequestData: Omit<RefillRequest, 'id'> = {
+          userId: user.id,
+          userName: user.name,
+          businessName: user.businessName,
+          clientId: user.clientId || '',
+          requestedAt: serverTimestamp(),
+          status: 'Requested',
+          statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+          requestedDate: new Date().toISOString(), // Use current date for ASAP
       };
+  
+      try {
+          const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
+          const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+  
+          await createNotification(authUser.uid, {
+              type: 'delivery',
+              title: 'ASAP Refill Request Sent!',
+              description: `Your immediate refill request has been sent.`,
+              data: { requestId: newDocRef.id },
+          });
+
+          const userName = user?.name.split(' ')[0] || 'friend';
+          toast({
+              title: 'Request Sent!',
+              description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
+          });
+  
+      } catch (error) {
+          toast({
+              variant: 'destructive',
+              title: 'Request Failed',
+              description: 'There was an issue sending your request. Please try again.',
+          });
+      } finally {
+          setIsRefillRequesting(false);
+      }
+    };
 
     const handleNotificationClick = (notification: NotificationType) => {
         if (!notification.data) return;
@@ -411,6 +411,10 @@ export default function DashboardLayout({
         if (eventName) {
             window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
         }
+    }
+
+    const handleComplianceClick = () => {
+        window.dispatchEvent(new CustomEvent('open-compliance-dialog'));
     }
 
   if (isUserLoading || isUserDocLoading || !isMounted || !auth) {
@@ -572,6 +576,9 @@ export default function DashboardLayout({
                 </div>
               </PopoverContent>
           </Popover>
+          <Button variant="outline" size="icon" className="sm:hidden rounded-full" onClick={handleComplianceClick}>
+              <ShieldCheck className="h-4 w-4" />
+          </Button>
           <MyAccountDialog
             user={user}
             authUser={authUser}
