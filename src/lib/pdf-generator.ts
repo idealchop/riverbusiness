@@ -377,4 +377,3 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(now, 'yyyy-MM')}.pdf`);
 };
 
-    
