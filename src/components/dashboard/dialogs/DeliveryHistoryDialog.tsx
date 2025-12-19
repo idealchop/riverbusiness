@@ -112,7 +112,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
           </Button>
         </div>
         <div className="flex-1 px-6 py-4 min-h-0">
-            <ScrollArea className="h-full">
+          <ScrollArea className="h-full">
             {/* Desktop Table View */}
             <Table className="hidden md:table">
               <TableHeader>
