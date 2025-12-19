@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -424,7 +424,14 @@ export default function DashboardLayout({
               <Separator className="my-4" />
                 <div className="space-y-4 max-h-80 overflow-y-auto">
                     {notifications && notifications.length > 0 ? (
-                        notifications.sort((a,b) => (b.date as any).seconds - (a.date as any).seconds).map((notification) => {
+                        notifications.sort((a,b) => {
+                            const aSeconds = (a.date instanceof Timestamp) ? a.date.seconds : 0;
+                            const bSeconds = (b.date instanceof Timestamp) ? b.date.seconds : 0;
+                            if (aSeconds === 0 && bSeconds === 0) return 0; // Both dates are not ready, keep order
+                            if (aSeconds === 0) return -1; // a is newer (not yet set)
+                            if (bSeconds === 0) return 1;  // b is newer (not yet set)
+                            return bSeconds - aSeconds; // Sort by most recent
+                        }).map((notification) => {
                             const Icon = ICONS[notification.type] || Info;
                             return (
                                 <div key={notification.id} className="grid grid-cols-[25px_1fr] items-start gap-4">
