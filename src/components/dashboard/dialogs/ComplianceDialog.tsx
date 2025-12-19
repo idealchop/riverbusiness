@@ -254,16 +254,17 @@ export function ComplianceDialog({
                         </CardContent>
                     </Card>
                 </div>
-
-                {selectedSanitationVisit?.reportUrl && (
-                    <Button variant="outline" asChild>
-                         <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
-                             <Eye className="mr-2 h-4 w-4" /> View Official Report
-                         </a>
-                    </Button>
-                )}
             </div>
-            <DialogFooter>
+            <DialogFooter className="justify-between">
+                <div>
+                  {selectedSanitationVisit?.reportUrl && (
+                      <Button variant="outline" asChild>
+                          <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
+                              <Eye className="mr-2 h-4 w-4" /> View Official Report
+                          </a>
+                      </Button>
+                  )}
+                </div>
                 <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
             </DialogFooter>
         </DialogContent>
