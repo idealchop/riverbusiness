@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -151,12 +150,7 @@ export default function DashboardPage() {
     const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
     const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
 
-    const complianceReportsQuery = useMemoFirebase(() => 
-        (firestore && user?.assignedWaterStationId) 
-        ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') 
-        : null, 
-        [firestore, user?.assignedWaterStationId]
-    );
+    const complianceReportsQuery = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
     const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
 
     const sanitationVisitsQuery = useMemoFirebase(() => 
@@ -462,7 +456,7 @@ export default function DashboardPage() {
             await addDocumentNonBlocking(refillRef, newRequest);
             toast({
                 title: "Refill Request Sent!",
-                description: `Thank you, ${user.name}! Our refill team has been notified and will process your request shortly.`,
+                description: `Thank you, ${user.name}! The refill team has been notified and will process your request shortly.`,
             });
         } catch (error) {
             toast({
@@ -1382,4 +1376,5 @@ export default function DashboardPage() {
     </div>
     </TooltipProvider>
     );
-}
+
+    
