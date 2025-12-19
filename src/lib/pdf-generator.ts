@@ -1,4 +1,5 @@
 
+
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -173,218 +174,176 @@ interface MonthlySOAProps {
 }
 
 export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount }: MonthlySOAProps) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('p', 'pt'); // Using points for finer control
     const primaryColor = [21, 99, 145];
-    const accentColor = [240, 249, 255];
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
-    let startY = 0; // We'll manage this dynamically
+    let startY = 0;
+
+    const margin = 40;
 
     // --- HEADER ---
     const drawHeader = () => {
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, pageWidth, 25, 'F');
+      doc.rect(0, 0, pageWidth, 60, 'F');
       
       const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
       try {
-         doc.addImage(logoUrl, 'JPEG', 14, 8, 18, 18);
+         doc.addImage(logoUrl, 'JPEG', margin, 18, 30, 30);
       } catch (e) {
         console.error("Could not add logo to PDF:", e);
       }
       
-      doc.setFontSize(20);
+      doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
-      doc.text('Monthly Statement of Account', pageWidth - 14, 18, { align: 'right' });
+      doc.text('Statement of Account', pageWidth - margin, 40, { align: 'right' });
     };
 
     // --- FOOTER ---
     const drawFooter = (pageNumber: number) => {
-      doc.setLineWidth(0.2);
+      doc.setLineWidth(0.5);
       doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+      doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
       
       doc.setFontSize(8);
+      
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text('River Philippines', 14, pageHeight - 15);
+      doc.text('River Philippines', margin, pageHeight - 38);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120);
-      doc.text('| Turn Essential Needs Into Automatic Experience.', 45, pageHeight - 15);
+      doc.text('| Turn Essential Needs Into Automatic Experience.', margin + 70, pageHeight - 38);
 
       const contactInfo = 'customers@riverph.com | www.riverph.com';
-      doc.text(contactInfo, 14, pageHeight - 10);
+      doc.text(contactInfo, margin, pageHeight - 28);
       
       doc.setTextColor(150);
-      doc.text(`Page ${pageNumber}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+      doc.text(`Page ${pageNumber}`, pageWidth - margin, pageHeight - 28, { align: 'right' });
     };
     
     drawHeader();
-    startY = 40;
+    startY = 90; // Start content below header
 
     // --- BILLING & DATE INFO ---
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('Bill To:', 14, startY);
+    doc.text('BILL TO:', margin, startY);
+    
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(user.businessName || 'N/A', 14, startY + 5);
-    doc.text(user.address || 'No address provided', 14, startY + 10);
+    doc.text(user.businessName || 'N/A', margin, startY + 12);
+    doc.text(user.address || 'No address provided', margin, startY + 22);
     
     const now = new Date();
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('Statement Date:', pageWidth / 2, startY);
-    doc.text('Billing Period:', pageWidth / 2, startY + 5);
+    doc.text('STATEMENT DATE:', pageWidth / 2, startY);
+    doc.text('BILLING PERIOD:', pageWidth / 2, startY + 12);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(format(now, 'PP'), (pageWidth / 2) + 30, startY);
-    doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 30, startY + 5);
+    doc.text(format(now, 'PP'), (pageWidth / 2) + 85, startY);
+    doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 85, startY + 12);
     
-    startY += 25;
+    startY += 40;
 
-    // --- FINANCIAL SUMMARY ---
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('Account Summary', 14, startY);
-    startY += 6;
+    // --- RENDER TABLES ---
+    const renderTable = (title: string, head: any[], body: any[][]) => {
+      if (body.length > 0) {
+        doc.autoTable({
+            head: head,
+            body: body,
+            startY: startY,
+            theme: 'striped',
+            headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
+            bodyStyles: { fontSize: 8, cellPadding: 4 },
+            margin: { left: margin, right: margin },
+            didDrawPage: (data) => {
+                drawHeader();
+                drawFooter(data.pageNumber);
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                doc.text(title, margin, 80);
+            },
+            willDrawPage: (data) => {
+              if(data.pageNumber > 1) {
+                startY = 90;
+              }
+            }
+        });
+        startY = (doc as any).lastAutoTable.finalY + 20;
+      }
+    };
+    
+    // --- Subscription Details ---
+    if (user.plan) {
+        let subscriptionBody: string[][] = [
+            ['Plan', `${user.plan.name} (${user.clientType || 'N/A'})`]
+        ];
+        if (user.customPlanDetails) {
+            const { gallonQuantity, dispenserQuantity } = user.customPlanDetails;
+            if (gallonQuantity > 0) subscriptionBody.push(['Containers on Loan', `${gallonQuantity}`]);
+            if (dispenserQuantity > 0) subscriptionBody.push(['Dispensers on Loan', `${dispenserQuantity}`]);
+        }
+        renderTable('Subscription Details', [['Detail', 'Information']], subscriptionBody);
+    }
 
+    // --- Deliveries ---
+    renderTable('Delivery History', 
+      [["Ref ID", "Date", "Containers", "Liters", "Status"]], 
+      deliveries.map(d => [d.id, format(new Date(d.date), 'PP'), d.volumeContainers, containerToLiter(d.volumeContainers).toFixed(1), d.status])
+    );
+    
+    // --- Sanitation ---
+    renderTable('Sanitation Visits', 
+      [["Scheduled Date", "Status", "Quality Officer"]],
+      sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo])
+    );
+    
+    // --- Compliance ---
+    renderTable('Compliance Reports',
+      [["Report Name", "Date", "Status"]],
+      complianceReports.map(r => [r.name, r.date ? format((r.date as any).toDate(), 'PP') : 'N/A', r.status])
+    );
+
+
+    // --- FINANCIAL SUMMARY (AT THE END) ---
+    const finalY = (doc as any).lastAutoTable.finalY || startY;
+    if (finalY > pageHeight - 120) { // Check if we need a new page for the summary
+      doc.addPage();
+      drawHeader();
+      startY = 90;
+    } else {
+      startY = finalY;
+    }
+
+    const summaryX = pageWidth - margin - 200; // Position summary block on the right
+    doc.setFillColor(240, 240, 240);
+    doc.rect(summaryX - 10, startY - 10, 220, 60, 'F');
+    
     const subtotal = totalAmount;
     const tax = totalAmount * 0.12;
     const grandTotal = subtotal;
 
-    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-    doc.rect(14, startY, pageWidth - 28, 28, 'F');
-    
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0);
-    doc.text('Subtotal:', 18, startY + 7);
-    doc.text(`₱ ${subtotal.toFixed(2)}`, pageWidth - 18, startY + 7, { align: 'right' });
+    doc.setTextColor(80);
+    doc.text('Subtotal:', summaryX, startY);
+    doc.text(`₱ ${subtotal.toFixed(2)}`, pageWidth - margin, startY, { align: 'right' });
     
-    doc.text('VAT (12%):', 18, startY + 14);
-    doc.text(`₱ ${tax.toFixed(2)}`, pageWidth - 18, startY + 14, { align: 'right' });
+    doc.text('VAT (12%):', summaryX, startY + 15);
+    doc.text(`₱ ${tax.toFixed(2)}`, pageWidth - margin, startY + 15, { align: 'right' });
 
-    doc.setFontSize(12);
+    doc.setLineWidth(0.5);
+    doc.line(summaryX, startY + 25, pageWidth - margin, startY + 25);
+
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total Amount Due:', 18, startY + 22);
-    doc.text(`₱ ${grandTotal.toFixed(2)}`, pageWidth - 18, startY + 22, { align: 'right' });
-    
-    startY += 40;
-
-    // --- PLAN & EQUIPMENT DETAILS ---
-    if (user.plan) {
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text('Subscription Details', 14, startY);
-        startY += 8;
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0);
-
-        let planText = `Plan: ${user.plan.name}`;
-        if (user.clientType) {
-            planText += ` (${user.clientType})`;
-        }
-        doc.text(planText, 18, startY);
-        startY += 6;
-
-        if (user.customPlanDetails) {
-            const { gallonQuantity, dispenserQuantity } = user.customPlanDetails;
-            if (gallonQuantity > 0 || dispenserQuantity > 0) {
-                doc.setFont('helvetica', 'bold');
-                doc.text('Equipment on Loan:', 18, startY);
-                startY += 6;
-                doc.setFont('helvetica', 'normal');
-                if (gallonQuantity > 0) {
-                    doc.text(`- ${gallonQuantity} x Water Containers`, 22, startY);
-                    startY += 5;
-                }
-                if (dispenserQuantity > 0) {
-                    doc.text(`- ${dispenserQuantity} x Water Dispensers`, 22, startY);
-                    startY += 5;
-                }
-            }
-        }
-        startY += 5; // Extra space before the next section
-    }
-
-    // --- DELIVERIES SECTION ---
-    if (deliveries.length > 0) {
-        doc.autoTable({
-            head: [["Ref ID", "Date", "Containers", "Liters", "Status"]],
-            body: deliveries.map(d => [
-                d.id,
-                format(new Date(d.date), 'PP'),
-                d.volumeContainers,
-                containerToLiter(d.volumeContainers),
-                d.status
-            ]),
-            startY: startY,
-            theme: 'striped',
-            headStyles: { fillColor: primaryColor },
-            didDrawPage: (data) => {
-                drawHeader();
-                drawFooter(data.pageNumber);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.text('Delivery History', 14, 35);
-            }
-        });
-        startY = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // --- SANITATION VISITS SECTION ---
-    if (sanitationVisits.length > 0) {
-        doc.autoTable({
-            head: [["Scheduled Date", "Status", "Quality Officer"]],
-            body: sanitationVisits.map(v => [
-                format(new Date(v.scheduledDate), 'PP'),
-                v.status,
-                v.assignedTo
-            ]),
-            startY: startY,
-            theme: 'striped',
-            headStyles: { fillColor: primaryColor },
-            didDrawPage: (data) => {
-                drawHeader();
-                drawFooter(data.pageNumber);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.text('Sanitation Visits', 14, 35);
-            }
-        });
-        startY = (doc as any).lastAutoTable.finalY + 15;
-    }
-
-    // --- COMPLIANCE REPORTS SECTION ---
-    if (complianceReports.length > 0) {
-        doc.autoTable({
-            head: [["Report Name", "Date", "Status"]],
-            body: complianceReports.map(r => [
-                r.name,
-                r.date ? format((r.date as any).toDate(), 'PP') : 'N/A',
-                r.status
-            ]),
-            startY: startY,
-            theme: 'striped',
-            headStyles: { fillColor: primaryColor },
-            didDrawPage: (data) => {
-                drawHeader();
-                drawFooter(data.pageNumber);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.text('Compliance Reports', 14, 35);
-            }
-        });
-    }
+    doc.setTextColor(0);
+    doc.text('Total Amount Due:', summaryX, startY + 38);
+    doc.text(`₱ ${grandTotal.toFixed(2)}`, pageWidth - margin, startY + 38, { align: 'right' });
 
     // Draw footer on the last page
     drawFooter((doc as any).internal.getNumberOfPages());
