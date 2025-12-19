@@ -194,29 +194,27 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
         </ScrollArea>
         <DialogFooter className="border-t pt-4 flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-            {totalPages > 1 && (
-                 <div className="flex items-center justify-center space-x-2">
-                     <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                         disabled={currentPage === 1}
-                     >
-                         Previous
-                     </Button>
-                     <span className="text-sm text-muted-foreground">
-                         Page {currentPage} of {totalPages}
-                     </span>
-                     <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                         disabled={currentPage === totalPages}
-                     >
-                         Next
-                     </Button>
-                 </div>
-            )}
+            <div className="flex items-center justify-center space-x-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                >
+                    Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages > 0 ? totalPages : 1}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || totalPages === 0}
+                >
+                    Next
+                </Button>
+            </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
