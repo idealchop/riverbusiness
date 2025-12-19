@@ -144,7 +144,7 @@ export default function DashboardPage() {
     const complianceReportsQuery = useMemoFirebase(() => 
         (firestore && user?.assignedWaterStationId) 
         ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') 
-        : null, -
+        : null, 
         [firestore, user?.assignedWaterStationId]
     );
     const { data: complianceReports, isLoading: complianceLoading } = useCollection<ComplianceReport>(complianceReportsQuery);
@@ -452,7 +452,7 @@ export default function DashboardPage() {
             await addDocumentNonBlocking(refillRef, newRequest);
             toast({
                 title: "Refill Request Sent!",
-                description: "Our refill team has been notified and will process your request shortly.",
+                description: `Thank you, ${user.name}! Our refill team has been notified and will process your request shortly.`,
             });
         } catch (error) {
             toast({
@@ -521,7 +521,7 @@ export default function DashboardPage() {
                                 {isRefillRequesting ? "Requesting..." : "Request Refill"}
                             </Button>
                         </UITooltipTrigger>
-                        {hasPendingRefill && <UITooltipContent><p>Don't worry, {user?.name}, our refill team is already on your previous request.</p></UITooltipContent>}
+                        {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
                     </UITooltip>
                     <AlertDialogContent>
                         <AlertDialogHeader>
