@@ -51,9 +51,15 @@ service cloud.firestore {
 
     match /users/{userId}/refillRequests/{requestId} {
       // User can create, read, and list their own requests.
-      allow read, list, create: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow read, list: if isOwner(userId) || isAdmin();
       // Admins can update any request (e.g., to change status).
       allow update: if isAdmin();
+    }
+
+    // This rule allows admins to query the 'refillRequests' collection group
+    match /{path=**}/refillRequests/{requestId} {
+      allow read, list: if isAdmin();
     }
 
     match /waterStations/{stationId} {
