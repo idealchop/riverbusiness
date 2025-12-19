@@ -170,10 +170,10 @@ export default function DashboardPage() {
     const { data: pendingRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(pendingRefillQuery);
 
     useEffect(() => {
-        if(pendingRefills) {
-            setHasPendingRefill(pendingRefills.length > 0);
+        if(!isRefillLoading) {
+            setHasPendingRefill((pendingRefills?.length || 0) > 0);
         }
-    }, [pendingRefills]);
+    }, [pendingRefills, isRefillLoading]);
 
     const isFlowPlan = user?.plan?.isConsumptionBased;
 
@@ -517,13 +517,15 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">{greeting}, {user?.businessName}. Here is an overview of your water consumption.</p>
             </div>
             <div className="hidden sm:flex items-center gap-2">
-                 <AlertDialog>
+                <AlertDialog>
                     <UITooltip>
                         <UITooltipTrigger asChild>
-                           <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillRequesting || hasPendingRefill}>
-                                <BellRing className="mr-2 h-4 w-4" />
-                                {isRefillRequesting ? "Requesting..." : "Request Refill"}
-                            </Button>
+                            <div tabIndex={hasPendingRefill ? 0 : -1}>
+                                <Button variant="default" className="w-auto h-auto px-4 py-2" onClick={handleRequestRefill} disabled={isRefillRequesting || hasPendingRefill}>
+                                    <BellRing className="mr-2 h-4 w-4" />
+                                    {isRefillRequesting ? "Requesting..." : "Request Refill"}
+                                </Button>
+                            </div>
                         </UITooltipTrigger>
                         {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
                     </UITooltip>
@@ -924,7 +926,7 @@ export default function DashboardPage() {
                     <div className="space-y-4">
                         <div className="space-y-2">
                            <h4 className="font-semibold">Official Report</h4>
-                           <div className="p-2 border rounded-lg min-h-[100px] flex items-center justify-center bg-muted/20">
+                            <div className="p-2 border rounded-lg min-h-[100px] flex items-center justify-center bg-muted/20">
                                 {selectedSanitationVisit?.reportUrl ? (
                                     <Image src={selectedSanitationVisit.reportUrl} alt="Sanitation Report" width={400} height={600} className="rounded-md w-full h-auto object-contain" />
                                 ) : (
@@ -1349,13 +1351,15 @@ export default function DashboardPage() {
             <AlertDialog>
                 <UITooltip>
                     <UITooltipTrigger asChild>
-                        <Button 
-                            className="rounded-full h-14 w-14 shadow-lg"
-                            onClick={handleRequestRefill} 
-                            disabled={isRefillRequesting || hasPendingRefill}
-                        >
-                            <BellRing className="h-6 w-6" />
-                        </Button>
+                        <div tabIndex={hasPendingRefill ? 0 : -1}>
+                            <Button 
+                                className="rounded-full h-14 w-14 shadow-lg"
+                                onClick={handleRequestRefill}
+                                disabled={isRefillRequesting || hasPendingRefill}
+                            >
+                                <BellRing className="h-6 w-6" />
+                            </Button>
+                        </div>
                     </UITooltipTrigger>
                     {hasPendingRefill && <UITooltipContent><p>Request pending</p></UITooltipContent>}
                 </UITooltip>
@@ -1377,5 +1381,3 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
-
-    
