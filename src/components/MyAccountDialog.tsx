@@ -386,12 +386,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
     months.push({ value: specialPeriodKey, label: `Dec ${currentYear} - Jan ${nextYear}` });
     
-    // Add subsequent months for the next year
-    for (let i = 1; i < 12; i++) { // Feb to Dec of next year
-        const date = new Date(nextYear, i, 1);
-        months.push({ value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') });
-    }
-
     return months;
   }, []);
   
