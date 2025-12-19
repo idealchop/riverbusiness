@@ -308,7 +308,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     <AlertDialog>
       <Dialog>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl rounded-lg">
           <DialogHeader>
             <DialogTitle>My Account</DialogTitle>
             <DialogDescription>Manage your plan, account details, and invoices.</DialogDescription>
