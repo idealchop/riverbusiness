@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, where } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -133,6 +133,7 @@ export default function DashboardPage() {
     const [isSanitationReportOpen, setIsSanitationReportOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
     const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
+    const [hasPendingRefill, setHasPendingRefill] = useState(false);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -155,6 +156,20 @@ export default function DashboardPage() {
         [firestore, authUser]
     );
     const { data: sanitationVisits, isLoading: sanitationLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+
+    const pendingRefillQuery = useMemoFirebase(() => 
+        (firestore && authUser)
+        ? query(collection(firestore, 'refillRequests'), where('userId', '==', authUser.uid), where('status', '==', 'Pending'))
+        : null,
+        [firestore, authUser]
+    );
+    const { data: pendingRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(pendingRefillQuery);
+
+    useEffect(() => {
+        if(pendingRefills) {
+            setHasPendingRefill(pendingRefills.length > 0);
+        }
+    }, [pendingRefills]);
 
     const isFlowPlan = user?.plan?.isConsumptionBased;
 
@@ -408,8 +423,8 @@ export default function DashboardPage() {
     };
 
     const handleRequestRefill = async () => {
-        if (!user || !firestore) {
-            toast({ variant: "destructive", title: "Error", description: "Cannot process request. Please try again later." });
+        if (!user || !firestore || hasPendingRefill) {
+            toast({ variant: "destructive", title: "Error", description: "Cannot process request. You may already have a pending request." });
             return;
         }
 
@@ -490,12 +505,17 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-2">
                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="default" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting}>
-                            <BellRing className="mr-2 h-4 w-4" />
-                            {isRefillRequesting ? "Requesting..." : "Request Refill"}
-                        </Button>
-                    </AlertDialogTrigger>
+                    <UITooltip>
+                        <UITooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="default" className="w-auto h-auto px-4 py-2" disabled={isRefillRequesting || hasPendingRefill}>
+                                    <BellRing className="mr-2 h-4 w-4" />
+                                    {isRefillRequesting ? "Requesting..." : "Request Refill"}
+                                </Button>
+                            </AlertDialogTrigger>
+                        </UITooltipTrigger>
+                        {hasPendingRefill && <UITooltipContent><p>You already have a pending refill request. Our team is on it!</p></UITooltipContent>}
+                    </UITooltip>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Confirm One-Time Refill Request</AlertDialogTitle>
@@ -931,18 +951,18 @@ export default function DashboardPage() {
                         )}
                         
                         <div>
-                            <h4 className="font-semibold mb-2">Official Report</h4>
-                            {selectedSanitationVisit?.reportUrl ? (
-                                <div className="p-2 border rounded-lg">
+                           <h4 className="font-semibold mb-2">Official Report</h4>
+                            <div className="p-2 border rounded-lg">
+                                {selectedSanitationVisit?.reportUrl ? (
                                     <Image src={selectedSanitationVisit.reportUrl} alt="Sanitation Report" width={400} height={600} className="rounded-md w-full h-auto object-contain" />
-                                </div>
-                            ) : (
-                                <div className="p-6 border rounded-lg bg-muted/50 flex flex-col items-center justify-center text-center">
-                                    <Hourglass className="h-10 w-10 text-muted-foreground mb-2" />
-                                    <p className="text-sm font-medium">Attachment Pending</p>
-                                    <p className="text-xs text-muted-foreground">The report is being processed and will be available here soon.</p>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="p-6 bg-muted/50 flex flex-col items-center justify-center text-center">
+                                        <Hourglass className="h-10 w-10 text-muted-foreground mb-2" />
+                                        <p className="text-sm font-medium">Attachment Pending</p>
+                                        <p className="text-xs text-muted-foreground">The report is being processed and will be available here soon.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                     </div>
@@ -1311,5 +1331,4 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
-
 
