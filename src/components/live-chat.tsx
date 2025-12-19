@@ -54,7 +54,7 @@ export function LiveChat({ messages, onMessageSubmit, user }: LiveChatProps) {
   }, [messages]);
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Live Support
