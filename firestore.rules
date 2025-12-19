@@ -49,6 +49,13 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /users/{userId}/refillRequests/{requestId} {
+      // User can create, read, and list their own requests.
+      allow read, list, create: if isOwner(userId);
+      // Admins can update any request (e.g., to change status).
+      allow update: if isAdmin();
+    }
+
     match /waterStations/{stationId} {
       allow read: if request.auth != null;
       allow create, update, delete: if isAdmin();
@@ -64,18 +71,5 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /refillRequests/{requestId} {
-      // Any authenticated user can create a request for themselves.
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      
-      // A user can read their own specific request document. Admins can read any.
-      allow get: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
-
-      // Admins can manage all requests.
-      allow update: if isAdmin();
-      
-      // Allow a user to LIST requests only when the query is filtered by their own userId and a valid status.
-      allow list: if (request.auth != null && request.query.userId == request.auth.uid && request.query.status in ['Requested', 'In Production', 'Out for Delivery']) || isAdmin();
-    }
   }
 }

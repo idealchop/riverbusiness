@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, serverTimestamp, query, where, Timestamp, arrayUnion } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, where, Timestamp, arrayUnion, addDoc } from 'firebase/firestore';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -175,8 +175,7 @@ export default function DashboardPage() {
     const activeRefillQuery = useMemoFirebase(() => {
         if (!firestore || !authUser) return null;
         return query(
-            collection(firestore, 'refillRequests'),
-            where('userId', '==', authUser.uid),
+            collection(firestore, 'users', authUser.uid, 'refillRequests'),
             where('status', 'in', ['Requested', 'In Production', 'Out for Delivery'])
         );
     }, [firestore, authUser]);
@@ -354,11 +353,12 @@ export default function DashboardPage() {
 
         filteredDeliveries.forEach(delivery => {
             const liters = containerToLiter(delivery.volumeContainers || 0);
+            const containers = delivery.volumeContainers || 0;
             const row = [
                 delivery.id,
                 format(new Date(delivery.date), 'PP'),
                 liters.toFixed(2),
-                delivery.volumeContainers,
+                containers,
                 delivery.status,
                 delivery.proofOfDeliveryUrl || "N/A"
             ].join(',');
@@ -438,7 +438,7 @@ export default function DashboardPage() {
     };
 
     const handleRequestRefill = async () => {
-        if (!user || !firestore) {
+        if (!user || !firestore || !authUser) {
             toast({ variant: "destructive", title: "Error", description: "Cannot process request. User not found." });
             return;
         }
@@ -462,7 +462,8 @@ export default function DashboardPage() {
         };
 
         try {
-            await addDocumentNonBlocking(collection(firestore, 'refillRequests'), newRequestData);
+            const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
+            await addDoc(refillRequestsCollection, newRequestData);
              toast({
                 title: "Refill Request Sent!",
                 description: `Thank you, ${user.name}! You can track the progress of your request by clicking the 'Request Refill' button again.`,
@@ -926,7 +927,9 @@ export default function DashboardPage() {
                                     <div className="p-6 text-center">
                                         <Hourglass className="h-10 w-10 text-muted-foreground mb-2 mx-auto" />
                                         <p className="text-sm font-medium">Attachment Pending</p>
-                                        <p className="text-xs text-muted-foreground">The report is being processed by the admin and will be available here soon.</p>
+                                        <p className="text-xs text-muted-foreground max-w-xs">
+                                            The report is being processed by the admin and will be available here soon.
+                                        </p>
                                     </div>
                                 )}
                             </div>
@@ -1413,7 +1416,7 @@ export default function DashboardPage() {
                                                 {statusConfig[status].label}
                                             </p>
                                             <p className="text-sm text-muted-foreground">
-                                                {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow(new Date(statusHistoryEntry.timestamp as string), { addSuffix: true })}` : 'Pending'}
+                                                {isCurrent ? statusConfig[status].message : statusHistoryEntry ? `Completed ${formatDistanceToNow(new Date((statusHistoryEntry.timestamp as Timestamp).toDate()), { addSuffix: true })}` : 'Pending'}
                                             </p>
                                         </div>
                                     </li>

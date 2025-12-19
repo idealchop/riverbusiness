@@ -214,6 +214,10 @@
       "schema": { "$ref": "#/entities/SanitationVisit" },
       "description": "Subcollection for a client's scheduled office sanitation visits."
     },
+    "/users/{userId}/refillRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/RefillRequest" },
+      "description": "Subcollection for user's one-time refill requests."
+    },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
@@ -225,10 +229,6 @@
     "/schedules/currentSchedule": {
       "schema": { "$ref": "#/entities/Schedule" },
       "description": "A single document to hold the current global delivery schedule."
-    },
-    "/refillRequests/{requestId}": {
-      "schema": { "$ref": "#/entities/RefillRequest" },
-      "description": "Stores user requests for one-time refills."
     }
   }
 }

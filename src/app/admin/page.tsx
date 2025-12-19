@@ -177,7 +177,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'refillRequests')) : null, [firestore, isAdmin]);
+    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'refillRequests') : null, [firestore, isAdmin]);
     const { data: refillRequests, isLoading: refillRequestsLoading } = useCollection<RefillRequest>(refillRequestsQuery);
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
@@ -744,9 +744,9 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
-    const handleRefillStatusUpdate = (requestId: string, newStatus: RefillRequestStatus) => {
+    const handleRefillStatusUpdate = (request: RefillRequest, newStatus: RefillRequestStatus) => {
         if (!firestore) return;
-        const requestRef = doc(firestore, 'refillRequests', requestId);
+        const requestRef = doc(firestore, 'users', request.userId, 'refillRequests', request.id);
         updateDocumentNonBlocking(requestRef, {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
@@ -1774,11 +1774,11 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild><Button size="sm">Update Status</Button></DropdownMenuTrigger>
                                                         <DropdownMenuContent>
-                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'In Production')} disabled={request.status !== 'Requested'}>Move to Production</DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'Out for Delivery')} disabled={request.status !== 'In Production'}>Set to Delivery</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'In Production')} disabled={request.status !== 'Requested'}>Move to Production</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Out for Delivery')} disabled={request.status !== 'In Production'}>Set to Delivery</DropdownMenuItem>
                                                             <DropdownMenuSeparator/>
-                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'Completed')}>Mark as Completed</DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request.id, 'Cancelled')} className="text-destructive">Cancel Request</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Completed')}>Mark as Completed</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Cancelled')} className="text-destructive">Cancel Request</DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
