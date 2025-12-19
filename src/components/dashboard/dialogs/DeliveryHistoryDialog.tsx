@@ -28,6 +28,8 @@ interface DeliveryHistoryDialogProps {
 
 export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userName, onViewProof }: DeliveryHistoryDialogProps) {
   const [deliveryDateRange, setDeliveryDateRange] = useState<DateRange | undefined>();
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
 
   const filteredDeliveries = useMemo(() => (deliveries || []).filter(delivery => {
     if (!deliveryDateRange?.from) return true;
@@ -36,6 +38,14 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
     const deliveryDate = new Date(delivery.date);
     return deliveryDate >= fromDate && deliveryDate <= toDate;
   }), [deliveries, deliveryDateRange]);
+
+  const totalPages = Math.ceil(filteredDeliveries.length / ITEMS_PER_PAGE);
+
+  const paginatedDeliveries = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredDeliveries.slice(startIndex, endIndex);
+  }, [filteredDeliveries, currentPage]);
 
   const handleDownloadDeliveries = () => {
     const headers = ["ID", "Date", "Volume (Liters)", "Containers", "Status", "Proof of Delivery URL"];
@@ -115,7 +125,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDeliveries.map(delivery => {
+                {paginatedDeliveries.map(delivery => {
                   const statusInfo = getStatusInfo(delivery.status);
                   const liters = containerToLiter(delivery.volumeContainers || 0);
                   const containers = delivery.volumeContainers || 0;
@@ -147,7 +157,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
 
             {/* Mobile Card View */}
             <div className="space-y-4 md:hidden">
-              {filteredDeliveries.map(delivery => {
+              {paginatedDeliveries.map(delivery => {
                 const statusInfo = getStatusInfo(delivery.status);
                 const liters = containerToLiter(delivery.volumeContainers || 0);
                 const containers = delivery.volumeContainers || 0;
@@ -182,8 +192,31 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, userNa
             </div>
           </div>
         </ScrollArea>
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter className="border-t pt-4 flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+            {totalPages > 1 && (
+                 <div className="flex items-center justify-center space-x-2">
+                     <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                         disabled={currentPage === 1}
+                     >
+                         Previous
+                     </Button>
+                     <span className="text-sm text-muted-foreground">
+                         Page {currentPage} of {totalPages}
+                     </span>
+                     <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                         disabled={currentPage === totalPages}
+                     >
+                         Next
+                     </Button>
+                 </div>
+            )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
