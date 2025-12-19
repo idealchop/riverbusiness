@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -610,7 +610,7 @@ export default function DashboardLayout({
                         {!selectedPaymentMethod ? (
                             <div>
                                 <h4 className="font-semibold mb-4">Select a Payment Method</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
+                                <div className="grid grid-cols-2 gap-4 md:grid-cols-1">
                                 {paymentOptions.map((option) => (
                                     <Card key={option.name} className="cursor-pointer hover:border-primary" onClick={() => handlePaymentOptionClick(option)}>
                                         <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
@@ -674,3 +674,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
