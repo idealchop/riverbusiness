@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, RefillRequestStatus, StatusHistoryEntry } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, RefillRequestStatus, StatusHistoryEntry, Notification } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -454,16 +455,29 @@ export default function DashboardPage() {
             userName: user.name,
             businessName: user.businessName,
             clientId: user.clientId || '',
-            requestedAt: new Date().toISOString(),
+            requestedAt: serverTimestamp(),
             status: 'Requested',
             statusHistory: [
-                { status: 'Requested', timestamp: new Date().toISOString() }
+                { status: 'Requested', timestamp: serverTimestamp() }
             ]
         };
 
         try {
             const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-            await addDoc(refillRequestsCollection, newRequestData);
+            const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+
+            const notificationsCol = collection(firestore, 'users', authUser.uid, 'notifications');
+            const notificationData: Partial<Notification> = {
+                type: 'delivery',
+                title: 'Refill Request Sent!',
+                description: `Your one-time refill request has been sent to the admin for processing.`,
+                data: { requestId: newDocRef.id },
+                date: serverTimestamp(),
+                isRead: false,
+                userId: authUser.uid,
+            };
+            await addDocumentNonBlocking(notificationsCol, notificationData);
+
              toast({
                 title: "Refill Request Sent!",
                 description: `Thank you, ${user.name}! You can track the progress of your request by clicking the 'Request Refill' button again.`,
@@ -530,7 +544,7 @@ export default function DashboardPage() {
                 <Button
                     variant="default"
                     className="w-auto h-auto px-4 py-2"
-                    disabled={isRefillRequesting}
+                    disabled={isRefillRequesting || (isFlowPlan && autoRefill)}
                     onClick={handleRequestRefill}
                 >
                     <BellRing className="mr-2 h-4 w-4" />
@@ -1427,4 +1441,5 @@ export default function DashboardPage() {
     </TooltipProvider>
     );
 }
+
 

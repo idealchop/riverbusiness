@@ -2,6 +2,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday } from 'date-fns';
+import type { Notification } from './types'; // Assuming types are defined in a shared file
 
 const db = admin.firestore();
 
@@ -68,7 +69,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 });
 
 /**
- * Generates an invoice for a single user for the specified billing period.
+ * Generates an invoice for a single user and creates a notification.
  */
 async function generateInvoiceForUser(
     user: admin.firestore.DocumentData,
@@ -122,6 +123,22 @@ async function generateInvoiceForUser(
             status: 'Upcoming',
         };
         console.log(`Generating invoice ${invoiceId} for user ${userRef.id} for amount ${amount}.`);
-        return paymentsRef.doc(invoiceId).set(newInvoice, { merge: true });
+
+        // Create notification for the new invoice
+        const notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+            type: 'payment',
+            title: 'New Invoice Generated',
+            description: `Your invoice for ${billingPeriod} amounting to ₱${amount.toFixed(2)} is now available.`,
+            data: { paymentId: invoiceId }
+        };
+
+        const notificationsRef = userRef.collection('notifications');
+
+        // Batch writes for invoice and notification
+        const batch = db.batch();
+        batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
+        batch.add(notificationsRef, { ...notification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id });
+        
+        return batch.commit();
     }
 }

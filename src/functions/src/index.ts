@@ -1,4 +1,5 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -6,6 +7,8 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
+import type { Notification } from './types';
+
 
 // Import all exports from billing.ts
 import * as billing from './billing';
@@ -21,18 +24,18 @@ const storage = getStorage();
 /**
  * Creates a notification document in a user's notification subcollection.
  */
-async function createNotification(userId: string, notificationData: any) {
+async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
   if (!userId) {
     logger.warn("User ID is missing, cannot create notification.");
     return;
   }
-  const notification = {
+  const notificationWithMeta = {
     ...notificationData,
     userId: userId,
     date: FieldValue.serverTimestamp(),
     isRead: false,
   };
-  await db.collection('users').doc(userId).collection('notifications').add(notification);
+  await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
 }
 
 

@@ -27,7 +27,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -388,6 +388,18 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const watchedChecklist = sanitationVisitForm.watch("checklist");
 
+    const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
+        if (!firestore) return;
+        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
+        const newNotification: Partial<Notification> = {
+            ...notification,
+            userId,
+            date: serverTimestamp(),
+            isRead: false
+        };
+        await addDocumentNonBlocking(notificationsCol, newNotification);
+    };
+
     React.useEffect(() => {
         if (visitToEdit) {
             sanitationVisitForm.reset({
@@ -498,6 +510,13 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(amount) });
         
         setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) + amount } : null);
+        
+        createNotification(selectedUser.id, {
+            type: 'general',
+            title: 'Balance Adjusted',
+            description: `An admin has ${adjustmentType === 'add' ? 'added' : 'deducted'} ${Math.abs(values.amount).toLocaleString()} liters ${adjustmentType === 'add' ? 'to' : 'from'} your account.`,
+            data: { adjustment: amount }
+        });
 
         toast({
             title: `Liters Adjusted`,
@@ -751,6 +770,16 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
+        
+        if (newStatus === 'Completed' || newStatus === 'Cancelled') {
+            createNotification(request.userId, {
+                type: 'delivery',
+                title: `Refill Request ${newStatus}`,
+                description: `Your one-time refill request has been marked as ${newStatus}.`,
+                data: { requestId: request.id }
+            });
+        }
+        
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };
 
@@ -799,6 +828,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
         const invoiceRef = doc(firestore, 'users', selectedUser.id, 'payments', selectedInvoice.id);
         updateDocumentNonBlocking(invoiceRef, { status: newStatus });
+
+        if (newStatus === 'Paid') {
+            createNotification(selectedUser.id, {
+                type: 'payment',
+                title: 'Payment Confirmed',
+                description: `Your payment for invoice ${selectedInvoice.id} has been confirmed. Thank you!`,
+                data: { paymentId: selectedInvoice.id }
+            });
+        } else { // Rejected
+             createNotification(selectedUser.id, {
+                type: 'payment',
+                title: 'Payment Action Required',
+                description: `Your payment for invoice ${selectedInvoice.id} was rejected. Reason: ${rejectionReason || 'Please contact support.'}`,
+                data: { paymentId: selectedInvoice.id }
+            });
+        }
+        
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
         setIsManageInvoiceOpen(false);
     };
@@ -816,12 +862,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             delete (visitData as any).reportFile;
     
             let visitRef: DocumentReference;
+            let isNewVisit = false;
     
             if (visitToEdit) {
                 visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
                 await updateDocumentNonBlocking(visitRef, visitData);
                 toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
             } else {
+                isNewVisit = true;
                 visitRef = await addDocumentNonBlocking(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
             }
@@ -830,6 +878,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const path = `users/${selectedUser.id}/sanitationVisits/${visitRef.id}/${file.name}`;
                 await handleFileUpload(file, path, `sanitation-${visitRef.id}`);
+            }
+            
+            // Send notification
+            if (isNewVisit) {
+                 createNotification(selectedUser.id, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A sanitation visit has been scheduled for your office on ${format(values.scheduledDate, 'PPP')}.`,
+                    data: { visitId: visitRef.id }
+                });
+            } else if (visitToEdit?.status !== values.status) {
+                 createNotification(selectedUser.id, {
+                    type: 'sanitation',
+                    title: `Sanitation Visit: ${values.status}`,
+                    description: `Your sanitation visit scheduled for ${format(values.scheduledDate, 'PPP')} is now ${values.status}.`,
+                    data: { visitId: visitRef.id }
+                });
             }
     
             setIsSanitationVisitDialogOpen(false);
