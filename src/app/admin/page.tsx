@@ -931,13 +931,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>User Account Management</DialogTitle>
                     <DialogDescription>
                         View user details and perform administrative actions.
                     </DialogDescription>
                 </DialogHeader>
+                <ScrollArea className="pr-6 -mr-6">
                 {selectedUser && (
                     <div className="grid md:grid-cols-2 gap-8 py-6">
                         {/* Left Column: User Profile & Details */}
@@ -1170,14 +1171,15 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                     </div>
                 )}
-                <DialogFooter>
+                </ScrollArea>
+                <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
                     <Button variant="outline" onClick={() => setIsUserDetailOpen(false)}>Close</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
         
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
                     <DialogDescription>
@@ -1230,7 +1232,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         Create Delivery
                     </Button>
                 </div>
-                 <div className="py-4 max-h-[60vh] overflow-y-auto">
+                 <ScrollArea className="pr-2 -mr-2">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -1294,7 +1296,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             )}
                         </TableBody>
                     </Table>
-                </div>
+                </ScrollArea>
             </DialogContent>
         </Dialog>
 
@@ -1979,14 +1981,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         </Dialog>
 
          <Dialog open={isStationProfileOpen} onOpenChange={(open) => {if (!open) {setStationToUpdate(null); stationForm.reset();} setIsStationProfileOpen(open);}}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-3xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Partnership Requirements</DialogTitle>
                     <DialogDescription>
                         {stationToUpdate ? `Manage compliance for ${stationToUpdate.name}.` : "Submit documents to become a verified Refill Partner."}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="max-h-[70vh] p-1">
+                <ScrollArea className="pr-6 -mr-6">
                     <div className="space-y-8 p-4">
                          <Form {...stationForm}>
                             <form className="space-y-4">
@@ -2266,7 +2268,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
         <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Manage Sanitation for {selectedUser?.businessName}</DialogTitle>
                     <DialogDescription>
@@ -2278,7 +2280,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <PlusCircle className="mr-2 h-4 w-4" /> Schedule Visit
                     </Button>
                 </div>
-                 <ScrollArea className="h-72">
+                 <ScrollArea className="pr-2 -mr-2">
                     {sanitationVisitsLoading ? (
                         <p>Loading visits...</p>
                     ) : sanitationVisitsData && sanitationVisitsData.length > 0 ? (
@@ -2323,14 +2325,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
                     )}
                 </ScrollArea>
-                <DialogFooter>
+                <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
                     <DialogClose asChild><Button variant="secondary">Close</Button></DialogClose>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
         
         <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); sanitationVisitForm.reset(); } setIsSanitationVisitDialogOpen(open);}}>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
                     <DialogDescription>
@@ -2338,7 +2340,8 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...sanitationVisitForm}>
-                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4">
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4 flex-1 min-h-0 flex flex-col">
+                    <ScrollArea className="pr-6 -mr-6 flex-1">
                         <div className="grid md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
@@ -2458,6 +2461,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </ScrollArea>
                             </div>
                         </div>
+                    </ScrollArea>
                         <DialogFooter className="pt-6">
                             <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>

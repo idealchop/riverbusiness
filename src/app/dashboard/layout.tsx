@@ -305,14 +305,15 @@ export default function DashboardLayout({
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-             <DialogContent className="sm:max-w-4xl h-screen sm:h-[85vh] flex flex-col">
+             <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[85vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid md:grid-cols-2 gap-8 py-4 pr-6 flex-1 min-h-0">
+                <ScrollArea className="pr-6 -mr-6">
+                <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 min-h-0">
                       <div className="space-y-8 flex flex-col">
                         <div className="space-y-4">
                           <div className="flex items-center gap-4 rounded-md border p-4">
@@ -360,6 +361,7 @@ export default function DashboardLayout({
                           />
                       </div>
                 </div>
+                </ScrollArea>
               </DialogContent>
           </Dialog>
           <Popover onOpenChange={handleNotificationOpenChange}>
@@ -520,7 +522,7 @@ export default function DashboardLayout({
         </Dialog>
 
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>
                         {selectedPaymentMethod ? `Pay with ${selectedPaymentMethod.name}` : `Pay Invoice ${selectedInvoice?.id}`}
@@ -529,6 +531,7 @@ export default function DashboardLayout({
                         {selectedPaymentMethod ? `Scan the QR code and upload your proof of payment.` : `Your bill is ₱${selectedInvoice?.amount.toFixed(2)}. Please select a payment method.`}
                     </DialogDescription>
                 </DialogHeader>
+                <ScrollArea className="pr-6 -mr-6">
                 <div className="py-4 grid md:grid-cols-2 gap-8">
                     {!selectedPaymentMethod ? (
                         <div className="space-y-4">
@@ -586,6 +589,7 @@ export default function DashboardLayout({
                         </Button>
                     </div>
                 </div>
+                </ScrollArea>
             </DialogContent>
         </Dialog>
       </div>
