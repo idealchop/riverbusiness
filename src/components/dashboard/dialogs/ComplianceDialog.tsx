@@ -87,7 +87,8 @@ export function ComplianceDialog({
                   <CardDescription>View all historical compliance reports and their status for {waterStation?.name || 'your assigned station'}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
+                  {/* Desktop Table */}
+                  <Table className="hidden md:table">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Report Name</TableHead>
@@ -123,6 +124,34 @@ export function ComplianceDialog({
                       )}
                     </TableBody>
                   </Table>
+
+                  {/* Mobile Cards */}
+                   <div className="space-y-4 md:hidden">
+                    {complianceLoading ? (
+                      <p className="text-center text-muted-foreground py-4">Loading reports...</p>
+                    ) : complianceReports?.map(report => (
+                      <Card key={report.id}>
+                        <CardContent className="p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold">{report.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}
+                              </p>
+                            </div>
+                            <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
+                          </div>
+                          <Button variant="outline" size="sm" className="w-full" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                            <Eye className="mr-2 h-4 w-4" /> View Attachment
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
+                      <p className="text-center text-muted-foreground py-10">No compliance reports available.</p>
+                    )}
+                  </div>
+
                 </CardContent>
               </Card>
             </TabsContent>
@@ -134,7 +163,8 @@ export function ComplianceDialog({
                   <CardDescription>Records of scheduled sanitation and cleaning for your office dispensers.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
+                   {/* Desktop Table */}
+                  <Table className="hidden md:table">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Scheduled Date</TableHead>
@@ -172,6 +202,34 @@ export function ComplianceDialog({
                       )}
                     </TableBody>
                   </Table>
+
+                   {/* Mobile Cards */}
+                   <div className="space-y-4 md:hidden">
+                    {sanitationLoading ? (
+                      <p className="text-center text-muted-foreground py-4">Loading visits...</p>
+                    ) : sanitationVisits?.map(visit => (
+                      <Card key={visit.id}>
+                        <CardContent className="p-4 space-y-3">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-semibold">{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                    <p className="text-xs text-muted-foreground">Officer: {visit.assignedTo}</p>
+                                </div>
+                                <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
+                                    {visit.status}
+                                </Badge>
+                            </div>
+                            <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectedSanitationVisit(visit); }}>
+                                <FileText className="mr-2 h-4 w-4" /> View Report
+                            </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                     {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
+                        <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
+                     )}
+                   </div>
+
                 </CardContent>
               </Card>
             </TabsContent>
