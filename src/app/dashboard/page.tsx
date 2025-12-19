@@ -197,7 +197,7 @@ export default function DashboardPage() {
     await addDocumentNonBlocking(notificationsCol, newNotification);
   };
   
-  const handleRequestRefill = async (date: Date, containers: number) => {
+  const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
       return;
@@ -229,7 +229,7 @@ export default function DashboardPage() {
 
       toast({
         title: 'Refill Request Sent!',
-        description: `Thank you, ${user.name}! You can track the progress of your request by clicking the 'Request Refill' button again.`,
+        description: `Thank you, ${user.name}! You can track the progress of your request.`,
       });
       closeDialog('requestRefill');
     } catch (error) {
@@ -240,6 +240,55 @@ export default function DashboardPage() {
       });
     } finally {
       setIsRefillRequesting(false);
+    }
+  };
+
+  const handleOneClickRefill = async () => {
+    if (hasPendingRefill) {
+      openDialog('refillStatus');
+      return;
+    }
+    if (!user || !firestore || !authUser) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
+        return;
+    }
+
+    setIsRefillRequesting(true);
+    const newRequestData: Omit<RefillRequest, 'id'> = {
+        userId: user.id,
+        userName: user.name,
+        businessName: user.businessName,
+        clientId: user.clientId || '',
+        requestedAt: serverTimestamp(),
+        status: 'Requested',
+        statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+        requestedDate: new Date().toISOString(), // Use current date for ASAP
+    };
+
+    try {
+        const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
+        const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+
+        await createNotification(authUser.uid, {
+            type: 'delivery',
+            title: 'ASAP Refill Request Sent!',
+            description: `Your immediate refill request has been sent to the admin for processing.`,
+            data: { requestId: newDocRef.id },
+        });
+
+        toast({
+            title: 'ASAP Refill Request Sent!',
+            description: `You can track the progress by clicking the "Check Request Status" button.`,
+        });
+
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Request Failed',
+            description: 'There was an issue sending your request. Please try again.',
+        });
+    } finally {
+        setIsRefillRequesting(false);
     }
   };
 
@@ -255,7 +304,7 @@ export default function DashboardPage() {
           greeting={greeting}
           userName={user?.businessName}
           isRefillRequesting={isRefillRequesting}
-          onRefillRequest={() => openDialog('requestRefill')}
+          onRefillRequest={handleOneClickRefill}
           onComplianceClick={() => openDialog('compliance')}
           hasPendingRefill={hasPendingRefill}
         />
@@ -304,7 +353,7 @@ export default function DashboardPage() {
         <RequestRefillDialog
             isOpen={dialogState.requestRefill}
             onOpenChange={() => closeDialog('requestRefill')}
-            onSubmit={handleRequestRefill}
+            onSubmit={handleScheduledRefill}
         />
         <SaveLitersDialog
             isOpen={dialogState.saveLiters}

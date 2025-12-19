@@ -37,7 +37,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference, arrayUnion, Timestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -1829,21 +1829,27 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <TableHead>Client ID</TableHead>
                                             <TableHead>Business Name</TableHead>
                                             <TableHead>Requested</TableHead>
+                                            <TableHead>Date / Qty</TableHead>
                                             <TableHead>Current Status</TableHead>
                                             <TableHead className="text-right">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {refillRequestsLoading ? (
-                                            <TableRow><TableCell colSpan={5} className="text-center">Loading requests...</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={6} className="text-center">Loading requests...</TableCell></TableRow>
                                         ) : activeRefillRequests.map((request) => {
                                             const requestedAtDate = toSafeDate(request.requestedAt);
+                                            const requestedForDate = toSafeDate(request.requestedDate);
                                             return (
                                             <TableRow key={request.id}>
                                                 <TableCell>{request.clientId}</TableCell>
                                                 <TableCell>{request.businessName}</TableCell>
                                                 <TableCell>
                                                     {requestedAtDate ? formatDistanceToNow(requestedAtDate, { addSuffix: true }) : 'Just now'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {requestedForDate ? format(requestedForDate, 'PP') : 'ASAP'}
+                                                    {request.volumeContainers && ` (${request.volumeContainers} cont.)`}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge variant="secondary">{request.status}</Badge>

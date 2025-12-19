@@ -165,7 +165,9 @@
         "statusHistory": {
             "type": "array",
             "items": { "$ref": "#/entities/StatusHistoryEntry" }
-        }
+        },
+        "volumeContainers": { "type": "number", "description": "The number of containers requested for the refill." },
+        "requestedDate": { "type": "string", "format": "date-time", "description": "The specific date the user requested the delivery for." }
       },
       "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
     },

@@ -161,6 +161,8 @@ export interface RefillRequest {
   requestedAt: FieldValue | Timestamp;
   status: RefillRequestStatus;
   statusHistory?: StatusHistoryEntry[];
+  volumeContainers?: number;
+  requestedDate?: string;
 }
 
 export interface Notification {
