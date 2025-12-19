@@ -116,7 +116,7 @@ export default function DashboardLayout({
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
   const { data: paymentHistoryFromDb } = useCollection<Payment>(paymentsQuery);
   
-  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'notifications') : null, [firestore, authUser]);
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
@@ -608,20 +608,22 @@ export default function DashboardLayout({
                 <ScrollArea className="pr-6 -mr-6">
                     <div className="py-4 grid md:grid-cols-2 gap-8">
                         {!selectedPaymentMethod ? (
-                            <div className="space-y-4">
-                                <h4 className="font-semibold">Select a Payment Method</h4>
+                            <div>
+                                <h4 className="font-semibold mb-4">Select a Payment Method</h4>
+                                <div className="grid grid-cols-2 md:grid-cols-1 gap-4">
                                 {paymentOptions.map((option) => (
                                     <Card key={option.name} className="cursor-pointer hover:border-primary" onClick={() => handlePaymentOptionClick(option)}>
-                                        <CardContent className="p-4 flex items-center gap-4">
+                                        <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
                                             {option.qr && (
                                                 <div className="relative h-10 w-10">
                                                     <Image src={option.qr.imageUrl} alt={option.name} fill className="object-contain" data-ai-hint={option.qr.imageHint}/>
                                                 </div>
                                             )}
-                                            <p className="font-medium">{option.name}</p>
+                                            <p className="font-medium text-sm sm:text-base">{option.name}</p>
                                         </CardContent>
                                     </Card>
                                 ))}
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -672,5 +674,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
