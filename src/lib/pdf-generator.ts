@@ -35,7 +35,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Water Refill History', 36, 17);
+  doc.text('Water Refill History', 36, 17, { align: 'left' });
 
   doc.setFontSize(10);
   doc.text('River Philippines', pageWidth - 14, 12, { align: 'right' });
@@ -48,9 +48,11 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   doc.setFontSize(10);
   doc.setTextColor(0);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Hi ${user.name}, here is your delivery history, produced for your convenience by River Business.`, 14, startY);
+  const greetingText = `Hi ${user.name}, thank you for being part of the River Business family. This document summarizes your delivery history, showcasing the convenience and quality you enjoy with our automated service.`;
+  const splitGreeting = doc.splitTextToSize(greetingText, pageWidth - 28);
+  doc.text(splitGreeting, 14, startY);
   
-  startY += 15;
+  startY += (splitGreeting.length * 5) + 10;
 
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
