@@ -22,12 +22,10 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   const pageWidth = doc.internal.pageSize.width;
   
   // 1. Add Logo and Header
-  const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
-  
-  // Header background
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, pageWidth, 25, 'F');
   
+  const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
   try {
      doc.addImage(logoUrl, 'JPEG', 14, 8, 18, 18);
   } catch (e) {
@@ -253,8 +251,8 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     startY += 50;
 
     // --- RENDER TABLES ---
-    const renderTable = (title: string, head: any[], body: any[][], finalY?: number) => {
-        let tableFinalY = finalY || startY;
+    const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
+        let tableFinalY = finalY;
         if (body.length > 0) {
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
@@ -269,7 +267,6 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
                 headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
                 bodyStyles: { fontSize: 8, cellPadding: 4 },
                 margin: { left: margin, right: margin },
-                tableWidth: 'auto'
             });
             tableFinalY = (doc as any).lastAutoTable.finalY;
         }
@@ -280,13 +277,14 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
 
     // --- Equipment Details ---
      if (user.customPlanDetails) {
-        const { gallonQuantity, dispenserQuantity } = user.customPlanDetails;
+        const { gallonQuantity, dispenserQuantity, litersPerMonth } = user.customPlanDetails;
         let equipmentBody: string[][] = [];
-        if (gallonQuantity > 0) equipmentBody.push(['Containers Included', `${gallonQuantity}`]);
-        if (dispenserQuantity > 0) equipmentBody.push(['Dispensers Included', `${dispenserQuantity}`]);
+        if(litersPerMonth > 0) equipmentBody.push(['Purchased Liters', `${litersPerMonth.toLocaleString()} L/month`]);
+        if (gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity}`]);
+        if (dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity}`]);
         
         if (equipmentBody.length > 0) {
-            lastY = renderTable('Equipment Details', [], equipmentBody, lastY);
+            lastY = renderTable('Subscription Details', [], equipmentBody, lastY);
             lastY += 20;
         }
     }
@@ -298,10 +296,10 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     const deliveryBody = deliveries.map(d => [d.id, format(new Date(d.date), 'PP'), d.volumeContainers, containerToLiter(d.volumeContainers).toFixed(1), d.status]);
     if (deliveries.length > 0) {
         const deliverySummaryRow = [
-          { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-          { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
-          { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold' } },
-          { content: '', styles: {} },
+          { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
+          { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
+          { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
+          { content: '', styles: {fillColor: [230, 242, 255] } },
         ];
         deliveryBody.push(deliverySummaryRow as any);
     }
@@ -329,11 +327,12 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }
 
     // --- FINANCIAL SUMMARY (AT THE END) ---
-    // Make sure summary is not split across pages
-    if (lastY > pageHeight - 150) { 
+    if ((doc as any).lastAutoTable.finalY > pageHeight - 150) { 
       doc.addPage();
       drawHeader();
       lastY = 100;
+    } else {
+        lastY = (doc as any).lastAutoTable.finalY + 30;
     }
 
     const summaryX = pageWidth - margin - 220; 
@@ -377,3 +376,5 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     // --- SAVE PDF ---
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${format(now, 'yyyy-MM')}.pdf`);
 };
+
+    
