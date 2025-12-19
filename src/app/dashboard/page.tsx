@@ -134,6 +134,16 @@ export default function DashboardPage() {
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
     const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
     const [hasPendingRefill, setHasPendingRefill] = useState(false);
+    const [showFabBubble, setShowFabBubble] = useState(false);
+
+    useEffect(() => {
+        const bubbleInterval = setInterval(() => {
+            setShowFabBubble(true);
+            setTimeout(() => setShowFabBubble(false), 4000); // Show for 4 seconds
+        }, 10000); // Appear every 10 seconds
+
+        return () => clearInterval(bubbleInterval);
+    }, []);
 
     const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
     const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -930,18 +940,34 @@ export default function DashboardPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                         <div className="space-y-2">
+                           <h4 className="font-semibold">Official Report</h4>
+                           <div className="p-2 border rounded-lg min-h-[100px] flex items-center justify-center bg-muted/20">
+                                {selectedSanitationVisit?.reportUrl ? (
+                                    <Image src={selectedSanitationVisit.reportUrl} alt="Sanitation Report" width={400} height={600} className="rounded-md w-full h-auto object-contain" />
+                                ) : (
+                                    <div className="p-6 text-center">
+                                        <Hourglass className="h-10 w-10 text-muted-foreground mb-2 mx-auto" />
+                                        <p className="text-sm font-medium">Attachment Pending</p>
+                                        <p className="text-xs text-muted-foreground">The report is being processed by the admin and will be available here soon.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                        {selectedSanitationVisit?.status === 'Completed' && (
-                            <>
-                                <h4 className="font-semibold">Results</h4>
-                                <Card>
-                                    <CardContent className="pt-6 space-y-4">
+                    </div>
+                    <div className="space-y-4">
+                        <h4 className="font-semibold">Checklist Results</h4>
+                        <Card>
+                            <CardContent className="p-2">
+                                 {selectedSanitationVisit?.status === 'Completed' && (
+                                    <div className="p-4 border-b">
                                         <div className="text-center">
                                             <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
                                             <p className="text-sm text-muted-foreground">Overall Sanitation Result</p>
                                         </div>
                                         <div>
-                                            <Progress value={sanitationReportStats.passRate} className="h-2"/>
+                                            <Progress value={sanitationReportStats.passRate} className="h-2 mt-2"/>
                                             <div className="flex justify-between text-xs text-muted-foreground mt-2">
                                                 <span>{sanitationReportStats.passed} / {sanitationReportStats.total} Items Passed</span>
                                                 <span>{sanitationReportStats.passRate.toFixed(0)}%</span>
@@ -952,64 +978,45 @@ export default function DashboardPage() {
                                                 Based on our inspection, your drinking water is clean and safe.
                                             </p>
                                         )}
-                                    </CardContent>
-                                </Card>
-                            </>
-                        )}
-                        
-                        <div>
-                           <h4 className="font-semibold mb-2">Official Report</h4>
-                           <div className="p-2 border rounded-lg">
-                                {selectedSanitationVisit?.reportUrl ? (
-                                    <Image src={selectedSanitationVisit.reportUrl} alt="Sanitation Report" width={400} height={600} className="rounded-md w-full h-auto object-contain" />
-                                ) : (
-                                    <div className="p-6 bg-muted/50 flex flex-col items-center justify-center text-center">
-                                        <Hourglass className="h-10 w-10 text-muted-foreground mb-2" />
-                                        <p className="text-sm font-medium">Attachment Pending</p>
-                                        <p className="text-xs text-muted-foreground">The report is being processed and will be available here soon.</p>
                                     </div>
                                 )}
-                            </div>
-                        </div>
-
-                    </div>
-                    <div className="space-y-4">
-                        <h4 className="font-semibold">Checklist Results</h4>
-                        <ScrollArea className="h-[450px] border rounded-md p-2">
-                            <Table>
-                                <TableBody>
-                                    {selectedSanitationVisit?.checklist?.map((item, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
-                                            <TableCell className="text-right">
-                                                {selectedSanitationVisit.status === 'Scheduled' ? (
-                                                        <UITooltip>
-                                                        <UITooltipTrigger>
-                                                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
-                                                        </UITooltipTrigger>
-                                                        <UITooltipContent>
-                                                            <p>Result will be available after the visit is completed.</p>
-                                                        </UITooltipContent>
-                                                    </UITooltip>
-                                                ) : item.checked ? (
-                                                    <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
-                                                ) : (
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <Badge variant="destructive" className="cursor-pointer whitespace-nowrap">Failed</Badge>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-60 text-sm">
-                                                            <p className="font-bold">Remarks:</p>
-                                                            <p>{item.remarks || "No remarks provided."}</p>
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
+                                <ScrollArea className={cn(selectedSanitationVisit?.status === 'Completed' ? "h-[250px]" : "h-[400px]")}>
+                                    <Table>
+                                        <TableBody>
+                                            {selectedSanitationVisit?.checklist?.map((item, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium text-xs w-full">{item.item}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        {selectedSanitationVisit.status === 'Scheduled' ? (
+                                                                <UITooltip>
+                                                                <UITooltipTrigger>
+                                                                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
+                                                                </UITooltipTrigger>
+                                                                <UITooltipContent>
+                                                                    <p>Result will be available after the visit is completed.</p>
+                                                                </UITooltipContent>
+                                                            </UITooltip>
+                                                        ) : item.checked ? (
+                                                            <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
+                                                        ) : (
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <Badge variant="destructive" className="cursor-pointer whitespace-nowrap">Failed</Badge>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-60 text-sm">
+                                                                    <p className="font-bold">Remarks:</p>
+                                                                    <p>{item.remarks || "No remarks provided."}</p>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
                 <DialogFooter>
@@ -1336,7 +1343,15 @@ export default function DashboardPage() {
         </Dialog>
 
         {/* Floating Action Button for Mobile */}
-        <div className="sm:hidden fixed bottom-4 right-4 z-50">
+        <div className="sm:hidden fixed bottom-4 right-4 z-50 flex items-center gap-2">
+             <div className={cn(
+                "transition-all duration-300 ease-in-out transform",
+                showFabBubble ? "opacity-100 scale-100 -translate-x-2" : "opacity-0 scale-90 -translate-x-0"
+            )}>
+                <div className="bg-primary text-primary-foreground text-sm rounded-lg px-3 py-2 shadow-lg whitespace-nowrap">
+                    <p>Urgent refill, {user?.name?.split(' ')[0]}? Pindot lang dito!</p>
+                </div>
+            </div>
             <AlertDialog>
                 <UITooltip>
                     <UITooltipTrigger asChild>
