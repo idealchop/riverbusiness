@@ -1,5 +1,4 @@
 
-
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -185,11 +184,11 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     // --- HEADER ---
     const drawHeader = () => {
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, pageWidth, 60, 'F');
+      doc.rect(0, 0, pageWidth, 70, 'F');
       
       const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
       try {
-         doc.addImage(logoUrl, 'JPEG', margin, 18, 30, 30);
+         doc.addImage(logoUrl, 'JPEG', margin, 18, 35, 35);
       } catch (e) {
         console.error("Could not add logo to PDF:", e);
       }
@@ -197,7 +196,12 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
-      doc.text('Statement of Account', pageWidth - margin, 40, { align: 'right' });
+      doc.text('Statement of Account', pageWidth - margin, 38, { align: 'right' });
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const planText = user.plan ? `Plan: ${user.plan.name} (${user.clientType || 'N/A'})` : 'No Active Plan';
+      doc.text(planText, pageWidth - margin, 55, { align: 'right' });
     };
 
     // --- FOOTER ---
@@ -223,7 +227,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     };
     
     drawHeader();
-    startY = 90;
+    startY = 100;
 
     // --- BILLING & DATE INFO ---
     doc.setFontSize(9);
@@ -246,7 +250,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     doc.text(format(now, 'PP'), (pageWidth / 2) + 85, startY);
     doc.text(format(startOfMonth(now), 'MMMM yyyy'), (pageWidth / 2) + 85, startY + 12);
     
-    startY += 40;
+    startY += 50;
 
     // --- RENDER TABLES ---
     const renderTable = (title: string, head: any[], body: any[][], finalY?: number) => {
@@ -274,25 +278,19 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     
     let lastY = startY;
 
-    // --- Subscription Details ---
-    if (user.plan) {
-        const planLiters = user.customPlanDetails?.litersPerMonth;
-        let subscriptionBody: string[][] = [
-            ['Plan Type', `${user.plan.name} (${user.clientType || 'N/A'})`]
-        ];
-
-        if (planLiters > 0 && !user.plan.isConsumptionBased) {
-            subscriptionBody.push(['Purchased Liters', `${planLiters.toLocaleString()} L/month`]);
+    // --- Equipment Details ---
+     if (user.customPlanDetails) {
+        const { gallonQuantity, dispenserQuantity } = user.customPlanDetails;
+        let equipmentBody: string[][] = [];
+        if (gallonQuantity > 0) equipmentBody.push(['Containers Included', `${gallonQuantity}`]);
+        if (dispenserQuantity > 0) equipmentBody.push(['Dispensers Included', `${dispenserQuantity}`]);
+        
+        if (equipmentBody.length > 0) {
+            lastY = renderTable('Equipment Details', [], equipmentBody, lastY);
+            lastY += 20;
         }
-
-        if (user.customPlanDetails) {
-            const { gallonQuantity, dispenserQuantity } = user.customPlanDetails;
-            if (gallonQuantity > 0) subscriptionBody.push(['Containers on Loan', `${gallonQuantity}`]);
-            if (dispenserQuantity > 0) subscriptionBody.push(['Dispensers on Loan', `${dispenserQuantity}`]);
-        }
-        lastY = renderTable('Subscription Details', [], subscriptionBody, lastY);
-        lastY += 20;
     }
+
 
     // --- Deliveries ---
     const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
@@ -332,17 +330,17 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
 
     // --- FINANCIAL SUMMARY (AT THE END) ---
     // Make sure summary is not split across pages
-    if (lastY > pageHeight - 140) { 
+    if (lastY > pageHeight - 150) { 
       doc.addPage();
       drawHeader();
-      lastY = 90;
+      lastY = 100;
     }
 
     const summaryX = pageWidth - margin - 220; 
     
     const subtotal = totalAmount;
     const tax = totalAmount * 0.12;
-    const grandTotal = subtotal; // As per user instruction
+    const grandTotal = subtotal;
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
