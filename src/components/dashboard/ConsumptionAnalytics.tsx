@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -24,11 +25,12 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
     
     if (analyticsFilter === 'weekly') {
       const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
-      return last7Days.map(date => {
+      return last7Days.map((date, index) => {
         const deliveriesOnDay = sourceDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
         const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
         return {
-          name: format(date, 'EEE').charAt(0),
+          name: `${format(date, 'EEE').charAt(0)}-${index}`, // Ensure unique name
+          displayName: format(date, 'EEE').charAt(0),
           value: containerToLiter(totalContainers)
         };
       });
@@ -40,6 +42,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
 
       const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
         name: `Week ${i + 1}`,
+        displayName: `Week ${i + 1}`,
         value: 0
       }));
 
@@ -81,7 +84,13 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
       <CardContent className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+            <XAxis 
+              dataKey="displayName" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={12} 
+              tickLine={false} 
+              axisLine={false} 
+            />
             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
             <Tooltip
               cursor={{ fill: 'hsla(var(--accent))' }}
