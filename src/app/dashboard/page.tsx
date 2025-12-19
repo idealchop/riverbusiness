@@ -348,7 +348,7 @@ export default function DashboardPage() {
             isOpen={dialogState.deliveryHistory}
             onOpenChange={() => closeDialog('deliveryHistory')}
             deliveries={deliveries}
-            userName={user?.name}
+            user={user}
             onViewProof={setSelectedProofUrl}
         />
         <ConsumptionHistoryDialog
