@@ -363,18 +363,17 @@ export default function DashboardLayout({
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-             <DialogContent className="sm:max-w-4xl min-h-[85vh] w-full sm:h-auto sm:max-h-[85vh] flex flex-col">
-                <DialogHeader>
+             <DialogContent className="sm:max-w-4xl min-h-[85vh] w-full sm:h-auto sm:max-h-[85vh] flex flex-col p-0 sm:p-6 sm:rounded-lg">
+                <DialogHeader className="p-6 pb-0 sm:p-0">
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
                         Our team is ready to assist you. Please use the contact details below, and we'll get back to you as soon as possible.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="pr-6 -mr-6">
-                <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 min-h-0">
-                      <div className="space-y-8 flex flex-col">
+                <div className="grid md:grid-cols-2 gap-8 py-4 flex-1 min-h-0 px-6 sm:px-0">
+                      <div className="flex flex-col md:space-y-8">
                         <div className="space-y-4">
-                          <div className="flex items-center gap-4 rounded-md border p-4">
+                           <div className="flex items-center gap-4 rounded-md border p-3 md:p-4">
                               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                                 <Phone className="h-6 w-6" />
                               </div>
@@ -385,7 +384,7 @@ export default function DashboardLayout({
                                 <p className="text-sm text-muted-foreground mt-1">09182719091</p>
                               </div>
                           </div>
-                          <div className="flex items-center gap-4 rounded-md border p-4">
+                           <div className="flex items-center gap-4 rounded-md border p-3 md:p-4">
                               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                               <Mail className="h-6 w-6" />
                               </div>
@@ -395,7 +394,7 @@ export default function DashboardLayout({
                               </div>
                           </div>
                         </div>
-                        <div className="mt-auto pt-4 text-center text-sm space-y-4">
+                        <div className="mt-auto pt-4 text-center text-sm space-y-4 hidden md:block">
                           <div className="flex justify-center gap-2">
                               <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
                                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -419,8 +418,23 @@ export default function DashboardLayout({
                             user={user}
                           />
                       </div>
+                       <div className="mt-auto pt-4 text-center text-sm space-y-4 md:hidden">
+                          <div className="flex justify-center gap-2">
+                              <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Submit Feedback
+                              </Button>
+                              <Button variant="outline" onClick={() => setIsSwitchProviderDialogOpen(true)}>
+                                <FileUp className="h-4 w-4 mr-2" />
+                                Switch Provider
+                              </Button>
+                          </div>
+                          <p className="text-balance text-muted-foreground mt-4">Your Drinking Water, Safe & Simplified.</p>
+                          <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline">
+                              By River Philippines
+                          </a>
+                        </div>
                 </div>
-                </ScrollArea>
               </DialogContent>
           </Dialog>
           <Popover onOpenChange={handleNotificationOpenChange}>
@@ -669,3 +683,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
