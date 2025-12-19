@@ -1383,7 +1383,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div>
-                            <ol className="relative flex items-center justify-between w-full">
+                            <ol className="flex items-start justify-between w-full">
                                 {statusOrder.map((status, index) => {
                                     const currentStatusIndex = statusOrder.indexOf(activeRefillRequest.status);
                                     const isCompleted = index < currentStatusIndex;
@@ -1391,35 +1391,21 @@ export default function DashboardPage() {
                                     const Icon = statusConfig[status].icon;
 
                                     return (
-                                        <li key={status} className={cn("relative flex-1", index < statusOrder.length - 1 ? "pr-8 sm:pr-12" : "")}>
-                                            <div className="flex flex-col items-center text-center">
-                                                <div className={cn(
-                                                    "w-10 h-10 rounded-full flex items-center justify-center border-2",
-                                                    isCompleted ? "bg-primary border-primary text-primary-foreground" :
-                                                    isCurrent ? "bg-primary/20 border-primary text-primary animate-pulse" :
-                                                    "bg-muted border-muted-foreground/30 text-muted-foreground"
-                                                )}>
-                                                    <Icon className="h-5 w-5" />
-                                                </div>
-                                                <p className={cn(
-                                                    "font-semibold text-xs mt-2",
-                                                    (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
-                                                )}>
-                                                    {statusConfig[status].label}
-                                                </p>
+                                        <li key={status} className="relative flex flex-col items-center justify-start flex-1">
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-full flex items-center justify-center border-2 z-10",
+                                                isCompleted ? "bg-primary border-primary text-primary-foreground" :
+                                                isCurrent ? "bg-primary/20 border-primary text-primary animate-pulse" :
+                                                "bg-muted border-muted-foreground/30 text-muted-foreground"
+                                            )}>
+                                                <Icon className="h-5 w-5" />
                                             </div>
-                                            {index < statusOrder.length - 1 && (
-                                                <div className={cn(
-                                                    "absolute top-5 left-1/2 w-full h-0.5 -translate-x-1/2 -z-10",
-                                                    isCompleted ? "bg-primary" : "bg-muted-foreground/30",
-                                                    index === 0 && "left-[calc(50%+1rem)] w-[calc(100%-2rem)]",
-                                                    index === statusOrder.length - 2 && "w-[calc(100%-2rem)]",
-                                                     // Shift the first line to start after the circle, and shorten the last
-                                                )} style={{
-                                                  left: index === 0 ? 'calc(50% + 1.25rem)' : '50%',
-                                                  width: index === 0 || index === statusOrder.length -2 ? 'calc(100% - 2.5rem)' : '100%',
-                                                }} />
-                                            )}
+                                            <p className={cn(
+                                                "font-semibold text-xs mt-2 text-center",
+                                                (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
+                                            )}>
+                                                {statusConfig[status].label}
+                                            </p>
                                         </li>
                                     );
                                 })}
