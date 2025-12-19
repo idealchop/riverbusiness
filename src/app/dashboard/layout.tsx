@@ -120,6 +120,7 @@ export default function DashboardLayout({
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
+  const [isRefillRequesting, setIsRefillRequesting] = useState(false);
 
   const activeRefillQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
@@ -132,7 +133,7 @@ export default function DashboardLayout({
   const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
   const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0 ? activeRefills[0] : null), [activeRefills]);
   const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
-  const [isRefillRequesting, setIsRefillRequesting] = useState(false);
+  
 
 
   useEffect(() => {
@@ -446,7 +447,7 @@ export default function DashboardLayout({
                 {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl rounded-lg max-h-[85vh]">
+            <DialogContent className="sm:max-w-4xl h-full w-full rounded-none border-none sm:rounded-lg sm:max-h-[85vh]">
                 <DialogHeader>
                     <DialogTitle className="text-3xl font-bold">Hello, {user?.businessName}!</DialogTitle>
                     <DialogDescription>
