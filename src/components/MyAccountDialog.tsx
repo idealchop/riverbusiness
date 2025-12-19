@@ -37,7 +37,6 @@ import { generateMonthlySOA } from '@/lib/pdf-generator';
 
 // State Management with useReducer
 type State = {
-  isEditingDetails: boolean;
   isPasswordDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
   isChangePlanDialogOpen: boolean;
@@ -70,7 +69,6 @@ type Action =
   | { type: 'RESET_UPLOAD' };
 
 const initialState: State = {
-  isEditingDetails: false,
   isPasswordDialogOpen: false,
   isPhotoPreviewOpen: false,
   isChangePlanDialogOpen: false,
@@ -89,7 +87,6 @@ const initialState: State = {
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'SET_EDIT_DETAILS': return { ...state, isEditingDetails: action.payload };
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
@@ -150,9 +147,11 @@ interface MyAccountDialogProps {
   onLogout: () => void;
   children: React.ReactNode;
   onPayNow: (invoice: Payment) => void;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onLogout, children, onPayNow }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -170,6 +169,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
   const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
+
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
 
 
   const consumptionDetails = React.useMemo(() => {
@@ -229,7 +230,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     const userDocRef = doc(firestore, 'users', authUser.uid);
     try {
       await updateDoc(userDocRef, state.editableFormData);
-      dispatch({ type: 'SET_EDIT_DETAILS', payload: false });
+      setIsEditingDetails(false);
       toast({ title: "Changes Saved", description: "Your account details have been updated." });
     } catch (error) {
       console.error("Error saving changes: ", error);
@@ -446,8 +447,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
   return (
     <AlertDialog>
-      <Dialog>
-        <DialogTrigger asChild>{children}</DialogTrigger>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        {children && <DialogTrigger asChild>{children}</DialogTrigger>}
         <DialogContent className="sm:max-w-2xl rounded-lg">
           <DialogHeader>
             <DialogTitle>My Account</DialogTitle>
@@ -509,12 +510,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="font-semibold">Your Details</h4>
-                          {!state.isEditingDetails && <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'SET_EDIT_DETAILS', payload: true })}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!state.isEditingDetails} />
+                                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!isEditingDetails} />
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="email" className="text-right">Login Email</Label>
@@ -522,24 +523,24 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
-                                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!state.isEditingDetails} />
+                                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!isEditingDetails} />
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="businessName" className="text-right">Business Name</Label>
-                                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} disabled={!state.isEditingDetails}/>
+                                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} disabled={!isEditingDetails}/>
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="address" className="text-right">Address</Label>
-                                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!state.isEditingDetails}/>
+                                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!isEditingDetails}/>
                             </div>
                             <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                                 <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!state.isEditingDetails}/>
+                                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!isEditingDetails}/>
                             </div>
                         </div>
-                        {state.isEditingDetails && (
+                        {isEditingDetails && (
                             <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="secondary" onClick={() => { dispatch({ type: 'SET_EDIT_DETAILS', payload: false }); dispatch({type: 'SET_FORM_DATA', payload: user}) }}>Cancel</Button>
+                                <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user}) }}>Cancel</Button>
                                 <Button onClick={handleSaveChanges}>Save Changes</Button>
                             </div>
                         )}

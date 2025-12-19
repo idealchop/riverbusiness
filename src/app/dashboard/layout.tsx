@@ -155,6 +155,8 @@ export default function DashboardLayout({
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
+
   
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
@@ -335,6 +337,16 @@ export default function DashboardLayout({
         }
     }
 
+    const handleOneClickRefill = () => {
+        const userName = user?.name.split(' ')[0] || 'friend';
+        toast({
+            title: 'Request Sent!',
+            description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
+        });
+        // This would eventually trigger the same logic as in DashboardPage
+        // For now, it just shows a toast.
+    };
+
   if (isUserLoading || isUserDocLoading || !isMounted || !auth) {
     return <DashboardLayoutSkeleton />;
   }
@@ -500,8 +512,10 @@ export default function DashboardLayout({
             paymentHistory={paymentHistoryFromDb || []}
             onLogout={handleLogout}
             onPayNow={handlePayNow}
+            isOpen={isAccountDialogOpen}
+            onOpenChange={setIsAccountDialogOpen}
           >
-            <div className="flex items-center gap-3 cursor-pointer">
+            <div className="items-center gap-3 cursor-pointer hidden sm:flex">
               <div className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                       <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
@@ -515,12 +529,35 @@ export default function DashboardLayout({
           </MyAccountDialog>
 
           </header>
-          <main className="flex-1 overflow-auto p-4 sm:p-6">
+          <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
             <div className="container mx-auto">
               {children}
             </div>
           </main>
-          <footer className="p-4 text-center text-xs text-muted-foreground border-t">
+
+        {/* Mobile Bottom Navigation */}
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex justify-around items-center z-20">
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => window.dispatchEvent(new CustomEvent('open-delivery-history'))}>
+                <History className="h-5 w-5" />
+                <span className="text-xs mt-1">History</span>
+            </Button>
+            <div className="relative">
+                <Button 
+                    size="icon" 
+                    className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-primary shadow-lg"
+                    onClick={handleOneClickRefill}
+                    >
+                    <Droplets className="h-8 w-8 text-primary-foreground" />
+                </Button>
+            </div>
+            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
+                <User className="h-5 w-5" />
+                <span className="text-xs mt-1">Account</span>
+            </Button>
+        </div>
+
+
+          <footer className="p-4 text-center text-xs text-muted-foreground border-t hidden sm:block">
               v1.0.0 - Smart Refill is a trademark and product name of{' '}
               <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                   River Philippines
@@ -674,4 +711,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
