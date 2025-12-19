@@ -326,16 +326,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
     const [year, month] = soaMonth.split('-').map(Number);
     const selectedMonthDate = new Date(year, month - 1, 2); 
-    const start = startOfMonth(selectedMonthDate);
-    const end = endOfMonth(selectedMonthDate);
     
-    let dateRangeForPDF = { from: start, to: end };
+    let dateRangeForPDF = { from: startOfMonth(selectedMonthDate), to: endOfMonth(selectedMonthDate) };
     
-    if (soaMonth === '2024-01') { // Special case for Dec-Jan
-      start.setMonth(start.getMonth() - 1);
-      dateRangeForPDF = { from: start, to: end };
+    if (soaMonth === '2024-01') { 
+      const decStart = new Date(2023, 11, 1);
+      dateRangeForPDF = { from: decStart, to: endOfMonth(selectedMonthDate) };
     }
-
 
     const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), dateRangeForPDF));
     const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), dateRangeForPDF)) || [];
@@ -350,12 +347,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         totalAmount = user.plan?.price || 0;
     }
     
-    if (soaMonth === '2024-01') { // Double the price for the two-month period
-        if (!user.plan?.isConsumptionBased) {
-            totalAmount *= 2;
-        }
+    if (soaMonth === '2024-01' && !user.plan?.isConsumptionBased) {
+        totalAmount *= 2;
     }
-
 
     generateMonthlySOA({
       user,
@@ -367,7 +361,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
     toast({
       title: 'Download Started',
-      description: `Your Statement of Account for ${format(start, 'MMMM yyyy')} is being generated.`,
+      description: `Your Statement of Account for ${format(dateRangeForPDF.from, 'MMMM yyyy')} is being generated.`,
     });
     
     dispatch({type: 'SET_SOA_DIALOG', payload: false});
@@ -378,22 +372,31 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   
     const deliveryMonths = new Set<string>();
     deliveries.forEach(d => {
-      deliveryMonths.add(format(new Date(d.date), 'yyyy-MM'));
+      const deliveryMonth = format(new Date(d.date), 'yyyy-MM');
+      // Special case for Dec 2023 deliveries to be included in Jan 2024 report
+      if (deliveryMonth === '2023-12') {
+          deliveryMonths.add('2024-01');
+      } else {
+          deliveryMonths.add(deliveryMonth);
+      }
     });
-  
-    // Always include the current month
-    deliveryMonths.add(format(new Date(), 'yyyy-MM'));
-  
+    
+    // Always include the current month if there's activity
+    const currentMonthStr = format(new Date(), 'yyyy-MM');
+    if (!deliveryMonths.has(currentMonthStr) && deliveries.some(d => format(new Date(d.date), 'yyyy-MM') === currentMonthStr)) {
+        deliveryMonths.add(currentMonthStr);
+    }
+
+
     return Array.from(deliveryMonths)
       .map(monthStr => {
-        const date = new Date(monthStr + '-02T00:00:00'); // Use 2nd day to avoid timezone issues
-        return {
-          value: monthStr,
-          label: format(date, 'MMMM yyyy'),
-        };
+        const date = new Date(monthStr + '-02T00:00:00'); 
+        const label = monthStr === '2024-01' ? 'Dec 2023 - Jan 2024' : format(date, 'MMMM yyyy');
+        return { value: monthStr, label };
       })
       .sort((a, b) => b.value.localeCompare(a.value));
   }, [deliveries]);
+  
   
   const isSoaReady = useMemo(() => {
     if (!soaMonth) return false;
@@ -403,9 +406,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   }, [soaMonth]);
   
   const soaNotReadyMessage = useMemo(() => {
-    if (isSoaReady || !soaMonth) return '';
+    if (isSoaReady || !soaMonth || !user) return null;
     const date = new Date(soaMonth + '-02T00:00:00');
-    return `Hi ${user?.name?.split(' ')[0] || 'there'}, your SOA for ${format(date, 'MMMM yyyy')} will be available for download at the end of the month.`;
+    const monthLabel = soaMonth === '2024-01' ? 'Dec 2023 - Jan 2024' : format(date, 'MMMM yyyy');
+    const userName = user.name.split(' ')[0] || 'there';
+
+    return (
+        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+            <h4 className="font-semibold text-blue-800">Report Availability</h4>
+            <p className="text-sm text-blue-700 mt-1">
+                Hi {userName}, your SOA for {monthLabel} will be available for download at the end of the month.
+            </p>
+            <p className="text-xs text-blue-600 mt-2">
+                Stay hydrated and enjoy the convenience with River Business!
+            </p>
+        </div>
+    );
   }, [isSoaReady, soaMonth, user]);
 
   useEffect(() => {
@@ -918,7 +934,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
               Select the month for which you'd like to download the SOA.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-2">
+          <div className="py-4 space-y-4">
             <div className="grid gap-2">
                 <Label htmlFor="soa-month">Month</Label>
                 <Select value={soaMonth} onValueChange={setSoaMonth}>
@@ -934,11 +950,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                     </SelectContent>
                 </Select>
             </div>
-            {!isSoaReady && soaNotReadyMessage && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
-                    {soaNotReadyMessage}
-                </div>
-            )}
+            {soaNotReadyMessage}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
