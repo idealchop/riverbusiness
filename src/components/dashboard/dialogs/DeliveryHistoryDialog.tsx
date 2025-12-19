@@ -99,7 +99,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
           </Popover>
           <Button onClick={handleDownloadSOA} disabled={filteredDeliveries.length === 0} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
-            Download SOA (PDF)
+            Download History
           </Button>
         </div>
 
