@@ -371,27 +371,31 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     if (!deliveries || deliveries.length === 0) return [];
   
     const deliveryMonths = new Set<string>();
+    let hasDec2023 = false;
+    let hasJan2024 = false;
+
     deliveries.forEach(d => {
       const deliveryMonth = format(new Date(d.date), 'yyyy-MM');
-      // Special case for Dec 2023 deliveries to be included in Jan 2024 report
       if (deliveryMonth === '2023-12') {
-          deliveryMonths.add('2024-01');
+        hasDec2023 = true;
+      } else if (deliveryMonth === '2024-01') {
+        hasJan2024 = true;
       } else {
-          deliveryMonths.add(deliveryMonth);
+        deliveryMonths.add(deliveryMonth);
       }
     });
-    
-    // Always include the current month if there's activity
-    const currentMonthStr = format(new Date(), 'yyyy-MM');
-    if (!deliveryMonths.has(currentMonthStr) && deliveries.some(d => format(new Date(d.date), 'yyyy-MM') === currentMonthStr)) {
-        deliveryMonths.add(currentMonthStr);
+
+    if (hasDec2023 || hasJan2024) {
+      deliveryMonths.add('2024-01'); // Special key for the combined report
     }
-
-
+    
     return Array.from(deliveryMonths)
       .map(monthStr => {
-        const date = new Date(monthStr + '-02T00:00:00'); 
-        const label = monthStr === '2024-01' ? 'Dec 2023 - Jan 2024' : format(date, 'MMMM yyyy');
+        if (monthStr === '2024-01') {
+          return { value: '2024-01', label: 'Dec 2023 - Jan 2024' };
+        }
+        const date = new Date(monthStr + '-02T00:00:00'); // Use second day to avoid timezone issues
+        const label = format(date, 'MMMM yyyy');
         return { value: monthStr, label };
       })
       .sort((a, b) => b.value.localeCompare(a.value));
@@ -962,3 +966,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
+
+    
