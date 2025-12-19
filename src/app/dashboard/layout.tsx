@@ -476,8 +476,8 @@ export default function DashboardLayout({
                                         <p className="text-sm text-muted-foreground">
                                             {notification.description}
                                         </p>
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                           <span>{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</span>
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                           <p>{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</p>
                                            {isActionable && 
                                              <button onClick={() => handleNotificationClick(notification)} className="font-medium text-primary hover:underline">View details</button>
                                            }
