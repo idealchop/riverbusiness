@@ -37,7 +37,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference, arrayUnion } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference, arrayUnion, Timestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -906,6 +906,23 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setComplianceRefresher(c => c + 1);
     };
     
+    // Helper function to safely convert a Firestore timestamp or string to a Date object
+    const toSafeDate = (timestamp: any): Date | null => {
+        if (!timestamp) return null;
+        if (timestamp instanceof Timestamp) {
+            return timestamp.toDate();
+        }
+        if (typeof timestamp === 'string') {
+            const date = new Date(timestamp);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+            return new Date(timestamp.seconds * 1000);
+        }
+        return null;
+    };
 
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
@@ -1739,12 +1756,14 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <TableBody>
                                         {refillRequestsLoading ? (
                                             <TableRow><TableCell colSpan={5} className="text-center">Loading requests...</TableCell></TableRow>
-                                        ) : activeRefillRequests.map((request) => (
+                                        ) : activeRefillRequests.map((request) => {
+                                            const requestedAtDate = toSafeDate(request.requestedAt);
+                                            return (
                                             <TableRow key={request.id}>
                                                 <TableCell>{request.clientId}</TableCell>
                                                 <TableCell>{request.businessName}</TableCell>
                                                 <TableCell>
-                                                    {request.requestedAt ? formatDistanceToNow(new Date(request.requestedAt as string), { addSuffix: true }) : 'Just now'}
+                                                    {requestedAtDate ? formatDistanceToNow(requestedAtDate, { addSuffix: true }) : 'Just now'}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge variant="secondary">{request.status}</Badge>
@@ -1762,7 +1781,7 @@ function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        )})}
                                     </TableBody>
                                 </Table>
                             </CardContent>
@@ -2518,3 +2537,5 @@ export default function AdminPage() {
         </div>
     )
 }
+
+    
