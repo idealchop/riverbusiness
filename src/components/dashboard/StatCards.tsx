@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -33,8 +33,9 @@ export function StatCards({
   onRequestRefillClick,
 }: StatCardsProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   
-  const consumptionDetails = useMemo(() => {
+  const consumptionDetails = React.useMemo(() => {
     const now = new Date();
     const emptyState = {
       monthlyPlanLiters: 0,
@@ -114,9 +115,9 @@ export function StatCards({
   }, [user, deliveries]);
 
   const handleAutoRefillToggle = (checked: boolean) => {
-    if (!user?.id) return;
+    if (!user?.id || !firestore) return;
 
-    const userDocRef = doc(useFirestore()!, 'users', user.id);
+    const userDocRef = doc(firestore, 'users', user.id);
     updateDocumentNonBlocking(userDocRef, {
         'customPlanDetails.autoRefillEnabled': checked,
     });
