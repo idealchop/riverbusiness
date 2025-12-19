@@ -27,7 +27,7 @@ import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollec
 import { doc, updateDoc, collection } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -323,16 +323,19 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         toast({ variant: 'destructive', title: 'Error', description: 'Please select a month to download.' });
         return;
     }
+
     const currentYear = getYear(new Date());
-    
+    const nextYear = currentYear + 1;
+    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
+
     let dateRangeForPDF: { from: Date; to: Date; };
     let soaTitleMonth: string;
     
-    if (soaMonth === `${currentYear}-01`) {
-        const decLastYear = new Date(currentYear - 1, 11, 1);
-        const janThisYear = new Date(currentYear, 0, 1);
-        dateRangeForPDF = { from: decLastYear, to: endOfMonth(janThisYear) };
-        soaTitleMonth = `Dec ${currentYear - 1} - Jan ${currentYear}`;
+    if (soaMonth === specialPeriodKey) {
+        const decThisYear = new Date(currentYear, 11, 1); // December of current year
+        const janNextYear = new Date(nextYear, 0, 1);    // January of next year
+        dateRangeForPDF = { from: decThisYear, to: endOfMonth(janNextYear) };
+        soaTitleMonth = `Dec ${currentYear} - Jan ${nextYear}`;
     } else {
         const [year, month] = soaMonth.split('-').map(Number);
         const selectedMonthDate = new Date(year, month - 1, 2);
@@ -353,7 +356,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         totalAmount = user.plan?.price || 0;
     }
     
-    if (soaMonth === `${currentYear}-01` && !user.plan?.isConsumptionBased) {
+    if (soaMonth === specialPeriodKey && !user.plan?.isConsumptionBased) {
         totalAmount *= 2;
     }
 
@@ -375,42 +378,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   };
 
   const availableMonths = useMemo(() => {
-    if (!deliveries || deliveries.length === 0) return [];
-    
     const currentYear = getYear(new Date());
-    const deliveryMonths = new Set<string>();
-    let hasDecLastYear = false;
-    let hasJanThisYear = false;
+    const nextYear = currentYear + 1;
+    let months: {value: string, label: string}[] = [];
 
-    deliveries.forEach(d => {
-        const deliveryDate = new Date(d.date);
-        const deliveryYear = getYear(deliveryDate);
-        const deliveryMonth = format(deliveryDate, 'yyyy-MM');
-
-        if (deliveryYear === currentYear -1 && deliveryDate.getMonth() === 11) { // December of last year
-            hasDecLastYear = true;
-        } else if (deliveryYear === currentYear && deliveryDate.getMonth() === 0) { // January of this year
-            hasJanThisYear = true;
-        } else {
-            deliveryMonths.add(deliveryMonth);
-        }
-    });
-
-    if (hasDecLastYear || hasJanThisYear) {
-      deliveryMonths.add(`${currentYear}-01`); // Special key for the combined report
-    }
+    // Special combined period for the current year's December and next year's January
+    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
+    months.push({ value: specialPeriodKey, label: `Dec ${currentYear} - Jan ${nextYear}` });
     
-    return Array.from(deliveryMonths)
-      .map(monthStr => {
-        if (monthStr === `${currentYear}-01`) {
-          return { value: `${currentYear}-01`, label: `Dec ${currentYear - 1} - Jan ${currentYear}` };
-        }
-        const date = new Date(monthStr + '-02T00:00:00'); // Use second day to avoid timezone issues
-        const label = format(date, 'MMMM yyyy');
-        return { value: monthStr, label };
-      })
-      .sort((a, b) => b.value.localeCompare(a.value));
-  }, [deliveries]);
+    // Add subsequent months for the next year
+    for (let i = 1; i < 12; i++) { // Feb to Dec of next year
+        const date = new Date(nextYear, i, 1);
+        months.push({ value: format(date, 'yyyy-MM'), label: format(date, 'MMMM yyyy') });
+    }
+
+    return months;
+  }, []);
   
   
   const isSoaReady = useMemo(() => {
@@ -418,9 +401,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     const today = endOfDay(new Date());
     
     const currentYear = getYear(new Date());
-    if (soaMonth === `${currentYear}-01`) {
-        const endOfJan = endOfMonth(new Date(currentYear, 0, 1));
-        return isAfter(today, endOfJan);
+    const nextYear = currentYear + 1;
+    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
+
+    if (soaMonth === specialPeriodKey) {
+        const endOfJanNextYear = endOfMonth(new Date(nextYear, 0, 1));
+        return isAfter(today, endOfJanNextYear);
     }
     
     const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
@@ -431,8 +417,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     if (isSoaReady || !soaMonth || !user) return null;
     
     const currentYear = getYear(new Date());
-    const monthLabel = soaMonth === `${currentYear}-01`
-        ? `Dec ${currentYear - 1} - Jan ${currentYear}`
+    const nextYear = currentYear + 1;
+    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
+
+    const monthLabel = soaMonth === specialPeriodKey
+        ? `Dec ${currentYear} - Jan ${nextYear}`
         : format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
         
     const userName = user.name.split(' ')[0] || 'there';
