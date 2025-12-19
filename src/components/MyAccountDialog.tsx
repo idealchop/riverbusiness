@@ -686,61 +686,102 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                     </Card>
                 </TabsContent>
                  <TabsContent value="invoices" className="py-4">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>Month</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                              <TableHead className="text-right">Action</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                            <TableRow className="bg-muted/50 font-semibold">
-                                <TableCell>{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</TableCell>
-                                <TableCell>
-                                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
-                                        {currentMonthInvoice.status}
-                                    </span>
-                                </TableCell>
-                                <TableCell className="text-right">P{currentMonthInvoice.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">
-                                  <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
-                                </TableCell>
-                            </TableRow>
-                          {paymentHistory.length > 0 ? (
-                            paymentHistory.map((invoice) => (
-                              <TableRow key={invoice.id}>
-                                  <TableCell>{format(new Date(invoice.date), 'MMMM yyyy')}</TableCell>
-                                  <TableCell>
-                                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
-                                        invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                        invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                        invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-gray-100 text-gray-800'
-                                    )}>
-                                        {invoice.status}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-right">P{invoice.amount.toFixed(2)}</TableCell>
-                                  <TableCell className="text-right">
-                                    {invoice.status === 'Upcoming' || invoice.status === 'Overdue' ? (
-                                      <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                    ) : (
-                                      <span className="text-xs text-muted-foreground">{invoice.status}</span>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Month</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow className="bg-muted/50 font-semibold">
+                                    <TableCell>{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</TableCell>
+                                    <TableCell>
+                                        <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
+                                            {currentMonthInvoice.status}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-right">P{currentMonthInvoice.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
+                                    </TableCell>
+                                </TableRow>
+                                {paymentHistory.map((invoice) => (
+                                    <TableRow key={invoice.id}>
+                                        <TableCell>{format(new Date(invoice.date), 'MMMM yyyy')}</TableCell>
+                                        <TableCell>
+                                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                                invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                                invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            )}>
+                                                {invoice.status}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right">P{invoice.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">
+                                            {invoice.status === 'Upcoming' || invoice.status === 'Overdue' ? (
+                                                <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">{invoice.status}</span>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {paymentHistory.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
+                                            No past invoices found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="space-y-4 md:hidden">
+                        <Card className="bg-muted/50">
+                            <CardContent className="p-4 flex justify-between items-center">
+                                <div>
+                                    <p className="font-semibold">{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</p>
+                                    <p className="text-sm">P{currentMonthInvoice.amount.toFixed(2)}</p>
+                                </div>
+                                <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
+                            </CardContent>
+                        </Card>
+                        {paymentHistory.map((invoice) => (
+                            <Card key={invoice.id}>
+                                <CardContent className="p-4 space-y-2">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold">{format(new Date(invoice.date), 'MMMM yyyy')}</p>
+                                            <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
+                                        </div>
+                                        <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                            invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                            invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                            invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        )}>
+                                            {invoice.status}
+                                        </span>
+                                    </div>
+                                    {(invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
+                                        <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                     )}
-                                  </TableCell>
-                              </TableRow>
-                              ))
-                          ) : (
-                            <TableRow>
-                              <TableCell colSpan={5} className="text-center py-10 text-sm text-muted-foreground">
-                                  No past invoices found.
-                              </TableCell>
-                            </TableRow>
-                          )}
-                      </TableBody>
-                  </Table>
+                                </CardContent>
+                            </Card>
+                        ))}
+                        {paymentHistory.length === 0 && (
+                           <p className="text-center py-10 text-sm text-muted-foreground">No past invoices found.</p>
+                        )}
+                    </div>
                 </TabsContent>
               </Tabs>
             </div>
