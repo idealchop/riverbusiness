@@ -529,33 +529,29 @@ export default function DashboardPage() {
                 <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
                     <UITooltip>
                         <UITooltipTrigger asChild>
-                            <div tabIndex={-1}>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        variant="default"
-                                        className="w-auto h-auto px-4 py-2"
-                                        disabled={isRefillRequesting || hasPendingRefill}
-                                        onClick={handleRequestRefill}
-                                    >
-                                        <BellRing className="mr-2 h-4 w-4" />
-                                        Request Refill
-                                    </Button>
-                                </AlertDialogTrigger>
-                            </div>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="default"
+                                    className="w-auto h-auto px-4 py-2"
+                                    disabled={isRefillRequesting}
+                                    onClick={handleRequestRefill}
+                                >
+                                    <BellRing className="mr-2 h-4 w-4" />
+                                    {hasPendingRefill ? 'Check Request Status' : 'Request Refill'}
+                                </Button>
+                            </AlertDialogTrigger>
                         </UITooltipTrigger>
-                        {hasPendingRefill && (
-                            <UITooltipContent>
-                                <p>A refill request is already in progress. Click to view status.</p>
-                            </UITooltipContent>
-                        )}
+                        <UITooltipContent>
+                            <p>{hasPendingRefill ? 'A refill request is already in progress. Click to view status.' : 'Request a one-time refill.'}</p>
+                        </UITooltipContent>
                     </UITooltip>
                     <AlertDialogContent className="sm:max-w-xl">
-                        <DialogHeader>
-                            <DialogTitle>Refill Request Status</DialogTitle>
-                            <DialogDescription>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Refill Request Status</AlertDialogTitle>
+                            <AlertDialogDescription>
                                 Here's the current progress of your refill request.
-                            </DialogDescription>
-                        </DialogHeader>
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
                         {activeRefillRequest ? (
                             <ul className="py-6 space-y-8">
                                 {statusOrder.map((status, index) => {
@@ -1434,12 +1430,12 @@ export default function DashboardPage() {
                     )}
                 </UITooltip>
                 <AlertDialogContent className="sm:max-w-xl">
-                    <DialogHeader>
-                        <DialogTitle>Refill Request Status</DialogTitle>
-                        <DialogDescription>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Refill Request Status</AlertDialogTitle>
+                        <AlertDialogDescription>
                             Here's the current progress of your refill request.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
                     {activeRefillRequest ? (
                         <ul className="py-6 space-y-8">
                             {statusOrder.map((status, index) => {
@@ -1545,3 +1541,5 @@ export default function DashboardPage() {
     );
 }
 
+
+    
