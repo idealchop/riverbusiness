@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -23,8 +24,8 @@ export function DashboardHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           {greeting}, {userName}. Here is an overview of your water consumption.
         </p>
       </div>
