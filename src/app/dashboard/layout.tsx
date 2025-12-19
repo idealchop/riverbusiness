@@ -463,17 +463,8 @@ export default function DashboardLayout({
                          />
                     </div>
                     <div className="shrink-0 pt-4 mt-auto border-t">
-                        <div className="flex justify-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setIsFeedbackDialogOpen(true)}>
-                                  <MessageSquare className="h-4 w-4 mr-2" />
-                                  Submit Feedback
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => setIsSwitchProviderDialogOpen(true)}>
-                                  <FileUp className="h-4 w-4 mr-2" />
-                                  Switch Provider
-                                </Button>
-                        </div>
-                        <div className="flex items-center gap-4 rounded-md p-3 md:p-4 justify-center mt-4">
+                        <p className="text-xs text-muted-foreground text-center mb-4">For urgent concerns, you may also reach us through these channels.</p>
+                        <div className="flex items-center gap-4 rounded-md p-3 md:p-4 justify-center mb-4">
                             <div className="flex items-center gap-2">
                                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                                   <Phone className="h-5 w-5" />
@@ -492,7 +483,17 @@ export default function DashboardLayout({
                                 <a href="mailto:jayvee@riverph.com" className="text-xs text-muted-foreground hover:text-primary">jayvee@riverph.com</a>
                                 </div>
                             </div>
-                          </div>
+                        </div>
+                        <div className="flex justify-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setIsFeedbackDialogOpen(true)}>
+                                  <MessageSquare className="h-4 w-4 mr-2" />
+                                  Submit Feedback
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setIsSwitchProviderDialogOpen(true)}>
+                                  <FileUp className="h-4 w-4 mr-2" />
+                                  Switch Provider
+                                </Button>
+                        </div>
                     </div>
                 </div>
               </DialogContent>
@@ -780,3 +781,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
