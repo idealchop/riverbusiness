@@ -120,19 +120,7 @@ export default function DashboardLayout({
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
-  const [isRefillRequesting, setIsRefillRequesting] = useState(false);
-
-  const activeRefillQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(
-      collection(firestore, 'users', authUser.uid, 'refillRequests'),
-      where('status', 'in', ['Requested', 'In Production', 'Out for Delivery'])
-    );
-  }, [firestore, authUser]);
-
-  const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
-  const hasPendingRefill = useMemo(() => !isRefillLoading && activeRefills && activeRefills.length > 0, [activeRefills, isRefillLoading]);
-
+  
   useEffect(() => {
     if (notifications) {
       setUnreadNotifications(notifications.filter(n => !n.isRead));
@@ -319,66 +307,8 @@ export default function DashboardLayout({
         setIsPaymentDialogOpen(true);
     };
 
-    const createNotification = async (userId: string, notification: Omit<NotificationType, 'id' | 'userId' | 'date' | 'isRead'>) => {
-        if (!firestore) return;
-        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-        const newNotification: Partial<NotificationType> = {
-            ...notification,
-            userId,
-            date: serverTimestamp(),
-            isRead: false
-        };
-        await addDocumentNonBlocking(notificationsCol, newNotification);
-    };
-    
-    const handleOneClickRefill = async () => {
-      if (hasPendingRefill) {
-          window.dispatchEvent(new CustomEvent('open-refill-status'));
-          return;
-      }
-      if (!user || !firestore || !authUser) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
-          return;
-      }
-  
-      setIsRefillRequesting(true);
-      const newRequestData: Omit<RefillRequest, 'id'> = {
-          userId: user.id,
-          userName: user.name,
-          businessName: user.businessName,
-          clientId: user.clientId || '',
-          requestedAt: serverTimestamp(),
-          status: 'Requested',
-          statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
-          requestedDate: new Date().toISOString(), // Use current date for ASAP
-      };
-  
-      try {
-          const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-          const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
-  
-          await createNotification(authUser.uid, {
-              type: 'delivery',
-              title: 'ASAP Refill Request Sent!',
-              description: `Your immediate refill request has been sent.`,
-              data: { requestId: newDocRef.id },
-          });
-
-          const userName = user?.name.split(' ')[0] || 'friend';
-          toast({
-              title: 'Request Sent!',
-              description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
-          });
-  
-      } catch (error) {
-          toast({
-              variant: 'destructive',
-              title: 'Request Failed',
-              description: 'There was an issue sending your request. Please try again.',
-          });
-      } finally {
-          setIsRefillRequesting(false);
-      }
+    const handleMobileRefillClick = () => {
+        window.dispatchEvent(new CustomEvent('request-asap-refill'));
     };
 
     const handleNotificationClick = (notification: NotificationType) => {
@@ -594,7 +524,7 @@ export default function DashboardLayout({
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
             <div className="container mx-auto">
-              {React.cloneElement(children as React.ReactElement, { handleOneClickRefill, isRefillRequesting, hasPendingRefill })}
+              {children}
             </div>
           </main>
 
@@ -608,13 +538,12 @@ export default function DashboardLayout({
                 <Button 
                     size="icon" 
                     className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-primary shadow-lg"
-                    onClick={handleOneClickRefill}
-                    disabled={isRefillRequesting}
+                    onClick={handleMobileRefillClick}
                     >
                     <Droplets className="h-8 w-8 text-primary-foreground" />
                 </Button>
                 <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
-                  <div className="tooltip-bubble">{hasPendingRefill ? "View Status" : `Refill now, ${userFirstName}?`}</div>
+                  <div className="tooltip-bubble">Refill now, {userFirstName}?</div>
                 </div>
             </div>
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
