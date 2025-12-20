@@ -991,7 +991,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline" size="sm">
                                         <FileHeart className="mr-2 h-4 w-4" /> Sanitation
                                     </Button>
-                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin} variant="outline" size="sm">
+                                    <Button onClick={() => setIsAssignStationOpen(true)} disabled={!isAdmin} variant="outline" size="sm">
                                         <Building className="mr-2 h-4 w-4" /> Assign Station
                                     </Button>
                                     <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
@@ -2402,5 +2402,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
