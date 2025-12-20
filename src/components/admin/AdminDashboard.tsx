@@ -2640,7 +2640,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <Form {...newUserForm}>
                     <form onSubmit={newUserForm.handleSubmit(handleCreateNewUser)}>
                         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                            {formStep === 0 && (
+                           {formStep === 0 && (
                                 <div className="space-y-4">
                                     <h3 className="font-semibold text-lg">Step 1: Business Details</h3>
                                     <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
@@ -2670,7 +2670,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </div>
                             )}
 
-                            {formStep === 1 && (
+                           {formStep === 1 && (
                                 <div className="space-y-6">
                                     <h3 className="font-semibold text-lg">Step 2: Plan & Configuration</h3>
                                     <FormField
@@ -2679,9 +2679,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
-                                                <FormControl>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                        {[...clientTypes].map(type => {
+                                                        {clientTypes.map(type => {
                                                             const image = PlaceHolderImages.find(p => p.id === type.imageId);
                                                             return (
                                                                 <Card 
@@ -2698,7 +2697,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             )
                                                         })}
                                                     </div>
-                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -2706,13 +2704,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     
                                     {selectedClientType && (
                                         <div className='space-y-4'>
-                                            <FormField
+                                             <FormField
                                                 control={newUserForm.control}
                                                 name="plan"
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Select a Plan</FormLabel>
-                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             {planOptions.map(plan => {
                                                                 const isSelected = field.value?.name === plan.name;
                                                                 return (
@@ -2735,7 +2733,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <div className="space-y-4 p-4 border rounded-lg">
                                                             <h4 className="font-medium">Subscription</h4>
                                                             {selectedPlan.price > 0 && (
-                                                                <div className="text-lg font-bold">Amount per Month: ₱{selectedPlan.price.toLocaleString()}</div>
+                                                                <div className="grid gap-2">
+                                                                    <Label>Amount per Month</Label>
+                                                                    <Input value={`₱${selectedPlan.price.toLocaleString()}`} readOnly className="font-bold text-lg h-auto p-2 border-0 bg-muted"/>
+                                                                </div>
                                                             )}
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
@@ -2786,7 +2787,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogFooter>
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
                             
-                            {formStep === 0 ? (
+                            {formStep < 1 ? (
                                 <Button type="button" onClick={async () => {
                                      const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail']);
                                      if (isValid) setFormStep(1);
@@ -2802,6 +2803,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-
-    

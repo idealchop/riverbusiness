@@ -156,7 +156,7 @@ async function generateInvoiceForUser(
         }
     } else {
         // Fixed-plan billing
-        // For ALL fixed plans, the charge is always for one month's price, even if the period is 2 months.
+        // The charge is always the plan's monthly price, regardless of the billing period length.
         amount = user.plan.price || 0;
         description = `Monthly Subscription for ${billingPeriod}`;
 
