@@ -1013,16 +1013,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [formStep, setFormStep] = React.useState(0);
     const selectedClientType = newUserForm.watch('clientType');
 
-    const getPlansForType = (type: string) => {
-        switch (type) {
-            case 'Family': return familyPlans;
-            case 'SME': return smePlans;
-            case 'Commercial': return commercialPlans;
-            case 'Corporate': return corporatePlans;
-            default: return [];
-        }
-    };
-    
     const handleCreateNewUser = async (values: NewUserFormValues) => {
         if (!firestore) return;
         setIsSubmitting(true);
@@ -1065,50 +1055,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     }
 
-
-    React.useEffect(() => {
-        const subscription = newUserForm.watch((value, { name, type }) => {
-            if (name === 'clientType') {
-                const planType = value.clientType;
-                let newPlan = null;
-                if (planType === 'Enterprise') {
-                    newPlan = enterprisePlans[0]; 
-                } else {
-                    const plans = getPlansForType(planType as string);
-                    if (plans.length > 0) {
-                        newPlan = plans[0];
-                    }
-                }
-                newUserForm.setValue('plan', newPlan);
-                 if (newPlan && newPlan.price !== undefined) {
-                    newUserForm.setValue('customPlanDetails.litersPerMonth', newPlan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0) );
-                    const formPlan = newUserForm.getValues('plan');
-                    if(formPlan) {
-                      newUserForm.setValue('plan.price', newPlan.price);
-                    }
-                }
-            }
-             if (name === 'plan' && value.plan && value.plan.price !== undefined) {
-                 newUserForm.setValue('customPlanDetails.litersPerMonth', value.plan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0) );
-            }
-        });
-        return () => subscription.unsubscribe();
-    }, [newUserForm]);
-
-    React.useEffect(() => {
-        const subscription = newUserForm.watch((value, { name }) => {
-            if (name === 'plan') {
-                const newPlan = value.plan;
-                if (newPlan && newPlan.price !== undefined) {
-                    const currentFormValues = newUserForm.getValues();
-                    const updatedPlan = { ...currentFormValues.plan, price: newPlan.price };
-                    newUserForm.setValue('plan', updatedPlan, { shouldValidate: true });
-                }
-            }
-        });
-        return () => subscription.unsubscribe();
-    }, [newUserForm]);
-
+    const getPlansForType = (type: string) => {
+        switch (type) {
+            case 'Family': return familyPlans;
+            case 'SME': return smePlans;
+            case 'Commercial': return commercialPlans;
+            case 'Corporate': return corporatePlans;
+            default: return [];
+        }
+    };
+    
     const planOptions = React.useMemo(() => {
         if (!selectedClientType) return [];
         if (selectedClientType === 'Enterprise') {
@@ -1116,8 +1072,23 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
         return getPlansForType(selectedClientType);
     }, [selectedClientType]);
-
+    
     const selectedPlan = newUserForm.watch('plan');
+
+    React.useEffect(() => {
+        if (selectedClientType) {
+            const plans = getPlansForType(selectedClientType);
+            const newPlan = (selectedClientType === 'Enterprise') ? enterprisePlans[0] : (plans.length > 0 ? plans[0] : null);
+            newUserForm.setValue('plan', newPlan, { shouldValidate: true });
+        }
+    }, [selectedClientType, newUserForm]);
+
+    React.useEffect(() => {
+        if (selectedPlan) {
+            newUserForm.setValue('customPlanDetails.litersPerMonth', selectedPlan.isConsumptionBased ? 0 : (newUserForm.getValues('customPlanDetails.litersPerMonth') || 0));
+        }
+    }, [selectedPlan, newUserForm]);
+
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
@@ -2745,50 +2716,33 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         )}
                                     />
                                     
-                                    {selectedClientType === 'Enterprise' ? (
-                                        <div className="space-y-4">
-                                            <FormField
-                                                control={newUserForm.control}
-                                                name="plan"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Select an Enterprise Plan</FormLabel>
-                                                        <Select onValueChange={(value) => {
-                                                            const selectedPlan = enterprisePlans.find(p => p.name === value);
-                                                            field.onChange(selectedPlan);
-                                                        }} value={field.value?.name}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Select from enterprise options..." />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                {enterprisePlans.map(plan => (
-                                                                    <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && `(P${plan.price}/L)`}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                    ) : selectedClientType ? (
-                                        <div className="space-y-4 p-4 border rounded-lg">
-                                             <FormField
-                                                control={newUserForm.control}
-                                                name="plan"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Selected Plan</FormLabel>
+                                    {selectedClientType && (
+                                        <FormField
+                                            control={newUserForm.control}
+                                            name="plan"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Select a {selectedClientType} Plan</FormLabel>
+                                                    <Select onValueChange={(value) => {
+                                                        const selectedPlan = planOptions.find(p => p.name === value);
+                                                        field.onChange(selectedPlan);
+                                                    }} value={field.value?.name}>
                                                         <FormControl>
-                                                            <Input readOnly value={field.value?.name || ''} />
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a plan..." />
+                                                            </SelectTrigger>
                                                         </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                    ) : null}
+                                                        <SelectContent>
+                                                            {planOptions.map(plan => (
+                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
@@ -2882,3 +2836,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+    
