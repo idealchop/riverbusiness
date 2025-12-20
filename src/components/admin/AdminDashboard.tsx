@@ -1026,18 +1026,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
 
+            const { customPlanDetails, plan, ...rest } = values;
+
             const profileData = {
-                clientId: values.clientId,
-                name: values.name,
-                businessEmail: values.businessEmail,
-                businessName: values.businessName,
-                address: values.address,
-                contactNumber: values.contactNumber,
-                clientType: values.clientType,
-                plan: values.plan,
-                customPlanDetails: values.customPlanDetails,
+                ...rest,
+                customPlanDetails: customPlanDetails,
+                plan: {
+                    name: plan.name,
+                    price: plan.price,
+                    isConsumptionBased: plan.isConsumptionBased || false,
+                },
                 role: 'User',
-                totalConsumptionLiters: values.plan?.isConsumptionBased ? 0 : (values.customPlanDetails?.litersPerMonth || 0),
+                totalConsumptionLiters: plan?.isConsumptionBased ? 0 : (customPlanDetails?.litersPerMonth || 0),
                 adminCreatedAt: serverTimestamp(),
             };
             
@@ -1075,19 +1075,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const selectedPlan = newUserForm.watch('plan');
 
-    React.useEffect(() => {
-        if (selectedClientType) {
-            const plans = getPlansForType(selectedClientType);
-            const newPlan = (selectedClientType === 'Enterprise') ? enterprisePlans[0] : (plans.length > 0 ? plans[0] : null);
-            newUserForm.setValue('plan', newPlan, { shouldValidate: true });
-        }
-    }, [selectedClientType, newUserForm]);
-
-    React.useEffect(() => {
-        if (selectedPlan) {
-            newUserForm.setValue('customPlanDetails.litersPerMonth', selectedPlan.isConsumptionBased ? 0 : (newUserForm.getValues('customPlanDetails.litersPerMonth') || 0));
-        }
-    }, [selectedPlan, newUserForm]);
+     useEffect(() => {
+        const subscription = newUserForm.watch((value, { name, type }) => {
+            if (name === 'clientType') {
+                const plans = getPlansForType(value.clientType!);
+                const newPlan = (value.clientType === 'Enterprise') ? enterprisePlans[0] : (plans.length > 0 ? plans[0] : null);
+                newUserForm.setValue('plan', newPlan, { shouldValidate: true });
+            }
+             if (name === 'plan' && value.plan) {
+                 newUserForm.setValue('customPlanDetails.litersPerMonth', value.plan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0));
+            }
+        });
+        return () => subscription.unsubscribe();
+    }, [newUserForm, selectedClientType]);
 
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
@@ -2750,17 +2750,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Subscription</h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                        <FormField
+                                                       <FormField
                                                             control={newUserForm.control}
                                                             name="plan.price"
                                                             render={({ field }) => (
                                                                 <FormItem>
                                                                     <FormLabel>Amount per Month</FormLabel>
                                                                     <FormControl>
-                                                                        <Input 
-                                                                            type="number" 
-                                                                            placeholder="e.g., 2500" 
-                                                                            value={field.value || ''}
+                                                                        <Input
+                                                                            type="number"
+                                                                            placeholder="e.g., 2500"
+                                                                            value={field.value}
                                                                             onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                                                                         />
                                                                     </FormControl>
@@ -2835,5 +2835,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    

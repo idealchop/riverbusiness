@@ -70,6 +70,7 @@ export default function ClaimAccountPage() {
         id: authUser.uid,
         email: authUser.email,
         onboardingComplete: true,
+        // The customPlanDetails are already at the top level from the unclaimed profile
       };
 
       batch.set(userProfileRef, newUserData);
