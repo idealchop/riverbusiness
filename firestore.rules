@@ -24,9 +24,12 @@ service cloud.firestore {
     }
     
     match /unclaimedProfiles/{clientId} {
-      allow read, write, create, delete: if isAdmin();
-      // A user who has just signed up but has not yet claimed a profile can read their own profile.
-      allow read: if request.auth != null && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      // Admins can create/manage these profiles.
+      allow write, create, list: if isAdmin();
+      
+      // A newly signed-up user can read and delete their own profile to claim it.
+      // We verify they are new by checking that a user document for them does NOT exist yet.
+      allow read, delete: if request.auth != null && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     match /waterStations/{stationId} {
