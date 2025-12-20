@@ -8,6 +8,7 @@ import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
 import type { Notification } from './types';
+import { onCall } from "firebase-functions/v2/https";
 
 
 // Import all exports from billing.ts

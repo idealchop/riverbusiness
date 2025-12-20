@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -153,8 +154,10 @@ export default function LoginPage() {
                   </Button>
                 </form>
                 <div className="mt-4 text-center text-sm">
-                  <p className="text-balance text-muted-foreground">Your Drinking Water, Safe & Simplified.</p>
-                  <p className="text-xs text-muted-foreground">By Smart Refill</p>
+                  Don&apos;t have an account?{" "}
+                  <Link href="/signup" className="underline">
+                    Sign up
+                  </Link>
                 </div>
                 <div className="mt-4 text-center text-xs text-muted-foreground">
                   <p>For questions or inquiries, contact us at:</p>
