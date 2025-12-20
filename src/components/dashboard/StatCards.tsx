@@ -186,7 +186,7 @@ export function StatCards({
                     </div>
                     <Button variant="outline" size="sm" className="w-full mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
                       <Edit className="mr-2 h-4 w-4" />
-                      Update Schedule
+                      Schedule
                     </Button>
                   </div>
                 ) : (
@@ -267,7 +267,7 @@ export function StatCards({
                     </div>
                     <Button variant="outline" size="sm" className="w-full text-xs mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
                       <Edit className="mr-2 h-4 w-4" />
-                      Update Schedule
+                      Schedule
                     </Button>
                   </div>
                 ) : (
