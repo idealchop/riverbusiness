@@ -169,6 +169,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isSanitationVisitDialogOpen, setIsSanitationVisitDialogOpen] = React.useState(false);
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
+    const [userDetailDefaultTab, setUserDetailDefaultTab] = React.useState('profile');
     const ITEMS_PER_PAGE = 20;
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -191,6 +192,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return collection(firestore, 'users', selectedUser.id, 'sanitationVisits');
     }, [firestore, selectedUser]);
     const { data: sanitationVisitsData, isLoading: sanitationVisitsLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+
+    const allPaymentsQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'payments') : null, [firestore]);
+    const { data: allPayments, isLoading: allPaymentsLoading } = useCollection<Payment & { parentId: string }>(allPaymentsQuery, {
+        idField: 'parentId'
+    });
+
+    const pendingPaymentsByUser = React.useMemo(() => {
+        if (!allPayments) return {};
+        return allPayments.reduce((acc, payment) => {
+            if (payment.status === 'Pending Review') {
+                const userId = payment.parentId.split('/')[1];
+                if (!acc[userId]) {
+                    acc[userId] = [];
+                }
+                acc[userId].push(payment);
+            }
+            return acc;
+        }, {} as Record<string, Payment[]>);
+    }, [allPayments]);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -941,7 +961,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </div>
                             </div>
                             
-                            <Tabs defaultValue="profile">
+                            <Tabs defaultValue={userDetailDefaultTab} onValueChange={setUserDetailDefaultTab}>
                                 <TabsList className="grid w-full grid-cols-2">
                                     <TabsTrigger value="profile">Profile</TabsTrigger>
                                     <TabsTrigger value="invoices">Invoices</TabsTrigger>
@@ -1711,7 +1731,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <TableHead>Client ID</TableHead>
                                     <TableHead>Business Name</TableHead>
                                     <TableHead>Auto Refill</TableHead>
-                                    <TableHead>Delivery Schedule</TableHead>
+                                    <TableHead>Payment Status</TableHead>
                                     <TableHead>Assigned Station</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -1721,8 +1741,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
                                         : 'N/A';
                                     const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
+                                    const userPendingPayments = pendingPaymentsByUser[user.id] || [];
+                                    const handlePaymentStatusClick = (e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        setSelectedUser(user);
+                                        setUserDetailDefaultTab('invoices');
+                                        setIsUserDetailOpen(true);
+                                    };
+
                                     return (
-                                    <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
+                                    <TableRow key={user.id} onClick={() => { setSelectedUser(user); setUserDetailDefaultTab('profile'); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                         <TableCell>
@@ -1736,7 +1764,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="whitespace-nowrap">{user.plan?.isConsumptionBased && !autoRefillEnabled ? 'On-demand' : schedule}</TableCell>
+                                        <TableCell>
+                                            {userPendingPayments.length > 0 ? (
+                                                <Badge onClick={handlePaymentStatusClick} className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200">
+                                                    {userPendingPayments.length} Pending
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">Up to date</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                     </TableRow>
                                 )})}
@@ -2391,4 +2427,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-

@@ -8,6 +8,7 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  getDocs,
 } from 'firebase/firestore';
 
 /** Utility type to add an 'id' field to a given type T. */
@@ -21,6 +22,10 @@ export interface UseCollectionResult<T> {
   data: WithId<T>[] | null; // Document data with ID, or null.
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
+}
+
+interface UseCollectionOptions {
+    idField?: string;
 }
 
 /* Internal implementation of Query:
@@ -51,6 +56,7 @@ export interface InternalQuery extends Query<DocumentData> {
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+    options: UseCollectionOptions = {}
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
@@ -58,6 +64,8 @@ export function useCollection<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+
+  const { idField } = options;
 
   useEffect(() => {
     if (!memoizedTargetRefOrQuery) {
@@ -70,28 +78,50 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
-    const unsubscribe = onSnapshot(
-      memoizedTargetRefOrQuery,
-      (snapshot: QuerySnapshot<DocumentData>) => {
+    const isCollectionGroup = (memoizedTargetRefOrQuery as any).type === 'collection-group';
+
+    const processSnapshot = (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
-        }
+        snapshot.forEach(doc => {
+            let itemData: any = { ...(doc.data() as T), id: doc.id };
+            if (isCollectionGroup && idField) {
+                // For collection group queries, the parent ID might be what's needed.
+                itemData[idField] = doc.ref.parent.parent?.id;
+            }
+            results.push(itemData);
+        });
         setData(results);
         setError(null);
         setIsLoading(false);
-      },
-      (error: FirestoreError) => {
-        console.error("useCollection error:", error);
-        setError(error);
-        setData(null);
-        setIsLoading(false);
-      }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+    if (isCollectionGroup) {
+      // For collection group, we do a one-time fetch as real-time listeners can be expensive.
+      // You can change this to onSnapshot if real-time updates are necessary and cost-effective.
+      getDocs(memoizedTargetRefOrQuery)
+        .then(processSnapshot)
+        .catch((err: FirestoreError) => {
+            console.error("useCollection (collectionGroup) error:", err);
+            setError(err);
+            setData(null);
+            setIsLoading(false);
+        });
+    } else {
+      const unsubscribe = onSnapshot(
+        memoizedTargetRefOrQuery,
+        processSnapshot,
+        (error: FirestoreError) => {
+          console.error("useCollection error:", error);
+          setError(error);
+          setData(null);
+          setIsLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    }
+
+  }, [memoizedTargetRefOrQuery, idField]); // Re-run if the target query/reference or idField changes.
+  
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
