@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +40,7 @@ import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, g
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import { clientTypes, enterprisePlans } from '@/lib/plans';
+import { clientTypes, enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
@@ -93,6 +92,19 @@ const sanitationVisitSchema = z.object({
 
 type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
 
+const planDetailsSchema = z.object({
+  litersPerMonth: z.coerce.number().optional(),
+  bonusLiters: z.coerce.number().optional(),
+  gallonQuantity: z.coerce.number().min(0, "Cannot be negative"),
+  gallonPrice: z.coerce.number().min(0, "Cannot be negative"),
+  dispenserQuantity: z.coerce.number().min(0, "Cannot be negative"),
+  dispenserPrice: z.coerce.number().min(0, "Cannot be negative"),
+  deliveryFrequency: z.string().min(1, "Frequency is required"),
+  deliveryDay: z.string().min(1, "Day is required"),
+  deliveryTime: z.string().min(1, "Time is required"),
+  autoRefillEnabled: z.boolean(),
+});
+
 const newUserSchema = z.object({
   clientId: z.string().min(1, { message: 'Client ID is required' }),
   name: z.string().min(1, { message: 'Full Name is required' }),
@@ -100,6 +112,9 @@ const newUserSchema = z.object({
   businessEmail: z.string().email({ message: 'A valid business email is required' }),
   address: z.string().min(1, { message: 'Address is required' }),
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
+  clientType: z.string().min(1, { message: 'Client type is required' }),
+  plan: z.any(),
+  customPlanDetails: planDetailsSchema.optional(),
 });
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
@@ -387,8 +402,30 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const newUserForm = useForm<NewUserFormValues>({
         resolver: zodResolver(newUserSchema),
+        defaultValues: {
+            clientId: '',
+            name: '',
+            businessName: '',
+            businessEmail: '',
+            address: '',
+            contactNumber: '',
+            clientType: '',
+            plan: null,
+            customPlanDetails: {
+                litersPerMonth: 0,
+                bonusLiters: 0,
+                gallonQuantity: 0,
+                gallonPrice: 0,
+                dispenserQuantity: 0,
+                dispenserPrice: 0,
+                deliveryFrequency: 'Weekly',
+                deliveryDay: 'Monday',
+                deliveryTime: '09:00',
+                autoRefillEnabled: true,
+            }
+        }
     });
-
+    
     const complianceReportForm = useForm<ComplianceReportFormValues>({
         resolver: zodResolver(complianceReportSchema),
         defaultValues: {
@@ -969,6 +1006,63 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
         return null;
     };
+    
+    const [formStep, setFormStep] = React.useState(0);
+    const selectedClientType = newUserForm.watch('clientType');
+
+    const planOptions = React.useMemo(() => {
+        switch (selectedClientType) {
+            case 'Family': return familyPlans;
+            case 'SME': return smePlans;
+            case 'Commercial': return commercialPlans;
+            case 'Corporate': return corporatePlans;
+            case 'Enterprise': return enterprisePlans;
+            default: return [];
+        }
+    }, [selectedClientType]);
+
+    const handleCreateNewUser = async (values: NewUserFormValues) => {
+        if (!firestore) return;
+        setIsSubmitting(true);
+        try {
+            const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', values.clientId);
+            const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
+
+            if (unclaimedProfileSnap.exists()) {
+                toast({ variant: "destructive", title: "Client ID already exists.", description: "Please use a unique Client ID."});
+                setIsSubmitting(false);
+                return;
+            }
+
+            const profileData = {
+                ...values,
+                role: 'User',
+                totalConsumptionLiters: values.customPlanDetails?.litersPerMonth || 0,
+                adminCreatedAt: serverTimestamp(),
+            };
+
+            await setDocumentNonBlocking(unclaimedProfileRef, profileData);
+
+            toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
+            setIsCreateUserOpen(false);
+            newUserForm.reset();
+            setFormStep(0);
+        } catch (error) {
+            console.error("Error creating unclaimed profile: ", error);
+            toast({ variant: "destructive", title: "Creation Failed", description: "An error occurred while creating the profile." });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
+
+    React.useEffect(() => {
+        if (planOptions.length > 0) {
+            newUserForm.setValue('plan', planOptions[0]);
+        }
+    }, [planOptions, newUserForm]);
+
+    const selectedPlan = newUserForm.watch('plan');
 
     if (usersLoading || stationsLoading) {
         return <AdminDashboardSkeleton />;
@@ -1700,7 +1794,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     </div>
                     <Button onClick={() => setIsCreateUserOpen(true)}>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Create User
+                        Add New Client
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -2473,15 +2567,134 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-        <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+        <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
           <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
-                <DialogTitle>Create New Client Profile</DialogTitle>
-                <DialogDescription>Set up a new client account. The client will claim this profile using the Client ID.</DialogDescription>
+                <DialogTitle>Add New Client</DialogTitle>
+                <DialogDescription>Set up a new client profile. The user will claim this profile using the generated Client ID.</DialogDescription>
             </DialogHeader>
             <Form {...newUserForm}>
-                <form className="space-y-4">
-                    {/* Form fields will go here */}
+                <form onSubmit={newUserForm.handleSubmit(handleCreateNewUser)} className="space-y-4">
+                   <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                     {formStep === 0 && (
+                        <div className="space-y-4">
+                            <h3 className="font-semibold text-lg">Step 1: Business Details</h3>
+                             <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Client ID</FormLabel>
+                                    <FormControl><Input placeholder="e.g. C-12345" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={newUserForm.control} name="name" render={({ field }) => (
+                                    <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (
+                                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
+                                    <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
+                                    <FormItem><FormLabel>Business Email</FormLabel><FormControl><Input placeholder="Client's Email" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            </div>
+                             <FormField control={newUserForm.control} name="address" render={({ field }) => (
+                                <FormItem><FormLabel>Business Address</FormLabel><FormControl><Textarea placeholder="Full Business Address" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                        </div>
+                    )}
+                    {formStep === 1 && (
+                        <div className="space-y-4">
+                             <h3 className="font-semibold text-lg">Step 2: Plan and Subscription</h3>
+                             <FormField control={newUserForm.control} name="clientType" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Client Type</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="Select a client type..." /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {clientTypes.map(type => <SelectItem key={type.name} value={type.name}>{type.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                             )} />
+                             {selectedClientType && (
+                                <Controller
+                                    control={newUserForm.control}
+                                    name="plan"
+                                    render={({ field }) => (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {planOptions.map(plan => (
+                                                <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", field.value?.name === plan.name && "border-primary")}>
+                                                    <CardHeader><CardTitle>{plan.name}</CardTitle></CardHeader>
+                                                    <CardContent>
+                                                        {plan.isConsumptionBased ? <p>P{plan.price}/liter</p> : <p>P{plan.price.toLocaleString()}/mo</p>}
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )}
+                                />
+                             )}
+                        </div>
+                    )}
+                     {formStep === 2 && selectedPlan && !selectedPlan.isConsumptionBased && (
+                         <div className="space-y-4">
+                             <h3 className="font-semibold text-lg">Step 3: Customize Plan</h3>
+                             <div className="grid grid-cols-2 gap-4">
+                                <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
+                                    <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                                <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (
+                                    <FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                             </div>
+                        </div>
+                     )}
+                     {formStep === 2 && (
+                         <div className="space-y-4 pt-4">
+                              <h3 className="font-semibold text-lg">{selectedPlan?.isConsumptionBased ? 'Step 3' : 'Step 4'}: Equipment & Schedule</h3>
+                              <div className="grid grid-cols-2 gap-4">
+                                <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (
+                                    <FormItem><FormLabel>Gallon Quantity</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                                <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (
+                                    <FormItem><FormLabel>Gallon Price (monthly)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                                <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (
+                                    <FormItem><FormLabel>Dispenser Quantity</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                                <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (
+                                    <FormItem><FormLabel>Dispenser Price (monthly)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={newUserForm.control} name="customPlanDetails.deliveryFrequency" render={({ field }) => (
+                                    <FormItem><FormLabel>Delivery Frequency</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                                 <FormField control={newUserForm.control} name="customPlanDetails.deliveryDay" render={({ field }) => (
+                                    <FormItem><FormLabel>Delivery Day</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
+                                )}/>
+                            </div>
+                            <FormField control={newUserForm.control} name="customPlanDetails.deliveryTime" render={({ field }) => (
+                                <FormItem><FormLabel>Delivery Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage/></FormItem>
+                            )}/>
+                         </div>
+                     )}
+                    </div>
+
+                    <DialogFooter>
+                        {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
+                        {formStep < 2 ? (
+                            <Button type="button" onClick={() => setFormStep(p => p + 1)}>Next</Button>
+                        ) : (
+                             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>
+                        )}
+                    </DialogFooter>
                 </form>
             </Form>
           </DialogContent>
