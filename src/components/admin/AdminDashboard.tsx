@@ -1068,12 +1068,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     React.useEffect(() => {
-        if (planOptions.length > 0 && selectedClientType !== 'Enterprise') {
-            newUserForm.setValue('plan', planOptions[0]);
+        if (selectedClientType && selectedClientType !== 'Enterprise' && planOptions.length > 0) {
+            const currentPlan = newUserForm.getValues('plan');
+            if (!currentPlan || !planOptions.some(p => p.name === currentPlan.name)) {
+                newUserForm.setValue('plan', planOptions[0]);
+            }
         } else if (selectedClientType !== 'Enterprise') {
-            newUserForm.setValue('plan', null);
+             newUserForm.setValue('plan', null);
         }
     }, [planOptions, selectedClientType, newUserForm]);
+
+    React.useEffect(() => {
+        const plan = newUserForm.getValues('plan');
+        if (plan && !plan.isConsumptionBased) {
+            const currentPlanInForm = newUserForm.getValues('plan');
+            if (currentPlanInForm?.price !== plan.price) {
+                newUserForm.setValue('plan', {...currentPlanInForm, price: plan.price });
+            }
+        }
+    }, [selectedPlan, newUserForm]);
 
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
@@ -2651,22 +2664,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                               <FormMessage />
                                           </FormItem>
                                       )}/>
+                                       <FormField control={newUserForm.control} name="name" render={({ field }) => (
+                                          <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                      )}/>
+                                       <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (
+                                          <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
+                                      )}/>
                                       <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
                                           <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
                                       )}/>
-                                      <FormField control={newUserForm.control} name="name" render={({ field }) => (
-                                          <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                       <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
+                                          <FormItem className="md:col-span-2"><FormLabel>Business Email (Optional)</FormLabel><FormControl><Input type="email" placeholder="contact@business.com" {...field} /></FormControl><FormMessage /></FormItem>
                                       )}/>
-                                      <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (
-                                          <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
+                                      <FormField control={newUserForm.control} name="address" render={({ field }) => (
+                                          <FormItem className="md:col-span-2"><FormLabel>Business Address</FormLabel><FormControl><Textarea placeholder="Full Business Address" {...field} /></FormControl><FormMessage /></FormItem>
                                       )}/>
                                     </div>
-                                    <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
-                                        <FormItem><FormLabel>Business Email (Optional)</FormLabel><FormControl><Input type="email" placeholder="contact@business.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={newUserForm.control} name="address" render={({ field }) => (
-                                        <FormItem><FormLabel>Business Address</FormLabel><FormControl><Textarea placeholder="Full Business Address" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
                                 </div>
                             )}
                             {formStep === 1 && (
@@ -2679,7 +2692,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
                                                 <FormControl>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                                         {clientTypes.map(type => {
                                                             const image = PlaceHolderImages.find(p => p.id === type.imageId);
                                                             return (
@@ -2687,20 +2700,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                     key={type.name} 
                                                                     onClick={() => {
                                                                         field.onChange(type.name);
-                                                                        if (type.name !== 'Enterprise') {
-                                                                            const plans = getPlansForType(type.name);
-                                                                            newUserForm.setValue('plan', plans[0] || null);
-                                                                        } else {
-                                                                            newUserForm.setValue('plan', null);
-                                                                        }
                                                                     }}
                                                                     className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}
                                                                 >
-                                                                    {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
-                                                                    <CardHeader>
-                                                                        <CardTitle className="text-base">{type.name}</CardTitle>
+                                                                    {image && <div className="relative h-24 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                    <CardHeader className="p-4 flex-1">
+                                                                        <CardTitle className="text-sm">{type.name}</CardTitle>
                                                                     </CardHeader>
-                                                                    <CardContent className="flex-1 text-xs text-muted-foreground">{type.description}</CardContent>
                                                                 </Card>
                                                             )
                                                         })}
@@ -2744,11 +2750,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     {!selectedPlan.isConsumptionBased ? (
                                                         <div className="space-y-4 p-4 border rounded-lg">
                                                             <h4 className="font-medium">Subscription</h4>
-                                                            <div className="grid gap-2">
-                                                                <Label>Amount per Month</Label>
-                                                                <Input value={`P ${selectedPlan.price.toLocaleString()}`} readOnly className="font-bold text-lg h-auto p-2 border-0 bg-muted"/>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-4">
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                <FormField
+                                                                    control={newUserForm.control}
+                                                                    name="plan.price"
+                                                                    render={({ field }) => (
+                                                                        <FormItem>
+                                                                            <FormLabel>Amount per Month</FormLabel>
+                                                                            <FormControl>
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    placeholder="e.g., 2500"
+                                                                                    value={field.value || ''}
+                                                                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                                                                />
+                                                                            </FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )}
+                                                                />
                                                                 <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
                                                                     <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
                                                                 )}/>
@@ -2818,3 +2838,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
