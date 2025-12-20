@@ -39,7 +39,6 @@
       "properties": {
         "clientId": { "type": "string", "description": "Manually assigned client identifier. This is the primary key." },
         "name": { "type": "string", "description": "User's full name." },
-        "businessEmail": { "type": "string", "format": "email", "description": "User's business contact email address." },
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
@@ -50,7 +49,7 @@
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
       },
-      "required": ["clientId", "name", "businessName", "businessEmail", "plan", "adminCreatedAt"]
+      "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt"]
     },
     "WaterStation": {
       "title": "WaterStation",

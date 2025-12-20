@@ -109,7 +109,6 @@ const newUserSchema = z.object({
   clientId: z.string().min(1, { message: 'Client ID is required' }),
   name: z.string().min(1, { message: 'Full Name is required' }),
   businessName: z.string().min(1, { message: 'Business Name is required' }),
-  businessEmail: z.string().email({ message: 'A valid business email is required' }),
   address: z.string().min(1, { message: 'Address is required' }),
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
   clientType: z.string().min(1, { message: 'Client type is required' }),
@@ -406,7 +405,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             clientId: '',
             name: '',
             businessName: '',
-            businessEmail: '',
             address: '',
             contactNumber: '',
             clientType: '',
@@ -1408,7 +1406,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
             <DialogContent>
@@ -2594,14 +2592,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
                                 )}/>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
-                                    <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
-                                    <FormItem><FormLabel>Business Email</FormLabel><FormControl><Input placeholder="Client's Email" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                            </div>
+                            
+                            <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
+                                <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
                              <FormField control={newUserForm.control} name="address" render={({ field }) => (
                                 <FormItem><FormLabel>Business Address</FormLabel><FormControl><Textarea placeholder="Full Business Address" {...field} /></FormControl><FormMessage /></FormItem>
                             )}/>
