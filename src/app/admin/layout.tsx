@@ -30,7 +30,9 @@ function AdminLayoutSkeleton() {
                 </div>
             </header>
             <main className="flex-1 overflow-auto p-4 sm:p-6">
-                {/* Children will be rendered here */}
+                <div className="container mx-auto">
+                    {/* Children will be rendered here */}
+                </div>
             </main>
         </div>
     );
@@ -64,7 +66,9 @@ export default function AdminLayout({
   if (!isMounted || !auth || isUserLoading) {
     return (
       <AdminLayoutSkeleton>
-          {children}
+          <div className="container mx-auto">
+              {children}
+          </div>
       </AdminLayoutSkeleton>
     );
   }
@@ -113,7 +117,9 @@ export default function AdminLayout({
         </div>
       </header>
       <main className="flex-1 overflow-auto p-4 sm:p-6">
-        {children}
+        <div className="container mx-auto">
+            {children}
+        </div>
       </main>
     </div>
   );
