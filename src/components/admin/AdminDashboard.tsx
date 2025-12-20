@@ -66,12 +66,6 @@ const complianceReportSchema = z.object({
 type ComplianceReportFormValues = z.infer<typeof complianceReportSchema>;
 
 
-const adjustConsumptionSchema = z.object({
-    amount: z.coerce.number().min(0, 'Amount must be a positive number'),
-    containers: z.coerce.number().optional(),
-});
-type AdjustConsumptionFormValues = z.infer<typeof adjustConsumptionSchema>;
-
 const deliveryFormSchema = z.object({
     trackingNumber: z.string().min(1, 'Tracking Number is required'),
     date: z.date({ required_error: 'Date is required.'}),
@@ -139,8 +133,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
     const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
-    const [isAdjustConsumptionOpen, setIsAdjustConsumptionOpen] = React.useState(false);
-    const [adjustmentType, setAdjustmentType] = React.useState<'add' | 'deduct'>('deduct');
     const [selectedProofUrl, setSelectedProofUrl] = React.useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = React.useState<Delivery | null>(null);
     const [deliveryProofFile, setDeliveryProofFile] = React.useState<File | null>(null);
@@ -309,10 +301,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(deliveryFormSchema),
     });
     
-    const adjustConsumptionForm = useForm<AdjustConsumptionFormValues>({
-        resolver: zodResolver(adjustConsumptionSchema),
-        defaultValues: { amount: 0, containers: 0 },
-    });
 
     const complianceReportForm = useForm<ComplianceReportFormValues>({
         resolver: zodResolver(complianceReportSchema),
@@ -459,32 +447,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: 'Station Assigned', description: `${stationName} has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
-    };
-
-    const handleAdjustConsumption = (values: AdjustConsumptionFormValues) => {
-        if (!selectedUser || !firestore) return;
-
-        const amount = adjustmentType === 'add' ? values.amount : -values.amount;
-        
-        const userRef = doc(firestore, 'users', selectedUser.id);
-        updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(amount) });
-        
-        setSelectedUser(prev => prev ? { ...prev, totalConsumptionLiters: (prev.totalConsumptionLiters || 0) + amount } : null);
-        
-        createNotification(selectedUser.id, {
-            type: 'general',
-            title: 'Balance Adjusted',
-            description: `An admin has ${adjustmentType === 'add' ? 'added' : 'deducted'} ${Math.abs(values.amount).toLocaleString()} liters ${adjustmentType === 'add' ? 'to' : 'from'} your account.`,
-            data: { adjustment: amount }
-        });
-
-        toast({
-            title: `Liters Adjusted`,
-            description: `${Math.abs(values.amount).toLocaleString()} liters ${adjustmentType === 'add' ? 'added to' : 'deducted from'} ${selectedUser.name}'s balance.`
-        });
-        
-        setIsAdjustConsumptionOpen(false);
-        adjustConsumptionForm.reset();
     };
 
     const handleFileUpload = async (
@@ -666,12 +628,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
         }
     }, [selectedUser, firestore]);
-
-    const watchedContainers = adjustConsumptionForm.watch('containers');
-    React.useEffect(() => {
-        const liters = (watchedContainers || 0) * 19.5;
-        adjustConsumptionForm.setValue('amount', parseFloat(liters.toFixed(2)), { shouldValidate: true });
-    }, [watchedContainers, adjustConsumptionForm]);
 
     const watchedDeliveryContainers = deliveryForm.watch('volumeContainers');
     const watchedEditDeliveryContainers = editDeliveryForm.watch('volumeContainers');
@@ -1077,25 +1033,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     Contract
                                 </Button>
                             </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="destructive" disabled={selectedUser.plan?.isConsumptionBased} className="w-full mt-2" size="sm">
-                                        <Repeat className="mr-2 h-4 w-4" />
-                                        Adjust Consumption
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Add Liters
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
-                                         <MinusCircle className="mr-2 h-4 w-4" />
-                                        Deduct Liters
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
                         </div>
 
                         {/* Right Column: Consumption & Plan */}
@@ -1589,54 +1526,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
 
-
-        <Dialog open={isAdjustConsumptionOpen} onOpenChange={setIsAdjustConsumptionOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{adjustmentType === 'deduct' ? 'Deduct' : 'Add'} Liters</DialogTitle>
-                    <DialogDescription>
-                        Manually {adjustmentType} water liters for {selectedUser?.name}.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...adjustConsumptionForm}>
-                    <form onSubmit={adjustConsumptionForm.handleSubmit(handleAdjustConsumption)} className="space-y-4 py-4">
-                         <FormField
-                            control={adjustConsumptionForm.control}
-                            name="containers"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Containers</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" placeholder="e.g., 5" {...field} />
-                                    </FormControl>
-                                    <FormDescription>
-                                        1 container = 19.5 liters. This will automatically calculate the liters below.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={adjustConsumptionForm.control}
-                            name="amount"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Liters to {adjustmentType}</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
-                            <Button type="submit">{adjustmentType === 'deduct' ? 'Deduct' : 'Add'}</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
 
         <Dialog open={isUploadContractOpen} onOpenChange={(open) => { if (!open) { setUserForContract(null); setContractFile(null); } setIsUploadContractOpen(open); }}>
             <DialogContent>
@@ -2503,4 +2392,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-    
