@@ -257,7 +257,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const cycleStart = startOfMonth(now);
         const cycleEnd = endOfMonth(now);
         
-        const deliveriesThisCycle = (userDeliveriesData || [])).filter(d => {
+        const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
         });
@@ -2802,5 +2802,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
 
     
