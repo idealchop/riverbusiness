@@ -112,7 +112,7 @@ const newUserSchema = z.object({
   businessName: z.string().min(1, { message: 'Business Name is required' }),
   address: z.string().min(1, { message: 'Address is required' }),
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
-  clientType: z.string().min(1, { message: 'Client type is required' }),
+  clientType: z.string().min(1, { message: 'Plan type is required' }),
   plan: z.any(),
   customPlanDetails: planDetailsSchema,
 });
@@ -2664,38 +2664,39 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </div>
                             )}
                             {formStep === 1 && (
-                                <div className="space-y-4">
-                                    <h3 className="font-semibold text-lg">Step 2: Plan and Subscription</h3>
-                                    <FormField control={newUserForm.control} name="clientType" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Client Type</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a client type..." /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {clientTypes.map(type => <SelectItem key={type.name} value={type.name}>{type.name}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                    {selectedClientType && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {planOptions.map(plan => {
-                                                const planImage = PlaceHolderImages.find(p => p.id === plan.imageId);
-                                                const isSelected = selectedPlan?.name === plan.name;
-                                                return (
-                                                    <Card key={plan.name} onClick={() => newUserForm.setValue('plan', plan)} className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}>
-                                                        {planImage && <div className="relative h-32 w-full"><Image src={planImage.imageUrl} alt={plan.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={planImage.imageHint} /></div>}
-                                                        <CardHeader>
-                                                            <CardTitle className="text-base">{plan.name}</CardTitle>
-                                                            {plan.isConsumptionBased ? <CardDescription>P{plan.price}/liter</CardDescription> : <CardDescription>{plan.price > 0 ? `P${plan.price.toLocaleString()}/mo` : 'Admin Configured'}</CardDescription>}
-                                                        </CardHeader>
-                                                        <CardContent className="flex-1 text-xs text-muted-foreground">{plan.description}</CardContent>
-                                                    </Card>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
+                                 <div className="space-y-4">
+                                    <h3 className="font-semibold text-lg">Step 2: Plan Type</h3>
+                                     <FormField
+                                        control={newUserForm.control}
+                                        name="clientType"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Select a Plan Type</FormLabel>
+                                                 <FormControl>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                        {clientTypes.map(type => {
+                                                            const image = PlaceHolderImages.find(p => p.id === type.imageId);
+                                                            const isSelected = field.value === type.name;
+                                                            return (
+                                                                <Card 
+                                                                    key={type.name} 
+                                                                    onClick={() => field.onChange(type.name)}
+                                                                    className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}
+                                                                >
+                                                                    {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                    <CardHeader>
+                                                                        <CardTitle className="text-base">{type.name}</CardTitle>
+                                                                    </CardHeader>
+                                                                    <CardContent className="flex-1 text-xs text-muted-foreground">{type.description}</CardContent>
+                                                                </Card>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
                             )}
                            {formStep === 2 && (
