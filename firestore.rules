@@ -9,28 +9,32 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // Allow full access for the designated admin email.
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
 
-    // Admins have global access
+    // Admins have global access to all documents for management purposes.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
     match /users/{userId} {
+      // A user can read, update, or delete their own profile.
       allow read, update, delete: if isOwner(userId);
+      // Any authenticated user can create their own user document (happens during profile claim).
       allow create: if request.auth != null;
     }
     
+    // Users can manage all subcollections within their own user document.
     match /users/{userId}/{document=**} {
       allow read, list, write, delete: if isOwner(userId);
     }
     
     match /unclaimedProfiles/{clientId} {
-      // Admins can create/manage these profiles (covered by global admin rule).
+      // Admins can create and manage unclaimed profiles (covered by global admin rule).
       
-      // A newly signed-up user can read and delete their own profile to claim it.
-      // We verify they are new by checking that a user document for them does NOT exist yet.
+      // A newly signed-up user can read and delete their own unclaimed profile to claim it.
+      // We verify they are a new user by checking that a document for them does NOT yet exist in the main /users collection.
       allow read, delete: if request.auth != null && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
@@ -46,7 +50,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
 
-    // Collection Group Queries for Admin
+    // Collection Group Queries for Admin Panel
      match /{path=**}/payments/{paymentId} {
       allow list: if isAdmin();
     }
@@ -56,3 +60,5 @@ service cloud.firestore {
     }
   }
 }
+
+      

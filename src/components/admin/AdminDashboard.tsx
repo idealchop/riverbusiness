@@ -114,7 +114,7 @@ const newUserSchema = z.object({
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
   clientType: z.string().min(1, { message: 'Client type is required' }),
   plan: z.any(),
-  customPlanDetails: planDetailsSchema.optional(),
+  customPlanDetails: planDetailsSchema,
 });
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
@@ -2685,7 +2685,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 const isSelected = selectedPlan?.name === plan.name;
                                                 return (
                                                     <Card key={plan.name} onClick={() => newUserForm.setValue('plan', plan)} className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}>
-                                                        {planImage && <div className="relative h-32 w-full"><Image src={planImage.imageUrl} alt={plan.name} fill objectFit="cover" className="rounded-t-lg" data-ai-hint={planImage.imageHint} /></div>}
+                                                        {planImage && <div className="relative h-32 w-full"><Image src={planImage.imageUrl} alt={plan.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={planImage.imageHint} /></div>}
                                                         <CardHeader>
                                                             <CardTitle className="text-base">{plan.name}</CardTitle>
                                                             {plan.isConsumptionBased ? <CardDescription>P{plan.price}/liter</CardDescription> : <CardDescription>{plan.price > 0 ? `P${plan.price.toLocaleString()}/mo` : 'Admin Configured'}</CardDescription>}
@@ -2748,12 +2748,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             )}
                         </div>
                         <DialogFooter>
+                          <DialogClose asChild><Button type="button" variant="secondary">Close</Button></DialogClose>
+                          <div className="flex gap-2">
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
                             {formStep < 2 ? (
                                 <Button type="button" onClick={() => setFormStep(p => p + 1)}>Next</Button>
                             ) : (
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>
                             )}
+                          </div>
                         </DialogFooter>
                     </form>
                 </Form>
