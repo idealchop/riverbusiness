@@ -533,27 +533,34 @@ export default function DashboardLayout({
           </main>
 
         {/* Mobile Bottom Navigation */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex justify-around items-center z-20 rounded-t-lg">
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => window.dispatchEvent(new CustomEvent('open-delivery-history'))}>
-                <History className="h-5 w-5" />
-                <span className="text-xs mt-1">History</span>
-            </Button>
-            <div className="relative group">
-                <Button 
-                    size="icon" 
-                    className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-primary shadow-lg"
-                    onClick={handleMobileRefillClick}
-                    >
-                    <Droplets className="h-8 w-8 text-primary-foreground" />
-                </Button>
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
-                  <div className="tooltip-bubble">Refill now, {userFirstName}?</div>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-20 bg-transparent z-20 flex justify-center">
+            <div className="relative bg-background border-t border-border rounded-t-2xl shadow-[0_-10px_20px_rgba(0,0,0,0.05)] w-full max-w-md">
+                <div className="absolute left-1/2 -translate-x-1/2 -top-[30px] w-[130px] h-[60px]">
+                    <div className="w-full h-full bg-transparent rounded-full border-[20px] border-transparent border-t-background transform rotate-180"></div>
+                </div>
+                <div className="flex justify-around items-center h-full">
+                    <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => window.dispatchEvent(new CustomEvent('open-delivery-history'))}>
+                        <History className="h-5 w-5" />
+                        <span className="text-xs mt-1">History</span>
+                    </Button>
+                    <div className="relative">
+                        <Button 
+                            size="icon" 
+                            className="w-16 h-16 rounded-full bg-primary shadow-lg absolute -top-8 left-1/2 -translate-x-1/2"
+                            onClick={handleMobileRefillClick}
+                            >
+                            <Droplets className="h-8 w-8 text-primary-foreground" />
+                        </Button>
+                        <div className="absolute -top-16 left-1/2 -translate-x-1/2">
+                          <div className="tooltip-bubble">Refill now, {userFirstName}?</div>
+                        </div>
+                    </div>
+                    <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
+                        <User className="h-5 w-5" />
+                        <span className="text-xs mt-1">Account</span>
+                    </Button>
                 </div>
             </div>
-            <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
-                <User className="h-5 w-5" />
-                <span className="text-xs mt-1">Account</span>
-            </Button>
         </div>
 
 
