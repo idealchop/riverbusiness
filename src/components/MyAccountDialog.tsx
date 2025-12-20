@@ -849,7 +849,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                 dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: null });
             }
         }}>
-            <DialogContent className="sm:max-w-2xl bg-muted/30 p-0 border-0">
+            <DialogContent className="sm:max-w-2xl bg-background p-0 border-0">
                 <div className="p-8">
                     <div className="flex items-center gap-2 mb-8">
                         <Logo className="h-8 w-8" />
