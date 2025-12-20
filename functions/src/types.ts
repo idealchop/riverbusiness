@@ -12,5 +12,3 @@ export interface Notification {
   isRead: boolean;
   data?: any;
 }
-
-    
