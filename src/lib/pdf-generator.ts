@@ -1,4 +1,5 @@
 
+
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -391,110 +392,109 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     let lastY = 0;
     const margin = 40;
 
-    // --- HEADER ---
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, pageWidth, 70, 'F');
-
+    // --- HEADER & LOGO ---
     const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
     try {
-        doc.addImage(logoUrl, 'JPEG', margin, 18, 35, 35);
+        doc.addImage(logoUrl, 'JPEG', pageWidth - margin - 35, margin - 10, 35, 35);
     } catch (e) {
         console.error("Could not add logo to PDF:", e);
     }
 
-    doc.setFontSize(22);
+    doc.setFontSize(28);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text('INVOICE', pageWidth - margin, 45, { align: 'right' });
-
-    lastY = 100;
-
-    // --- BILLING & DATE INFO ---
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('BILL TO:', margin, lastY);
-
-    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(user.businessName || 'N/A', margin, lastY + 12);
-    doc.text(user.address || 'No address provided', margin, lastY + 22);
+    doc.text('Invoice', margin, margin + 20);
 
-    const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('INVOICE #:', pageWidth / 2, lastY);
-    doc.text('DATE OF ISSUE:', pageWidth / 2, lastY + 12);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0);
-    doc.text(invoice.id, (pageWidth / 2) + 85, lastY);
-    doc.text(format(invoiceDate, 'PP'), (pageWidth / 2) + 85, lastY + 12);
-
-    lastY += 50;
+    lastY = margin + 50;
     
-     // --- PAID STAMP ---
-    doc.saveGraphicsState();
-    doc.setFontSize(72);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 128, 0);
-    doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
-    doc.text('PAID', pageWidth / 2, pageHeight / 2 + 30, { align: 'center', angle: -45 });
-    doc.restoreGraphicsState();
+    // --- INVOICE DETAILS ---
+    const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
+    const details = [
+        ['Invoice number', invoice.id],
+        ['Date of issue', format(invoiceDate, 'MMMM d, yyyy')],
+        ['Date due', format(invoiceDate, 'MMMM d, yyyy')]
+    ];
+    doc.setFontSize(10);
+    details.forEach((detail, index) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(detail[0], margin, lastY + (index * 15));
+        doc.setFont('helvetica', 'normal');
+        doc.text(detail[1], margin + 80, lastY + (index * 15));
+    });
 
-    // --- TABLE ---
+    lastY += (details.length * 15) + 20;
+
+    // --- FROM / TO ---
+    doc.setFont('helvetica', 'bold');
+    doc.text('River Philippines', margin, lastY);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Filinvest Axis Tower 1', margin, lastY + 12);
+    doc.text('Alabang, Muntinlupa', margin, lastY + 24);
+    doc.text('customer@riverph.com', margin, lastY + 36);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Bill to', margin + 250, lastY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(user.businessName || '', margin + 250, lastY + 12);
+    doc.text(user.address || '', margin + 250, lastY + 24);
+    doc.text(user.email, margin + 250, lastY + 36);
+
+    lastY += 60;
+    
+    // --- PAID STATUS ---
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text(`PHP ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} PAID`, margin, lastY);
+    
+    lastY += 30;
+
+    // --- LINE ITEMS TABLE ---
     doc.autoTable({
         startY: lastY,
-        head: [["DESCRIPTION", "AMOUNT"]],
-        body: [[invoice.description, `P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]],
-        theme: 'striped',
-        headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 10, cellPadding: 8 },
-        bodyStyles: { fontSize: 10, cellPadding: 8 },
+        head: [["Description", "Qty", "Unit price", "Amount"]],
+        body: [[
+            invoice.description,
+            1,
+            `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+            `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+        ]],
+        theme: 'plain',
+        headStyles: { fontStyle: 'bold', textColor: 120, fontSize: 10, cellPadding: { top: 0, bottom: 8 } },
+        bodyStyles: { fontSize: 10, cellPadding: { top: 8, bottom: 8 } },
         margin: { left: margin, right: margin },
     });
-    lastY = (doc as any).lastAutoTable.finalY + 20;
+    lastY = (doc as any).lastAutoTable.finalY;
 
-    // --- FINANCIAL SUMMARY ---
-    const summaryX = pageWidth - margin - 220;
-    const subtotal = invoice.amount;
-    const tax = 0; // Assuming 0 for now
-    const grandTotal = subtotal + tax;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80);
-    doc.text('Subtotal:', summaryX, lastY);
-    doc.text(`P ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin, lastY, { align: 'right' });
-
-    doc.text('Tax (0%):', summaryX, lastY + 18);
-    doc.text(`P ${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin, lastY + 18, { align: 'right' });
-
-    doc.setLineWidth(1);
-    doc.line(summaryX - 5, lastY + 32, pageWidth - margin, lastY + 32);
-
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0);
-    doc.text('Total Paid:', summaryX, lastY + 50);
-    doc.text(`P ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin, lastY + 50, { align: 'right' });
+    // --- TOTALS ---
+    const summaryX = pageWidth - margin - 200;
+    const totals = [
+        ['Subtotal', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
+        ['Total', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]
+    ];
     
-    lastY += 80;
+    doc.setFontSize(10);
+    totals.forEach((total, index) => {
+        doc.setFont('helvetica', index === totals.length - 1 ? 'bold' : 'normal');
+        doc.text(total[0], summaryX, lastY + 20 + (index * 15));
+        doc.text(total[1], pageWidth - margin, lastY + 20 + (index * 15), { align: 'right'});
+    });
+    
+    lastY += (totals.length * 15) + 20;
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Amount paid', summaryX, lastY);
+    doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right'});
+
 
     // --- FOOTER ---
-    doc.setLineWidth(0.5);
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
-      
     doc.setFontSize(8);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Thank you for your business!', margin, pageHeight - 38);
-    
     doc.setTextColor(150);
-    doc.text(`Invoice ${invoice.id}`, pageWidth - margin, pageHeight - 38, { align: 'right' });
-
-
+    const footerText = 'Thank you for your business. If you have any questions, please contact us at customer@riverph.com.';
+    const splitFooter = doc.splitTextToSize(footerText, pageWidth - (margin * 2));
+    doc.text(splitFooter, margin, pageHeight - margin - 10);
+    
     // --- SAVE PDF ---
     doc.save(`Invoice_${invoice.id}.pdf`);
 }
-
-    
