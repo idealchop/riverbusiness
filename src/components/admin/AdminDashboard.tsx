@@ -246,7 +246,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             status: 'Upcoming',
         } as Payment;
 
-    }, [userForInvoices, selectedUser, userDeliveriesData, userPaymentsData]);
+    }, [userForInvoices, selectedUser, userDeliveriesData]);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -770,38 +770,41 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleInvoiceStatusUpdate = (newStatus: 'Paid' | 'Upcoming') => {
         const userToUpdate = userForInvoices || selectedUser;
         if (!userToUpdate || !selectedInvoice || !firestore) return;
-        
+    
         const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', selectedInvoice.id);
-
-        const updatePayload: any = { status: newStatus };
-        if (newStatus === 'Upcoming') {
-            updatePayload.rejectionReason = rejectionReason;
-        } else if (newStatus === 'Paid') {
-            updatePayload.rejectionReason = deleteField();
+    
+        const isCurrentMonthVirtualInvoice = selectedInvoice.id === currentMonthInvoice?.id;
+    
+        if (newStatus === 'Paid' && isCurrentMonthVirtualInvoice) {
+            // Create the document because it doesn't exist yet
+            const docToCreate = {
+                ...selectedInvoice,
+                status: 'Paid',
+                date: serverTimestamp(),
+            };
+            setDocumentNonBlocking(invoiceRef, docToCreate);
+        } else {
+            // Update an existing document
+            const updatePayload: any = { status: newStatus };
+            if (newStatus === 'Upcoming') {
+                updatePayload.rejectionReason = rejectionReason;
+            } else if (newStatus === 'Paid') {
+                updatePayload.rejectionReason = deleteField();
+            }
+            updateDocumentNonBlocking(invoiceRef, updatePayload);
         }
-
-        updateDocumentNonBlocking(invoiceRef, updatePayload);
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
-        
-        if(selectedInvoice?.id === currentMonthInvoice?.id) {
-            // This is a special case for the current month's upcoming invoice, which isn't in Firestore yet.
-            // We can't really "update" it, but we can close the dialog.
-        } else {
-             // Optimistically update the UI by removing the paid/rejected invoice from local state
-             if (userPaymentsData) {
-                const updatedPayments = userPaymentsData.map(p => 
-                    p.id === selectedInvoice.id ? { ...p, status: newStatus, rejectionReason: newStatus === 'Upcoming' ? rejectionReason : undefined } : p
-                );
-                // This optimistic update isn't perfect without a state setter from useCollection
-             }
-        }
-        
-        setSelectedInvoice(prev => prev ? { ...prev, status: newStatus } : null);
-        
-        if (newStatus === 'Paid' || newStatus === 'Upcoming') {
-            setIsManageInvoiceOpen(false);
-        }
+    
+        // Close the dialog after action
+        setIsManageInvoiceOpen(false);
+        // Refresh the view by forcing a re-render of the parent.
+        // A better approach would be to have a shared state management.
+        setTimeout(() => {
+            const currentlySelected = userForInvoices;
+            setUserForInvoices(null);
+            setUserForInvoices(currentlySelected);
+        }, 500); // give Firestore time to propagate
         
         setRejectionReason('');
     };

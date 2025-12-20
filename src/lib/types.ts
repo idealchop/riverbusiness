@@ -114,6 +114,7 @@ export interface Payment {
   amount: number;
   status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review';
   proofOfPaymentUrl?: string;
+  rejectionReason?: string;
 }
 
 export type ImagePlaceholder = {

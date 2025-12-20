@@ -10,12 +10,6 @@ import * as path from 'path';
 import type { Notification } from './types';
 
 
-// Import all exports from billing.ts
-import * as billing from './billing';
-
-// Export all billing functions so they are deployed
-export * from './billing';
-
 // Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();

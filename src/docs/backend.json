@@ -69,7 +69,8 @@
         "description": { "type": "string" },
         "amount": { "type": "number" },
         "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review"] },
-        "proofOfPaymentUrl": { "type": "string", "format": "uri" }
+        "proofOfPaymentUrl": { "type": "string", "format": "uri" },
+        "rejectionReason": { "type": "string", "description": "Reason provided by admin for rejecting a payment." }
       },
       "required": ["id", "date", "description", "amount", "status"]
     },
@@ -165,7 +166,9 @@
         "statusHistory": {
             "type": "array",
             "items": { "$ref": "#/entities/StatusHistoryEntry" }
-        }
+        },
+        "volumeContainers": { "type": "number", "description": "The number of containers requested for the refill." },
+        "requestedDate": { "type": "string", "format": "date-time", "description": "The specific date the user requested the delivery for." }
       },
       "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
     },
@@ -214,6 +217,10 @@
       "schema": { "$ref": "#/entities/SanitationVisit" },
       "description": "Subcollection for a client's scheduled office sanitation visits."
     },
+    "/users/{userId}/refillRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/RefillRequest" },
+      "description": "Subcollection for user's one-time refill requests."
+    },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
@@ -225,10 +232,6 @@
     "/schedules/currentSchedule": {
       "schema": { "$ref": "#/entities/Schedule" },
       "description": "A single document to hold the current global delivery schedule."
-    },
-    "/refillRequests/{requestId}": {
-      "schema": { "$ref": "#/entities/RefillRequest" },
-      "description": "Stores user requests for one-time refills."
     }
   }
 }
