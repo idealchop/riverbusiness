@@ -1745,7 +1745,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     {userPendingPayments.length} Pending
                                                 </Badge>
                                             ) : (
-                                                <span className="text-xs text-muted-foreground">Up to date</span>
+                                                <div onClick={handlePaymentStatusClick} className="text-xs text-muted-foreground cursor-pointer hover:text-primary">
+                                                  Up to date
+                                                </div>
                                             )}
                                         </TableCell>
                                         <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
