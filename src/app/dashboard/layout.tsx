@@ -192,7 +192,7 @@ export default function DashboardLayout({
       }
     };
 
-    updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString());
+    updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -716,5 +716,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
