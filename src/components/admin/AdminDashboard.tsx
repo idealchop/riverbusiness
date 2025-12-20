@@ -113,7 +113,7 @@ const newUserSchema = z.object({
   address: z.string().min(1, { message: 'Address is required' }),
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
   clientType: z.string().min(1, { message: 'Plan type is required' }),
-  plan: z.any(),
+  plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
   customPlanDetails: planDetailsSchema,
 });
 
@@ -1019,10 +1019,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             case 'SME': return smePlans;
             case 'Commercial': return commercialPlans;
             case 'Corporate': return corporatePlans;
-            case 'Enterprise': return enterprisePlans;
+            case 'Enterprise': return enterprisePlans.filter(p => !p.isConsumptionBased);
             default: return [];
         }
     };
+    const flowPlanOptions = enterprisePlans.filter(p => p.isConsumptionBased);
 
     const planOptions = React.useMemo(() => {
         return getPlansForType(selectedClientType);
@@ -1076,8 +1077,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
     }
-
-    const flowPlan = enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)');
 
   return (
     <>
@@ -2670,46 +2669,75 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </div>
                             )}
                             {formStep === 1 && (
-                                 <div className="space-y-4">
+                                <div className="space-y-4">
                                     <h3 className="font-semibold text-lg">Step 2: Plan Type</h3>
-                                     <FormField
+                                    <FormField
                                         control={newUserForm.control}
                                         name="clientType"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {[...clientTypes.filter(ct => ct.name !== 'Enterprise'), flowPlan].map(type => {
-                                                        if (!type) return null;
-                                                        const image = PlaceHolderImages.find(p => p.id === type.imageId);
-                                                        const isSelected = field.value === type.name;
-                                                        const name = type.name.includes('Flow Plan') ? 'Flow Plan' : type.name;
-
-                                                        return (
-                                                            <Card 
-                                                                key={name} 
-                                                                onClick={() => {
-                                                                    field.onChange(name);
-                                                                    const plans = getPlansForType(name);
-                                                                    if (plans.length > 0) {
-                                                                        newUserForm.setValue('plan', plans.find(p => p.name.includes(name)) || plans[0]);
-                                                                    }
-                                                                }}
-                                                                className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}
-                                                            >
-                                                                {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
-                                                                <CardHeader>
-                                                                    <CardTitle className="text-base">{name}</CardTitle>
-                                                                </CardHeader>
-                                                                <CardContent className="flex-1 text-xs text-muted-foreground">{type.description}</CardContent>
-                                                            </Card>
-                                                        )
-                                                    })}
-                                                </div>
+                                                <FormControl>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                        {[...clientTypes.filter(ct => ct.name !== 'Enterprise')].map(type => {
+                                                            const image = PlaceHolderImages.find(p => p.id === type.imageId);
+                                                            return (
+                                                                <Card 
+                                                                    key={type.name} 
+                                                                    onClick={() => field.onChange(type.name)}
+                                                                    className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}
+                                                                >
+                                                                    {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                    <CardHeader>
+                                                                        <CardTitle className="text-base">{type.name}</CardTitle>
+                                                                    </CardHeader>
+                                                                    <CardContent className="flex-1 text-xs text-muted-foreground">{type.description}</CardContent>
+                                                                </Card>
+                                                            )
+                                                        })}
+                                                         <Card 
+                                                            onClick={() => field.onChange('Enterprise')}
+                                                            className={cn("cursor-pointer flex flex-col", field.value === 'Enterprise' && "border-2 border-primary")}
+                                                        >
+                                                            <div className="relative h-32 w-full">
+                                                                <Image src={PlaceHolderImages.find(p=>p.id==='plan-enterprise')!.imageUrl} alt='Enterprise' fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={PlaceHolderImages.find(p=>p.id==='plan-enterprise')!.imageHint} />
+                                                            </div>
+                                                            <CardHeader>
+                                                                <CardTitle className="text-base">Enterprise</CardTitle>
+                                                            </CardHeader>
+                                                            <CardContent className="flex-1 text-xs text-muted-foreground">Customize and pay based on consumption.</CardContent>
+                                                        </Card>
+                                                    </div>
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+                                    {selectedClientType === 'Enterprise' && (
+                                         <FormField
+                                            control={newUserForm.control}
+                                            name="plan"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Select an Enterprise Plan</FormLabel>
+                                                    <div className="grid grid-cols-1 gap-4">
+                                                        {flowPlanOptions.map(plan => {
+                                                            const isSelected = field.value?.name === plan.name;
+                                                            return (
+                                                                <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
+                                                                    <CardContent className="p-4">
+                                                                        <h4 className="font-semibold">{plan.name}</h4>
+                                                                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                                                                    </CardContent>
+                                                                </Card>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
                                 </div>
                             )}
                            {formStep === 2 && (
@@ -2719,6 +2747,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     {!selectedPlan?.isConsumptionBased && (
                                         <div className="space-y-4 p-4 border rounded-lg">
                                             <h4 className="font-medium">Subscription</h4>
+                                             {selectedPlan?.price > 0 && (
+                                                <div className="text-lg font-bold">
+                                                    Amount per Month: ₱{selectedPlan.price.toLocaleString()}
+                                                </div>
+                                             )}
                                             <div className="grid grid-cols-2 gap-4">
                                                 <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
                                                     <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
@@ -2763,8 +2796,26 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                         <DialogFooter>
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
+                            
                             {formStep < 2 ? (
-                                <Button type="button" onClick={() => setFormStep(p => p + 1)}>Next</Button>
+                                <Button type="button" onClick={() => {
+                                    if (formStep === 0) {
+                                         newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber']);
+                                         const hasErrors = Object.keys(newUserForm.formState.errors).length > 0;
+                                         if (!hasErrors) setFormStep(1);
+                                    } else if (formStep === 1) {
+                                         newUserForm.trigger(['clientType', 'plan']);
+                                         const hasErrors = newUserForm.formState.errors.clientType || newUserForm.formState.errors.plan;
+                                         if (!hasErrors) {
+                                            const type = newUserForm.getValues('clientType');
+                                            if (type !== 'Enterprise') {
+                                                const plans = getPlansForType(type);
+                                                newUserForm.setValue('plan', plans[0]);
+                                            }
+                                            setFormStep(2);
+                                         }
+                                    }
+                                }}>Next</Button>
                             ) : (
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>
                             )}
@@ -2776,5 +2827,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-
