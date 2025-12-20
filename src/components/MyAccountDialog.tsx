@@ -487,6 +487,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   if (!user) return <>{children}</>;
 
   const displayPhoto = user.photoURL;
+  const userFirstName = user.name.split(' ')[0];
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
@@ -865,7 +866,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                 dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: null });
             }
         }}>
-            <DialogContent className="sm:max-w-2xl p-0 border-0 bg-background">
+            <DialogContent className="sm:max-w-2xl bg-background p-0 border-0">
                 <DialogHeader className="p-8 pb-0">
                     <DialogTitle className="sr-only">Invoice Receipt</DialogTitle>
                     <DialogDescription className="sr-only">Details for invoice {state.selectedInvoiceForDetail?.id}</DialogDescription>
@@ -1033,7 +1034,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             <p className="font-bold text-lg">{user.pendingPlan.name}</p>
                             <p className="text-muted-foreground">on</p>
                             <p className="font-bold text-lg">{user.planChangeEffectiveDate ? format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy') : ''}</p>
-                            <p className="text-xs text-muted-foreground pt-4">When this should the change plan scheduled. Users will still be able to undo the request and get back to its original plan.</p>
+                            <p className="text-xs text-muted-foreground pt-4">Hi {userFirstName}, you can undo this request anytime before the effective date if you change your mind.</p>
                         </CardContent>
                          <CardFooter className="flex flex-col gap-2">
                             <Button variant="destructive" onClick={handleUndoPlanChange}>
@@ -1175,3 +1176,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
+
+    
