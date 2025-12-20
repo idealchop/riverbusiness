@@ -39,7 +39,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   doc.text('Water Refill History', 36, 17, { align: 'left' });
 
   doc.setFontSize(10);
-  doc.text('River Philippines', pageWidth - 14, 12, { align: 'right' });
+  doc.text('River Tech Inc.', pageWidth - 14, 12, { align: 'right' });
   doc.setFontSize(8);
   doc.text('Turn Everyday Needs Into Automatic Experience With River', pageWidth - 14, 18, { align: 'right' });
 
@@ -61,7 +61,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0);
-  doc.text('River Philippines', 14, startY + 6);
+  doc.text('River Tech Inc.', 14, startY + 6);
   doc.text('Filinvest Axis Tower 1 24th & 26th Flr, 304 Filinvest Ave, Alabang, Muntinlupa', 14, startY + 11);
   doc.text('www.riverph.com', 14, startY + 16);
   doc.text('customer@riverph.com', 14, startY + 21);
@@ -148,7 +148,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
         // Branding Message
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.setFont('helvetica', 'bold');
-        doc.text('River Philippines: Turn Essential Needs Into Automatic Experience.', 14, pageHeight - 12);
+        doc.text('River Tech Inc.: Turn Essential Needs Into Automatic Experience.', 14, pageHeight - 12);
         
         // Page Number
         doc.setTextColor(150);
@@ -451,8 +451,19 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
 
     // --- LINE ITEMS TABLE ---
     const planName = user.plan?.name || 'N/A';
-    const totalLiters = user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A';
-    const description = `${invoice.description}\nPlan: ${planName} (${totalLiters} L/mo)`;
+    let litersText = '';
+    if (user.plan?.isConsumptionBased) {
+        const pricePerLiter = user.plan.price || 1; // Avoid division by zero
+        const consumedLiters = invoice.amount / pricePerLiter;
+        litersText = `(${consumedLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L consumed)`;
+    } else {
+        const monthlyLiters = user.customPlanDetails?.litersPerMonth?.toLocaleString();
+        if (monthlyLiters) {
+            litersText = `(${monthlyLiters} L/mo)`;
+        }
+    }
+    
+    const description = `${invoice.description}\nPlan: ${planName} ${litersText}`;
 
     doc.autoTable({
         startY: lastY,
@@ -501,4 +512,4 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     
     // --- SAVE PDF ---
     doc.save(`Invoice_${invoice.id}.pdf`);
-}
+};
