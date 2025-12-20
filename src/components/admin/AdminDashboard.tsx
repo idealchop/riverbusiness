@@ -300,7 +300,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const cycleStart = startOfMonth(now);
         const cycleEnd = endOfMonth(now);
         
-        const deliveriesThisCycle = userDeliveriesData.filter(d => {
+        const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
         });
@@ -2627,7 +2627,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Sanitation</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -2669,8 +2669,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}/>
                                 </div>
                             )}
-
-                           {formStep === 1 && (
+                            {formStep === 1 && (
                                 <div className="space-y-6">
                                     <h3 className="font-semibold text-lg">Step 2: Plan & Configuration</h3>
                                     <FormField
@@ -2679,13 +2678,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
+                                                <FormControl>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                         {clientTypes.map(type => {
                                                             const image = PlaceHolderImages.find(p => p.id === type.imageId);
                                                             return (
                                                                 <Card 
                                                                     key={type.name} 
-                                                                    onClick={() => field.onChange(type.name)}
+                                                                    onClick={() => {
+                                                                        field.onChange(type.name);
+                                                                        if (type.name !== 'Enterprise') {
+                                                                            const plans = getPlansForType(type.name);
+                                                                            newUserForm.setValue('plan', plans[0] || null);
+                                                                        } else {
+                                                                            newUserForm.setValue('plan', null);
+                                                                        }
+                                                                    }}
                                                                     className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}
                                                                 >
                                                                     {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
@@ -2697,6 +2705,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             )
                                                         })}
                                                     </div>
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -2704,7 +2713,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     
                                     {selectedClientType && (
                                         <div className='space-y-4'>
-                                             <FormField
+                                            <FormField
                                                 control={newUserForm.control}
                                                 name="plan"
                                                 render={({ field }) => (
@@ -2727,6 +2736,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     </FormItem>
                                                 )}
                                             />
+
                                             {selectedPlan && (
                                                 <div className="space-y-6 pt-4">
                                                     {!selectedPlan.isConsumptionBased && (
@@ -2735,7 +2745,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             {selectedPlan.price > 0 && (
                                                                 <div className="grid gap-2">
                                                                     <Label>Amount per Month</Label>
-                                                                    <Input value={`₱${selectedPlan.price.toLocaleString()}`} readOnly className="font-bold text-lg h-auto p-2 border-0 bg-muted"/>
+                                                                    <Input value={`P ${selectedPlan.price.toLocaleString()}`} readOnly className="font-bold text-lg h-auto p-2 border-0 bg-muted"/>
                                                                 </div>
                                                             )}
                                                             <div className="grid grid-cols-2 gap-4">
@@ -2782,7 +2792,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}
                                 </div>
                             )}
-
                         </div>
                         <DialogFooter>
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
@@ -2803,3 +2812,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+

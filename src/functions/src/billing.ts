@@ -156,8 +156,8 @@ async function generateInvoiceForUser(
         }
     } else {
         // Fixed-plan billing
-        // The charge is always the plan's monthly price, regardless of the billing period length.
-        amount = user.plan.price || 0;
+        // The charge is always the plan's monthly price, multiplied by the number of months in the billing period.
+        amount = (user.plan.price || 0) * monthsToBill;
         description = `Monthly Subscription for ${billingPeriod}`;
 
         // Rollover logic needs to consider the total allocation for the billing period (1 or 2 months).
@@ -208,3 +208,4 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
+
