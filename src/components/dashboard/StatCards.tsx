@@ -49,12 +49,13 @@ export function StatCards({
       remainingPercentage: 100,
       estimatedCost: 0,
     };
-  
+
     if (!user || !user.plan || !deliveries) {
       return emptyState;
     }
   
-    const planDetails = user.customPlanDetails;
+    // Use the correct plan details, regardless of where they are stored
+    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
   
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
@@ -74,7 +75,7 @@ export function StatCards({
       };
     }
   
-    if (!user.createdAt || !planDetails) {
+    if (!planDetails) {
         return {
             ...emptyState,
             consumedLitersThisMonth, // Still show what's consumed this month
@@ -82,7 +83,10 @@ export function StatCards({
         };
     }
   
+    // This is the total available balance for the user at the start of the period.
     const totalAvailableLiters = user.totalConsumptionLiters;
+    const currentBalance = totalAvailableLiters - consumedLitersThisMonth;
+
     const consumedPercentage = totalAvailableLiters > 0 ? (consumedLitersThisMonth / totalAvailableLiters) * 100 : 0;
     const remainingPercentage = 100 - consumedPercentage;
   
@@ -92,12 +96,13 @@ export function StatCards({
       bonusLiters: planDetails.bonusLiters || 0,
       totalLitersForMonth: totalAvailableLiters, // This is the key change: total is the user's actual balance
       consumedLitersThisMonth,
-      currentBalance: totalAvailableLiters - consumedLitersThisMonth, // The true remaining balance
+      currentBalance: currentBalance, // The true remaining balance
       consumedPercentage,
       remainingPercentage,
       estimatedCost: user.plan.price || 0,
     };
   }, [user, deliveries]);
+
 
   const handleAutoRefillToggle = (checked: boolean) => {
     if (!user?.id || !firestore) return;
@@ -114,7 +119,7 @@ export function StatCards({
     });
   };
   
-  const planDetails = user?.customPlanDetails;
+  const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
   const autoRefill = planDetails?.autoRefillEnabled ?? true;
   const nextRefillDay = planDetails?.deliveryDay || 'Not set';
   const weeklyContainers = planDetails?.gallonQuantity || 0;
