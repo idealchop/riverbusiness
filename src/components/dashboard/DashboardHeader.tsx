@@ -37,7 +37,7 @@ export function DashboardHeader({
           onClick={onRefillRequest}
         >
           <BellRing className="mr-2 h-4 w-4" />
-          {hasPendingRefill ? 'Check Request Status' : 'Request Refill'}
+          {hasPendingRefill ? 'View Status' : 'Request Refill'}
         </Button>
         <Button
           variant="default"
