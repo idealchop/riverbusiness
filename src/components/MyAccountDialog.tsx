@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useReducer, useEffect, useMemo, useState } from 'react';
+import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
 import Image from 'next/image';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
@@ -24,18 +24,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
-import { useTransition } from 'react';
 
 
 // State Management with useReducer
@@ -325,6 +324,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: false});
     dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: null});
   };
+
+  const handleUndoPlanChange = () => {
+    if (!authUser || !firestore) return;
+    
+    const userDocRef = doc(firestore, 'users', authUser.uid);
+    updateDocumentNonBlocking(userDocRef, {
+      pendingPlan: deleteField(),
+      planChangeEffectiveDate: deleteField(),
+    });
+    
+    toast({
+        title: 'Request Cancelled',
+        description: 'Your scheduled plan change has been cancelled.',
+    });
+  };
+
 
   const handleDownloadMonthlySOA = () => {
     if (!user || !deliveries) {
@@ -850,9 +865,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                 dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: null });
             }
         }}>
-            <DialogContent className="sm:max-w-2xl bg-background p-0 border-0">
-                 <DialogHeader className="p-8 pb-0">
-                    {/* This title is visually hidden but available for screen readers */}
+            <DialogContent className="sm:max-w-2xl p-0 border-0 bg-background">
+                <DialogHeader className="p-8 pb-0">
                     <DialogTitle className="sr-only">Invoice Receipt</DialogTitle>
                 </DialogHeader>
                 <div className="p-8 pt-0">
@@ -1001,7 +1015,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <DialogHeader>
             <DialogTitle>Change Your Plan</DialogTitle>
             <DialogDescription>
-              Compare your current plan with our Flow Plan and schedule the change.
+              {user.pendingPlan ? "A change to your plan is already scheduled." : "Compare your current plan with our Flow Plan and schedule the change."}
             </DialogDescription>
           </DialogHeader>
             {user.pendingPlan ? (
@@ -1018,7 +1032,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             <p className="font-bold text-lg">{user.pendingPlan.name}</p>
                             <p className="text-muted-foreground">on</p>
                             <p className="font-bold text-lg">{user.planChangeEffectiveDate ? format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy') : ''}</p>
+                            <p className="text-xs text-muted-foreground pt-4">You can undo this request anytime before the effective date.</p>
                         </CardContent>
+                         <CardFooter className="flex flex-col gap-2">
+                            <Button variant="destructive" onClick={handleUndoPlanChange}>
+                                <Undo2 className="mr-2 h-4 w-4"/>
+                                Undo Request
+                            </Button>
+                        </CardFooter>
                     </Card>
                 </div>
             ) : (
