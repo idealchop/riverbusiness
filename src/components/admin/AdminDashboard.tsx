@@ -1012,7 +1012,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [formStep, setFormStep] = React.useState(0);
     const selectedClientType = newUserForm.watch('clientType');
-    const selectedPlan = newUserForm.watch('plan');
+    
+    const planOptions = React.useMemo(() => {
+        if (selectedClientType === 'Enterprise') {
+            return enterprisePlans;
+        }
+        return getPlansForType(selectedClientType);
+    }, [selectedClientType]);
 
     const getPlansForType = (type: string) => {
         switch (type) {
@@ -1023,13 +1029,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             default: return [];
         }
     };
-    
-    const planOptions = React.useMemo(() => {
-        if (selectedClientType === 'Enterprise') {
-            return enterprisePlans;
-        }
-        return getPlansForType(selectedClientType);
-    }, [selectedClientType]);
 
 
     const handleCreateNewUser = async (values: NewUserFormValues) => {
@@ -1076,26 +1075,29 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     React.useEffect(() => {
-        if (selectedClientType && selectedClientType !== 'Enterprise' && planOptions.length > 0) {
-            const currentPlan = newUserForm.getValues('plan');
-            if (!currentPlan || !planOptions.some(p => p.name === currentPlan.name)) {
-                newUserForm.setValue('plan', planOptions[0]);
+        const subscription = newUserForm.watch((value, { name, type }) => {
+            if (name === 'clientType') {
+                const planType = value.clientType;
+                let newPlan = null;
+                if (planType === 'Enterprise') {
+                    // Default to the first enterprise plan if switching to Enterprise
+                    newPlan = enterprisePlans[0]; 
+                } else {
+                    const plans = getPlansForType(planType);
+                    if (plans.length > 0) {
+                        newPlan = plans[0];
+                    }
+                }
+                newUserForm.setValue('plan', newPlan);
             }
-        } else if (selectedClientType !== 'Enterprise') {
-             newUserForm.setValue('plan', null);
-        }
-    }, [planOptions, selectedClientType, newUserForm]);
-
-    React.useEffect(() => {
-        const plan = newUserForm.getValues('plan');
-        if (plan && !plan.isConsumptionBased) {
-            const currentPlanInForm = newUserForm.getValues('plan');
-            if (currentPlanInForm?.price !== plan.price) {
-                newUserForm.setValue('plan', {...currentPlanInForm, price: plan.price });
+             if (name === 'plan' && value.plan && value.plan.price !== undefined) {
+                 newUserForm.setValue('customPlanDetails.litersPerMonth', value.plan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0) );
             }
-        }
-    }, [selectedPlan, newUserForm]);
+        });
+        return () => subscription.unsubscribe();
+    }, [newUserForm]);
 
+    const selectedPlan = newUserForm.watch('plan');
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
@@ -2662,9 +2664,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <form onSubmit={newUserForm.handleSubmit(handleCreateNewUser)}>
                         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                            {formStep === 0 && (
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                     <h3 className="font-semibold text-lg">Step 1: Business Details</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                       <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
                                           <FormItem>
                                               <FormLabel>Client ID</FormLabel>
@@ -2693,7 +2695,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             {formStep === 1 && (
                                 <div className="space-y-6">
                                      <div>
-                                        <h3 className="font-semibold text-lg">Step 2: Plan & Configuration</h3>
+                                        <h3 className="font-semibold text-lg">Step 2: Plan &amp; Configuration</h3>
                                         <p className="text-sm text-muted-foreground">Select a plan type, then choose and configure a specific plan.</p>
                                     </div>
                                     <FormField
@@ -2740,16 +2742,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 {planOptions.map(plan => {
                                                                     const isSelected = field.value?.name === plan.name;
                                                                     return (
-                                                                        <Card key={plan.name} onClick={() => {
-                                                                            const newPlan = {...plan};
-                                                                            if (newUserForm.getValues('plan.price')) {
-                                                                                newPlan.price = newUserForm.getValues('plan.price');
-                                                                            }
-                                                                            field.onChange(newPlan);
-                                                                        }} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
+                                                                        <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
                                                                             <CardHeader>
-                                                                              <CardTitle className="text-base">{plan.name}</CardTitle>
-                                                                              <CardDescription>{plan.description}</CardDescription>
+                                                                                <CardTitle className="text-base flex justify-between">{plan.name} {plan.isConsumptionBased && <span className='text-sm text-muted-foreground font-normal'>(P{plan.price}/L)</span>}</CardTitle>
+                                                                                <CardDescription>{plan.description}</CardDescription>
                                                                             </CardHeader>
                                                                         </Card>
                                                                     )
@@ -2767,7 +2763,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <div className="space-y-4 p-4 border rounded-lg">
                                                             <h4 className="font-medium">Subscription</h4>
                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                               <FormField
+                                                              <FormField
                                                                     control={newUserForm.control}
                                                                     name="plan.price"
                                                                     render={({ field }) => (

@@ -53,6 +53,9 @@ export function StatCards({
     if (!user || !user.plan || !deliveries) {
       return emptyState;
     }
+    
+    // Unify the source of custom plan details. Check top-level first, then fall back to plan-nested.
+    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
 
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
@@ -72,6 +75,7 @@ export function StatCards({
     }
 
     if (!user.createdAt) return emptyState;
+    if (!planDetails) return emptyState;
 
     const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
         ? (user.createdAt as any).toDate() 
@@ -81,8 +85,8 @@ export function StatCards({
     const lastCycleStart = startOfMonth(lastMonth);
     const lastCycleEnd = endOfMonth(lastMonth);
 
-    const monthlyPlanLiters = user.customPlanDetails?.litersPerMonth || 0;
-    const bonusLiters = user.customPlanDetails?.bonusLiters || 0;
+    const monthlyPlanLiters = planDetails.litersPerMonth || 0;
+    const bonusLiters = planDetails.bonusLiters || 0;
     const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
 
     let rolloverLiters = 0;
@@ -120,19 +124,32 @@ export function StatCards({
     if (!user?.id || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', user.id);
-    updateDocumentNonBlocking(userDocRef, {
-        'customPlanDetails.autoRefillEnabled': checked,
-    });
+    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
+    
+    const newCustomPlanDetails = { ...planDetails, autoRefillEnabled: checked };
+
+    // Update based on where the details are currently stored to avoid creating disparate structures
+    if (user.customPlanDetails) {
+         updateDocumentNonBlocking(userDocRef, {
+            'customPlanDetails.autoRefillEnabled': checked,
+        });
+    } else if (user.plan?.customPlanDetails) {
+         updateDocumentNonBlocking(userDocRef, {
+            'plan.customPlanDetails.autoRefillEnabled': checked,
+        });
+    }
+
 
     toast({
         title: checked ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
         description: checked ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
     });
   };
-
-  const autoRefill = user?.customPlanDetails?.autoRefillEnabled ?? true;
-  const nextRefillDay = user?.customPlanDetails?.deliveryDay || 'Not set';
-  const weeklyContainers = user?.customPlanDetails?.gallonQuantity || 0;
+  
+  const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
+  const autoRefill = planDetails?.autoRefillEnabled ?? true;
+  const nextRefillDay = planDetails?.deliveryDay || 'Not set';
+  const weeklyContainers = planDetails?.gallonQuantity || 0;
   const estimatedWeeklyLiters = containerToLiter(weeklyContainers);
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
