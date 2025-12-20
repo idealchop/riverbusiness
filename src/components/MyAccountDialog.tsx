@@ -28,7 +28,7 @@ import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/fir
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2 } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -503,6 +503,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     });
   }
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `${label} Copied!`, description: 'The ID has been copied to your clipboard.' });
+    });
+  };
+
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -611,6 +617,30 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                           <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
                         </div>
                       </div>
+                      <Separator />
+                        <div>
+                            <h4 className="font-semibold mb-4">Account Identifiers</h4>
+                            <div className="space-y-3 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input id="uid" value={user.id} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(user.id, 'User ID')}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input id="clientId" value={user.clientId || 'N/A'} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user.clientId && copyToClipboard(user.clientId, 'Client ID')} disabled={!user.clientId}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
