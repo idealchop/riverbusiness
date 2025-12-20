@@ -1013,8 +1013,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [formStep, setFormStep] = React.useState(0);
     const selectedClientType = newUserForm.watch('clientType');
 
-    const planOptions = React.useMemo(() => {
-        switch (selectedClientType) {
+    const getPlansForType = (type: string) => {
+        switch (type) {
             case 'Family': return familyPlans;
             case 'SME': return smePlans;
             case 'Commercial': return commercialPlans;
@@ -1022,6 +1022,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             case 'Enterprise': return enterprisePlans;
             default: return [];
         }
+    };
+
+    const planOptions = React.useMemo(() => {
+        return getPlansForType(selectedClientType);
     }, [selectedClientType]);
 
     const handleCreateNewUser = async (values: NewUserFormValues) => {
@@ -1072,6 +1076,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
     }
+
+    const flowPlan = enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)');
 
   return (
     <>
@@ -2670,29 +2676,36 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         control={newUserForm.control}
                                         name="clientType"
                                         render={({ field }) => (
-                                            <FormItem className="space-y-3">
+                                            <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
-                                                 <FormControl>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                        {clientTypes.map(type => {
-                                                            const image = PlaceHolderImages.find(p => p.id === type.imageId);
-                                                            const isSelected = field.value === type.name;
-                                                            return (
-                                                                <Card 
-                                                                    key={type.name} 
-                                                                    onClick={() => field.onChange(type.name)}
-                                                                    className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}
-                                                                >
-                                                                    {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
-                                                                    <CardHeader>
-                                                                        <CardTitle className="text-base">{type.name}</CardTitle>
-                                                                    </CardHeader>
-                                                                    <CardContent className="flex-1 text-xs text-muted-foreground">{type.description}</CardContent>
-                                                                </Card>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                </FormControl>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {[...clientTypes.filter(ct => ct.name !== 'Enterprise'), flowPlan].map(type => {
+                                                        if (!type) return null;
+                                                        const image = PlaceHolderImages.find(p => p.id === type.imageId);
+                                                        const isSelected = field.value === type.name;
+                                                        const name = type.name.includes('Flow Plan') ? 'Flow Plan' : type.name;
+
+                                                        return (
+                                                            <Card 
+                                                                key={name} 
+                                                                onClick={() => {
+                                                                    field.onChange(name);
+                                                                    const plans = getPlansForType(name);
+                                                                    if (plans.length > 0) {
+                                                                        newUserForm.setValue('plan', plans.find(p => p.name.includes(name)) || plans[0]);
+                                                                    }
+                                                                }}
+                                                                className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}
+                                                            >
+                                                                {image && <div className="relative h-32 w-full"><Image src={image.imageUrl} alt={name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                <CardHeader>
+                                                                    <CardTitle className="text-base">{name}</CardTitle>
+                                                                </CardHeader>
+                                                                <CardContent className="flex-1 text-xs text-muted-foreground">{type.description}</CardContent>
+                                                            </Card>
+                                                        )
+                                                    })}
+                                                </div>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -2749,15 +2762,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             )}
                         </div>
                         <DialogFooter>
-                          <DialogClose asChild><Button type="button" variant="secondary">Close</Button></DialogClose>
-                          <div className="flex gap-2">
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
                             {formStep < 2 ? (
                                 <Button type="button" onClick={() => setFormStep(p => p + 1)}>Next</Button>
                             ) : (
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>
                             )}
-                          </div>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -2767,4 +2777,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-    
+
