@@ -26,10 +26,8 @@ service cloud.firestore {
 
     match /users/{userId}/payments/{paymentId} {
       allow read, list: if isOwner(userId) || isAdmin();
-      // Allow admins to update payment status
-      allow update: if isAdmin();
-      // Only backend functions can create invoices, users can't create them.
-      allow create: if false; 
+      // Allow admins to update payment status or create an invoice
+      allow update, create: if isAdmin();
     }
 
     // This rule allows admins to query the 'payments' collection group
