@@ -1615,14 +1615,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             {selectedInvoice?.status}
                         </Badge>
                     </div>
-                    {selectedInvoice?.proofOfPaymentUrl && (
-                        <div className="space-y-2">
-                            <p className="text-sm text-muted-foreground">Proof of Payment</p>
+                    
+                    <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Proof of Payment</p>
+                        {selectedInvoice?.proofOfPaymentUrl ? (
                             <Button variant="outline" onClick={() => setSelectedProofUrl(selectedInvoice.proofOfPaymentUrl!)}>
                                 <Eye className="mr-2 h-4 w-4" /> View Proof
                             </Button>
-                        </div>
-                    )}
+                        ) : (
+                             <Button variant="outline" disabled>
+                                <EyeOff className="mr-2 h-4 w-4" /> No Proof Uploaded
+                            </Button>
+                        )}
+                    </div>
 
                     {selectedInvoice?.status === 'Pending Review' && (
                         <div className="pt-4 space-y-4 border-t">
@@ -2455,5 +2460,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
