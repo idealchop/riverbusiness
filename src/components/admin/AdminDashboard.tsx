@@ -130,6 +130,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = React.useState(false);
     const [userForHistory, setUserForHistory] = React.useState<AppUser | null>(null);
+    const [userForInvoices, setUserForInvoices] = React.useState<AppUser | null>(null);
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
     const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
@@ -169,7 +170,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isSanitationVisitDialogOpen, setIsSanitationVisitDialogOpen] = React.useState(false);
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
-    const [userDetailDefaultTab, setUserDetailDefaultTab] = React.useState('profile');
+    const [isUserInvoicesOpen, setIsUserInvoicesOpen] = React.useState(false);
+
     const ITEMS_PER_PAGE = 20;
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -182,9 +184,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: userDeliveriesData } = useCollection<Delivery>(userDeliveriesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
-        if (!firestore || !selectedUser) return null;
-        return collection(firestore, 'users', selectedUser.id, 'payments');
-    }, [firestore, selectedUser]);
+        const userToQuery = userForInvoices || selectedUser;
+        if (!firestore || !userToQuery) return null;
+        return collection(firestore, 'users', userToQuery.id, 'payments');
+    }, [firestore, userForInvoices, selectedUser]);
     const { data: userPaymentsData, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
 
     const sanitationVisitsQuery = useMemoFirebase(() => {
@@ -765,20 +768,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleInvoiceStatusUpdate = (newStatus: 'Paid' | 'Upcoming') => {
-        if (!selectedUser || !selectedInvoice || !firestore) return;
+        const userToUpdate = userForInvoices || selectedUser;
+        if (!userToUpdate || !selectedInvoice || !firestore) return;
 
-        const invoiceRef = doc(firestore, 'users', selectedUser.id, 'payments', selectedInvoice.id);
+        const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', selectedInvoice.id);
         updateDocumentNonBlocking(invoiceRef, { status: newStatus });
 
         if (newStatus === 'Paid') {
-            createNotification(selectedUser.id, {
+            createNotification(userToUpdate.id, {
                 type: 'payment',
                 title: 'Payment Confirmed',
                 description: `Your payment for invoice ${selectedInvoice.id} has been confirmed. Thank you!`,
                 data: { paymentId: selectedInvoice.id }
             });
         } else { // Rejected
-             createNotification(selectedUser.id, {
+             createNotification(userToUpdate.id, {
                 type: 'payment',
                 title: 'Payment Action Required',
                 description: `Your payment for invoice ${selectedInvoice.id} was rejected. Reason: ${rejectionReason || 'Please contact support.'}`,
@@ -937,18 +941,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-            <DialogContent className="sm:max-w-5xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>User Account Management</DialogTitle>
                     <DialogDescription>
                         View user details and perform administrative actions.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="pr-6 -mr-6">
+                <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
                 {selectedUser && (
                     <div className="grid md:grid-cols-2 gap-8 py-6">
                         {/* Left Column: User Profile & Details */}
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="flex items-start gap-4">
                                 <Avatar className="h-20 w-20">
                                     <AvatarImage src={selectedUser.photoURL || undefined} alt={selectedUser.name} />
@@ -961,104 +965,45 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </div>
                             </div>
                             
-                            <Tabs defaultValue={userDetailDefaultTab} onValueChange={setUserDetailDefaultTab}>
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="profile">Profile</TabsTrigger>
-                                    <TabsTrigger value="invoices">Invoices</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="profile" className="pt-4">
-                                    <Card>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-base">User Profile</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-2 text-sm pt-0">
-                                            <div className="grid grid-cols-2 gap-x-4">
-                                                <div className="text-muted-foreground">Client ID:</div>
-                                                <div className="font-medium text-right">{selectedUser.clientId}</div>
-                                                <div className="text-muted-foreground">Plan:</div>
-                                                <div className="font-medium text-right">{selectedUser.plan?.name || 'N/A'}</div>
-                                                <div className="text-muted-foreground">Role:</div>
-                                                <div className="font-medium text-right">{selectedUser.role}</div>
-                                                <div className="text-muted-foreground">Assigned Station:</div>
-                                                <div className="font-medium text-right">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</div>
-                                                <div className="text-muted-foreground">Last Login:</div>
-                                                <div className="font-medium text-right">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
-                                <TabsContent value="invoices" className="pt-4">
-                                    <ScrollArea className="h-72">
-                                    {paymentsLoading ? (
-                                         <div className="text-center text-muted-foreground py-10">
-                                            Loading invoices...
-                                        </div>
-                                    ) : userPaymentsData && userPaymentsData.length > 0 ? (
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Invoice</TableHead>
-                                                    <TableHead>Status</TableHead>
-                                                    <TableHead className="text-right">Amount</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {userPaymentsData.map((invoice) => (
-                                                    <TableRow key={invoice.id} className="cursor-pointer" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
-                                                        <TableCell>
-                                                            <div className="font-medium">{invoice.id}</div>
-                                                            <div className="text-xs text-muted-foreground">{format(new Date(invoice.date), 'PP')}</div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge
-                                                                variant={invoice.status === 'Paid' ? 'default' : (invoice.status === 'Upcoming' ? 'secondary' : 'outline')}
-                                                                className={cn(
-                                                                    'text-xs',
-                                                                    invoice.status === 'Paid' && 'bg-green-100 text-green-800',
-                                                                    invoice.status === 'Upcoming' && 'bg-yellow-100 text-yellow-800',
-                                                                    invoice.status === 'Overdue' && 'bg-red-100 text-red-800',
-                                                                    invoice.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
-                                                                )}
-                                                            >{invoice.status}</Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    ) : (
-                                         <div className="text-center text-muted-foreground py-10">
-                                            No invoices found for this user.
-                                        </div>
-                                    )}
-                                    </ScrollArea>
-                                </TabsContent>
-                            </Tabs>
-                             <h4 className="font-semibold text-lg pt-4">Actions</h4>
-                             <div className="grid grid-cols-2 gap-2">
-                                <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline" size="sm">
-                                    <History className="mr-2 h-4 w-4" />
-                                    Deliveries
-                                </Button>
-                                <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline" size="sm">
-                                    <FileHeart className="mr-2 h-4 w-4" />
-                                    Sanitation
-                                </Button>
-                                <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin} variant="outline" size="sm">
-                                    <Building className="mr-2 h-4 w-4" />
-                                    Assign Station
-                                </Button>
-                                <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Contract
-                                </Button>
-                            </div>
+                            <Card>
+                                <CardHeader className="pb-4">
+                                    <CardTitle className="text-base">User Profile</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm pt-0">
+                                    <div className="grid grid-cols-[120px_1fr] gap-x-4">
+                                        <div className="text-muted-foreground">Client ID:</div><div className="font-medium">{selectedUser.clientId}</div>
+                                        <div className="text-muted-foreground">Plan:</div><div className="font-medium">{selectedUser.plan?.name || 'N/A'}</div>
+                                        <div className="text-muted-foreground">Role:</div><div className="font-medium">{selectedUser.role}</div>
+                                        <div className="text-muted-foreground">Assigned Station:</div><div className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</div>
+                                        <div className="text-muted-foreground">Last Login:</div><div className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                             <Card>
+                                 <CardHeader>
+                                    <CardTitle className="text-base">Actions</CardTitle>
+                                 </CardHeader>
+                                 <CardContent className="grid grid-cols-2 gap-2">
+                                    <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline" size="sm">
+                                        <History className="mr-2 h-4 w-4" /> Deliveries
+                                    </Button>
+                                    <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline" size="sm">
+                                        <FileHeart className="mr-2 h-4 w-4" /> Sanitation
+                                    </Button>
+                                    <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin} variant="outline" size="sm">
+                                        <Building className="mr-2 h-4 w-4" /> Assign Station
+                                    </Button>
+                                    <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
+                                        <Upload className="mr-2 h-4 w-4" /> Contract
+                                    </Button>
+                                </CardContent>
+                             </Card>
                         </div>
 
                         {/* Right Column: Consumption & Plan */}
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             {selectedUserPlanImage && (
-                                <div className="space-y-2">
                                 <div className="relative w-full h-32 rounded-lg overflow-hidden border">
                                     <Image
                                         src={selectedUserPlanImage.imageUrl}
@@ -1068,36 +1013,35 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         data-ai-hint={selectedUserPlanImage.imageHint}
                                     />
                                 </div>
-                                </div>
                             )}
 
                             <Card>
-                                <CardHeader className="pb-2">
+                                <CardHeader className="pb-4">
                                     <CardTitle className="text-base">Consumption Details</CardTitle>
                                 </CardHeader>
                                 {selectedUser.plan?.isConsumptionBased ? (
                                     <CardContent className="space-y-2 text-sm pt-0">
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Billing Model:</span>
                                             <span className="font-medium">Pay based on consumption</span>
                                         </div>
-                                         <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
-                                            <span className="text-foreground">Estimated Cost This Month:</span>
+                                         <div className="flex justify-between items-center font-semibold text-lg border-t pt-2 mt-2">
+                                            <span>Est. Cost This Month:</span>
                                             <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         <Separator/>
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Consumed this Month:</span>
                                             <span className="font-medium text-red-600">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
                                         </div>
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Rate:</span>
                                             <span className="font-medium">₱{selectedUser.plan.price}/Liter</span>
                                         </div>
                                     </CardContent>
                                 ) : (
                                     <CardContent className="space-y-2 text-sm pt-0">
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Auto Refill:</span>
                                             {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
                                                 <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
@@ -1106,31 +1050,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             )}
                                         </div>
                                         <Separator/>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Monthly Plan Liters:</span>
-                                            <span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Bonus Liters:</span>
-                                            <span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Rollover from Last Month:</span>
-                                            <span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
-                                        </div>
-                                        <div className="flex justify-between font-semibold border-t pt-2 mt-1">
-                                            <span className="text-foreground">Total for this Month:</span>
-                                            <span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span>
-                                        </div>
+                                        <div className="flex justify-between items-center"><span>Plan Liters:</span><span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
+                                        <div className="flex justify-between items-center"><span>Bonus Liters:</span><span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
+                                        <div className="flex justify-between items-center"><span>Rollover:</span><span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
+                                        <div className="flex justify-between items-center font-semibold border-t pt-2 mt-2"><span>Total for Month:</span><span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span></div>
                                         <Separator/>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Consumed this Month:</span>
-                                            <span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
-                                        </div>
-                                        <div className="flex justify-between font-semibold text-lg border-t pt-2 mt-1">
-                                            <span className="text-foreground">Current Balance:</span>
-                                            <span>{consumptionDetails.currentBalance.toLocaleString()} L</span>
-                                        </div>
+                                        <div className="flex justify-between items-center"><span>Consumed:</span><span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span></div>
+                                        <div className="flex justify-between items-center font-semibold text-lg border-t pt-2 mt-2"><span>Current Balance:</span><span>{consumptionDetails.currentBalance.toLocaleString()} L</span></div>
                                     </CardContent>
                                 )}
                             </Card>
@@ -1144,6 +1070,56 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
+        <Dialog open={isUserInvoicesOpen} onOpenChange={(open) => { if (!open) { setUserForInvoices(null); } setIsUserInvoicesOpen(open);}}>
+            <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Invoice History for {userForInvoices?.businessName}</DialogTitle>
+                    <DialogDescription>Review and manage payment statuses.</DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[60vh] pr-6 -mr-6">
+                    {paymentsLoading ? (
+                        <div className="text-center text-muted-foreground py-10">Loading invoices...</div>
+                    ) : userPaymentsData && userPaymentsData.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Invoice ID</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {userPaymentsData.map((invoice) => (
+                                    <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
+                                        <TableCell className="font-mono text-xs">{invoice.id}</TableCell>
+                                        <TableCell>{format(new Date(invoice.date), 'PP')}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant={invoice.status === 'Paid' ? 'default' : invoice.status === 'Pending Review' ? 'secondary' : 'outline'}
+                                                className={cn('text-xs',
+                                                    invoice.status === 'Paid' && 'bg-green-100 text-green-800',
+                                                    invoice.status === 'Upcoming' && 'bg-yellow-100 text-yellow-800',
+                                                    invoice.status === 'Overdue' && 'bg-red-100 text-red-800',
+                                                    invoice.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
+                                                )}
+                                            >{invoice.status}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center text-muted-foreground py-10">No invoices found for this user.</div>
+                    )}
+                </ScrollArea>
+                 <DialogFooter className="pt-4 border-t">
+                    <Button variant="outline" onClick={() => setIsUserInvoicesOpen(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
             <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
@@ -1744,13 +1720,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     const userPendingPayments = pendingPaymentsByUser[user.id] || [];
                                     const handlePaymentStatusClick = (e: React.MouseEvent) => {
                                         e.stopPropagation();
-                                        setSelectedUser(user);
-                                        setUserDetailDefaultTab('invoices');
-                                        setIsUserDetailOpen(true);
+                                        setUserForInvoices(user);
+                                        setIsUserInvoicesOpen(true);
                                     };
 
                                     return (
-                                    <TableRow key={user.id} onClick={() => { setSelectedUser(user); setUserDetailDefaultTab('profile'); setIsUserDetailOpen(true);}} className="cursor-pointer">
+                                    <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                         <TableCell>
@@ -2427,3 +2402,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
