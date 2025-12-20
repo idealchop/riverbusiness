@@ -36,7 +36,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, FieldValue, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -777,7 +777,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (newStatus === 'Upcoming') {
             updatePayload.rejectionReason = rejectionReason;
         } else if (newStatus === 'Paid') {
-            updatePayload.rejectionReason = FieldValue.delete();
+            updatePayload.rejectionReason = deleteField();
         }
 
         updateDocumentNonBlocking(invoiceRef, updatePayload);
@@ -2424,3 +2424,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
