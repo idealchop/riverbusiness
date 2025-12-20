@@ -2643,24 +2643,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                            {formStep === 0 && (
                                 <div className="space-y-4">
                                     <h3 className="font-semibold text-lg">Step 1: Business Details</h3>
-                                    <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Client ID</FormLabel>
-                                            <FormControl><Input placeholder="e.g. C-12345" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField control={newUserForm.control} name="name" render={({ field }) => (
-                                            <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (
-                                            <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Client ID</FormLabel>
+                                              <FormControl><Input placeholder="e.g. C-12345" {...field} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                      )}/>
+                                      <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
+                                          <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                      )}/>
+                                      <FormField control={newUserForm.control} name="name" render={({ field }) => (
+                                          <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                      )}/>
+                                      <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (
+                                          <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
+                                      )}/>
                                     </div>
-                                    <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
-                                        <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
                                     <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
                                         <FormItem><FormLabel>Business Email (Optional)</FormLabel><FormControl><Input type="email" placeholder="contact@business.com" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}/>
@@ -2713,25 +2713,27 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     
                                     {selectedClientType && (
                                         <div className='space-y-4'>
-                                            <FormField
+                                             <FormField
                                                 control={newUserForm.control}
                                                 name="plan"
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Select a Plan</FormLabel>
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                            {planOptions.map(plan => {
-                                                                const isSelected = field.value?.name === plan.name;
-                                                                return (
-                                                                    <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
-                                                                        <CardContent className="p-4">
-                                                                            <h4 className="font-semibold">{plan.name}</h4>
-                                                                            <p className="text-sm text-muted-foreground">{plan.description}</p>
-                                                                        </CardContent>
-                                                                    </Card>
-                                                                )
-                                                            })}
-                                                        </div>
+                                                        <FormControl>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                {planOptions.map(plan => {
+                                                                    const isSelected = field.value?.name === plan.name;
+                                                                    return (
+                                                                        <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
+                                                                            <CardHeader>
+                                                                              <CardTitle className="text-base">{plan.name}</CardTitle>
+                                                                              <CardDescription>{plan.description}</CardDescription>
+                                                                            </CardHeader>
+                                                                        </Card>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                        </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -2739,15 +2741,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                             {selectedPlan && (
                                                 <div className="space-y-6 pt-4">
-                                                    {!selectedPlan.isConsumptionBased && (
+                                                    {!selectedPlan.isConsumptionBased ? (
                                                         <div className="space-y-4 p-4 border rounded-lg">
                                                             <h4 className="font-medium">Subscription</h4>
-                                                            {selectedPlan.price > 0 && (
-                                                                <div className="grid gap-2">
-                                                                    <Label>Amount per Month</Label>
-                                                                    <Input value={`P ${selectedPlan.price.toLocaleString()}`} readOnly className="font-bold text-lg h-auto p-2 border-0 bg-muted"/>
-                                                                </div>
-                                                            )}
+                                                            <div className="grid gap-2">
+                                                                <Label>Amount per Month</Label>
+                                                                <Input value={`P ${selectedPlan.price.toLocaleString()}`} readOnly className="font-bold text-lg h-auto p-2 border-0 bg-muted"/>
+                                                            </div>
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
                                                                     <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
@@ -2757,7 +2757,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 )}/>
                                                             </div>
                                                         </div>
-                                                    )}
+                                                     ) : (
+                                                        <div className="p-4 border rounded-lg bg-muted/50">
+                                                            <h4 className="font-medium">Billing</h4>
+                                                            <p className="text-sm text-muted-foreground">This is a consumption-based plan. The client will be billed at <span className="font-bold text-foreground">P{selectedPlan.price}/liter</span> at the end of each month.</p>
+                                                        </div>
+                                                     )}
                                                      <div className="space-y-4 p-4 border rounded-lg">
                                                         <h4 className="font-medium">Equipment & Schedule</h4>
                                                         <div className="grid grid-cols-2 gap-4">
@@ -2796,14 +2801,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogFooter>
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
                             
-                            {formStep < 1 ? (
+                            {formStep === 0 &&
                                 <Button type="button" onClick={async () => {
                                      const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail']);
                                      if (isValid) setFormStep(1);
                                 }}>Next</Button>
-                            ) : (
+                            }
+                            {formStep === 1 &&
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>
-                            )}
+                            }
                         </DialogFooter>
                     </form>
                 </Form>
@@ -2812,4 +2818,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
