@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -960,7 +961,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-5xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>User Account Management</DialogTitle>
                     <DialogDescription>
@@ -978,7 +979,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <AvatarFallback className="text-3xl">{selectedUser.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1">
-                                    <h4 className="font-semibold text-lg">{selectedUser.name}</h4>
+                                    <h4 className="font-semibold text-lg">{selectedUser.businessName}</h4>
+                                    <p className="text-sm text-muted-foreground">Contact: {selectedUser.name}</p>
                                     <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                                 </div>
                             </div>
@@ -993,34 +995,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <CardHeader className="pb-2">
                                             <CardTitle className="text-base">User Profile</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="space-y-1 text-sm pt-0">
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Client ID:</span>
-                                                <span className="font-medium">{selectedUser.clientId}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Business Name:</span>
-                                                <span className="font-medium">{selectedUser.businessName}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Contact Person:</span>
-                                                <span className="font-medium">{selectedUser.name}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Plan:</span>
-                                                <span className="font-medium">{selectedUser.plan?.name || 'N/A'}</span>
-                                            </div>
-                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Role:</span>
-                                                <span className="font-medium">{selectedUser.role}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Assigned Station:</span>
-                                                <span className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Last Login:</span>
-                                                <span className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</span>
+                                        <CardContent className="space-y-2 text-sm pt-0">
+                                            <div className="grid grid-cols-2 gap-x-4">
+                                                <div className="text-muted-foreground">Client ID:</div>
+                                                <div className="font-medium text-right">{selectedUser.clientId}</div>
+                                                <div className="text-muted-foreground">Plan:</div>
+                                                <div className="font-medium text-right">{selectedUser.plan?.name || 'N/A'}</div>
+                                                <div className="text-muted-foreground">Role:</div>
+                                                <div className="font-medium text-right">{selectedUser.role}</div>
+                                                <div className="text-muted-foreground">Assigned Station:</div>
+                                                <div className="font-medium text-right">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</div>
+                                                <div className="text-muted-foreground">Last Login:</div>
+                                                <div className="font-medium text-right">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -1072,19 +1058,56 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </ScrollArea>
                                 </TabsContent>
                             </Tabs>
+                             <h4 className="font-semibold text-lg pt-4">Actions</h4>
+                             <div className="grid grid-cols-2 gap-2">
+                                <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline" size="sm">
+                                    <History className="mr-2 h-4 w-4" />
+                                    Deliveries
+                                </Button>
+                                <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline" size="sm">
+                                    <FileHeart className="mr-2 h-4 w-4" />
+                                    Sanitation
+                                </Button>
+                                <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin} variant="outline" size="sm">
+                                    <Building className="mr-2 h-4 w-4" />
+                                    Assign Station
+                                </Button>
+                                <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Contract
+                                </Button>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="destructive" disabled={selectedUser.plan?.isConsumptionBased} className="w-full mt-2" size="sm">
+                                        <Repeat className="mr-2 h-4 w-4" />
+                                        Adjust Consumption
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                    <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Add Liters
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
+                                         <MinusCircle className="mr-2 h-4 w-4" />
+                                        Deduct Liters
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
                         </div>
 
-                        {/* Right Column: Consumption & Actions */}
+                        {/* Right Column: Consumption & Plan */}
                         <div className="space-y-4">
                             {selectedUserPlanImage && (
                                 <div className="space-y-2">
-                                <h4 className="font-semibold text-lg text-center">{selectedUser.clientType} Plan</h4>
-                                <div className="relative w-full h-32 rounded-lg overflow-hidden">
+                                <div className="relative w-full h-32 rounded-lg overflow-hidden border">
                                     <Image
                                         src={selectedUserPlanImage.imageUrl}
                                         alt={selectedUser.clientType || ''}
                                         fill
-                                        className="object-contain"
+                                        className="object-cover"
                                         data-ai-hint={selectedUserPlanImage.imageHint}
                                     />
                                 </div>
@@ -1154,49 +1177,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </CardContent>
                                 )}
                             </Card>
-
-                            <h4 className="font-semibold text-lg border-b pb-2">Actions</h4>
-                            <div className="flex flex-col gap-2">
-                                <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline">
-                                    <History className="mr-2 h-4 w-4" />
-                                    Delivery History
-                                </Button>
-                                <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline">
-                                    <FileHeart className="mr-2 h-4 w-4" />
-                                    Manage Sanitation
-                                </Button>
-                                <Button onClick={() => { setIsAssignStationOpen(true); }} disabled={!isAdmin}>
-                                    <Building className="mr-2 h-4 w-4" />
-                                    Assign Station
-                                </Button>
-                                <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin}>
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    Attach Contract
-                                </Button>
-                                 <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" disabled={selectedUser.plan?.isConsumptionBased}>
-                                            <Repeat className="mr-2 h-4 w-4" />
-                                            Adjust Consumption
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => { setAdjustmentType('add'); setIsAdjustConsumptionOpen(true); }}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Add Liters
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => { setAdjustmentType('deduct'); setIsAdjustConsumptionOpen(true); }}>
-                                             <MinusCircle className="mr-2 h-4 w-4" />
-                                            Deduct Liters
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                {selectedUser.currentContractUrl && (
-                                    <Button variant="link" asChild>
-                                        <a href={selectedUser.currentContractUrl} target="_blank" rel="noopener noreferrer">View Contract</a>
-                                    </Button>
-                                )}
-                            </div>
                         </div>
                     </div>
                 )}
@@ -2522,3 +2502,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
