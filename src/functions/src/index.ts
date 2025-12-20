@@ -10,6 +10,12 @@ import * as path from 'path';
 import type { Notification } from './types';
 
 
+// Import all exports from billing.ts
+import * as billing from './billing';
+
+// Export all billing functions so they are deployed
+export * from './billing';
+
 // Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
@@ -122,6 +128,53 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     await createNotification(userId, notification);
 });
 
+/**
+ * Cloud Function to send notifications for sanitation visit creations.
+ */
+export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const visit = event.data.data();
+
+    const scheduledDate = new Date(visit.scheduledDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const notification = {
+        type: 'sanitation',
+        title: 'Sanitation Visit Scheduled',
+        description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
+        data: { visitId: event.params.visitId }
+    };
+
+    await createNotification(userId, notification);
+});
+
+/**
+ * Cloud Function to send notifications for sanitation visit updates.
+ */
+export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (before.status === after.status) return; // No change, no notification
+
+    const scheduledDate = new Date(after.scheduledDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const notification = {
+        type: 'sanitation',
+        title: `Sanitation Visit: ${after.status}`,
+        description: `Your sanitation visit for ${scheduledDate} is now ${after.status}.`,
+        data: { visitId: event.params.visitId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
 
 /**
  * Generic Cloud Function for file uploads.
@@ -206,7 +259,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     if (filePath.startsWith("users/") && filePath.includes("/sanitationVisits/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
-        const visitId = parts[3];
+        const visitId = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
             reportUrl: url,
