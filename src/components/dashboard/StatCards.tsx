@@ -39,69 +39,60 @@ export function StatCards({
   const consumptionDetails = React.useMemo(() => {
     const now = new Date();
     const emptyState = {
-      monthlyPlanLiters: 0,
-      bonusLiters: 0,
-      rolloverLiters: 0,
-      totalLitersForMonth: 0,
-      consumedLitersThisMonth: 0,
-      currentBalance: user?.totalConsumptionLiters || 0,
-      consumedPercentage: 0,
-      remainingPercentage: 100,
-      estimatedCost: 0,
+        monthlyPlanLiters: 0,
+        bonusLiters: 0,
+        rolloverLiters: 0,
+        totalLitersForMonth: user?.totalConsumptionLiters || 0,
+        consumedLitersThisMonth: 0,
+        currentBalance: user?.totalConsumptionLiters || 0,
+        consumedPercentage: 0,
+        remainingPercentage: 100,
+        estimatedCost: 0,
     };
 
     if (!user || !user.plan || !deliveries) {
-      return emptyState;
+        return emptyState;
     }
-  
-    // Use the correct plan details, regardless of where they are stored
+
     const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
-  
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
-  
+
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
     const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-  
+
     if (user.plan.isConsumptionBased) {
-      return {
-        ...emptyState,
-        consumedLitersThisMonth,
-        currentBalance: 0, // Not applicable for consumption plan
-        estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
-      };
-    }
-  
-    if (!planDetails) {
         return {
             ...emptyState,
-            consumedLitersThisMonth, // Still show what's consumed this month
-            currentBalance: user.totalConsumptionLiters // Fallback to the stored total
+            consumedLitersThisMonth,
+            currentBalance: 0, // Not applicable for consumption plan
+            estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
         };
     }
-  
+    
     // This is the total available balance for the user at the start of the period.
     const totalAvailableLiters = user.totalConsumptionLiters;
     const currentBalance = totalAvailableLiters - consumedLitersThisMonth;
 
     const consumedPercentage = totalAvailableLiters > 0 ? (consumedLitersThisMonth / totalAvailableLiters) * 100 : 0;
     const remainingPercentage = 100 - consumedPercentage;
-  
+    
     return {
-      ...emptyState,
-      monthlyPlanLiters: planDetails.litersPerMonth || 0,
-      bonusLiters: planDetails.bonusLiters || 0,
-      totalLitersForMonth: totalAvailableLiters, // This is the key change: total is the user's actual balance
-      consumedLitersThisMonth,
-      currentBalance: currentBalance, // The true remaining balance
-      consumedPercentage,
-      remainingPercentage,
-      estimatedCost: user.plan.price || 0,
+        ...emptyState,
+        monthlyPlanLiters: planDetails?.litersPerMonth || 0,
+        bonusLiters: planDetails?.bonusLiters || 0,
+        // The total for the month IS the user's entire available balance.
+        totalLitersForMonth: totalAvailableLiters,
+        consumedLitersThisMonth,
+        currentBalance,
+        consumedPercentage,
+        remainingPercentage,
+        estimatedCost: user.plan.price || 0,
     };
-  }, [user, deliveries]);
+}, [user, deliveries]);
 
 
   const handleAutoRefillToggle = (checked: boolean) => {
