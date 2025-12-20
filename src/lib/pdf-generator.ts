@@ -212,7 +212,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
       
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text('River Philippines', margin, pageHeight - 38);
+      doc.text('River Tech Inc.', margin, pageHeight - 38);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120);
       doc.text('| Turn Essential Needs Into Automatic Experience.', margin + 70, pageHeight - 38);
@@ -426,7 +426,7 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
 
     // --- FROM / TO ---
     doc.setFont('helvetica', 'bold');
-    doc.text('River Philippines', margin, lastY);
+    doc.text('River Tech Inc.', margin, lastY);
     doc.setFont('helvetica', 'normal');
     doc.text('Filinvest Axis Tower 1', margin, lastY + 12);
     doc.text('Alabang, Muntinlupa', margin, lastY + 24);
@@ -450,11 +450,15 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     lastY += 30;
 
     // --- LINE ITEMS TABLE ---
+    const planName = user.plan?.name || 'N/A';
+    const totalLiters = user.customPlanDetails?.litersPerMonth?.toLocaleString() || 'N/A';
+    const description = `${invoice.description}\nPlan: ${planName} (${totalLiters} L/mo)`;
+
     doc.autoTable({
         startY: lastY,
         head: [["Description", "Qty", "Unit price", "Amount"]],
         body: [[
-            invoice.description,
+            description,
             1,
             `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
             `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
