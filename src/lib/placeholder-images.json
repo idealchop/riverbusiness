@@ -77,6 +77,12 @@
       "description": "A beautiful river flowing through a lush landscape.",
       "imageUrl": "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
       "imageHint": "river landscape"
+    },
+    {
+      "id": "welcome-river",
+      "description": "A scenic, winding river from an aerial view.",
+      "imageUrl": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080",
+      "imageHint": "river aerial"
     }
   ]
 }

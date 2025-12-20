@@ -103,6 +103,8 @@ import { ComplianceDialog } from '@/components/dashboard/dialogs/ComplianceDialo
 import { AttachmentViewerDialog } from '@/components/dashboard/dialogs/AttachmentViewerDialog';
 import { RefillStatusDialog } from '@/components/dashboard/dialogs/RefillStatusDialog';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { WelcomeDialog } from '@/components/dashboard/WelcomeDialog';
+
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -128,6 +130,7 @@ export default function DashboardPage() {
     saveLiters: false,
     compliance: false,
     refillStatus: false,
+    welcome: false,
   });
 
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
@@ -271,6 +274,16 @@ export default function DashboardPage() {
     else setGreeting('Good evening');
   }, []);
 
+  useEffect(() => {
+    // Show welcome dialog on first load after user is confirmed
+    if (user && !isUserDocLoading) {
+      const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+      if (!hasSeenWelcome) {
+        setDialogState((prev) => ({ ...prev, welcome: true }));
+        sessionStorage.setItem('hasSeenWelcome', 'true');
+      }
+    }
+  }, [user, isUserDocLoading]);
   
   const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
@@ -325,6 +338,12 @@ export default function DashboardPage() {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-8">
+        <WelcomeDialog 
+            isOpen={dialogState.welcome}
+            onOpenChange={() => closeDialog('welcome')}
+            user={user}
+        />
+
         <DashboardHeader
           greeting={greeting}
           userName={user?.businessName}
@@ -412,4 +431,3 @@ export default function DashboardPage() {
     </TooltipProvider>
   );
 }
-
