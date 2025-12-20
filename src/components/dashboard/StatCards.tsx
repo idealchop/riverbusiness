@@ -54,7 +54,8 @@ export function StatCards({
       return emptyState;
     }
     
-    // Unify the source of custom plan details. Check top-level first, then fall back to plan-nested.
+    // **DEFINITIVE FIX**: Correctly and reliably get planDetails regardless of user profile structure.
+    // This checks the top-level for existing users, and falls back to the nested plan object for new users.
     const planDetails = user.customPlanDetails || user.plan?.customPlanDetails;
 
     const cycleStart = startOfMonth(now);
