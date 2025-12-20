@@ -2,7 +2,7 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import type { AppUser, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
+import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment } from '@/lib/types';
 import type { DateRange } from 'react-day-picker';
 
 // Extend jsPDF with the autoTable method
@@ -147,7 +147,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
         // Branding Message
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.setFont('helvetica', 'bold');
-        doc.text('River Philippines: Turn Essential Needs Into an Automatic Experience.', 14, pageHeight - 12);
+        doc.text('River Philippines: Turn Essential Needs Into Automatic Experience.', 14, pageHeight - 12);
         
         // Page Number
         doc.setTextColor(150);
@@ -377,3 +377,124 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     // --- SAVE PDF ---
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`);
 };
+
+interface InvoicePDFProps {
+    user: AppUser;
+    invoice: Payment;
+}
+
+export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
+    const doc = new jsPDF('p', 'pt');
+    const primaryColor = [21, 99, 145];
+    const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.width;
+    let lastY = 0;
+    const margin = 40;
+
+    // --- HEADER ---
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 70, 'F');
+
+    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+    try {
+        doc.addImage(logoUrl, 'JPEG', margin, 18, 35, 35);
+    } catch (e) {
+        console.error("Could not add logo to PDF:", e);
+    }
+
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('INVOICE', pageWidth - margin, 45, { align: 'right' });
+
+    lastY = 100;
+
+    // --- BILLING & DATE INFO ---
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('BILL TO:', margin, lastY);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+    doc.text(user.businessName || 'N/A', margin, lastY + 12);
+    doc.text(user.address || 'No address provided', margin, lastY + 22);
+
+    const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('INVOICE #:', pageWidth / 2, lastY);
+    doc.text('DATE OF ISSUE:', pageWidth / 2, lastY + 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
+    doc.text(invoice.id, (pageWidth / 2) + 85, lastY);
+    doc.text(format(invoiceDate, 'PP'), (pageWidth / 2) + 85, lastY + 12);
+
+    lastY += 50;
+    
+     // --- PAID STAMP ---
+    doc.saveGraphicsState();
+    doc.setFontSize(72);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 128, 0);
+    doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+    doc.text('PAID', pageWidth / 2, pageHeight / 2 + 30, { align: 'center', angle: -45 });
+    doc.restoreGraphicsState();
+
+    // --- TABLE ---
+    doc.autoTable({
+        startY: lastY,
+        head: [["DESCRIPTION", "AMOUNT"]],
+        body: [[invoice.description, `P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`]],
+        theme: 'striped',
+        headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 10, cellPadding: 8 },
+        bodyStyles: { fontSize: 10, cellPadding: 8 },
+        margin: { left: margin, right: margin },
+    });
+    lastY = (doc as any).lastAutoTable.finalY + 20;
+
+    // --- FINANCIAL SUMMARY ---
+    const summaryX = pageWidth - margin - 220;
+    const subtotal = invoice.amount;
+    const tax = 0; // Assuming 0 for now
+    const grandTotal = subtotal + tax;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80);
+    doc.text('Subtotal:', summaryX, lastY);
+    doc.text(`P ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin, lastY, { align: 'right' });
+
+    doc.text('Tax (0%):', summaryX, lastY + 18);
+    doc.text(`P ${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin, lastY + 18, { align: 'right' });
+
+    doc.setLineWidth(1);
+    doc.line(summaryX - 5, lastY + 32, pageWidth - margin, lastY + 32);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text('Total Paid:', summaryX, lastY + 50);
+    doc.text(`P ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin, lastY + 50, { align: 'right' });
+    
+    lastY += 80;
+
+    // --- FOOTER ---
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
+      
+    doc.setFontSize(8);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Thank you for your business!', margin, pageHeight - 38);
+    
+    doc.setTextColor(150);
+    doc.text(`Invoice ${invoice.id}`, pageWidth - margin, pageHeight - 38, { align: 'right' });
+
+
+    // --- SAVE PDF ---
+    doc.save(`Invoice_${invoice.id}.pdf`);
+}
+
+    
