@@ -32,6 +32,26 @@
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
+    "UnclaimedProfile": {
+      "title": "UnclaimedProfile",
+      "type": "object",
+      "description": "Represents a pre-configured user profile created by an admin, waiting to be claimed by a new user. The document ID is the clientId.",
+      "properties": {
+        "clientId": { "type": "string", "description": "Manually assigned client identifier. This is the primary key." },
+        "name": { "type": "string", "description": "User's full name." },
+        "businessEmail": { "type": "string", "format": "email", "description": "User's business contact email address." },
+        "businessName": { "type": "string", "description": "User's business name." },
+        "address": { "type": "string", "description": "User's address." },
+        "contactNumber": { "type": "string", "description": "User's phone number." },
+        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters." },
+        "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
+        "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
+        "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
+        "plan": { "type": "object", "description": "User's subscription plan details." },
+        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
+      },
+      "required": ["clientId", "name", "businessName", "businessEmail", "plan", "adminCreatedAt"]
+    },
     "WaterStation": {
       "title": "WaterStation",
       "type": "object",
@@ -232,6 +252,10 @@
     "/schedules/currentSchedule": {
       "schema": { "$ref": "#/entities/Schedule" },
       "description": "A single document to hold the current global delivery schedule."
+    },
+    "/unclaimedProfiles/{clientId}": {
+      "schema": { "$ref": "#/entities/UnclaimedProfile" },
+      "description": "Stores pre-configured profiles created by an admin, waiting to be claimed. The document ID is the clientId."
     }
   }
 }

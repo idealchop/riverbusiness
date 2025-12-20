@@ -41,7 +41,7 @@ import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, g
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import { clientTypes } from '@/lib/plans';
+import { clientTypes, enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
@@ -92,6 +92,18 @@ const sanitationVisitSchema = z.object({
 });
 
 type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
+
+const newUserSchema = z.object({
+  clientId: z.string().min(1, { message: 'Client ID is required' }),
+  name: z.string().min(1, { message: 'Full Name is required' }),
+  businessName: z.string().min(1, { message: 'Business Name is required' }),
+  businessEmail: z.string().email({ message: 'A valid business email is required' }),
+  address: z.string().min(1, { message: 'Address is required' }),
+  contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
+});
+
+type NewUserFormValues = z.infer<typeof newUserSchema>;
+
 
 const defaultChecklistItems: Omit<SanitationChecklistItem, 'id'>[] = [
     { item: 'Exterior surfaces inspected for dust, dirt, or spills.', checked: false, remarks: '' },
@@ -172,6 +184,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
     const [isUserInvoicesOpen, setIsUserInvoicesOpen] = React.useState(false);
+    const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
+
 
     const ITEMS_PER_PAGE = 20;
 
@@ -371,6 +385,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         resolver: zodResolver(deliveryFormSchema),
     });
     
+    const newUserForm = useForm<NewUserFormValues>({
+        resolver: zodResolver(newUserSchema),
+    });
 
     const complianceReportForm = useForm<ComplianceReportFormValues>({
         resolver: zodResolver(complianceReportSchema),
@@ -1671,14 +1688,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
         <div className="space-y-6">
             <Card>
-                <CardHeader>
-                    <CardTitle className="relative flex items-center">
-                        <Users className="mr-2 h-4 w-4"/>User Management
-                        {activeRefillRequests.length > 0 && (
-                            <Badge className="ml-2 h-5 w-5 justify-center p-0">{activeRefillRequests.length}</Badge>
-                        )}
-                    </CardTitle>
-                    <CardDescription>Manage all user accounts and their details.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="relative flex items-center">
+                            <Users className="mr-2 h-4 w-4"/>User Management
+                            {activeRefillRequests.length > 0 && (
+                                <Badge className="ml-2 h-5 w-5 justify-center p-0">{activeRefillRequests.length}</Badge>
+                            )}
+                        </CardTitle>
+                        <CardDescription>Manage all user accounts and their details.</CardDescription>
+                    </div>
+                    <Button onClick={() => setIsCreateUserOpen(true)}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Create User
+                    </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
                      {activeRefillRequests.length > 0 && (
@@ -2450,6 +2473,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+          <DialogContent className="sm:max-w-4xl">
+            <DialogHeader>
+                <DialogTitle>Create New Client Profile</DialogTitle>
+                <DialogDescription>Set up a new client account. The client will claim this profile using the Client ID.</DialogDescription>
+            </DialogHeader>
+            <Form {...newUserForm}>
+                <form className="space-y-4">
+                    {/* Form fields will go here */}
+                </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
     </>
   );
 }
