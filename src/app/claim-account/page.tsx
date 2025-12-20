@@ -65,12 +65,17 @@ export default function ClaimAccountPage() {
 
       const unclaimedData = unclaimedProfileSnap.data();
       
+      // The definitive fix: Ensure all data from the unclaimed profile,
+      // including the top-level customPlanDetails and totalConsumptionLiters,
+      // is correctly copied to the new user profile.
       const newUserData = {
-        ...unclaimedData,
+        ...unclaimedData, // This carries over all fields like customPlanDetails, totalConsumptionLiters, etc.
         id: authUser.uid,
         email: authUser.email,
         onboardingComplete: true,
-        // The customPlanDetails are already at the top level from the unclaimed profile
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        accountStatus: 'Active',
       };
 
       batch.set(userProfileRef, newUserData);
@@ -126,3 +131,5 @@ export default function ClaimAccountPage() {
     </main>
   );
 }
+
+    

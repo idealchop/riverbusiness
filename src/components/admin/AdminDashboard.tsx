@@ -297,6 +297,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             return { ...emptyState, currentBalance: selectedUser?.totalConsumptionLiters || 0 };
         }
     
+        const planDetails = selectedUser.customPlanDetails || selectedUser.plan.customPlanDetails;
+
         const cycleStart = startOfMonth(now);
         const cycleEnd = endOfMonth(now);
         
@@ -315,6 +317,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
 
         if (!selectedUser.createdAt) return emptyState;
+        if (!planDetails) return { ...emptyState, currentBalance: selectedUser.totalConsumptionLiters - consumedLitersThisMonth };
+
 
         const createdAtDate = typeof (selectedUser.createdAt as any)?.toDate === 'function' 
             ? (selectedUser.createdAt as any).toDate() 
@@ -324,8 +328,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const lastCycleStart = startOfMonth(lastMonth);
         const lastCycleEnd = endOfMonth(lastMonth);
         
-        const monthlyPlanLiters = selectedUser.customPlanDetails?.litersPerMonth || 0;
-        const bonusLiters = selectedUser.customPlanDetails?.bonusLiters || 0;
+        const monthlyPlanLiters = planDetails.litersPerMonth || 0;
+        const bonusLiters = planDetails.bonusLiters || 0;
         const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
         
         let rolloverLiters = 0;
@@ -1011,8 +1015,28 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const [formStep, setFormStep] = React.useState(0);
+
+    const getPlansForType = (type: string) => {
+        switch (type) {
+            case 'Family': return familyPlans;
+            case 'SME': return smePlans;
+            case 'Commercial': return commercialPlans;
+            case 'Corporate': return corporatePlans;
+            default: return [];
+        }
+    };
+    
     const selectedClientType = newUserForm.watch('clientType');
 
+    const planOptions = React.useMemo(() => {
+        if (!selectedClientType) return [];
+        if (selectedClientType === 'Enterprise') {
+            return enterprisePlans;
+        }
+        return getPlansForType(selectedClientType);
+    }, [selectedClientType]);
+
+    
     const handleCreateNewUser = async (values: NewUserFormValues) => {
         if (!firestore) return;
         setIsSubmitting(true);
@@ -1025,19 +1049,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 setIsSubmitting(false);
                 return;
             }
-
+            
             const { customPlanDetails, plan, ...rest } = values;
 
+            // This is the correct structure.
             const profileData = {
-                ...rest,
-                customPlanDetails: customPlanDetails,
+                ...rest, // name, businessName, address, etc.
+                customPlanDetails, // The detailed configuration object at the top level
                 plan: {
                     name: plan.name,
                     price: plan.price,
                     isConsumptionBased: plan.isConsumptionBased || false,
                 },
                 role: 'User',
-                totalConsumptionLiters: plan?.isConsumptionBased ? 0 : (customPlanDetails?.litersPerMonth || 0),
+                // Correctly set initial liter balance
+                totalConsumptionLiters: plan.isConsumptionBased ? 0 : (customPlanDetails.litersPerMonth || 0) + (customPlanDetails.bonusLiters || 0),
                 adminCreatedAt: serverTimestamp(),
             };
             
@@ -1054,24 +1080,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsSubmitting(false);
         }
     }
-
-    const getPlansForType = (type: string) => {
-        switch (type) {
-            case 'Family': return familyPlans;
-            case 'SME': return smePlans;
-            case 'Commercial': return commercialPlans;
-            case 'Corporate': return corporatePlans;
-            default: return [];
-        }
-    };
-    
-    const planOptions = React.useMemo(() => {
-        if (!selectedClientType) return [];
-        if (selectedClientType === 'Enterprise') {
-            return enterprisePlans;
-        }
-        return getPlansForType(selectedClientType);
-    }, [selectedClientType]);
     
     const selectedPlan = newUserForm.watch('plan');
 
@@ -1080,14 +1088,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (name === 'clientType') {
                 const plans = getPlansForType(value.clientType!);
                 const newPlan = (value.clientType === 'Enterprise') ? enterprisePlans[0] : (plans.length > 0 ? plans[0] : null);
-                newUserForm.setValue('plan', newPlan, { shouldValidate: true });
+                 if (newPlan) {
+                    newUserForm.setValue('plan', newPlan);
+                } else {
+                    newUserForm.setValue('plan', null);
+                }
             }
              if (name === 'plan' && value.plan) {
-                 newUserForm.setValue('customPlanDetails.litersPerMonth', value.plan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0));
+                const planPrice = value.plan.price || 0;
+                // Check if the current price in the form is different before setting
+                if (newUserForm.getValues('plan.price') !== planPrice) {
+                    newUserForm.setValue('plan.price', planPrice);
+                }
             }
         });
         return () => subscription.unsubscribe();
-    }, [newUserForm, selectedClientType]);
+    }, [newUserForm]);
 
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
@@ -2734,7 +2750,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         </FormControl>
                                                         <SelectContent>
                                                             {planOptions.map(plan => (
-                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
+                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && !plan.isConsumptionBased && `(P${plan.price}/mo)`} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -2749,8 +2765,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             {!selectedPlan.isConsumptionBased ? (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Subscription</h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                       <FormField
+                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                         <FormField
                                                             control={newUserForm.control}
                                                             name="plan.price"
                                                             render={({ field }) => (
@@ -2835,3 +2851,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
