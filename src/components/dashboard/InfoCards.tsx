@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { CheckCircle, ExternalLink, Gift, Lightbulb, MapPin } from 'lucide-react';
+import { CheckCircle, ExternalLink, Gift, Lightbulb, MapPin, Rocket, Users, Target } from 'lucide-react';
 
 const perks = [
     { 
@@ -22,26 +23,7 @@ const perks = [
     },
 ];
 
-const tips = [
-    { title: "Give Your Bottle a Sniff Test", description: "Before you leave home, check your bottle for cleanliness. If it smells sour or 'off,' it needs a proper wash. That smell means germs are in the bottle, not the water!" },
-    { title: "Empty Out Old Water", description: "Don't mix old, potentially contaminated water with your fresh refill. Always pour out any standing water from the day before to start fresh." },
-    { title: "Check the Cap and Spout", description: "Inspect the threads and spout for any residue. The part that touches your mouth should always be clean to protect the fresh water." },
-    { title: "Look for the Clean Signs", description: "At the refill station, check if the area is dry and tidy. A well-maintained station is a good sign of safe practices." },
-    { title: "Stop the Touch", description: "Prevent cross-contamination by making sure the refilling nozzle never touches the inside of your bottle. Hold your container carefully beneath it." },
-    { title: "Pick the Right Temperature", description: "If the station offers chilled water, choose it! People naturally drink more when water is cold and refreshing." },
-    { title: "Weekly Soap and Water Wash", description: "Once a week, use dish soap and a bottle brush to scrub the inside walls, bottom, and especially the neck and threads where germs hide." },
-    { title: "The Sanitizing Soak", description: "For a deep clean, fill your bottle with a mix of equal parts white vinegar and water and let it sit for 30 minutes. Rinse thoroughly afterward." },
-    { title: "⭐ Hydration Tip", description: "Keep your refilled bottle visible on your desk or near you throughout the day. If you see it, you'll remember to drink it!" }
-];
-
 export function InfoCards() {
-  const [dailyTip, setDailyTip] = useState<{ title: string; description: string } | null>(null);
-
-  useEffect(() => {
-    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    const tipIndex = dayOfYear % tips.length;
-    setDailyTip(tips[tipIndex]);
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -122,17 +104,29 @@ export function InfoCards() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-yellow-400" /> Tip of the Day
+            <Rocket className="h-5 w-5 text-primary" /> What's Coming Next
           </CardTitle>
-          <CardDescription>A daily tip to keep your water safe and refreshing.</CardDescription>
+          <CardDescription>A look at the future of River Business automation.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {dailyTip && (
-            <>
-              <h4 className="font-semibold">{dailyTip.title}</h4>
-              <p className="text-sm text-muted-foreground">{dailyTip.description}</p>
-            </>
-          )}
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                  <h4 className="font-semibold">HR Solution</h4>
+                  <p className="text-sm text-muted-foreground">Automate payroll, manage employee data, and streamline HR processes with our upcoming, fully-integrated HR platform.</p>
+              </div>
+          </div>
+          <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Target className="h-5 w-5" />
+              </div>
+              <div>
+                  <h4 className="font-semibold">CRM Solution</h4>
+                  <p className="text-sm text-muted-foreground">Enhance customer relationships with our powerful CRM. Track leads, manage sales pipelines, and improve customer service effortlessly.</p>
+              </div>
+          </div>
         </CardContent>
       </Card>
     </div>
