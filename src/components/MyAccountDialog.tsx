@@ -849,92 +849,78 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                 dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: null });
             }
         }}>
-            <DialogContent className="sm:max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle>Invoice Details</DialogTitle>
-                    <DialogDescription>
-                        A summary of your payment for {state.selectedInvoiceForDetail ? format(toSafeDate(state.selectedInvoiceForDetail.date) || new Date(), 'MMMM yyyy') : ''}.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-6">
-                    <div className="p-6 border rounded-lg relative overflow-hidden">
-                        <div className="absolute top-4 right-4 transform rotate-12">
-                            <div className="px-4 py-2 border-2 border-green-500 rounded-md text-green-500 font-bold text-2xl uppercase">
-                                Paid
-                            </div>
-                        </div>
+            <DialogContent className="sm:max-w-2xl bg-muted/30 p-0 border-0">
+                <div className="p-8">
+                    <div className="flex items-center gap-2 mb-8">
+                        <Logo className="h-8 w-8" />
+                        <h3 className="font-semibold text-foreground">River Business</h3>
+                    </div>
 
-                        <div className="flex justify-between items-start mb-8">
-                            <div>
-                                <Logo className="h-12 w-12 mb-2" />
-                                <h3 className="font-bold text-lg">River Philippines</h3>
-                                <p className="text-xs text-muted-foreground">Filinvest Axis Tower 1, Alabang, Muntinlupa</p>
-                                <p className="text-xs text-muted-foreground">business@smartrefill.io</p>
+                    <Card className="mb-4">
+                        <CardContent className="p-6">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Receipt from River Business</p>
+                                    <p className="text-4xl font-bold mt-1">₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</p>
+                                    <p className="text-sm text-muted-foreground">Paid {state.selectedInvoiceForDetail ? format(toSafeDate(state.selectedInvoiceForDetail.date) || new Date(), 'PP') : ''}</p>
+                                </div>
+                                <div className="p-3 rounded-lg bg-secondary">
+                                    <FileText className="h-8 w-8 text-muted-foreground" />
+                                </div>
                             </div>
-                            <div className="text-right">
-                                <h4 className="font-bold text-xl">INVOICE</h4>
-                                <p className="text-sm text-muted-foreground">{state.selectedInvoiceForDetail?.id}</p>
+                            <Separator className="my-6" />
+                            <div className="space-y-3 text-sm">
+                                <Button 
+                                    variant="link" 
+                                    className="p-0 h-auto text-primary" 
+                                    onClick={() => state.selectedInvoiceForDetail && handleDownloadInvoice(state.selectedInvoiceForDetail)}
+                                >
+                                    <Download className="mr-2 h-4 w-4" /> Download Invoice
+                                </Button>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Receipt number</span>
+                                    <span className="font-medium font-mono">{state.selectedInvoiceForDetail?.id.split('-').pop()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Invoice number</span>
+                                    <span className="font-medium font-mono">{state.selectedInvoiceForDetail?.id}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Payment method</span>
+                                    <span className="font-medium">Online</span>
+                                </div>
                             </div>
-                        </div>
+                        </CardContent>
+                    </Card>
 
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-                            <div>
-                                <p className="text-sm font-semibold text-muted-foreground">BILL TO</p>
-                                <p className="font-bold">{user?.businessName}</p>
-                                <p className="text-sm">{user?.name}</p>
-                                <p className="text-sm">{user?.address}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-sm font-semibold text-muted-foreground">Date of Issue</p>
-                                <p className="font-medium">{state.selectedInvoiceForDetail ? format(toSafeDate(state.selectedInvoiceForDetail.date) || new Date(), 'PP') : ''}</p>
-                                <p className="text-sm font-semibold text-muted-foreground mt-2">Due Date</p>
-                                <p className="font-medium">{state.selectedInvoiceForDetail ? format(toSafeDate(state.selectedInvoiceForDetail.date) || new Date(), 'PP') : ''}</p>
-                            </div>
-                        </div>
-
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <TableRow>
-                                    <TableCell>
-                                        <p className="font-medium">{state.selectedInvoiceForDetail?.description}</p>
-                                        <p className="text-xs text-muted-foreground">Payment confirmed and processed.</p>
-                                    </TableCell>
-                                    <TableCell className="text-right font-medium">₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</TableCell>
-                                </TableRow>
-                            </TableBody>
-                        </Table>
-                        
-                        <div className="flex justify-end mt-4">
-                            <div className="w-64 space-y-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Receipt #{state.selectedInvoiceForDetail?.id.split('-').pop()}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="space-y-4">
+                                <div className="flex justify-between text-sm">
+                                    <span className="font-medium">{state.selectedInvoiceForDetail?.description}</span>
+                                    <span className="font-medium">₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</span>
+                                </div>
+                                <Separator />
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">Subtotal</span>
                                     <span>₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</span>
                                 </div>
-                                <div className="flex justify-between text-sm">
+                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">Tax (0%)</span>
                                     <span>₱0.00</span>
                                 </div>
-                                <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
-                                    <span>Total Paid</span>
+                                <Separator />
+                                <div className="flex justify-between font-bold">
+                                    <span>Amount Paid</span>
                                     <span>₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                             </div>
+                        </CardContent>
+                    </Card>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => dispatch({type: 'SET_INVOICE_DETAIL_DIALOG', payload: false})}>Close</Button>
-                    <Button onClick={() => state.selectedInvoiceForDetail && handleDownloadInvoice(state.selectedInvoiceForDetail)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download PDF
-                    </Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
 
