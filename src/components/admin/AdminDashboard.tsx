@@ -161,6 +161,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = React.useState(false);
     const [userForHistory, setUserForHistory] = React.useState<AppUser | null>(null);
     const [userForInvoices, setUserForInvoices] = React.useState<AppUser | null>(null);
+    const [isUserInvoicesOpen, setIsUserInvoicesOpen] = React.useState(false);
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
     const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
@@ -1781,265 +1782,272 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         />
 
         <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="relative flex items-center">
-                        <Users className="mr-2 h-4 w-4"/>User Management
-                    </CardTitle>
-                    <CardDescription>Manage all active and pending user accounts.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="active-users">
-                        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                            <TabsTrigger value="active-users">Active Users</TabsTrigger>
-                            <TabsTrigger value="unclaimed-profiles" className="relative">
-                                Unclaimed Profiles
-                                {unclaimedProfiles && unclaimedProfiles.length > 0 && (
-                                    <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{unclaimedProfiles.length}</Badge>
-                                )}
-                            </TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="active-users" className="space-y-6 pt-4">
-                             {activeRefillRequests.length > 0 && (
-                                <Card className="bg-amber-50 border-amber-200">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/>Active Refill Requests</CardTitle>
-                                        <CardDescription>This is the queue for the refill team. Update the status as the request progresses.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Table>
+            <Tabs defaultValue="user-management">
+                <TabsList>
+                    <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
+                    <TabsTrigger value="station-management"><Building className="mr-2 h-4 w-4" />Station Management</TabsTrigger>
+                </TabsList>
+                <TabsContent value="user-management">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Client Accounts</CardTitle>
+                            <CardDescription>Manage all active and pending user accounts.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Tabs defaultValue="active-users">
+                                <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+                                    <TabsTrigger value="active-users">Active Users</TabsTrigger>
+                                    <TabsTrigger value="unclaimed-profiles" className="relative">
+                                        Unclaimed Profiles
+                                        {unclaimedProfiles && unclaimedProfiles.length > 0 && (
+                                            <Badge className="absolute -top-2 -right-2 h-5 w-5 justify-center p-0">{unclaimedProfiles.length}</Badge>
+                                        )}
+                                    </TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="active-users" className="space-y-6 pt-4">
+                                    {activeRefillRequests.length > 0 && (
+                                        <Card className="bg-amber-50 border-amber-200">
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="h-5 w-5 text-amber-600"/>Active Refill Requests</CardTitle>
+                                                <CardDescription>This is the queue for the refill team. Update the status as the request progresses.</CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Client ID</TableHead>
+                                                            <TableHead>Business Name</TableHead>
+                                                            <TableHead>Requested</TableHead>
+                                                            <TableHead>Date / Qty</TableHead>
+                                                            <TableHead>Current Status</TableHead>
+                                                            <TableHead className="text-right">Action</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {refillRequestsLoading ? (
+                                                            <TableRow><TableCell colSpan={6} className="text-center">Loading requests...</TableCell></TableRow>
+                                                        ) : activeRefillRequests.map((request) => {
+                                                            const requestedAtDate = toSafeDate(request.requestedAt);
+                                                            const requestedForDate = toSafeDate(request.requestedDate);
+                                                            return (
+                                                            <TableRow key={request.id}>
+                                                                <TableCell>{request.clientId}</TableCell>
+                                                                <TableCell>{request.businessName}</TableCell>
+                                                                <TableCell>
+                                                                    {requestedAtDate ? formatDistanceToNow(requestedAtDate, { addSuffix: true }) : 'Just now'}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    {requestedForDate ? format(requestedForDate, 'PP') : 'ASAP'}
+                                                                    {request.volumeContainers && ` (${request.volumeContainers} cont.)`}
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Badge variant="secondary">{request.status}</Badge>
+                                                                </TableCell>
+                                                                <TableCell className="text-right">
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild><Button size="sm">Update Status</Button></DropdownMenuTrigger>
+                                                                        <DropdownMenuContent>
+                                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'In Production')} disabled={request.status !== 'Requested'}>Move to Production</DropdownMenuItem>
+                                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Out for Delivery')} disabled={request.status !== 'In Production'}>Set to Delivery</DropdownMenuItem>
+                                                                            <DropdownMenuSeparator/>
+                                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Completed')}>Mark as Completed</DropdownMenuItem>
+                                                                            <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Cancelled')} className="text-destructive">Cancel Request</DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )})}
+                                                    </TableBody>
+                                                </Table>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            placeholder="Search by Client ID or Business Name..."
+                                            value={localSearchTerm}
+                                            onChange={(e) => {
+                                                setLocalSearchTerm(e.target.value);
+                                                setCurrentPage(1); // Reset to first page on new search
+                                            }}
+                                            className="max-w-sm"
+                                        />
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <Table className="min-w-full">
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Client ID</TableHead>
                                                     <TableHead>Business Name</TableHead>
-                                                    <TableHead>Requested</TableHead>
-                                                    <TableHead>Date / Qty</TableHead>
-                                                    <TableHead>Current Status</TableHead>
-                                                    <TableHead className="text-right">Action</TableHead>
+                                                    <TableHead>Auto Refill</TableHead>
+                                                    <TableHead>Payment Status</TableHead>
+                                                    <TableHead>Assigned Station</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {refillRequestsLoading ? (
-                                                    <TableRow><TableCell colSpan={6} className="text-center">Loading requests...</TableCell></TableRow>
-                                                ) : activeRefillRequests.map((request) => {
-                                                    const requestedAtDate = toSafeDate(request.requestedAt);
-                                                    const requestedForDate = toSafeDate(request.requestedDate);
+                                                {paginatedUsers.map((user) => {
+                                                    const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
+                                                        ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
+                                                        : 'N/A';
+                                                    const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
+                                                    const userPendingPayments = pendingPaymentsByUser[user.id] || [];
+                                                    const handlePaymentStatusClick = (e: React.MouseEvent) => {
+                                                        e.stopPropagation();
+                                                        setUserForInvoices(user);
+                                                        setIsUserInvoicesOpen(true);
+                                                    };
+
                                                     return (
-                                                    <TableRow key={request.id}>
-                                                        <TableCell>{request.clientId}</TableCell>
-                                                        <TableCell>{request.businessName}</TableCell>
+                                                    <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
+                                                        <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
+                                                        <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                         <TableCell>
-                                                            {requestedAtDate ? formatDistanceToNow(requestedAtDate, { addSuffix: true }) : 'Just now'}
+                                                            <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
+                                                                {user.plan?.isConsumptionBased && !autoRefillEnabled ? (
+                                                                    <Badge variant="outline">On-Demand</Badge>
+                                                                ) : autoRefillEnabled ? (
+                                                                    <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                                                ) : (
+                                                                    <Badge variant="destructive">Disabled</Badge>
+                                                                )}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>
-                                                            {requestedForDate ? format(requestedForDate, 'PP') : 'ASAP'}
-                                                            {request.volumeContainers && ` (${request.volumeContainers} cont.)`}
+                                                            {userPendingPayments.length > 0 ? (
+                                                                <Badge onClick={handlePaymentStatusClick} className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200">
+                                                                    {userPendingPayments.length} Pending
+                                                                </Badge>
+                                                            ) : (
+                                                                <div onClick={handlePaymentStatusClick} className="text-xs text-muted-foreground cursor-pointer hover:text-primary">
+                                                                Up to date
+                                                                </div>
+                                                            )}
                                                         </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="secondary">{request.status}</Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild><Button size="sm">Update Status</Button></DropdownMenuTrigger>
-                                                                <DropdownMenuContent>
-                                                                    <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'In Production')} disabled={request.status !== 'Requested'}>Move to Production</DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Out for Delivery')} disabled={request.status !== 'In Production'}>Set to Delivery</DropdownMenuItem>
-                                                                    <DropdownMenuSeparator/>
-                                                                    <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Completed')}>Mark as Completed</DropdownMenuItem>
-                                                                    <DropdownMenuItem onClick={() => handleRefillStatusUpdate(request, 'Cancelled')} className="text-destructive">Cancel Request</DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
+                                                        <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
                                                     </TableRow>
                                                 )})}
+                                                {paginatedUsers.length === 0 && !usersLoading && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="text-center">No users found.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {usersLoading && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
+                                                    </TableRow>
+                                                )}
                                             </TableBody>
                                         </Table>
-                                    </CardContent>
-                                </Card>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    placeholder="Search by Client ID or Business Name..."
-                                    value={localSearchTerm}
-                                    onChange={(e) => {
-                                        setLocalSearchTerm(e.target.value);
-                                        setCurrentPage(1); // Reset to first page on new search
-                                    }}
-                                    className="max-w-sm"
-                                />
+                                    </div>
+                                    <div className="flex items-center justify-end space-x-2 py-4">
+                                        <span className="text-sm text-muted-foreground">
+                                            Page {currentPage} of {totalPages}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            Previous
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="unclaimed-profiles" className="space-y-6 pt-4">
+                                     <div className="flex justify-between items-center">
+                                        <p className="text-sm text-muted-foreground">These profiles have been created and are waiting for users to claim them.</p>
+                                        <Button onClick={() => setIsCreateUserOpen(true)}>
+                                            <UserPlus className="mr-2 h-4 w-4" />
+                                            Add New Client
+                                        </Button>
+                                    </div>
+                                     <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Client ID</TableHead>
+                                                <TableHead>Business Name</TableHead>
+                                                <TableHead>Plan</TableHead>
+                                                <TableHead>Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {unclaimedProfiles && unclaimedProfiles.length > 0 ? (
+                                                unclaimedProfiles.map((profile) => (
+                                                    <TableRow key={profile.id}>
+                                                        <TableCell className="font-medium">{profile.clientId}</TableCell>
+                                                        <TableCell>{profile.businessName}</TableCell>
+                                                        <TableCell>{profile.plan?.name}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                                                Pending Claim
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                                                        No unclaimed profiles.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TabsContent>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="station-management">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Water Station Network</CardTitle>
+                            <CardDescription>Manage all water refilling stations in the network.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-end mb-4">
+                               <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
                             </div>
                             <div className="overflow-x-auto">
-                                <Table className="min-w-full">
+                               <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Client ID</TableHead>
-                                            <TableHead>Business Name</TableHead>
-                                            <TableHead>Auto Refill</TableHead>
-                                            <TableHead>Payment Status</TableHead>
-                                            <TableHead>Assigned Station</TableHead>
+                                            <TableHead>Station ID</TableHead>
+                                            <TableHead>Station Name</TableHead>
+                                            <TableHead>Location</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {paginatedUsers.map((user) => {
-                                            const schedule = user.customPlanDetails?.deliveryDay && user.customPlanDetails?.deliveryTime
-                                                ? `${user.customPlanDetails.deliveryDay}, ${user.customPlanDetails.deliveryTime}`
-                                                : 'N/A';
-                                            const autoRefillEnabled = user.customPlanDetails?.autoRefillEnabled ?? true;
-                                            const userPendingPayments = pendingPaymentsByUser[user.id] || [];
-                                            const handlePaymentStatusClick = (e: React.MouseEvent) => {
-                                                e.stopPropagation();
-                                                setUserForInvoices(user);
-                                                setIsUserInvoicesOpen(true);
-                                            };
-
-                                            return (
-                                            <TableRow key={user.id} onClick={() => { setSelectedUser(user); setIsUserDetailOpen(true);}} className="cursor-pointer">
-                                                <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
-                                                <TableCell>
-                                                    <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
-                                                        {user.plan?.isConsumptionBased && !autoRefillEnabled ? (
-                                                            <Badge variant="outline">On-Demand</Badge>
-                                                        ) : autoRefillEnabled ? (
-                                                            <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                        ) : (
-                                                            <Badge variant="destructive">Disabled</Badge>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {userPendingPayments.length > 0 ? (
-                                                        <Badge onClick={handlePaymentStatusClick} className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200">
-                                                            {userPendingPayments.length} Pending
-                                                        </Badge>
-                                                    ) : (
-                                                        <div onClick={handlePaymentStatusClick} className="text-xs text-muted-foreground cursor-pointer hover:text-primary">
-                                                        Up to date
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
-                                            </TableRow>
-                                        )})}
-                                        {paginatedUsers.length === 0 && !usersLoading && (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="text-center">No users found.</TableCell>
-                                            </TableRow>
+                                        {stationsLoading && (
+                                            <TableRow><TableCell colSpan={3} className="text-center">Loading stations...</TableCell></TableRow>
                                         )}
-                                        {usersLoading && (
+                                        {!stationsLoading && waterStations?.map((station) => (
+                                            <TableRow key={station.id} onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }} className="cursor-pointer">
+                                                <TableCell className="font-mono text-xs">{station.id}</TableCell>
+                                                <TableCell className="font-medium">{station.name}</TableCell>
+                                                <TableCell>{station.location}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                         {!stationsLoading && waterStations?.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="text-center">Loading users...</TableCell>
+                                                <TableCell colSpan={3} className="text-center">No water stations found.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
                             </div>
-                            <div className="flex items-center justify-end space-x-2 py-4">
-                                <span className="text-sm text-muted-foreground">
-                                    Page {currentPage} of {totalPages}
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                    disabled={currentPage === 1}
-                                >
-                                    Previous
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="unclaimed-profiles" className="space-y-6 pt-4">
-                             <div className="flex justify-between items-center">
-                                <p className="text-sm text-muted-foreground">These profiles have been created and are waiting for users to claim them.</p>
-                                <Button onClick={() => setIsCreateUserOpen(true)}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    Add New Client
-                                </Button>
-                            </div>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Client ID</TableHead>
-                                        <TableHead>Business Name</TableHead>
-                                        <TableHead>Plan</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {unclaimedProfiles && unclaimedProfiles.length > 0 ? (
-                                        unclaimedProfiles.map((profile) => (
-                                            <TableRow key={profile.id}>
-                                                <TableCell className="font-medium">{profile.clientId}</TableCell>
-                                                <TableCell>{profile.businessName}</TableCell>
-                                                <TableCell>{profile.plan?.name}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                                        Pending Claim
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
-                                                No unclaimed profiles.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TabsContent>
-                    </Tabs>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center"><Building className="mr-2 h-4 w-4" />Water Stations</CardTitle>
-                    <CardDescription>Manage all water refilling stations in the network.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-end mb-4">
-                       <Button onClick={() => { setStationToUpdate(null); setIsStationProfileOpen(true); }} disabled={!isAdmin}><PlusCircle className="mr-2 h-4 w-4" />Create Station</Button>
-                    </div>
-                    <div className="overflow-x-auto">
-                       <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Station ID</TableHead>
-                                    <TableHead>Station Name</TableHead>
-                                    <TableHead>Location</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {stationsLoading && (
-                                    <TableRow><TableCell colSpan={3} className="text-center">Loading stations...</TableCell></TableRow>
-                                )}
-                                {!stationsLoading && waterStations?.map((station) => (
-                                    <TableRow key={station.id} onClick={() => { setStationToUpdate(station); setIsStationProfileOpen(true); }} className="cursor-pointer">
-                                        <TableCell className="font-mono text-xs">{station.id}</TableCell>
-                                        <TableCell className="font-medium">{station.name}</TableCell>
-                                        <TableCell>{station.location}</TableCell>
-                                    </TableRow>
-                                ))}
-                                 {!stationsLoading && waterStations?.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={3} className="text-center">No water stations found.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
 
 
