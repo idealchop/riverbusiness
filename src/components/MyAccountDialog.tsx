@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -868,6 +868,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
             <DialogContent className="sm:max-w-2xl p-0 border-0 bg-background">
                 <DialogHeader className="p-8 pb-0">
                     <DialogTitle className="sr-only">Invoice Receipt</DialogTitle>
+                    <DialogDescription className="sr-only">Details for invoice {state.selectedInvoiceForDetail?.id}</DialogDescription>
                 </DialogHeader>
                 <div className="p-8 pt-0">
                     <div className="flex items-center gap-2 mb-8">
@@ -1032,7 +1033,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             <p className="font-bold text-lg">{user.pendingPlan.name}</p>
                             <p className="text-muted-foreground">on</p>
                             <p className="font-bold text-lg">{user.planChangeEffectiveDate ? format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy') : ''}</p>
-                            <p className="text-xs text-muted-foreground pt-4">You can undo this request anytime before the effective date.</p>
+                            <p className="text-xs text-muted-foreground pt-4">When this should the change plan scheduled. Users will still be able to undo the request and get back to its original plan.</p>
                         </CardContent>
                          <CardFooter className="flex flex-col gap-2">
                             <Button variant="destructive" onClick={handleUndoPlanChange}>
@@ -1174,5 +1175,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
-    
