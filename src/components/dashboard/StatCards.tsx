@@ -56,7 +56,7 @@ export function StatCards({
     
     // **DEFINITIVE FIX**: Correctly and reliably get planDetails regardless of user profile structure.
     // This checks the top-level for existing users, and falls back to the nested plan object for new users.
-    const planDetails = user.customPlanDetails || user.plan?.customPlanDetails;
+    const planDetails = user.customPlanDetails;
 
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
@@ -125,21 +125,16 @@ export function StatCards({
     if (!user?.id || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', user.id);
-    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
+    const planDetails = user.customPlanDetails;
     
     const newCustomPlanDetails = { ...planDetails, autoRefillEnabled: checked };
 
-    // Update based on where the details are currently stored to avoid creating disparate structures
+    // Update based on where the details are currently stored to avoid disparate structures
     if (user.customPlanDetails) {
          updateDocumentNonBlocking(userDocRef, {
             'customPlanDetails.autoRefillEnabled': checked,
         });
-    } else if (user.plan?.customPlanDetails) {
-         updateDocumentNonBlocking(userDocRef, {
-            'plan.customPlanDetails.autoRefillEnabled': checked,
-        });
     }
-
 
     toast({
         title: checked ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
@@ -147,7 +142,7 @@ export function StatCards({
     });
   };
   
-  const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
+  const planDetails = user?.customPlanDetails;
   const autoRefill = planDetails?.autoRefillEnabled ?? true;
   const nextRefillDay = planDetails?.deliveryDay || 'Not set';
   const weeklyContainers = planDetails?.gallonQuantity || 0;
@@ -307,3 +302,5 @@ export function StatCards({
     </div>
   );
 }
+
+    

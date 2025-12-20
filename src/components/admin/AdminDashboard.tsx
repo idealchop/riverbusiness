@@ -2752,7 +2752,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Select an Enterprise Plan</FormLabel>
-                                                        <Select onValueChange={field.onChange} value={field.value} >
+                                                        <Select onValueChange={(value) => {
+                                                            const selectedPlan = enterprisePlans.find(p => p.name === value);
+                                                            field.onChange(selectedPlan);
+                                                        }} value={field.value?.name}>
                                                             <FormControl>
                                                                 <SelectTrigger>
                                                                     <SelectValue placeholder="Select from enterprise options..." />
@@ -2760,7 +2763,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             </FormControl>
                                                             <SelectContent>
                                                                 {enterprisePlans.map(plan => (
-                                                                    <SelectItem key={plan.name} value={plan as any}>{plan.name} {plan.price > 0 && `(P${plan.price}/L)`}</SelectItem>
+                                                                    <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && `(P${plan.price}/L)`}</SelectItem>
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
@@ -2792,19 +2795,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Subscription</h4>
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                          <FormField
+                                                        <FormField
                                                             control={newUserForm.control}
                                                             name="plan.price"
                                                             render={({ field }) => (
                                                                 <FormItem>
                                                                     <FormLabel>Amount per Month</FormLabel>
                                                                     <FormControl>
-                                                                        <Input type="number" placeholder="e.g., 2500" value={field.value || ''} 
-                                                                            onChange={(e) => {
-                                                                                const newPrice = parseFloat(e.target.value) || 0;
-                                                                                const currentPlan = newUserForm.getValues('plan');
-                                                                                newUserForm.setValue('plan', { ...currentPlan, price: newPrice });
-                                                                            }} 
+                                                                        <Input 
+                                                                            type="number" 
+                                                                            placeholder="e.g., 2500" 
+                                                                            value={field.value || ''}
+                                                                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                                                                         />
                                                                     </FormControl>
                                                                     <FormMessage />
@@ -2878,3 +2880,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
