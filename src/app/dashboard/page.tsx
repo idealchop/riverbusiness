@@ -275,13 +275,9 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Show welcome dialog on first load after user is confirmed
+    // Show welcome dialog every time the dashboard loads for the user.
     if (user && !isUserDocLoading) {
-      const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
-      if (!hasSeenWelcome) {
-        setDialogState((prev) => ({ ...prev, welcome: true }));
-        sessionStorage.setItem('hasSeenWelcome', 'true');
-      }
+      setDialogState((prev) => ({ ...prev, welcome: true }));
     }
   }, [user, isUserDocLoading]);
   
