@@ -191,8 +191,10 @@ export function StatCards({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 items-center text-center">
-                    <p className="text-xs text-muted-foreground">Need water sooner?</p>
-                    <Button variant="default" size="sm" className="w-auto" onClick={onRequestRefillClick}>
+                    <p className="text-xs text-muted-foreground">
+                        Need water sooner? Schedule a one-time delivery with an exact date and quantity.
+                    </p>
+                    <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       Schedule Refill
                     </Button>
