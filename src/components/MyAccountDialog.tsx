@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
+import React, { useReducer, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose
@@ -35,6 +35,7 @@ import { enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
+import { useTransition } from 'react';
 
 
 // State Management with useReducer
@@ -850,7 +851,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
             }
         }}>
             <DialogContent className="sm:max-w-2xl bg-background p-0 border-0">
-                <div className="p-8">
+                 <DialogHeader className="p-8 pb-0">
+                    {/* This title is visually hidden but available for screen readers */}
+                    <DialogTitle className="sr-only">Invoice Receipt</DialogTitle>
+                </DialogHeader>
+                <div className="p-8 pt-0">
                     <div className="flex items-center gap-2 mb-8">
                         <Logo className="h-8 w-8" />
                         <h3 className="font-semibold text-foreground">River Tech Inc.</h3>
@@ -1148,3 +1153,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
+
+    
