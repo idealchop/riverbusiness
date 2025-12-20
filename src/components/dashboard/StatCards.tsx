@@ -194,7 +194,7 @@ export function StatCards({
                     <Label className="text-xs text-muted-foreground">Need water sooner?</Label>
                     <Button variant="default" size="sm" className="w-auto" onClick={onRequestRefillClick}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      Request Refill
+                      Schedule Refill
                     </Button>
                   </div>
                 )}
@@ -273,7 +273,7 @@ export function StatCards({
                 ) : (
                   <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    Request Refill
+                    Schedule Refill
                   </Button>
                 )}
               </div>
