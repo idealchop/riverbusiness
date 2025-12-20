@@ -770,12 +770,29 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleInvoiceStatusUpdate = (newStatus: 'Paid' | 'Upcoming') => {
         const userToUpdate = userForInvoices || selectedUser;
         if (!userToUpdate || !selectedInvoice || !firestore) return;
-
+        
         const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', selectedInvoice.id);
-        updateDocumentNonBlocking(invoiceRef, { status: newStatus, rejectionReason: newStatus === 'Upcoming' ? rejectionReason : FieldValue.delete() });
+
+        const updatePayload: any = { status: newStatus };
+        if (newStatus === 'Upcoming') {
+            updatePayload.rejectionReason = rejectionReason;
+        } else if (newStatus === 'Paid') {
+            updatePayload.rejectionReason = FieldValue.delete();
+        }
+
+        updateDocumentNonBlocking(invoiceRef, updatePayload);
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
-        setIsManageInvoiceOpen(false);
+        
+        // Optimistically update the UI
+        if(selectedInvoice) {
+            setSelectedInvoice({...selectedInvoice, status: newStatus});
+        }
+        
+        if (newStatus === 'Paid') {
+            setIsManageInvoiceOpen(false);
+        }
+        
         setRejectionReason('');
     };
 
@@ -1066,7 +1083,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </TableHeader>
                             <TableBody>
                                 {currentMonthInvoice && (
-                                     <TableRow className="bg-muted/50 font-semibold" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>
+                                     <TableRow className="bg-muted/50 font-semibold cursor-pointer hover:bg-muted" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>
                                         <TableCell className="font-mono text-xs">{currentMonthInvoice.id}</TableCell>
                                         <TableCell>{format(new Date(currentMonthInvoice.date), 'PP')}</TableCell>
                                         <TableCell>

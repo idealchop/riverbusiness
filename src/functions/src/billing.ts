@@ -84,33 +84,50 @@ async function generateInvoiceForUser(
     }
 
     const paymentsRef = userRef.collection('payments');
+    const notificationsRef = userRef.collection('notifications');
+    const deliveriesRef = userRef.collection('deliveries');
+    const batch = db.batch();
+
     let amount = 0;
     let description = '';
 
+    const deliveriesSnapshot = await deliveriesRef
+        .where('date', '>=', billingCycleStart.toISOString())
+        .where('date', '<=', billingCycleEnd.toISOString())
+        .get();
+
+    const consumedLitersLastMonth = deliveriesSnapshot.docs.reduce((sum, doc) => {
+        const delivery = doc.data();
+        return sum + containerToLiter(delivery.volumeContainers);
+    }, 0);
+
     if (user.plan.isConsumptionBased) {
         // Consumption-based billing
-        const deliveriesSnapshot = await userRef.collection('deliveries')
-            .where('date', '>=', billingCycleStart.toISOString())
-            .where('date', '<=', billingCycleEnd.toISOString())
-            .get();
-
-        let totalLitersConsumed = 0;
-        if (!deliveriesSnapshot.empty) {
-            totalLitersConsumed = deliveriesSnapshot.docs.reduce((sum, doc) => {
-                const delivery = doc.data();
-                return sum + containerToLiter(delivery.volumeContainers);
-            }, 0);
-        }
-        
-        if (totalLitersConsumed > 0) {
-            amount = totalLitersConsumed * (user.plan.price || 0);
+        if (consumedLitersLastMonth > 0) {
+            amount = consumedLitersLastMonth * (user.plan.price || 0);
             description = `Water Consumption for ${billingPeriod}`;
         }
-
     } else {
         // Fixed-plan billing
         amount = user.plan.price || 0;
         description = `Monthly Subscription for ${billingPeriod}`;
+
+        // Calculate and notify about rollover liters
+        const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
+        if (monthlyAllocation > 0) {
+            const rolloverLiters = Math.max(0, monthlyAllocation - consumedLitersLastMonth);
+            if (rolloverLiters > 0) {
+                const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+                    type: 'general',
+                    title: 'Liters Rolled Over!',
+                    description: `You've saved ${rolloverLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} liters from last month. They've been added to your current balance.`,
+                    data: { rolloverLiters, month: format(billingCycleStart, 'MMMM yyyy') }
+                };
+                const notificationWithMeta = { ...rolloverNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+                batch.set(notificationsRef.doc(), notificationWithMeta);
+                console.log(`Generated rollover notification for user ${userRef.id} for ${rolloverLiters} liters.`);
+            }
+        }
     }
 
     if (amount > 0) {
@@ -125,21 +142,17 @@ async function generateInvoiceForUser(
         console.log(`Generating invoice ${invoiceId} for user ${userRef.id} for amount ${amount}.`);
 
         // Create notification for the new invoice
-        const notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+        const invoiceNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
             type: 'payment',
             title: 'New Invoice',
             description: `Your invoice for ${billingPeriod} (₱${amount.toFixed(2)}) is available.`,
             data: { paymentId: invoiceId }
         };
 
-        const notificationsRef = userRef.collection('notifications');
-
-        // Batch writes for invoice and notification
-        const batch = db.batch();
-        batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
-        const notificationWithMeta = { ...notification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+        const notificationWithMeta = { ...invoiceNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
         batch.set(notificationsRef.doc(), notificationWithMeta);
-        
-        return batch.commit();
+        batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
     }
+    
+    return batch.commit();
 }

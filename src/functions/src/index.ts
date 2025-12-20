@@ -86,6 +86,48 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     await createNotification(userId, notification);
 });
 
+/**
+ * Cloud Function to create notifications when a payment status is updated by an admin.
+ */
+export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{paymentId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Only notify if the status has changed.
+    if (before.status === after.status) {
+        return;
+    }
+
+    const userId = event.params.userId;
+    const payment = after;
+
+    let notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>;
+
+    if (payment.status === 'Paid') {
+        notification = {
+            type: 'payment',
+            title: 'Payment Confirmed',
+            description: `Your payment for invoice ${payment.id} has been confirmed. Thank you!`,
+            data: { paymentId: payment.id }
+        };
+    } else if (before.status === 'Pending Review' && payment.status === 'Upcoming') {
+        // This logic specifically targets the rejection flow
+        notification = {
+            type: 'payment',
+            title: 'Payment Action Required',
+            description: `Your payment for invoice ${payment.id} requires attention. Reason: ${payment.rejectionReason || 'Please contact support.'}`,
+            data: { paymentId: payment.id }
+        };
+    } else {
+        // Don't send notifications for other status changes (e.g., Upcoming -> Overdue)
+        return;
+    }
+    
+    await createNotification(userId, notification);
+});
+
 
 /**
  * Generic Cloud Function for file uploads.
