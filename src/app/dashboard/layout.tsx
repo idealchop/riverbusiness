@@ -192,7 +192,7 @@ export default function DashboardLayout({
       }
     };
 
-    updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
+    updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString());
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -540,8 +540,7 @@ export default function DashboardLayout({
                 </div>
                 <div className="flex justify-around items-center h-full">
                     <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => window.dispatchEvent(new CustomEvent('open-delivery-history'))}>
-                        <History className="h-5 w-5" />
-                        <span className="text-xs mt-1">History</span>
+                        <History className="h-6 w-6" />
                     </Button>
                     <div className="relative">
                         <Button 
@@ -556,8 +555,7 @@ export default function DashboardLayout({
                         </div>
                     </div>
                     <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => setIsAccountDialogOpen(true)}>
-                        <User className="h-5 w-5" />
-                        <span className="text-xs mt-1">Account</span>
+                        <User className="h-6 w-6" />
                     </Button>
                 </div>
             </div>
@@ -718,3 +716,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
