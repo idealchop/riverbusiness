@@ -177,20 +177,18 @@ export function StatCards({
               </p>
               <div className="border-t pt-3 space-y-2">
                 {autoRefill ? (
-                  <>
+                  <div className="grid sm:grid-cols-2 gap-2 items-center">
                     <div>
                       <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
                       <p className="font-semibold text-sm">{nextRefillDay !== 'Not set' ? `Next ${nextRefillDay}` : 'Not set'}</p>
-                    </div>
-                    <div>
                       <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Delivery</p>
                       <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full" onClick={onUpdateScheduleClick}>
+                    <Button variant="outline" size="sm" className="w-full mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
                       <Edit className="mr-2 h-4 w-4" />
                       Update Schedule
                     </Button>
-                  </>
+                  </div>
                 ) : (
                   <div className="flex flex-col gap-2">
                     <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
@@ -261,14 +259,16 @@ export function StatCards({
               </p>
               <div className="border-t pt-3 space-y-2">
                 {autoRefill ? (
-                  <>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
-                    <p className="font-semibold text-sm">Next {nextRefillDay}</p>
-                    <Button variant="outline" size="sm" className="w-full text-xs" onClick={onUpdateScheduleClick}>
+                   <div className="grid sm:grid-cols-2 gap-2 items-center">
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
+                      <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full text-xs mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
                       <Edit className="mr-2 h-4 w-4" />
                       Update Schedule
                     </Button>
-                  </>
+                  </div>
                 ) : (
                   <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
