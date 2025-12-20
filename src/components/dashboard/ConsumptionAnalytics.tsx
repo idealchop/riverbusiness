@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { Delivery } from '@/lib/types';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear } from 'date-fns';
 import { History } from 'lucide-react';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -18,7 +18,7 @@ interface ConsumptionAnalyticsProps {
 }
 
 export function ConsumptionAnalytics({ deliveries, onHistoryClick }: ConsumptionAnalyticsProps) {
-  const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly'>('weekly');
+  const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
 
   const consumptionChartData = useMemo(() => {
     const sourceDeliveries = deliveries || [];
@@ -34,7 +34,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
           value: containerToLiter(totalContainers)
         };
       });
-    } else { // monthly
+    } else if (analyticsFilter === 'monthly') {
       const now = new Date();
       const firstDay = startOfMonth(now);
       const lastDay = endOfMonth(now);
@@ -42,7 +42,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
 
       const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
         name: `Week ${i + 1}`,
-        displayName: `Week ${i + 1}`,
+        displayName: `W${i + 1}`,
         value: 0
       }));
 
@@ -56,6 +56,26 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
         }
       });
       return weeklyData;
+    } else { // yearly
+        const now = new Date();
+        const yearStart = startOfYear(now);
+        const yearEnd = endOfYear(now);
+        const year = getYear(now);
+
+        const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+            name: format(new Date(year, i), 'MMM'),
+            displayName: format(new Date(year, i), 'MMM'),
+            value: 0
+        }));
+
+        sourceDeliveries.forEach(d => {
+            const deliveryDate = new Date(d.date);
+            if (deliveryDate >= yearStart && deliveryDate <= yearEnd) {
+                const month = getMonth(deliveryDate);
+                monthlyData[month].value += containerToLiter(d.volumeContainers);
+            }
+        });
+        return monthlyData;
     }
   }, [deliveries, analyticsFilter]);
 
@@ -66,13 +86,14 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
           <CardTitle>Consumption Analytics</CardTitle>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as 'weekly' | 'monthly')}>
+          <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as 'weekly' | 'monthly' | 'yearly')}>
             <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue placeholder="Filter..." />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="weekly">This Week</SelectItem>
               <SelectItem value="monthly">This Month</SelectItem>
+              <SelectItem value="yearly">This Year</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={onHistoryClick} variant="outline" className="w-full sm:w-auto">
