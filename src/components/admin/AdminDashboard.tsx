@@ -384,18 +384,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const watchedChecklist = sanitationVisitForm.watch("checklist");
 
-    const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
-        if (!firestore) return;
-        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-        const newNotification: Partial<Notification> = {
-            ...notification,
-            userId,
-            date: serverTimestamp(),
-            isRead: false
-        };
-        await addDocumentNonBlocking(notificationsCol, newNotification);
-    };
-
     React.useEffect(() => {
         if (visitToEdit) {
             sanitationVisitForm.reset({
@@ -493,13 +481,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         setSelectedUser(prev => prev ? { ...prev, assignedWaterStationId: stationToAssign } : null);
 
-        createNotification(selectedUser.id, {
-            type: 'general',
-            title: 'Water Station Assigned',
-            description: `Your account has been assigned to the ${stationName} water station.`,
-            data: { stationId: stationToAssign }
-        });
-
         toast({ title: 'Station Assigned', description: `${stationName} has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
@@ -561,13 +542,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         try {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
             await handleFileUpload(contractFile, path, uploadKey);
-
-            createNotification(userForContract.id, {
-                type: 'general',
-                title: 'Contract Attached',
-                description: 'A new contract has been attached to your account.',
-                data: {}
-            });
     
             toast({ title: 'Upload Complete', description: 'The contract is being processed.' });
             setIsUploadContractOpen(false);
@@ -750,13 +724,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
         
-        createNotification(request.userId, {
-            type: 'delivery',
-            title: `Refill Request: ${newStatus}`,
-            description: `Your one-time refill request is now ${newStatus}.`,
-            data: { requestId: request.id }
-        });
-        
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };
 
@@ -845,19 +812,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             // Send notification
             if (isNewVisit) {
-                 createNotification(selectedUser.id, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Scheduled',
-                    description: `A sanitation visit has been scheduled for your office on ${format(values.scheduledDate, 'PPP')}.`,
-                    data: { visitId: visitRef.id }
-                });
+                 toast({title: 'Notification Sent', description: 'User has been notified of the scheduled visit.'})
             } else if (visitToEdit?.status !== values.status) {
-                 createNotification(selectedUser.id, {
-                    type: 'sanitation',
-                    title: `Sanitation Visit: ${values.status}`,
-                    description: `Your sanitation visit scheduled for ${format(values.scheduledDate, 'PPP')} is now ${values.status}.`,
-                    data: { visitId: visitRef.id }
-                });
+                 toast({title: 'Notification Sent', description: `User has been notified that the visit is now ${values.status}.`})
             }
     
             setIsSanitationVisitDialogOpen(false);
@@ -1275,6 +1232,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </TableBody>
                     </Table>
                 </ScrollArea>
+                 <DialogFooter className="pt-4 border-t">
+                    <Button variant="outline" onClick={() => setIsDeliveryHistoryOpen(false)}>Close</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 
@@ -1291,7 +1251,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
             <DialogContent>
@@ -2447,5 +2407,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
