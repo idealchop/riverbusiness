@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   LifeBuoy,
   Droplet,
@@ -106,15 +106,7 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-export default function DashboardPage({
-  handleOneClickRefill,
-  isRefillRequesting,
-  hasPendingRefill,
-}: {
-  handleOneClickRefill: () => void;
-  isRefillRequesting: boolean;
-  hasPendingRefill: boolean;
-}) {
+export default function DashboardPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -175,7 +167,8 @@ export default function DashboardPage({
 
   const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
   const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0 ? activeRefills[0] : null), [activeRefills]);
-  
+  const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
+  const [isRefillRequesting, setIsRefillRequesting] = useState(false);
   const [isSubmitScheduledRefill, setIsSubmitScheduledRefill] = useState(false);
 
 
@@ -188,6 +181,67 @@ export default function DashboardPage({
   };
   const closeDialog = (dialog: keyof typeof dialogState) => setDialogState((prev) => ({ ...prev, [dialog]: false }));
 
+  const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
+    if (!firestore) return;
+    const notificationsCol = collection(firestore, 'users', userId, 'notifications');
+    const newNotification: Partial<Notification> = {
+        ...notification,
+        userId,
+        date: serverTimestamp(),
+        isRead: false
+    };
+    await addDocumentNonBlocking(notificationsCol, newNotification);
+  };
+  
+  const handleOneClickRefill = useCallback(async () => {
+    if (hasPendingRefill) {
+      openDialog('refillStatus');
+      return;
+    }
+
+    if (!user || !firestore || !authUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
+      return;
+    }
+    
+    setIsRefillRequesting(true);
+    const newRequestData: Omit<RefillRequest, 'id'> = {
+      userId: user.id,
+      userName: user.name,
+      businessName: user.businessName,
+      clientId: user.clientId || '',
+      requestedAt: serverTimestamp(),
+      status: 'Requested',
+      statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+    };
+
+    try {
+      const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
+      const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+      
+      await createNotification(authUser.uid, {
+        type: 'delivery',
+        title: 'Refill Request Sent',
+        description: 'Your ASAP refill request has been sent to the admin for processing.',
+        data: { requestId: newDocRef.id },
+      });
+
+      toast({
+        title: 'Refill Request Sent!',
+        description: `Thank you, ${user.name}! We've received your ASAP refill request. You can track its progress.`,
+      });
+      openDialog('refillStatus');
+
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Request Failed',
+        description: 'There was an issue sending your request. Please try again.',
+      });
+    } finally {
+      setIsRefillRequesting(false);
+    }
+  }, [user, firestore, authUser, hasPendingRefill, toast]);
   
   useEffect(() => {
     const handleOpenDelivery = () => openDialog('deliveryHistory');
@@ -208,7 +262,7 @@ export default function DashboardPage({
         window.removeEventListener('open-compliance-dialog', handleOpenCompliance);
         window.removeEventListener('request-asap-refill', handleMobileRefill);
     };
-  }, [hasPendingRefill, user, authUser, firestore]); // Add dependencies to ensure the latest state is used
+  }, [handleOneClickRefill]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -217,17 +271,6 @@ export default function DashboardPage({
     else setGreeting('Good evening');
   }, []);
 
-  const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
-    if (!firestore) return;
-    const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-    const newNotification: Partial<Notification> = {
-        ...notification,
-        userId,
-        date: serverTimestamp(),
-        isRead: false
-    };
-    await addDocumentNonBlocking(notificationsCol, newNotification);
-  };
   
   const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
@@ -369,3 +412,4 @@ export default function DashboardPage({
     </TooltipProvider>
   );
 }
+
