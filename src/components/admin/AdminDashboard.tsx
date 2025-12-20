@@ -1629,37 +1629,39 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         )}
                     </div>
 
-                    {selectedInvoice?.status === 'Pending Review' && (
+                    {selectedInvoice?.status !== 'Paid' && (
                         <div className="pt-4 space-y-4 border-t">
                              <h4 className="font-semibold">Actions</h4>
                              <div className="flex gap-2">
                                 <Button onClick={() => handleInvoiceStatusUpdate('Paid')}>
                                     <CheckCircle className="mr-2 h-4 w-4" /> Mark as Paid
                                 </Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive">
-                                            <AlertTriangle className="mr-2 h-4 w-4" /> Reject Payment
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Reject Payment?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will set the invoice status back to "Upcoming". You can add a note for the user.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <Textarea 
-                                            placeholder="Optional: Reason for rejection (e.g., incorrect amount, unclear screenshot)..."
-                                            value={rejectionReason}
-                                            onChange={(e) => setRejectionReason(e.target.value)}
-                                        />
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleInvoiceStatusUpdate('Upcoming')}>Confirm Rejection</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                {selectedInvoice?.status === 'Pending Review' && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive">
+                                                <AlertTriangle className="mr-2 h-4 w-4" /> Reject Payment
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Reject Payment?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will set the invoice status back to "Upcoming". You can add a note for the user.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <Textarea 
+                                                placeholder="Optional: Reason for rejection (e.g., incorrect amount, unclear screenshot)..."
+                                                value={rejectionReason}
+                                                onChange={(e) => setRejectionReason(e.target.value)}
+                                            />
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleInvoiceStatusUpdate('Upcoming')}>Confirm Rejection</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
                              </div>
                         </div>
                     )}
