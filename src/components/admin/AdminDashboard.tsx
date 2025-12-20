@@ -178,9 +178,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
     const userDeliveriesQuery = useMemoFirebase(() => {
-        if (!firestore || !selectedUser) return null;
-        return collection(firestore, 'users', selectedUser.id, 'deliveries');
-    }, [firestore, selectedUser]);
+        const userToQuery = userForHistory || selectedUser || userForInvoices;
+        if (!firestore || !userToQuery) return null;
+        return collection(firestore, 'users', userToQuery.id, 'deliveries');
+    }, [firestore, selectedUser, userForHistory, userForInvoices]);
     const { data: userDeliveriesData } = useCollection<Delivery>(userDeliveriesQuery);
 
     const paymentsQuery = useMemoFirebase(() => {
@@ -214,6 +215,38 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             return acc;
         }, {} as Record<string, Payment[]>);
     }, [allPayments]);
+
+    const currentMonthInvoice = React.useMemo(() => {
+        const userToCalc = userForInvoices || selectedUser;
+        if (!userToCalc) return null;
+
+        const now = new Date();
+        const cycleStart = startOfMonth(now);
+        const cycleEnd = endOfMonth(now);
+        
+        const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
+            const deliveryDate = new Date(d.date);
+            return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
+        });
+
+        const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+
+        let estimatedCost = 0;
+        if (userToCalc.plan?.isConsumptionBased) {
+            estimatedCost = consumedLitersThisMonth * (userToCalc.plan.price || 0);
+        } else {
+            estimatedCost = userToCalc.plan?.price || 0;
+        }
+
+        return {
+            id: `INV-${format(new Date(), 'yyyy-MMM').toUpperCase()}`,
+            date: new Date().toISOString(),
+            description: `Bill for ${format(new Date(), 'MMMM yyyy')}`,
+            amount: estimatedCost,
+            status: 'Upcoming',
+        } as Payment;
+
+    }, [userForInvoices, selectedUser, userDeliveriesData]);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -941,14 +974,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>User Account Management</DialogTitle>
                     <DialogDescription>
                         View user details and perform administrative actions.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
+                <ScrollArea className="pr-6 -mr-6 flex-1">
                 {selectedUser && (
                     <div className="grid md:grid-cols-2 gap-8 py-6">
                         {/* Left Column: User Profile & Details */}
@@ -1079,7 +1112,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <ScrollArea className="max-h-[60vh] pr-6 -mr-6">
                     {paymentsLoading ? (
                         <div className="text-center text-muted-foreground py-10">Loading invoices...</div>
-                    ) : userPaymentsData && userPaymentsData.length > 0 ? (
+                    ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -1090,28 +1123,46 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {userPaymentsData.map((invoice) => (
-                                    <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
-                                        <TableCell className="font-mono text-xs">{invoice.id}</TableCell>
-                                        <TableCell>{format(new Date(invoice.date), 'PP')}</TableCell>
+                                {currentMonthInvoice && (
+                                     <TableRow className="bg-muted/50 font-semibold" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>
+                                        <TableCell className="font-mono text-xs">{currentMonthInvoice.id}</TableCell>
+                                        <TableCell>{format(new Date(currentMonthInvoice.date), 'PP')}</TableCell>
                                         <TableCell>
                                             <Badge
-                                                variant={invoice.status === 'Paid' ? 'default' : invoice.status === 'Pending Review' ? 'secondary' : 'outline'}
-                                                className={cn('text-xs',
-                                                    invoice.status === 'Paid' && 'bg-green-100 text-green-800',
-                                                    invoice.status === 'Upcoming' && 'bg-yellow-100 text-yellow-800',
-                                                    invoice.status === 'Overdue' && 'bg-red-100 text-red-800',
-                                                    invoice.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
-                                                )}
-                                            >{invoice.status}</Badge>
+                                                variant="outline"
+                                                className='bg-blue-100 text-blue-800'
+                                            >{currentMonthInvoice.status}</Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">₱{currentMonthInvoice.amount.toFixed(2)}</TableCell>
                                     </TableRow>
-                                ))}
+                                )}
+                                {(userPaymentsData && userPaymentsData.length > 0) ? (
+                                    userPaymentsData.map((invoice) => (
+                                        <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
+                                            <TableCell className="font-mono text-xs">{invoice.id}</TableCell>
+                                            <TableCell>{format(new Date(invoice.date), 'PP')}</TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    variant={invoice.status === 'Paid' ? 'default' : invoice.status === 'Pending Review' ? 'secondary' : 'outline'}
+                                                    className={cn('text-xs',
+                                                        invoice.status === 'Paid' && 'bg-green-100 text-green-800',
+                                                        invoice.status === 'Upcoming' && 'bg-yellow-100 text-yellow-800',
+                                                        invoice.status === 'Overdue' && 'bg-red-100 text-red-800',
+                                                        invoice.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
+                                                    )}
+                                                >{invoice.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    !currentMonthInvoice &&
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-10">No invoices found for this user.</TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
-                    ) : (
-                        <div className="text-center text-muted-foreground py-10">No invoices found for this user.</div>
                     )}
                 </ScrollArea>
                  <DialogFooter className="pt-4 border-t">
