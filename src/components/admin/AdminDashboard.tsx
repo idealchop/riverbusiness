@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -1109,10 +1110,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </TableRow>
                                 )}
                                 {(userPaymentsData && userPaymentsData.length > 0) ? (
-                                    userPaymentsData.map((invoice) => (
+                                    userPaymentsData.map((invoice) => {
+                                        const safeDate = toSafeDate(invoice.date);
+                                        return (
                                         <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
                                             <TableCell className="font-mono text-xs">{invoice.id}</TableCell>
-                                            <TableCell>{format(new Date(invoice.date), 'PP')}</TableCell>
+                                            <TableCell>{safeDate ? format(safeDate, 'PP') : 'Invalid Date'}</TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant={invoice.status === 'Paid' ? 'default' : invoice.status === 'Pending Review' ? 'secondary' : 'outline'}
@@ -1126,7 +1129,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableCell>
                                             <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
                                         </TableRow>
-                                    ))
+                                    )})
                                 ) : (
                                     !currentMonthInvoice &&
                                     <TableRow>
@@ -2437,3 +2440,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
