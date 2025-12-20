@@ -31,6 +31,11 @@ service cloud.firestore {
       // Only backend functions can create invoices, users can't create them.
       allow create: if false; 
     }
+
+    // This rule allows admins to query the 'payments' collection group
+    match /{path=**}/payments/{paymentId} {
+      allow read, list: if isAdmin();
+    }
     
     match /users/{userId}/consumptionHistory/{historyId} {
       allow read, list: if isOwner(userId) || isAdmin();
