@@ -161,8 +161,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
     const [isDeliveryHistoryOpen, setIsDeliveryHistoryOpen] = React.useState(false);
     const [userForHistory, setUserForHistory] = React.useState<AppUser | null>(null);
-    const [userForInvoices, setUserForInvoices] = React.useState<AppUser | null>(null);
     const [isUserInvoicesOpen, setIsUserInvoicesOpen] = React.useState(false);
+    const [userForInvoices, setUserForInvoices] = React.useState<AppUser | null>(null);
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
     const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
@@ -1040,7 +1040,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const profileData = {
                 ...values,
                 role: 'User',
-                totalConsumptionLiters: values.customPlanDetails?.litersPerMonth || 0,
+                totalConsumptionLiters: values.plan?.isConsumptionBased ? 0 : (values.customPlanDetails?.litersPerMonth || 0),
                 adminCreatedAt: serverTimestamp(),
             };
 
@@ -2685,10 +2685,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 const isSelected = selectedPlan?.name === plan.name;
                                                 return (
                                                     <Card key={plan.name} onClick={() => newUserForm.setValue('plan', plan)} className={cn("cursor-pointer flex flex-col", isSelected && "border-2 border-primary")}>
-                                                        {planImage && <div className="relative h-32 w-full"><Image src={planImage.imageUrl} alt={plan.name} layout="fill" objectFit="cover" className="rounded-t-lg" data-ai-hint={planImage.imageHint} /></div>}
+                                                        {planImage && <div className="relative h-32 w-full"><Image src={planImage.imageUrl} alt={plan.name} fill objectFit="cover" className="rounded-t-lg" data-ai-hint={planImage.imageHint} /></div>}
                                                         <CardHeader>
                                                             <CardTitle className="text-base">{plan.name}</CardTitle>
-                                                            {plan.isConsumptionBased ? <CardDescription>P{plan.price}/liter</CardDescription> : <CardDescription>P{plan.price.toLocaleString()}/mo</CardDescription>}
+                                                            {plan.isConsumptionBased ? <CardDescription>P{plan.price}/liter</CardDescription> : <CardDescription>{plan.price > 0 ? `P${plan.price.toLocaleString()}/mo` : 'Admin Configured'}</CardDescription>}
                                                         </CardHeader>
                                                         <CardContent className="flex-1 text-xs text-muted-foreground">{plan.description}</CardContent>
                                                     </Card>
@@ -2698,21 +2698,26 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}
                                 </div>
                             )}
-                            {formStep === 2 && (
-                                <div className="space-y-4">
+                           {formStep === 2 && (
+                                <div className="space-y-6">
                                     <h3 className="font-semibold text-lg">{selectedPlan?.isConsumptionBased ? 'Step 3: Equipment & Schedule' : 'Step 3: Customize Plan'}</h3>
-                                    {selectedPlan && !selectedPlan.isConsumptionBased && (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
-                                                <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                            )}/>
-                                            <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (
-                                                <FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                            )}/>
+                                    
+                                    {!selectedPlan?.isConsumptionBased && (
+                                        <div className="space-y-4 p-4 border rounded-lg">
+                                            <h4 className="font-medium">Subscription</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
+                                                    <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                                <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (
+                                                    <FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                                )}/>
+                                            </div>
                                         </div>
                                     )}
-                                    <div className="space-y-4 pt-4">
-                                        <h4 className="font-medium text-base">Equipment & Schedule</h4>
+
+                                    <div className="space-y-4 p-4 border rounded-lg">
+                                        <h4 className="font-medium">Equipment & Schedule</h4>
                                         <div className="grid grid-cols-2 gap-4">
                                             <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (
                                                 <FormItem><FormLabel>Gallon Quantity</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
@@ -2758,3 +2763,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+    
