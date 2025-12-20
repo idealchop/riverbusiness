@@ -132,8 +132,6 @@ export default function DashboardLayout({
 
   const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
   const hasPendingRefill = useMemo(() => !isRefillLoading && activeRefills && activeRefills.length > 0, [activeRefills, isRefillLoading]);
-  
-
 
   useEffect(() => {
     if (notifications) {
@@ -780,3 +778,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
