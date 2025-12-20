@@ -1,7 +1,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { format, subMonths, startOfMonth, endOfMonth, isToday } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth, startOfYear } from 'date-fns';
 import type { Notification } from './types'; // Assuming types are defined in a shared file
 
 const db = admin.firestore();
@@ -25,18 +25,43 @@ async function createNotification(userId: string, notificationData: Omit<Notific
  */
 export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     console.log('Starting monthly invoice generation and plan update job.');
+    
+    const now = new Date();
+    const currentYear = getYear(now);
+    const currentMonth = getMonth(now); // 0-indexed (Jan=0, Feb=1, etc.)
+
+    // Special Case: On Jan 1, 2026, do nothing. The invoice for Dec 2025 will be combined with Jan 2026's.
+    if (currentYear === 2026 && currentMonth === 0) { // currentMonth is 0 for January
+        console.log('Skipping invoice generation for Jan 1, 2026, to create a combined Dec-Jan invoice in February.');
+        return null;
+    }
+
+    let billingPeriod: string;
+    let billingCycleStart: Date;
+    let billingCycleEnd: Date;
+    let monthsToBill = 1;
+
+    // Special Case: On Feb 1, 2026, generate a combined invoice for Dec 2025 and Jan 2026.
+    if (currentYear === 2026 && currentMonth === 1) { // currentMonth is 1 for February
+        console.log('Running special combined invoice generation for Dec 2025 - Jan 2026.');
+        billingCycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+        billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
+        billingPeriod = 'December 2025 - January 2026';
+        monthsToBill = 2;
+    } else {
+        // Standard logic for all other months
+        const previousMonth = subMonths(now, 1);
+        billingPeriod = format(previousMonth, 'MMMM yyyy');
+        billingCycleStart = startOfMonth(previousMonth);
+        billingCycleEnd = endOfMonth(previousMonth);
+    }
+
 
     const usersSnapshot = await db.collection('users').get();
     if (usersSnapshot.empty) {
         console.log('No users found. Exiting job.');
         return null;
     }
-
-    const now = new Date();
-    const previousMonth = subMonths(now, 1);
-    const billingPeriod = format(previousMonth, 'MMMM yyyy');
-    const billingCycleStart = startOfMonth(previousMonth);
-    const billingCycleEnd = endOfMonth(previousMonth);
 
     const promises: Promise<any>[] = [];
 
@@ -51,8 +76,9 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
             if (isToday(effectiveDate)) {
                 console.log(`Activating new plan for user ${userDoc.id}.`);
                 
-                // First, generate the invoice for the PREVIOUS month using the OLD plan
-                promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd));
+                // Always generate the invoice for the PREVIOUS period using the OLD plan
+                // This will correctly handle the special Feb 1 case by billing for Dec/Jan on the old plan
+                promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
                 
                 // Then, update the user's plan
                 const planUpdatePromise = userRef.update({
@@ -80,11 +106,11 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         }
         
         // --- Step 2: Generate Invoice for users without a plan change ---
-        promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd));
+        promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
     }
 
     await Promise.all(promises);
-    console.log(`Invoice generation and plan update job completed.`);
+    console.log(`Invoice generation and plan update job completed for period: ${billingPeriod}.`);
     return null;
 });
 
@@ -96,7 +122,8 @@ async function generateInvoiceForUser(
     userRef: admin.firestore.DocumentReference,
     billingPeriod: string,
     billingCycleStart: Date,
-    billingCycleEnd: Date
+    billingCycleEnd: Date,
+    monthsToBill: number = 1
 ) {
     // Skip admins or users without a plan
     if (user.role === 'Admin' || !user.plan) {
@@ -116,32 +143,35 @@ async function generateInvoiceForUser(
         .where('date', '<=', billingCycleEnd)
         .get();
 
-    const consumedLitersLastMonth = deliveriesSnapshot.docs.reduce((sum, doc) => {
+    const consumedLitersInPeriod = deliveriesSnapshot.docs.reduce((sum, doc) => {
         const delivery = doc.data();
         return sum + containerToLiter(delivery.volumeContainers);
     }, 0);
 
     if (user.plan.isConsumptionBased) {
         // Consumption-based billing
-        if (consumedLitersLastMonth > 0) {
-            amount = consumedLitersLastMonth * (user.plan.price || 0);
+        if (consumedLitersInPeriod > 0) {
+            amount = consumedLitersInPeriod * (user.plan.price || 0);
             description = `Water Consumption for ${billingPeriod}`;
         }
     } else {
         // Fixed-plan billing
+        // For ALL fixed plans, the charge is always for one month's price, even if the period is 2 months.
         amount = user.plan.price || 0;
         description = `Monthly Subscription for ${billingPeriod}`;
 
-        // Calculate and notify about rollover liters
+        // Rollover logic needs to consider the total allocation for the billing period (1 or 2 months).
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
-            const rolloverLiters = Math.max(0, monthlyAllocation - consumedLitersLastMonth);
+            const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
+            const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
+
             if (rolloverLiters > 0) {
                 const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
                     type: 'general',
                     title: 'Liters Rolled Over!',
-                    description: `You've saved ${rolloverLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} liters from last month. They've been added to your current balance.`,
-                    data: { rolloverLiters, month: format(billingCycleStart, 'MMMM yyyy') }
+                    description: `You've saved ${rolloverLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} liters from ${billingPeriod}. They've been added to your current balance.`,
+                    data: { rolloverLiters, period: billingPeriod }
                 };
                 const notificationWithMeta = { ...rolloverNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
                 batch.set(notificationsRef.doc(), notificationWithMeta);
@@ -151,7 +181,9 @@ async function generateInvoiceForUser(
     }
 
     if (amount > 0) {
-        const invoiceId = `INV-${userRef.id.substring(0, 5)}-${format(billingCycleStart, 'yyyyMM')}`;
+        const invoiceIdSuffix = monthsToBill > 1 ? '202512-202601' : format(billingCycleStart, 'yyyyMM');
+        const invoiceId = `INV-${userRef.id.substring(0, 5)}-${invoiceIdSuffix}`;
+
         const newInvoice = {
             id: invoiceId,
             date: admin.firestore.Timestamp.fromDate(startOfMonth(new Date())),
