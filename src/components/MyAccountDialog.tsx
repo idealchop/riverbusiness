@@ -853,14 +853,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                 <div className="p-8">
                     <div className="flex items-center gap-2 mb-8">
                         <Logo className="h-8 w-8" />
-                        <h3 className="font-semibold text-foreground">River Business</h3>
+                        <h3 className="font-semibold text-foreground">River Tech Inc.</h3>
                     </div>
 
                     <Card className="mb-4">
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-sm text-muted-foreground">Receipt from River Business</p>
+                                    <p className="text-sm text-muted-foreground">Receipt from River Tech Inc.</p>
                                     <p className="text-4xl font-bold mt-1">₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</p>
                                     <p className="text-sm text-muted-foreground">Paid {state.selectedInvoiceForDetail ? format(toSafeDate(state.selectedInvoiceForDetail.date) || new Date(), 'PP') : ''}</p>
                                 </div>
@@ -909,7 +909,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     <span>₱{state.selectedInvoiceForDetail?.amount.toFixed(2)}</span>
                                 </div>
                                  <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Tax (0%)</span>
+                                    <span className="text-muted-foreground">Tax (inclusive)</span>
                                     <span>₱0.00</span>
                                 </div>
                                 <Separator />
@@ -1148,5 +1148,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
-    
