@@ -1062,6 +1062,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     React.useEffect(() => {
         if (planOptions.length > 0) {
             newUserForm.setValue('plan', planOptions[0]);
+        } else {
+            newUserForm.setValue('plan', null);
         }
     }, [planOptions, newUserForm]);
 
@@ -2703,7 +2705,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         )}
                          {formStep === 2 && (
                             <div className="space-y-4">
-                                <h3 className="font-semibold text-lg">{selectedPlan?.isConsumptionBased ? 'Step 3' : 'Step 3: Customize Plan'}</h3>
+                                <h3 className="font-semibold text-lg">{selectedPlan?.isConsumptionBased ? 'Step 3: Equipment & Schedule' : 'Step 3: Customize Plan'}</h3>
                                 {selectedPlan && !selectedPlan.isConsumptionBased && (
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
