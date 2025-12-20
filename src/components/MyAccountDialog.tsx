@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
@@ -440,6 +440,23 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     }
   }, [availableMonths, soaMonth]);
 
+  const toSafeDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toDate();
+    }
+    if (typeof timestamp === 'string') {
+      const date = new Date(timestamp);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+      return new Date(timestamp.seconds * 1000);
+    }
+    return null;
+  };
+
 
   if (!user) return <>{children}</>;
 
@@ -711,9 +728,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                         <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
                                     </TableCell>
                                 </TableRow>
-                                {paymentHistory.map((invoice) => (
+                                {paymentHistory.map((invoice) => {
+                                    const safeDate = toSafeDate(invoice.date);
+                                    return (
                                     <TableRow key={invoice.id}>
-                                        <TableCell>{format(new Date(invoice.date), 'MMMM yyyy')}</TableCell>
+                                        <TableCell>{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</TableCell>
                                         <TableCell>
                                             <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
                                                 invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
@@ -733,7 +752,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                             )}
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )})}
                                 {paymentHistory.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
@@ -756,12 +775,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
                             </CardContent>
                         </Card>
-                        {paymentHistory.map((invoice) => (
+                        {paymentHistory.map((invoice) => {
+                             const safeDate = toSafeDate(invoice.date);
+                             return (
                             <Card key={invoice.id}>
                                 <CardContent className="p-4 space-y-2">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <p className="font-semibold">{format(new Date(invoice.date), 'MMMM yyyy')}</p>
+                                            <p className="font-semibold">{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</p>
                                             <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
                                         </div>
                                         <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
@@ -778,7 +799,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     )}
                                 </CardContent>
                             </Card>
-                        ))}
+                        )})}
                         {paymentHistory.length === 0 && (
                            <p className="text-center py-10 text-sm text-muted-foreground">No past invoices found.</p>
                         )}
