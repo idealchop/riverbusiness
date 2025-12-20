@@ -867,7 +867,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
             }
         }}>
             <DialogContent className="sm:max-w-2xl bg-background p-0 border-0">
-                <DialogHeader className="p-8 pb-0">
+                 <DialogHeader className="p-8 pb-0">
                     <DialogTitle className="sr-only">Invoice Receipt</DialogTitle>
                     <DialogDescription className="sr-only">Details for invoice {state.selectedInvoiceForDetail?.id}</DialogDescription>
                 </DialogHeader>
@@ -1037,9 +1037,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             <p className="text-xs text-muted-foreground pt-4">Hi {userFirstName}, you can undo this request anytime before the effective date if you change your mind.</p>
                         </CardContent>
                          <CardFooter className="flex flex-col gap-2">
-                            <Button variant="destructive" onClick={handleUndoPlanChange}>
+                            <Button variant="outline" onClick={handleUndoPlanChange}>
                                 <Undo2 className="mr-2 h-4 w-4"/>
-                                Undo Request
+                                No, I'm good with my current plan
                             </Button>
                         </CardFooter>
                     </Card>
@@ -1176,5 +1176,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
-    
