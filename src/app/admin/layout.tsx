@@ -1,18 +1,28 @@
 
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bell, User } from 'lucide-react';
+import { Bell, User, Receipt, FileUp, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import type { AppUser } from '@/lib/types';
-import { doc } from 'firebase/firestore';
+import type { AppUser, Notification as NotificationType } from '@/lib/types';
+import { doc, collection, query, writeBatch, Timestamp } from 'firebase/firestore';
 import { useMounted } from '@/hooks/use-mounted';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+
+
+const NOTIFICATION_ICONS: { [key: string]: React.ElementType } = {
+  payment: Receipt,
+  general: Info,
+  default: Bell,
+};
 
 function AdminLayoutSkeleton() {
     return (
@@ -53,6 +63,36 @@ export default function AdminLayout({
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
+  const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
+  
+  const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
+  
+  useEffect(() => {
+    if (notifications) {
+      setUnreadNotifications(notifications.filter(n => !n.isRead));
+    }
+  }, [notifications]);
+
+  const handleNotificationOpenChange = (open: boolean) => {
+    if (!open && unreadNotifications.length > 0 && firestore && authUser) {
+        const batch = writeBatch(firestore);
+        unreadNotifications.forEach(notif => {
+            if (notif.id) {
+                const notifRef = doc(firestore, 'users', authUser.uid, 'notifications', notif.id);
+                batch.update(notifRef, { isRead: true });
+            }
+        });
+        batch.commit().catch(err => console.error("Failed to mark notifications as read:", err));
+    }
+  };
+
+  const handleNotificationClick = (notification: NotificationType) => {
+    if (notification.data?.userId) {
+        window.dispatchEvent(new CustomEvent('admin-open-user-detail', { detail: { userId: notification.data.userId } }));
+    }
+  };
+
   React.useEffect(() => {
     if (!isUserLoading && !authUser) {
       router.push('/login');
@@ -83,7 +123,7 @@ export default function AdminLayout({
         </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
-          <Popover>
+          <Popover onOpenChange={handleNotificationOpenChange}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -91,16 +131,66 @@ export default function AdminLayout({
                 className="relative overflow-hidden rounded-full"
               >
                 <Bell className="h-5 w-5" />
+                 {unreadNotifications.length > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-xs">
+                        {unreadNotifications.length}
+                    </Badge>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-96">
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Notifications</h4>
-                <p className="text-sm text-muted-foreground">
-                  You have 0 new notifications.
-                </p>
+               <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-sm">Notifications</h4>
+                   {unreadNotifications.length > 0 && (
+                      <Badge variant="secondary" className="rounded-sm">
+                          {unreadNotifications.length} New
+                      </Badge>
+                   )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Recent updates from your clients.
+                  </p>
               </div>
               <Separator className="my-4" />
+                <div className="space-y-4 max-h-80 overflow-y-auto">
+                    {notifications && notifications.length > 0 ? (
+                        notifications.sort((a,b) => {
+                            const aSeconds = (a.date instanceof Timestamp) ? a.date.seconds : 0;
+                            const bSeconds = (b.date instanceof Timestamp) ? b.date.seconds : 0;
+                            if (aSeconds === 0 && bSeconds === 0) return 0;
+                            if (aSeconds === 0) return -1;
+                            if (bSeconds === 0) return 1;
+                            return bSeconds - aSeconds;
+                        }).map((notification) => {
+                            const Icon = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.default;
+                            const date = notification.date instanceof Timestamp ? notification.date.toDate() : null;
+                             const isActionable = !!notification.data?.userId;
+
+                            return (
+                                <div key={notification.id} className={cn("grid grid-cols-[25px_1fr] items-start gap-4", isActionable && "cursor-pointer hover:bg-accent -mx-2 px-2 py-1 rounded-md")} onClick={() => isActionable && handleNotificationClick(notification)}>
+                                    <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium leading-none">
+                                            {notification.title}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {notification.description}
+                                        </p>
+                                        <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                           <p>{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</p>
+                                           {isActionable && 
+                                             <span className="font-medium text-primary">View details</span>
+                                           }
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">No new notifications.</p>
+                    )}
+                </div>
             </PopoverContent>
           </Popover>
           <Button

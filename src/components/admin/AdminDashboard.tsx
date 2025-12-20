@@ -336,13 +336,26 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const openAccountDialog = () => {
           setIsAccountDialogOpen(true);
         };
+        const openUserDetail = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const userId = customEvent.detail.userId;
+            if(userId) {
+                const userToOpen = appUsers?.find(u => u.id === userId);
+                if (userToOpen) {
+                    setSelectedUser(userToOpen);
+                    setIsUserDetailOpen(true);
+                }
+            }
+        };
     
         window.addEventListener('admin-open-my-account', openAccountDialog);
+        window.addEventListener('admin-open-user-detail', openUserDetail);
     
         return () => {
           window.removeEventListener('admin-open-my-account', openAccountDialog);
+          window.removeEventListener('admin-open-user-detail', openUserDetail);
         };
-    }, []);
+    }, [appUsers]);
 
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
