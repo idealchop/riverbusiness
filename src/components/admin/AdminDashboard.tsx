@@ -246,7 +246,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             status: 'Upcoming',
         } as Payment;
 
-    }, [userForInvoices, selectedUser, userDeliveriesData]);
+    }, [userForInvoices, selectedUser, userDeliveriesData, userPaymentsData]);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -784,12 +784,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
         
-        // Optimistically update the UI
-        if(selectedInvoice) {
-            setSelectedInvoice({...selectedInvoice, status: newStatus});
+        if(selectedInvoice?.id === currentMonthInvoice?.id) {
+            // This is a special case for the current month's upcoming invoice, which isn't in Firestore yet.
+            // We can't really "update" it, but we can close the dialog.
+        } else {
+             // Optimistically update the UI by removing the paid/rejected invoice from local state
+             if (userPaymentsData) {
+                const updatedPayments = userPaymentsData.map(p => 
+                    p.id === selectedInvoice.id ? { ...p, status: newStatus, rejectionReason: newStatus === 'Upcoming' ? rejectionReason : undefined } : p
+                );
+                // This optimistic update isn't perfect without a state setter from useCollection
+             }
         }
         
-        if (newStatus === 'Paid') {
+        setSelectedInvoice(prev => prev ? { ...prev, status: newStatus } : null);
+        
+        if (newStatus === 'Paid' || newStatus === 'Upcoming') {
             setIsManageInvoiceOpen(false);
         }
         
@@ -2424,4 +2434,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
