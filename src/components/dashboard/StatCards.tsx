@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { ArrowRight, History, Edit, Calendar as CalendarIcon } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
-import { startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore } from 'date-fns';
 import { updateDocumentNonBlocking, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentReference, doc } from 'firebase/firestore';
@@ -87,7 +87,8 @@ export function StatCards({
 
     let rolloverLiters = 0;
     
-    if (createdAtDate < lastCycleStart) {
+    // Only calculate rollover if the user was created before the start of the previous billing cycle
+    if (isBefore(createdAtDate, lastCycleStart)) {
         const deliveriesLastCycle = deliveries.filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: lastCycleStart, end: lastCycleEnd });

@@ -1046,12 +1046,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
 
             const profileData = {
-                ...values,
+                clientId: values.clientId,
+                name: values.name,
+                businessEmail: values.businessEmail,
+                businessName: values.businessName,
+                address: values.address,
+                contactNumber: values.contactNumber,
+                clientType: values.clientType,
+                plan: values.plan,
+                customPlanDetails: values.customPlanDetails,
                 role: 'User',
                 totalConsumptionLiters: values.plan?.isConsumptionBased ? 0 : (values.customPlanDetails?.litersPerMonth || 0),
                 adminCreatedAt: serverTimestamp(),
             };
-
+            
             await setDocumentNonBlocking(unclaimedProfileRef, profileData);
 
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
@@ -2664,14 +2672,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                               <FormMessage />
                                           </FormItem>
                                       )}/>
+                                      <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
+                                          <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                      )}/>
                                        <FormField control={newUserForm.control} name="name" render={({ field }) => (
                                           <FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
                                       )}/>
                                        <FormField control={newUserForm.control} name="contactNumber" render={({ field }) => (
                                           <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
-                                      )}/>
-                                      <FormField control={newUserForm.control} name="businessName" render={({ field }) => (
-                                          <FormItem><FormLabel>Business Name</FormLabel><FormControl><Input placeholder="Client's Business Name" {...field} /></FormControl><FormMessage /></FormItem>
                                       )}/>
                                        <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
                                           <FormItem className="md:col-span-2"><FormLabel>Business Email (Optional)</FormLabel><FormControl><Input type="email" placeholder="contact@business.com" {...field} /></FormControl><FormMessage /></FormItem>
@@ -2684,7 +2692,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             )}
                             {formStep === 1 && (
                                 <div className="space-y-6">
-                                    <h3 className="font-semibold text-lg">Step 2: Plan & Configuration</h3>
+                                     <div>
+                                        <h3 className="font-semibold text-lg">Step 2: Plan & Configuration</h3>
+                                        <p className="text-sm text-muted-foreground">Select a plan type, then choose and configure a specific plan.</p>
+                                    </div>
                                     <FormField
                                         control={newUserForm.control}
                                         name="clientType"
@@ -2692,20 +2703,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
                                                 <FormControl>
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                                                         {clientTypes.map(type => {
                                                             const image = PlaceHolderImages.find(p => p.id === type.imageId);
                                                             return (
                                                                 <Card 
                                                                     key={type.name} 
-                                                                    onClick={() => {
-                                                                        field.onChange(type.name);
-                                                                    }}
+                                                                    onClick={() => { field.onChange(type.name); }}
                                                                     className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}
                                                                 >
-                                                                    {image && <div className="relative h-24 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
-                                                                    <CardHeader className="p-4 flex-1">
+                                                                    {image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                    <CardHeader className="p-3 flex-1">
                                                                         <CardTitle className="text-sm">{type.name}</CardTitle>
+                                                                        <CardDescription className="text-xs">{type.description}</CardDescription>
                                                                     </CardHeader>
                                                                 </Card>
                                                             )
@@ -2730,7 +2740,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 {planOptions.map(plan => {
                                                                     const isSelected = field.value?.name === plan.name;
                                                                     return (
-                                                                        <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
+                                                                        <Card key={plan.name} onClick={() => {
+                                                                            const newPlan = {...plan};
+                                                                            if (newUserForm.getValues('plan.price')) {
+                                                                                newPlan.price = newUserForm.getValues('plan.price');
+                                                                            }
+                                                                            field.onChange(newPlan);
+                                                                        }} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
                                                                             <CardHeader>
                                                                               <CardTitle className="text-base">{plan.name}</CardTitle>
                                                                               <CardDescription>{plan.description}</CardDescription>
@@ -2751,19 +2767,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <div className="space-y-4 p-4 border rounded-lg">
                                                             <h4 className="font-medium">Subscription</h4>
                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                                <FormField
+                                                               <FormField
                                                                     control={newUserForm.control}
                                                                     name="plan.price"
                                                                     render={({ field }) => (
                                                                         <FormItem>
                                                                             <FormLabel>Amount per Month</FormLabel>
                                                                             <FormControl>
-                                                                                <Input
-                                                                                    type="number"
-                                                                                    placeholder="e.g., 2500"
-                                                                                    value={field.value || ''}
-                                                                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                                                                />
+                                                                                <Input type="number" placeholder="e.g., 2500" value={field.value || ''} onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} />
                                                                             </FormControl>
                                                                             <FormMessage />
                                                                         </FormItem>
@@ -2821,13 +2832,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogFooter>
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
                             
-                            {formStep === 0 &&
+                            {formStep === 0 ?
                                 <Button type="button" onClick={async () => {
                                      const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail']);
                                      if (isValid) setFormStep(1);
                                 }}>Next</Button>
-                            }
-                            {formStep === 1 &&
+                                :
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>
                             }
                         </DialogFooter>
@@ -2838,4 +2848,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
