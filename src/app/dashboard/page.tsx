@@ -202,7 +202,7 @@ export default function DashboardPage({ handleOneClickRefill, isRefillRequesting
         window.removeEventListener('open-compliance-dialog', handleOpenCompliance);
         window.removeEventListener('open-refill-status', handleOpenRefillStatus);
     };
-  }, [hasPendingRefill]); // Re-add hasPendingRefill dependency here
+  }, [hasPendingRefill]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -276,7 +276,7 @@ export default function DashboardPage({ handleOneClickRefill, isRefillRequesting
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-8">
-        <DashboardHeader 
+        <DashboardHeader
           greeting={greeting}
           userName={user?.businessName}
           isRefillRequesting={isRefillRequesting}
@@ -363,3 +363,5 @@ export default function DashboardPage({ handleOneClickRefill, isRefillRequesting
     </TooltipProvider>
   );
 }
+
+    
