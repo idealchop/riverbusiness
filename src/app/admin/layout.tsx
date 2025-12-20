@@ -1,6 +1,7 @@
 
 'use client';
 import React from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Bell, User } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,6 +18,11 @@ function AdminLayoutSkeleton() {
     return (
         <div className="flex flex-col h-screen">
             <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
+                <div className="flex items-center gap-2 font-semibold text-lg">
+                    <div className="flex items-center">
+                        <span className="font-bold">River Business</span>
+                    </div>
+                </div>
                 <div className="flex-1" />
                 <div className="flex items-center gap-4">
                     <Skeleton className="h-10 w-10 rounded-full" />
@@ -66,6 +72,11 @@ export default function AdminLayout({
   return (
     <div className="flex flex-col h-screen">
       <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
+        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg">
+            <div className="flex items-center">
+                <span className="font-bold">River Business</span>
+            </div>
+        </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
           <Popover>
