@@ -44,80 +44,58 @@ export function StatCards({
       rolloverLiters: 0,
       totalLitersForMonth: 0,
       consumedLitersThisMonth: 0,
-      currentBalance: 0,
+      currentBalance: user?.totalConsumptionLiters || 0,
       consumedPercentage: 0,
       remainingPercentage: 100,
       estimatedCost: 0,
     };
-
+  
     if (!user || !user.plan || !deliveries) {
       return emptyState;
     }
-    
-    // **DEFINITIVE FIX**: Correctly and reliably get planDetails regardless of user profile structure.
-    // This checks the top-level for existing users, and falls back to the nested plan object for new users.
+  
     const planDetails = user.customPlanDetails;
-
+  
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
-
+  
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
     const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-    
+  
     if (user.plan.isConsumptionBased) {
+      return {
+        ...emptyState,
+        consumedLitersThisMonth,
+        currentBalance: 0, // Not applicable for consumption plan
+        estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
+      };
+    }
+  
+    if (!user.createdAt || !planDetails) {
         return {
             ...emptyState,
-            consumedLitersThisMonth,
-            estimatedCost: consumedLitersThisMonth * (user.plan.price || 3),
+            consumedLitersThisMonth, // Still show what's consumed this month
+            currentBalance: user.totalConsumptionLiters // Fallback to the stored total
         };
     }
-
-    if (!user.createdAt) return emptyState;
-    if (!planDetails) return emptyState;
-
-    const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
-        ? (user.createdAt as any).toDate() 
-        : new Date(user.createdAt as string);
-
-    const lastMonth = subMonths(now, 1);
-    const lastCycleStart = startOfMonth(lastMonth);
-    const lastCycleEnd = endOfMonth(lastMonth);
-
-    const monthlyPlanLiters = planDetails.litersPerMonth || 0;
-    const bonusLiters = planDetails.bonusLiters || 0;
-    const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
-
-    let rolloverLiters = 0;
-    
-    // Only calculate rollover if the user was created before the start of the previous billing cycle
-    if (isBefore(createdAtDate, lastCycleStart)) {
-        const deliveriesLastCycle = deliveries.filter(d => {
-            const deliveryDate = new Date(d.date);
-            return isWithinInterval(deliveryDate, { start: lastCycleStart, end: lastCycleEnd });
-        });
-        const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-        
-        rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
-    }
-
-    const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
-    const currentBalance = totalLitersForMonth - consumedLitersThisMonth;
-    const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
+  
+    const totalAvailableLiters = user.totalConsumptionLiters;
+    const consumedPercentage = totalAvailableLiters > 0 ? (consumedLitersThisMonth / totalAvailableLiters) * 100 : 0;
     const remainingPercentage = 100 - consumedPercentage;
-
+  
     return {
-        monthlyPlanLiters,
-        bonusLiters,
-        rolloverLiters,
-        totalLitersForMonth,
-        consumedLitersThisMonth,
-        currentBalance,
-        consumedPercentage,
-        remainingPercentage,
-        estimatedCost: user.plan.price,
+      ...emptyState,
+      monthlyPlanLiters: planDetails.litersPerMonth || 0,
+      bonusLiters: planDetails.bonusLiters || 0,
+      totalLitersForMonth: totalAvailableLiters, // This is the key change: total is the user's actual balance
+      consumedLitersThisMonth,
+      currentBalance: totalAvailableLiters - consumedLitersThisMonth, // The true remaining balance
+      consumedPercentage,
+      remainingPercentage,
+      estimatedCost: user.plan.price || 0,
     };
   }, [user, deliveries]);
 
@@ -125,16 +103,10 @@ export function StatCards({
     if (!user?.id || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', user.id);
-    const planDetails = user.customPlanDetails;
     
-    const newCustomPlanDetails = { ...planDetails, autoRefillEnabled: checked };
-
-    // Update based on where the details are currently stored to avoid disparate structures
-    if (user.customPlanDetails) {
-         updateDocumentNonBlocking(userDocRef, {
-            'customPlanDetails.autoRefillEnabled': checked,
-        });
-    }
+    updateDocumentNonBlocking(userDocRef, {
+        'customPlanDetails.autoRefillEnabled': checked,
+    });
 
     toast({
         title: checked ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
@@ -302,5 +274,3 @@ export function StatCards({
     </div>
   );
 }
-
-    
