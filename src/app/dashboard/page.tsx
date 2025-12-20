@@ -202,7 +202,7 @@ export default function DashboardPage({ handleOneClickRefill, isRefillRequesting
         window.removeEventListener('open-compliance-dialog', handleOpenCompliance);
         window.removeEventListener('open-refill-status', handleOpenRefillStatus);
     };
-  }, []); // Empty dependency array ensures this runs only once
+  }, [hasPendingRefill]); // Re-add hasPendingRefill dependency here
 
   useEffect(() => {
     const hour = new Date().getHours();

@@ -130,9 +130,8 @@ export default function DashboardLayout({
     );
   }, [firestore, authUser]);
 
-  const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
-  const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0 ? activeRefills[0] : null), [activeRefills]);
-  const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
+  const { data: activeRefills } = useCollection<RefillRequest>(activeRefillQuery);
+  const hasPendingRefill = useMemo(() => activeRefills && activeRefills.length > 0, [activeRefills]);
   
 
 
