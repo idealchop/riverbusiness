@@ -69,7 +69,8 @@
         "description": { "type": "string" },
         "amount": { "type": "number" },
         "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review"] },
-        "proofOfPaymentUrl": { "type": "string", "format": "uri" }
+        "proofOfPaymentUrl": { "type": "string", "format": "uri" },
+        "rejectionReason": { "type": "string", "description": "Reason provided by admin for rejecting a payment." }
       },
       "required": ["id", "date", "description", "amount", "status"]
     },
@@ -234,3 +235,5 @@
     }
   }
 }
+
+    

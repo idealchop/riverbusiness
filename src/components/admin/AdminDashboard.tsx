@@ -805,26 +805,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!userToUpdate || !selectedInvoice || !firestore) return;
 
         const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', selectedInvoice.id);
-        updateDocumentNonBlocking(invoiceRef, { status: newStatus });
-
-        if (newStatus === 'Paid') {
-            createNotification(userToUpdate.id, {
-                type: 'payment',
-                title: 'Payment Confirmed',
-                description: `Your payment for invoice ${selectedInvoice.id} has been confirmed. Thank you!`,
-                data: { paymentId: selectedInvoice.id }
-            });
-        } else { // Rejected
-             createNotification(userToUpdate.id, {
-                type: 'payment',
-                title: 'Payment Action Required',
-                description: `Your payment for invoice ${selectedInvoice.id} was rejected. Reason: ${rejectionReason || 'Please contact support.'}`,
-                data: { paymentId: selectedInvoice.id }
-            });
-        }
+        updateDocumentNonBlocking(invoiceRef, { status: newStatus, rejectionReason: newStatus === 'Upcoming' ? rejectionReason : FieldValue.delete() });
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
         setIsManageInvoiceOpen(false);
+        setRejectionReason('');
     };
 
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
@@ -1306,7 +1291,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
             <DialogContent>
@@ -2462,3 +2447,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    

@@ -1,4 +1,5 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -6,6 +7,8 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
+import type { Notification } from './types';
+
 
 // Import all exports from billing.ts
 import * as billing from './billing';
@@ -21,18 +24,18 @@ const storage = getStorage();
 /**
  * Creates a notification document in a user's notification subcollection.
  */
-async function createNotification(userId: string, notificationData: any) {
+async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
   if (!userId) {
     logger.warn("User ID is missing, cannot create notification.");
     return;
   }
-  const notification = {
+  const notificationWithMeta = {
     ...notificationData,
     userId: userId,
     date: FieldValue.serverTimestamp(),
     isRead: false,
   };
-  await db.collection('users').doc(userId).collection('notifications').add(notification);
+  await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
 }
 
 
@@ -48,7 +51,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: 'Delivery Scheduled',
-        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
+        description: `Delivery of ${delivery.volumeContainers} containers is scheduled.`,
         data: { deliveryId: event.params.deliveryId }
     };
     
@@ -76,9 +79,51 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: `Delivery ${delivery.status}`,
-        description: `Your delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
+        description: `Delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
         data: { deliveryId: event.params.deliveryId }
     };
+    
+    await createNotification(userId, notification);
+});
+
+/**
+ * Cloud Function to create notifications when a payment status is updated by an admin.
+ */
+export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{paymentId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Only notify if the status has changed.
+    if (before.status === after.status) {
+        return;
+    }
+
+    const userId = event.params.userId;
+    const payment = after;
+
+    let notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>;
+
+    if (payment.status === 'Paid') {
+        notification = {
+            type: 'payment',
+            title: 'Payment Confirmed',
+            description: `Your payment for invoice ${payment.id} has been confirmed. Thank you!`,
+            data: { paymentId: payment.id }
+        };
+    } else if (before.status === 'Pending Review' && payment.status === 'Upcoming') {
+        // This logic specifically targets the rejection flow
+        notification = {
+            type: 'payment',
+            title: 'Payment Action Required',
+            description: `Your payment for invoice ${payment.id} requires attention. Reason: ${payment.rejectionReason || 'Please contact support.'}`,
+            data: { paymentId: payment.id }
+        };
+    } else {
+        // Don't send notifications for other status changes (e.g., Upcoming -> Overdue)
+        return;
+    }
     
     await createNotification(userId, notification);
 });
@@ -158,9 +203,21 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         await createNotification(userId, {
             type: 'payment',
             title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} has been received and is now pending review.`,
+            description: `Your payment proof for invoice ${paymentId} is under review.`,
             data: { paymentId: paymentId }
         });
+        return;
+    }
+    
+    if (filePath.startsWith("users/") && filePath.includes("/sanitationVisits/")) {
+        const parts = filePath.split("/");
+        const userId = parts[1];
+        const visitId = parts[3];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
+            reportUrl: url,
+        });
+        logger.log(`Updated report URL for sanitation visit: ${visitId} for user: ${userId}`);
         return;
     }
 
@@ -177,19 +234,11 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             logger.log(`Updated partnership agreement for station: ${stationId}`);
         } else if (docType === "compliance") {
             const reportKey = path.basename(filePath).split('-')[0];
-            const formattedName = reportKey.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
             
-            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports");
-            const reportDocId = reportKey;
+            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportKey);
 
-            await reportRef.doc(reportDocId).set({
-                id: reportDocId,
-                name: formattedName,
-                date: FieldValue.serverTimestamp(),
-                status: "Pending Review",
-                reportUrl: url,
-            }, { merge: true });
-            logger.log(`Updated compliance report '${formattedName}' for station: ${stationId}`);
+            await reportRef.update({ reportUrl: url });
+            logger.log(`Updated compliance report URL for report '${reportKey}' for station: ${stationId}`);
         }
         return;
     }
