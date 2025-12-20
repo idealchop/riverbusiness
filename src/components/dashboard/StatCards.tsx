@@ -55,7 +55,7 @@ export function StatCards({
     }
     
     // Unify the source of custom plan details. Check top-level first, then fall back to plan-nested.
-    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
+    const planDetails = user.customPlanDetails || user.plan?.customPlanDetails;
 
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);

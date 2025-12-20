@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -1089,6 +1089,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     }
                 }
                 newUserForm.setValue('plan', newPlan);
+                 if (newPlan && newPlan.price !== undefined) {
+                    newUserForm.setValue('customPlanDetails.litersPerMonth', newPlan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0) );
+                    const formPlan = newUserForm.getValues('plan');
+                    if(formPlan) {
+                      newUserForm.setValue('plan.price', newPlan.price);
+                    }
+                }
             }
              if (name === 'plan' && value.plan && value.plan.price !== undefined) {
                  newUserForm.setValue('customPlanDetails.litersPerMonth', value.plan.isConsumptionBased ? 0 : (value.customPlanDetails?.litersPerMonth || 0) );
@@ -2660,7 +2667,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <DialogTitle>Add New Client</DialogTitle>
                     <DialogDescription>Set up a new client profile. The user will claim this profile using the generated Client ID.</DialogDescription>
                 </DialogHeader>
-                <Form {...newUserForm}>
+                 <Form {...newUserForm}>
                     <form onSubmit={newUserForm.handleSubmit(handleCreateNewUser)}>
                         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                            {formStep === 0 && (
@@ -2692,9 +2699,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </div>
                                 </div>
                             )}
-                            {formStep === 1 && (
+                           {formStep === 1 && (
                                 <div className="space-y-6">
-                                     <div>
+                                    <div>
                                         <h3 className="font-semibold text-lg">Step 2: Plan &amp; Configuration</h3>
                                         <p className="text-sm text-muted-foreground">Select a plan type, then choose and configure a specific plan.</p>
                                     </div>
@@ -2705,7 +2712,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <FormItem>
                                                 <FormLabel>Select a Plan Type</FormLabel>
                                                 <FormControl>
-                                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                                                         {clientTypes.map(type => {
                                                             const image = PlaceHolderImages.find(p => p.id === type.imageId);
                                                             return (
@@ -2737,21 +2744,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Select a Plan</FormLabel>
-                                                        <FormControl>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                {planOptions.map(plan => {
-                                                                    const isSelected = field.value?.name === plan.name;
-                                                                    return (
-                                                                        <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
-                                                                            <CardHeader>
-                                                                                <CardTitle className="text-base flex justify-between">{plan.name} {plan.isConsumptionBased && <span className='text-sm text-muted-foreground font-normal'>(P{plan.price}/L)</span>}</CardTitle>
-                                                                                <CardDescription>{plan.description}</CardDescription>
-                                                                            </CardHeader>
-                                                                        </Card>
-                                                                    )
-                                                                })}
-                                                            </div>
-                                                        </FormControl>
+                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {planOptions.map(plan => {
+                                                                const isSelected = field.value?.name === plan.name;
+                                                                return (
+                                                                    <Card key={plan.name} onClick={() => field.onChange(plan)} className={cn("cursor-pointer", isSelected && "border-2 border-primary")}>
+                                                                        <CardHeader>
+                                                                            <CardTitle className="text-base flex justify-between">{plan.name} {plan.isConsumptionBased && <span className='text-sm text-muted-foreground font-normal'>(P{plan.price}/L)</span>}</CardTitle>
+                                                                            <CardDescription>{plan.description}</CardDescription>
+                                                                        </CardHeader>
+                                                                    </Card>
+                                                                )
+                                                            })}
+                                                        </div>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
@@ -2762,8 +2767,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     {!selectedPlan.isConsumptionBased ? (
                                                         <div className="space-y-4 p-4 border rounded-lg">
                                                             <h4 className="font-medium">Subscription</h4>
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                              <FormField
+                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                  <FormField
                                                                     control={newUserForm.control}
                                                                     name="plan.price"
                                                                     render={({ field }) => (
