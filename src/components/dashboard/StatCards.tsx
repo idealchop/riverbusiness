@@ -137,7 +137,7 @@ export function StatCards({
   const isFlowPlan = user?.plan?.isConsumptionBased;
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-4">
       {isFlowPlan ? (
         <div className="col-span-full grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="flex flex-col lg:col-span-2">
@@ -191,12 +191,13 @@ export function StatCards({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 items-center text-center">
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground sm:text-sm">
                         Need water sooner? Schedule a one-time delivery with an exact date and quantity.
                     </p>
                     <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      Schedule Refill
+                      <span className="sm:hidden">Schedule</span>
+                      <span className="hidden sm:inline">Schedule Refill</span>
                     </Button>
                   </div>
                 )}
@@ -275,7 +276,8 @@ export function StatCards({
                 ) : (
                   <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    Schedule Refill
+                    <span className="sm:hidden">Schedule</span>
+                    <span className="hidden sm:inline">Schedule Refill</span>
                   </Button>
                 )}
               </div>
