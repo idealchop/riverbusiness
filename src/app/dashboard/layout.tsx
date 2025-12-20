@@ -524,12 +524,16 @@ export default function DashboardLayout({
           </header>
           <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
             <div className="container mx-auto">
-              {children}
+              {React.cloneElement(children as React.ReactElement, {
+                handleOneClickRefill: () => {},
+                isRefillRequesting: false,
+                hasPendingRefill: false
+              })}
             </div>
           </main>
 
         {/* Mobile Bottom Navigation */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex justify-around items-center z-20">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex justify-around items-center z-20 rounded-t-lg">
             <Button variant="ghost" className="flex flex-col h-auto p-2" onClick={() => window.dispatchEvent(new CustomEvent('open-delivery-history'))}>
                 <History className="h-5 w-5" />
                 <span className="text-xs mt-1">History</span>

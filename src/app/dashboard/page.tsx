@@ -106,7 +106,15 @@ import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-export default function DashboardPage() {
+export default function DashboardPage({
+  handleOneClickRefill,
+  isRefillRequesting,
+  hasPendingRefill,
+}: {
+  handleOneClickRefill: () => void;
+  isRefillRequesting: boolean;
+  hasPendingRefill: boolean;
+}) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser, isUserLoading: isAuthLoading } = useUser();
@@ -118,7 +126,6 @@ export default function DashboardPage() {
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   const [greeting, setGreeting] = useState('');
-  const [isRefillRequesting, setIsRefillRequesting] = useState(false);
 
 
   const [dialogState, setDialogState] = useState({
@@ -168,7 +175,6 @@ export default function DashboardPage() {
 
   const { data: activeRefills, isLoading: isRefillLoading } = useCollection<RefillRequest>(activeRefillQuery);
   const activeRefillRequest = useMemo(() => (activeRefills && activeRefills.length > 0 ? activeRefills[0] : null), [activeRefills]);
-  const hasPendingRefill = useMemo(() => !isRefillLoading && activeRefills && activeRefills.length > 0, [activeRefills, isRefillLoading]);
   
   const [isSubmitScheduledRefill, setIsSubmitScheduledRefill] = useState(false);
 
@@ -182,57 +188,7 @@ export default function DashboardPage() {
   };
   const closeDialog = (dialog: keyof typeof dialogState) => setDialogState((prev) => ({ ...prev, [dialog]: false }));
 
-  const handleOneClickRefill = async () => {
-      if (hasPendingRefill) {
-          openDialog('refillStatus');
-          return;
-      }
-      if (!user || !firestore || !authUser) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Cannot process request. User not found.' });
-          return;
-      }
   
-      setIsRefillRequesting(true);
-      const newRequestData: Omit<RefillRequest, 'id'> = {
-          userId: user.id,
-          userName: user.name,
-          businessName: user.businessName,
-          clientId: user.clientId || '',
-          requestedAt: serverTimestamp(),
-          status: 'Requested',
-          statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
-          requestedDate: new Date().toISOString(), // Use current date for ASAP
-      };
-  
-      try {
-          const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-          const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
-  
-          await createNotification(authUser.uid, {
-              type: 'delivery',
-              title: 'ASAP Refill Request Sent!',
-              description: `Your immediate refill request has been sent.`,
-              data: { requestId: newDocRef.id },
-          });
-
-          const userName = user?.name.split(' ')[0] || 'friend';
-          toast({
-              title: 'Request Sent!',
-              description: `Salamat, ${userName}! Papunta na ang aming team para sa iyong water refill.`,
-          });
-  
-      } catch (error) {
-          toast({
-              variant: 'destructive',
-              title: 'Request Failed',
-              description: 'There was an issue sending your request. Please try again.',
-          });
-      } finally {
-          setIsRefillRequesting(false);
-      }
-  };
-
-
   useEffect(() => {
     const handleOpenDelivery = () => openDialog('deliveryHistory');
     const handleOpenCompliance = (event: Event) => {
