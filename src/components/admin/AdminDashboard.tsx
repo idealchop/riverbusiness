@@ -1023,13 +1023,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     };
     
-    const planOptions = React.useMemo(() => {
-        if (selectedClientType === 'Enterprise') {
-            return enterprisePlans;
-        }
-        return getPlansForType(selectedClientType);
-    }, [selectedClientType]);
-
     const handleCreateNewUser = async (values: NewUserFormValues) => {
         if (!firestore) return;
         setIsSubmitting(true);
@@ -1115,6 +1108,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
         return () => subscription.unsubscribe();
     }, [newUserForm]);
+
+    const planOptions = React.useMemo(() => {
+        if (!selectedClientType) return [];
+        if (selectedClientType === 'Enterprise') {
+            return enterprisePlans;
+        }
+        return getPlansForType(selectedClientType);
+    }, [selectedClientType]);
 
     const selectedPlan = newUserForm.watch('plan');
 
@@ -2881,4 +2882,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-    
