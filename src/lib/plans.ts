@@ -11,7 +11,7 @@ export const clientTypes = [
 export const familyPlans = [
     {
         name: 'Family Plan',
-        price: 0,
+        price: 50,
         recommended: true,
         details: 'Admin-configured'
     }
@@ -20,7 +20,7 @@ export const familyPlans = [
 export const smePlans = [
     {
         name: 'SME Plan',
-        price: 0,
+        price: 100,
         recommended: true,
         details: 'Admin-configured'
     }
@@ -29,7 +29,7 @@ export const smePlans = [
 export const commercialPlans = [
     {
         name: 'Commercial Plan',
-        price: 0,
+        price: 150,
         recommended: true,
         details: 'Admin-configured'
     }
@@ -38,7 +38,7 @@ export const commercialPlans = [
 export const corporatePlans = [
     {
         name: 'Corporate Plan',
-        price: 0,
+        price: 250,
         recommended: true,
         details: 'Admin-configured'
     }
