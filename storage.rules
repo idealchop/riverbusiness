@@ -5,33 +5,39 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'admin@riverph.com';
+      // The user is an admin if their custom claim 'admin' is true.
+      // Or, as a fallback, if they are the designated admin email.
+      return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
-    // Users can only read/write to their own folder. Admins can read.
+    // 1. Global Admin Rule: Admins can read and write ANY file.
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // 2. User-Specific Rules: Users can manage files in their own directory.
+    // An admin can also write here because of the global rule above.
     match /users/{userId}/{allPaths=**} {
+      // Any authenticated user can read files (e.g. profile pictures).
       allow read: if request.auth != null;
+      // Only the owner of the folder can write files to it.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Admins can upload files on behalf of users to a dedicated folder.
-    match /admin_uploads/{adminId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == adminId && isAdmin();
-    }
-
-    // Admins can manage user contracts. Any auth'd user can read.
+    // 3. User Contracts: Managed by admins, readable by any authenticated user.
     match /userContracts/{userId}/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+      // Write is handled by the global admin rule.
     }
 
-    // Admins can manage station documents. Any auth'd user can read.
+    // 4. Station Documents: Managed by admins, readable by any authenticated user.
     match /stations/{stationId}/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+       // Write is handled by the global admin rule.
     }
 
-    // Allow read access to marketing and logo images for all users, including unauthenticated ones for the login page.
+    // 5. Public Assets: Read-only for everyone, including unauthenticated users.
+    // This is necessary for images on login/public pages.
     match /River Mobile/{allPaths=**} {
       allow read;
     }
