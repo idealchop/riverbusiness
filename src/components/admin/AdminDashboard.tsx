@@ -205,6 +205,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadedProofUrl, setUploadedProofUrl] = useState<string | null>(null);
+    const [uploadedAgreementUrl, setUploadedAgreementUrl] = useState<string | null>(null);
 
 
     const ITEMS_PER_PAGE = 20;
@@ -487,6 +489,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         } else {
             stationForm.reset({ name: '', location: '' });
             setAgreementFile(null);
+            setUploadedAgreementUrl(null);
         }
     }, [stationToUpdate, stationForm, isStationProfileOpen]);
 
@@ -562,77 +565,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
     };
-
-    const handleProofUpload = async () => {
-        if (!deliveryProofFile || !deliveryToUpdate || !userForHistory || !storage || !auth) return;
-    
-        setIsSubmitting(true);
-    
-        try {
-            const path = `users/${userForHistory.id}/deliveries/${deliveryToUpdate.id}-${deliveryProofFile.name}`;
-            await uploadFileWithProgress(storage, auth, path, deliveryProofFile, {}, setUploadProgress);
-            
-            toast({ title: 'Upload Complete', description: 'The proof of delivery is being processed.' });
-            setDeliveryToUpdate(null);
-            setDeliveryProofFile(null);
-    
-        } catch (error) {
-            console.error(error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
-        } finally {
-            setIsSubmitting(false);
-            setUploadProgress(0);
-        }
-    };
-
-
-    const handleUploadContract = async () => {
-        if (!contractFile || !userForContract || !storage || !firestore || !auth) return;
-
-        setIsSubmitting(true);
-    
-        try {
-            const path = `userContracts/${userForContract.id}/${contractFile.name}`;
-            await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
-    
-            toast({ title: 'Upload Complete', description: 'The contract is being processed.' });
-            setIsUploadContractOpen(false);
-            setContractFile(null);
-        } catch (error) {
-            console.error(error);
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
-        } finally {
-            setIsSubmitting(false);
-            setUploadProgress(0);
-        }
-    };
     
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !storage || !auth) return;
+        if (!userForHistory || !firestore) return;
         setIsSubmitting(true);
     
         try {
-            const deliveryData = {
+            const deliveryData: any = {
                 id: values.trackingNumber,
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
+                proofOfDeliveryUrl: uploadedProofUrl, // Use the URL from state
             };
     
-            // Step 1: Create the document first.
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
             await setDoc(deliveryRef, deliveryData);
             
-            // Step 2: Upload the file if it exists.
-            const file = deliveryForm.getValues('proofFile');
-            if (file) {
-                const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
-                // The backend function will attach the URL, no need to await here for that part.
-                await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
-            }
-            
-            // Step 3: Adjust user's consumption if delivered
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
@@ -642,7 +592,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             
             deliveryForm.reset();
-            setUploadProgress(0);
+            setUploadedProofUrl(null);
             setIsCreateDeliveryOpen(false);
     
         } catch (error) {
@@ -654,6 +604,26 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleProofFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !userForHistory || !auth || !storage) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const path = `users/${userForHistory.id}/deliveries/${deliveryForm.getValues('trackingNumber') || Date.now()}-${file.name}`;
+            const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+            setUploadedProofUrl(downloadURL);
+            toast({ title: "Upload Complete", description: "Proof of delivery is ready to be attached." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
+            setUploadedProofUrl(null);
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -796,29 +766,46 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleCreateStation = async (values: NewStationFormValues) => {
         if (!firestore || !auth || !storage) return;
         setIsSubmitting(true);
+        let stationId = '';
         try {
             const newStationData = {
                 name: values.name,
                 location: values.location,
+                partnershipAgreementUrl: uploadedAgreementUrl
             };
             const newStationRef = await addDoc(collection(firestore, 'waterStations'), newStationData);
-            
-            if (agreementFile) {
-                const path = `stations/${newStationRef.id}/agreement/${agreementFile.name}`;
-                await uploadFileWithProgress(storage, auth, path, agreementFile, {}, setUploadProgress);
-            }
+            stationId = newStationRef.id;
 
-            toast({ title: "Station Created", description: `Station "${values.name}" and its documents are being processed.` });
+            toast({ title: "Station Created", description: `Station "${values.name}" has been created.` });
             setIsStationProfileOpen(false);
             stationForm.reset();
-            setAgreementFile(null);
+            setUploadedAgreementUrl(null);
 
         } catch (error) {
             console.error(error);
             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
         } finally {
             setIsSubmitting(false);
-            setUploadProgress(0);
+        }
+    };
+    
+    const handleAgreementFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !auth || !storage) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const path = `stations/temp_agreements/${Date.now()}-${file.name}`;
+            const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+            setUploadedAgreementUrl(downloadURL);
+            toast({ title: "Upload Complete", description: "Agreement is ready to be attached." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload agreement.' });
+            setUploadedAgreementUrl(null);
+        } finally {
+            setIsUploading(false);
         }
     };
     
@@ -869,6 +856,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 scheduledDate: values.scheduledDate.toISOString(),
                 userId: selectedUser.id,
             };
+            
+            const file = values.reportFile?.[0];
+            if (file) {
+                 const path = `users/${selectedUser.id}/sanitationVisits/${Date.now()}-${file.name}`;
+                 const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+                 visitData.reportUrl = downloadURL;
+            }
             delete (visitData as any).reportFile;
     
             let visitRef: DocumentReference;
@@ -882,12 +876,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 isNewVisit = true;
                 visitRef = await addDoc(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
-            }
-    
-            const file = values.reportFile?.[0];
-            if (file) {
-                const path = `users/${selectedUser.id}/sanitationVisits/${visitRef.id}-${file.name}`;
-                await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
             }
             
             if (isNewVisit) {
@@ -923,13 +911,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
     
         try {
-            const reportData = {
+            const reportData: any = {
                 ...values,
                 name: `${values.reportType} - ${format(new Date(), 'MMM yyyy')}`,
                 date: serverTimestamp(),
             };
             
-            delete (reportData as any).reportFile;
+            const file = values.reportFile?.[0];
+            if (file) {
+                 const path = `stations/${stationToUpdate.id}/compliance/${Date.now()}-${file.name}`;
+                 const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+                 reportData.reportUrl = downloadURL;
+            }
+            delete reportData.reportFile;
     
             let reportRef: DocumentReference;
             if (complianceReportToEdit) {
@@ -937,15 +931,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 await updateDoc(reportRef, reportData);
                 toast({ title: 'Report Updated', description: 'The compliance report has been updated.' });
             } else {
-                const newReportData = await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
-                reportRef = newReportData;
+                reportRef = await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
                 toast({ title: 'Report Created', description: 'A new compliance report has been created.' });
-            }
-    
-            const file = values.reportFile?.[0];
-            if (file) {
-                const path = `stations/${stationToUpdate.id}/compliance/${reportRef.id}-${file.name}`;
-                await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
             }
     
             setIsComplianceReportDialogOpen(false);
@@ -1385,9 +1372,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                             View Proof
                                                         </DropdownMenuItem>
                                                     ) : (
-                                                        <DropdownMenuItem onClick={() => setDeliveryToUpdate(delivery)} disabled={!isAdmin || isUploadingProof}>
+                                                        <DropdownMenuItem disabled>
                                                             <Upload className="mr-2 h-4 w-4" />
-                                                            {isUploadingProof ? 'Uploading...' : 'Attach Proof'}
+                                                            No Proof
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuSeparator />
@@ -1429,7 +1416,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); setIsUploading(false); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
+        <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); setIsUploading(false); deliveryForm.reset(); setUploadedProofUrl(null); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Create Manual Delivery</DialogTitle>
@@ -1528,23 +1515,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </FormItem>
                             )}
                         />
-                        <FormField
-                            control={deliveryForm.control}
-                            name="proofFile"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Proof of Delivery (Optional)</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="file"
-                                            onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)}
-                                            disabled={isSubmitting}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
+                        <FormItem>
+                            <FormLabel>Proof of Delivery (Optional)</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    onChange={handleProofFileChange}
+                                    disabled={isUploading || isSubmitting}
+                                />
+                            </FormControl>
+                            {isUploading && (
+                                <Progress value={uploadProgress} className="mt-2" />
                             )}
-                        />
+                            <FormMessage />
+                        </FormItem>
                          <FormField
                             control={deliveryForm.control}
                             name="adminNotes"
@@ -1559,9 +1544,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             )}
                         />
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting}>Cancel</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? "Creating..." : "Create Delivery"}
+                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting || isUploading}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting || isUploading}>
+                                {isSubmitting ? "Creating..." : isUploading ? "Uploading..." : "Create Delivery"}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -1674,28 +1659,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={!!deliveryToUpdate} onOpenChange={(open) => { if (!open && !isSubmitting) { setDeliveryToUpdate(null); setDeliveryProofFile(null); } }}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Attach Proof of Delivery</DialogTitle>
-                    <DialogDescription>Attach the proof of delivery for delivery ID: {deliveryToUpdate?.id}</DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-2">
-                    <Input type="file" onChange={(e) => setDeliveryProofFile(e.target.files?.[0] || null)} disabled={isSubmitting} />
-                    {isSubmitting && (
-                        <Progress value={uploadProgress} />
-                    )}
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => { setDeliveryToUpdate(null); setDeliveryProofFile(null); }} disabled={isSubmitting}>Cancel</Button>
-                    <Button onClick={handleProofUpload} disabled={!deliveryProofFile || isSubmitting}>
-                        {isSubmitting ? "Uploading..." : "Attach"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
-
         <Dialog open={isUploadContractOpen} onOpenChange={(open) => { if (!open) { setUserForContract(null); setContractFile(null); } setIsUploadContractOpen(open); }}>
             <DialogContent>
                 <DialogHeader>
@@ -1710,7 +1673,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsUploadContractOpen(false)} disabled={isSubmitting}>Cancel</Button>
-                    <Button onClick={handleUploadContract} disabled={!contractFile || isSubmitting}>
+                    <Button onClick={async () => {
+                        if (!contractFile || !userForContract || !storage || !auth) return;
+                        setIsSubmitting(true);
+                        try {
+                            const path = `userContracts/${userForContract.id}/${contractFile.name}`;
+                            await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
+                            toast({ title: 'Upload Complete', description: 'The contract is being processed.' });
+                            setIsUploadContractOpen(false);
+                            setContractFile(null);
+                        } catch (error) {
+                            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    }} disabled={!contractFile || isSubmitting}>
                         {isSubmitting ? 'Uploading...' : 'Attach'}
                     </Button>
                 </DialogFooter>
@@ -2245,11 +2222,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
                             <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {(() => {
-                                    const isUploadingFile = uploadProgress > 0 && uploadProgress < 100;
-
-                                    if (isUploadingFile) {
-                                        return <Progress value={uploadProgress} className="w-full h-2" />;
-                                    }
                                     if (stationToUpdate?.partnershipAgreementUrl) {
                                         return (
                                             <>
@@ -2259,48 +2231,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </>
                                         );
                                     }
-                                    if (agreementFile) {
-                                        return (
-                                            <>
-                                                <FileText className="h-6 w-6 text-muted-foreground" />
-                                                <div className="flex-1">
-                                                    <p className="font-medium truncate">{agreementFile.name}</p>
-                                                    <p className="text-xs text-muted-foreground">Ready to upload</p>
-                                                </div>
-                                                {<Button disabled={isSubmitting || !stationToUpdate} onClick={async () => {
-                                                    if (!agreementFile || !stationToUpdate || !storage || !auth) return;
-                                                     setIsSubmitting(true);
-                                                     try {
-                                                        const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
-                                                        await uploadFileWithProgress(storage, auth, path, agreementFile, {}, setUploadProgress);
-                                                        toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
-                                                        setAgreementFile(null);
-                                                    } catch (err) {
-                                                        console.error(err);
-                                                        toast({variant: 'destructive', title: 'Upload Failed'});
-                                                    } finally {
-                                                        setIsSubmitting(false);
-                                                        setUploadProgress(0);
-                                                    }
-                                                }}><Upload className="mr-2 h-4 w-4"/> Upload</Button>}
-                                                <Button size="icon" variant="ghost" onClick={() => setAgreementFile(null)} disabled={isSubmitting}><X className="h-4 w-4"/></Button>
-                                            </>
-                                        );
-                                    }
                                     return (
-                                        <>
-                                            <FileText className="h-6 w-6 text-muted-foreground" />
-                                            <div className="flex-1">
-                                                <p className="font-medium">No Agreement Attached</p>
-                                                <p className="text-xs text-muted-foreground">Please attach the signed agreement.</p>
-                                            </div>
-                                             <Button asChild variant="outline" disabled={isSubmitting}>
-                                                <Label className={cn("flex items-center", !isSubmitting ? "cursor-pointer" : "cursor-not-allowed")}>
-                                                    <Paperclip className="mr-2 h-4 w-4" /> Attach
-                                                    <Input type="file" accept="application/pdf,image/*" className="hidden" disabled={isSubmitting} onChange={(e) => e.target.files?.[0] && setAgreementFile(e.target.files[0])} />
-                                                </Label>
-                                            </Button>
-                                        </>
+                                        <div className="w-full">
+                                            <Label>Attach Signed Agreement</Label>
+                                            <Input 
+                                                type="file" 
+                                                accept="image/*,application/pdf" 
+                                                onChange={handleAgreementFileChange} 
+                                                disabled={isUploading}
+                                            />
+                                            {isUploading && <Progress value={uploadProgress} className="mt-2" />}
+                                        </div>
                                     );
                                 })()}
                             </div>
@@ -2321,7 +2262,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                         </DialogClose>
                         {!stationToUpdate && (
-                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isSubmitting || stationForm.formState.isSubmitting}>{isSubmitting ? "Creating..." : "Create Station"}</Button>
+                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isSubmitting || stationForm.formState.isSubmitting || isUploading || !uploadedAgreementUrl}>{isSubmitting ? "Creating..." : "Create Station"}</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -2548,7 +2489,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     disabled={isSubmitting}
                                                 />
                                             </FormControl>
-                                            {isSubmitting && (
+                                            {isSubmitting && uploadProgress > 0 && (
                                                 <Progress value={uploadProgress} className="mt-2" />
                                             )}
                                             <FormMessage />

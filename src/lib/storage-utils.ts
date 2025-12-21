@@ -1,7 +1,7 @@
 
 'use client';
 
-import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata } from 'firebase/storage';
+import { FirebaseStorage, ref, uploadBytesResumable, type UploadMetadata, getDownloadURL } from 'firebase/storage';
 import type { Auth } from 'firebase/auth';
 
 /**
@@ -15,7 +15,7 @@ import type { Auth } from 'firebase/auth';
  * @param file The file object to upload.
  * @param metadata The custom metadata to attach to the file, if any.
  * @param onProgress A callback function to report the upload progress (0-100).
- * @returns A promise that resolves when the upload is 100% complete, or rejects on failure.
+ * @returns A promise that resolves with the final download URL when the upload is 100% complete, or rejects on failure.
  */
 export function uploadFileWithProgress(
   storage: FirebaseStorage,
@@ -24,7 +24,7 @@ export function uploadFileWithProgress(
   file: File,
   metadata: UploadMetadata,
   onProgress: (progress: number) => void
-): Promise<void> {
+): Promise<string> {
     
   return new Promise((resolve, reject) => {
     // Critical Step: Ensure user is authenticated before attempting upload.
@@ -50,14 +50,15 @@ export function uploadFileWithProgress(
         reject(error); // Make sure to reject the promise on error
       },
       () => {
-        // Handle successful uploads on complete
         // This callback is the source of truth for completion.
         onProgress(100);
-        // The getDownloadURL is not strictly needed by the client, but confirming
-        // the task is complete is the most important part.
-        // We resolve without a URL, as the client doesn't need it.
-        // The Cloud Function is responsible for getting the URL and updating Firestore.
-        resolve(); // Resolve the promise ONLY when the upload is complete.
+        // Once the upload is complete, get the download URL.
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          resolve(downloadURL); // Resolve the promise with the URL.
+        }).catch((error) => {
+           console.error("[UPLOAD] Failed to get download URL:", error);
+           reject(error);
+        });
       }
     );
   });
