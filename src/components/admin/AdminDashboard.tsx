@@ -203,6 +203,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
     const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
+    
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
 
 
     const ITEMS_PER_PAGE = 20;
@@ -634,38 +637,37 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !storage || !auth) return;
+        if (!userForHistory || !firestore) return;
         setIsSubmitting(true);
-
+        
         try {
             const newDeliveryDocRef = doc(collection(firestore, 'users', userForHistory.id, 'deliveries'), values.trackingNumber);
-
-            const newDeliveryData: Omit<Delivery, 'id'|'userId'> & {date: string} = {
+    
+            const newDeliveryData: Omit<Delivery, 'id' | 'userId'> & { date: string } = {
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
             };
-
+    
+            // Step 1: Create the document
             await setDoc(newDeliveryDocRef, newDeliveryData);
-
-            const file = values.proofFile?.[0];
-            if (file) {
-                const uploadKey = `delivery-${values.trackingNumber}`;
-                const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
-                await handleFileUpload(file, path, uploadKey);
-            }
-
+    
+            // Step 2: If there's a file, we already uploaded it. The backend function will handle the rest.
+            // The isUploading state would have prevented submission until the file was ready.
+            
+            // Step 3: Handle inventory adjustment if needed
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
                 await updateDoc(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
             }
-
+    
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             deliveryForm.reset();
+            setUploadProgress(0); // Reset progress for the next form
             setIsCreateDeliveryOpen(false);
-
+    
         } catch (error) {
             console.error("Delivery creation failed: ", error);
             toast({
@@ -1462,7 +1464,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Tracking Number</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., DEL-00123" {...field} disabled={isSubmitting} />
+                                        <Input placeholder="e.g., DEL-00123" {...field} disabled={isSubmitting || isUploading} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -1483,7 +1485,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         "w-full text-left font-normal",
                                                         !field.value && "text-muted-foreground"
                                                     )}
-                                                    disabled={isSubmitting}
+                                                    disabled={isSubmitting || isUploading}
                                                 >
                                                     {field.value ? (
                                                         format(field.value, "PPP")
@@ -1515,7 +1517,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Volume (Containers)</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="e.g., 50" {...field} disabled={isSubmitting} />
+                                        <Input type="number" placeholder="e.g., 50" {...field} disabled={isSubmitting || isUploading} />
                                     </FormControl>
                                     <FormDescription>
                                         1 container = 19.5 liters. Total: { (watchedDeliveryContainers * 19.5).toLocaleString() } liters.
@@ -1530,7 +1532,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isUploading}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a status" />
@@ -1549,14 +1551,34 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                          <FormField
                             control={deliveryForm.control}
                             name="proofFile"
-                            render={({ field }) => (
+                            render={({ field: { onChange, ...fieldProps } }) => (
                                 <FormItem>
                                     <FormLabel>Proof of Delivery (Optional)</FormLabel>
                                     <FormControl>
-                                       <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} />
+                                       <Input type="file" 
+                                         {...fieldProps}
+                                         onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file || !userForHistory || !auth || !storage) return;
+
+                                            setIsUploading(true);
+                                            const path = `users/${userForHistory.id}/deliveries/${deliveryForm.getValues('trackingNumber')}-${file.name}`;
+                                            try {
+                                                await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+                                            } catch (error) {
+                                                toast({variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof file.'});
+                                                setIsUploading(false); // Re-enable form
+                                                return;
+                                            }
+                                            setIsUploading(false);
+                                            onChange(file); // Inform react-hook-form about the file
+                                         }} 
+                                         disabled={isSubmitting || isUploading || !deliveryForm.getValues('trackingNumber')} 
+                                       />
                                     </FormControl>
-                                    {uploadingFiles[`delivery-${deliveryForm.getValues('trackingNumber')}`] > 0 && (
-                                        <Progress value={uploadingFiles[`delivery-${deliveryForm.getValues('trackingNumber')}`]} className="mt-2" />
+                                    {!deliveryForm.getValues('trackingNumber') && <FormDescription className="text-destructive">Please enter a Tracking Number before uploading a file.</FormDescription>}
+                                    {isUploading && (
+                                        <Progress value={uploadProgress} className="mt-2" />
                                     )}
                                     <FormMessage />
                                 </FormItem>
@@ -1569,16 +1591,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Admin Notes (Optional)</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} disabled={isSubmitting} />
+                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} disabled={isSubmitting || isUploading} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting}>Cancel</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? "Creating..." : "Create Delivery"}
+                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting || isUploading}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting || isUploading}>
+                                {isUploading ? "Uploading..." : isSubmitting ? "Creating..." : "Create Delivery"}
                             </Button>
                         </DialogFooter>
                     </form>
