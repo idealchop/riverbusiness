@@ -74,8 +74,6 @@ import {
   useFirestore,
   useUser,
   useMemoFirebase,
-  updateDocumentNonBlocking,
-  addDocumentNonBlocking,
 } from '@/firebase';
 import {
   doc,
@@ -85,6 +83,7 @@ import {
   where,
   Timestamp,
   arrayUnion,
+  addDoc,
 } from 'firebase/firestore';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -193,7 +192,7 @@ export default function DashboardPage() {
         date: serverTimestamp(),
         isRead: false
     };
-    await addDocumentNonBlocking(notificationsCol, newNotification);
+    await addDoc(notificationsCol, newNotification);
   };
   
   const handleOneClickRefill = useCallback(async () => {
@@ -220,7 +219,7 @@ export default function DashboardPage() {
 
     try {
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-      const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+      const newDocRef = await addDoc(refillRequestsCollection, newRequestData);
       
       await createNotification(authUser.uid, {
         type: 'delivery',
@@ -302,7 +301,7 @@ export default function DashboardPage() {
 
     try {
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-      const newDocRef = await addDocumentNonBlocking(refillRequestsCollection, newRequestData);
+      const newDocRef = await addDoc(refillRequestsCollection, newRequestData);
       
       await createNotification(authUser.uid, {
         type: 'delivery',
