@@ -97,11 +97,20 @@ export default function LoginPage() {
       }
 
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Please check your credentials and try again.',
-      });
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        toast({
+            variant: 'destructive',
+            title: 'No Account Found',
+            description: 'Would you like to create one?',
+            action: <Button variant="secondary" size="sm" onClick={() => router.push('/signup')}>Sign Up</Button>
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'Please check your credentials and try again.',
+        });
+      }
     }
   };
   
