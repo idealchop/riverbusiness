@@ -76,7 +76,7 @@ export function StatCards({
         };
     }
     
-    // This is the total available balance for the user at the start of the period.
+    // For fixed plans, the total available balance is the source of truth.
     const totalAvailableLiters = user.totalConsumptionLiters;
     const currentBalance = totalAvailableLiters - consumedLitersThisMonth;
 
@@ -87,7 +87,6 @@ export function StatCards({
         ...emptyState,
         monthlyPlanLiters: planDetails?.litersPerMonth || 0,
         bonusLiters: planDetails?.bonusLiters || 0,
-        // The total for the month IS the user's entire available balance.
         totalLitersForMonth: totalAvailableLiters,
         consumedLitersThisMonth,
         currentBalance,
