@@ -1,13 +1,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { ArrowRight, History, Edit, Calendar as CalendarIcon } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ArrowRight, History, Edit, Calendar as CalendarIcon, BellRing, Info } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -35,6 +36,8 @@ export function StatCards({
 }: StatCardsProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [isConfirmingToggle, setIsConfirmingToggle] = useState(false);
+  const [toggleTargetState, setToggleTargetState] = useState<boolean | null>(null);
   
   const consumptionDetails = React.useMemo(() => {
     const now = new Date();
@@ -94,30 +97,35 @@ export function StatCards({
     };
 }, [user, deliveries]);
 
-
-  const handleAutoRefillToggle = async (checked: boolean) => {
-    if (!user?.id || !firestore) return;
+  const handleToggleConfirmation = () => {
+    if (toggleTargetState === null || !user?.id || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', user.id);
     
-    try {
-        await updateDoc(userDocRef, {
-            'customPlanDetails.autoRefillEnabled': checked,
-        });
-
+    updateDoc(userDocRef, {
+        'customPlanDetails.autoRefillEnabled': toggleTargetState,
+    }).then(() => {
         toast({
-            title: checked ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
-            description: checked ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
+            title: toggleTargetState ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
+            description: toggleTargetState ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
         });
-    } catch (error) {
+    }).catch((error) => {
         console.error("Failed to update auto-refill status:", error);
         toast({
             variant: "destructive",
             title: "Update Failed",
             description: "Could not update your auto-refill preference.",
         });
-    }
+    }).finally(() => {
+        setIsConfirmingToggle(false);
+        setToggleTargetState(null);
+    });
   };
+
+  const onSwitchChange = (checked: boolean) => {
+    setToggleTargetState(checked);
+    setIsConfirmingToggle(true);
+  }
   
   const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
   const autoRefill = planDetails?.autoRefillEnabled ?? true;
@@ -128,6 +136,7 @@ export function StatCards({
   const isFlowPlan = user?.plan?.isConsumptionBased;
 
   return (
+    <>
     <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
       {isFlowPlan ? (
         <div className="col-span-full grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -161,7 +170,7 @@ export function StatCards({
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill</Label>
-                <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
+                <Switch id="auto-refill" checked={autoRefill} onCheckedChange={onSwitchChange} />
               </div>
               <p className="text-xs text-muted-foreground">
                 {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
@@ -246,8 +255,8 @@ export function StatCards({
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill</Label>
-                <Switch id="auto-refill" checked={autoRefill} onCheckedChange={handleAutoRefillToggle} />
+                <Label htmlFor="auto-refill-main" className="font-bold text-base">Auto Refill</Label>
+                <Switch id="auto-refill-main" checked={autoRefill} onCheckedChange={onSwitchChange} />
               </div>
               <p className="text-xs text-muted-foreground">
                 {autoRefill ? "Deliveries will be auto-scheduled based on your plan." : "Deliveries are paused. Schedule manually."}
@@ -277,5 +286,32 @@ export function StatCards({
         </>
       )}
     </div>
+    <AlertDialog open={isConfirmingToggle} onOpenChange={setIsConfirmingToggle}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to {toggleTargetState ? 'enable' : 'disable'} Auto-Refill?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {toggleTargetState ? (
+                        <>
+                            By enabling this, we will automatically schedule deliveries for you based on your plan:
+                            <strong className="block mt-2">{nextRefillDay}, {planDetails?.deliveryTime}</strong>
+                            You can customize this schedule at any time.
+                        </>
+                    ) : (
+                        <>
+                            By disabling this, all automatic deliveries will be paused. You will need to manually request refills to receive water.
+                        </>
+                    )}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setToggleTargetState(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleToggleConfirmation}>
+                    {toggleTargetState ? 'Yes, Enable Auto-Refill' : 'Yes, Disable Auto-Refill'}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
