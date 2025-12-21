@@ -1450,7 +1450,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
             <DialogContent>
@@ -2660,7 +2660,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Sanitation</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
