@@ -35,8 +35,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc } from 'firebase/firestore';
+import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser, useDoc, useStorage } from '@/firebase';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc, deleteDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -527,7 +527,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore || !stationToUpdate) return;
     
         const stationRef = doc(firestore, 'waterStations', stationToUpdate.id);
-        await updateDocumentNonBlocking(stationRef, values);
+        await updateDoc(stationRef, values);
         toast({ title: 'Station Updated', description: `Station "${values.name}" has been updated.` });
     };
 
@@ -535,7 +535,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!stationToDelete || !firestore) return;
         
         const stationRef = doc(firestore, 'waterStations', stationToDelete.id);
-        deleteDocumentNonBlocking(stationRef);
+        await deleteDoc(stationRef);
 
         toast({
             title: 'Station Deleted',
@@ -547,12 +547,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
 
-    const handleAssignStation = () => {
+    const handleAssignStation = async () => {
         if (!selectedUser || !stationToAssign || !firestore) return;
 
         const userRef = doc(firestore, 'users', selectedUser.id);
         const stationName = waterStations?.find(ws => ws.id === stationToAssign)?.name || 'a new station';
-        updateDocumentNonBlocking(userRef, { assignedWaterStationId: stationToAssign });
+        await updateDoc(userRef, { assignedWaterStationId: stationToAssign });
         
         setSelectedUser(prev => prev ? { ...prev, assignedWaterStationId: stationToAssign } : null);
 
@@ -637,37 +637,36 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
         if (!userForHistory || !firestore || !storage) return;
         setIsSubmitting(true);
-    
+
         try {
             const newDeliveryDocRef = doc(collection(firestore, 'users', userForHistory.id, 'deliveries'), values.trackingNumber);
-    
+
             const newDeliveryData: Omit<Delivery, 'id'|'userId'> & {date: string} = {
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
             };
-    
-            // Ensure document is created before file upload
+
             await setDoc(newDeliveryDocRef, newDeliveryData);
-    
+
             const file = values.proofFile?.[0];
             if (file) {
                 const uploadKey = `delivery-${values.trackingNumber}`;
                 const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
                 await handleFileUpload(file, path, uploadKey);
             }
-    
+
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
                 await updateDoc(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
             }
-    
+
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
             deliveryForm.reset();
             setIsCreateDeliveryOpen(false);
-    
+
         } catch (error) {
             console.error("Delivery creation failed: ", error);
             toast({
@@ -717,10 +716,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (deliveryToDelete.status === 'Delivered') {
             const litersToRestore = containerToLiter(deliveryToDelete.volumeContainers);
             const userRef = doc(firestore, 'users', userForHistory.id);
-            updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(litersToRestore) });
+            await updateDoc(userRef, { totalConsumptionLiters: increment(litersToRestore) });
         }
     
-        deleteDocumentNonBlocking(deliveryRef);
+        await deleteDoc(deliveryRef);
     
         toast({
             title: "Delivery Deleted",
@@ -793,10 +792,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         toast({ title: "Download Started", description: "Your delivery history CSV is being downloaded." });
     };
 
-    const handleRefillStatusUpdate = (request: RefillRequest, newStatus: RefillRequestStatus) => {
+    const handleRefillStatusUpdate = async (request: RefillRequest, newStatus: RefillRequestStatus) => {
         if (!firestore) return;
         const requestRef = doc(firestore, 'users', request.userId, 'refillRequests', request.id);
-        updateDocumentNonBlocking(requestRef, {
+        await updateDoc(requestRef, {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
@@ -824,7 +823,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 name: values.name,
                 location: values.location,
             };
-            const newStationRef = await addDocumentNonBlocking(collection(firestore, 'waterStations'), newStationData);
+            const newStationRef = await addDoc(collection(firestore, 'waterStations'), newStationData);
             
             if (agreementFile) {
                 const path = `stations/${newStationRef.id}/agreement/${agreementFile.name}`;
@@ -844,7 +843,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     };
     
-    const handleInvoiceStatusUpdate = (newStatus: 'Paid' | 'Upcoming') => {
+    const handleInvoiceStatusUpdate = async (newStatus: 'Paid' | 'Upcoming') => {
         const userToUpdate = userForInvoices || selectedUser;
         if (!userToUpdate || !selectedInvoice || !firestore) return;
     
@@ -853,35 +852,30 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const isCurrentMonthVirtualInvoice = selectedInvoice.id === currentMonthInvoice?.id;
     
         if (newStatus === 'Paid' && isCurrentMonthVirtualInvoice) {
-            // Create the document because it doesn't exist yet
             const docToCreate = {
                 ...selectedInvoice,
                 status: 'Paid',
                 date: serverTimestamp(),
             };
-            setDocumentNonBlocking(invoiceRef, docToCreate);
+            await setDoc(invoiceRef, docToCreate);
         } else {
-            // Update an existing document
             const updatePayload: any = { status: newStatus };
             if (newStatus === 'Upcoming') {
                 updatePayload.rejectionReason = rejectionReason;
             } else if (newStatus === 'Paid') {
                 updatePayload.rejectionReason = deleteField();
             }
-            updateDocumentNonBlocking(invoiceRef, updatePayload);
+            await updateDoc(invoiceRef, updatePayload);
         }
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
     
-        // Close the dialog after action
         setIsManageInvoiceOpen(false);
-        // Refresh the view by forcing a re-render of the parent.
-        // A better approach would be to have a shared state management.
         setTimeout(() => {
             const currentlySelected = userForInvoices;
             setUserForInvoices(null);
             setUserForInvoices(currentlySelected);
-        }, 500); // give Firestore time to propagate
+        }, 500);
         
         setRejectionReason('');
     };
@@ -903,11 +897,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
             if (visitToEdit) {
                 visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
-                await updateDocumentNonBlocking(visitRef, visitData);
+                await updateDoc(visitRef, visitData);
                 toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
             } else {
                 isNewVisit = true;
-                visitRef = await addDocumentNonBlocking(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
+                visitRef = await addDoc(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
             }
     
@@ -917,7 +911,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 await handleFileUpload(file, path, `sanitation-${visitRef.id}`);
             }
             
-            // Send notification
             if (isNewVisit) {
                  toast({title: 'Notification Sent', description: 'User has been notified of the scheduled visit.'})
             } else if (visitToEdit?.status !== values.status) {
@@ -939,7 +932,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore || !selectedUser || !visitToDelete) return;
         
         const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToDelete.id);
-        await deleteDocumentNonBlocking(visitRef);
+        await deleteDoc(visitRef);
         
         toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
         setVisitToDelete(null);
@@ -961,10 +954,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             let reportRef: DocumentReference;
             if (complianceReportToEdit) {
                 reportRef = doc(firestore, 'waterStations', stationToUpdate.id, 'complianceReports', complianceReportToEdit.id);
-                await updateDocumentNonBlocking(reportRef, reportData);
+                await updateDoc(reportRef, reportData);
                 toast({ title: 'Report Updated', description: 'The compliance report has been updated.' });
             } else {
-                reportRef = await addDocumentNonBlocking(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
+                reportRef = await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
                 toast({ title: 'Report Created', description: 'A new compliance report has been created.' });
             }
     
@@ -991,7 +984,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore || !stationToUpdate || !complianceReportToDelete) return;
 
         const reportRef = doc(firestore, 'waterStations', stationToUpdate.id, 'complianceReports', complianceReportToDelete.id);
-        await deleteDocumentNonBlocking(reportRef);
+        await deleteDoc(reportRef);
 
         toast({ title: "Report Deleted", description: "The compliance report has been removed." });
         setComplianceReportToDelete(null);
@@ -1069,7 +1062,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 adminCreatedAt: serverTimestamp(),
             };
             
-            await setDocumentNonBlocking(unclaimedProfileRef, profileData);
+            await setDoc(unclaimedProfileRef, profileData);
 
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
             setIsCreateUserOpen(false);
@@ -2853,3 +2846,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
