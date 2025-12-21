@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -24,7 +25,6 @@ export default function ClaimAccountPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, isUserLoading } = useUser();
-  const firestore = useFirestore();
 
   const {
     register,
@@ -104,9 +104,9 @@ export default function ClaimAccountPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Logo className="h-16 w-16 mb-4 mx-auto" />
-          <CardTitle>Claim Your Profile</CardTitle>
+          <CardTitle>Welcome to River Business!</CardTitle>
           <CardDescription>
-            Enter the Client ID provided by your administrator to link your account.
+            You're one step away! We've sent the Client ID to <span className="font-semibold text-primary">{authUser.email}</span>. Please enter it below to unlock your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
