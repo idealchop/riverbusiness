@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service firebase.storage {
@@ -13,18 +14,16 @@ service firebase.storage {
     // Rule for admins uploading delivery proofs or sanitation reports on behalf of users.
     // This matches the paths used in the AdminDashboard component.
     match /admin_uploads/{adminId}/{path=**} {
-      allow read, write: if request.auth.uid == adminId && isAdmin();
+      allow write: if request.auth.uid == adminId && isAdmin();
     }
 
     // Rule for admins uploading contracts for users.
     match /userContracts/{userId}/{fileName} {
-      allow read: if request.auth != null;
       allow write: if isAdmin();
     }
     
     // Rule for admins managing water station documents (agreements, compliance).
     match /stations/{stationId}/{path=**} {
-        allow read: if request.auth != null;
         allow write: if isAdmin();
     }
 
@@ -32,30 +31,27 @@ service firebase.storage {
 
     // Users can upload their own profile photo.
     match /users/{userId}/profile/{fileName} {
-      allow read: if request.auth != null;
       allow write: if request.auth.uid == userId;
     }
 
     // Users can upload their own payment proofs.
     match /users/{userId}/payments/{fileName} {
-       allow read: if request.auth != null;
        allow write: if request.auth.uid == userId;
     }
     
-    // --- READ-ONLY & PUBLIC RULES ---
+    // --- READ RULES ---
 
-    // As a fallback, authenticated users can generally read from user folders
-    // (e.g., to see another user's profile picture if needed).
-    // Write access is denied here and must be granted by a more specific rule above.
-    match /users/{userId}/{allPaths=**} {
+    // Allow authenticated users to read from any of these paths.
+    // This covers viewing profile photos, proofs, reports, contracts etc.
+    match /{path=**} {
       allow read: if request.auth != null;
     }
 
     // Public assets for login/marketing pages are readable by anyone.
-    match /River Mobile/{allPaths=**} {
+    match /Sales Portal/{allPaths=**} {
       allow read;
     }
-    match /Sales Portal/{allPaths=**} {
+     match /River Mobile/{allPaths=**} {
       allow read;
     }
   }

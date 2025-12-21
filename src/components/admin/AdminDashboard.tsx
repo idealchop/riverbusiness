@@ -571,17 +571,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
     
         try {
+            // First, create the document without the URL
             const deliveryData: any = {
                 id: values.trackingNumber,
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
-                proofOfDeliveryUrl: uploadedProofUrl,
             };
-    
+
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
             await setDoc(deliveryRef, deliveryData);
+            
+            // Now, if there was a file uploaded, the backend function will handle updating the URL
             
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
@@ -593,6 +595,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             deliveryForm.reset();
             setUploadedProofUrl(null);
+            setUploadProgress(0);
             setIsCreateDeliveryOpen(false);
     
         } catch (error) {
@@ -609,13 +612,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const handleProofFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file || !userForHistory || !auth || !storage) return;
+        if (!file || !userForHistory || !auth || !storage || !authUser) return;
 
         setIsUploading(true);
         setUploadProgress(0);
+        setUploadedProofUrl(null);
 
         try {
-            const path = `admin_uploads/${auth.currentUser?.uid}/proofs_for/${userForHistory.id}/${deliveryForm.getValues('trackingNumber') || Date.now()}-${file.name}`;
+            const path = `admin_uploads/${authUser.uid}/proofs_for/${userForHistory.id}/${deliveryForm.getValues('trackingNumber') || Date.now()}-${file.name}`;
             const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
             setUploadedProofUrl(downloadURL);
             toast({ title: "Upload Complete", description: "Proof of delivery is ready to be attached." });
@@ -847,7 +851,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
-        if (!firestore || !selectedUser || !storage || !auth) return;
+        if (!firestore || !selectedUser || !storage || !auth || !authUser) return;
         setIsSubmitting(true);
     
         try {
@@ -859,7 +863,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             const file = values.reportFile?.[0];
             if (file) {
-                 const path = `admin_uploads/${auth.currentUser?.uid}/sanitation_for/${selectedUser.id}/${Date.now()}-${file.name}`;
+                 const path = `admin_uploads/${authUser.uid}/sanitation_for/${selectedUser.id}/${visitToEdit?.id || Date.now()}-${file.name}`;
                  const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
                  visitData.reportUrl = downloadURL;
             }
@@ -919,7 +923,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             const file = values.reportFile?.[0];
             if (file) {
-                 const path = `stations/${stationToUpdate.id}/compliance/${Date.now()}-${file.name}`;
+                 const path = `stations/${stationToUpdate.id}/compliance/${complianceReportToEdit?.id || Date.now()}-${file.name}`;
                  const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
                  reportData.reportUrl = downloadURL;
             }
