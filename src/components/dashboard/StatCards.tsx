@@ -78,7 +78,7 @@ export function StatCards({
     
     // For fixed plans, the total available balance is the source of truth.
     const totalAvailableLiters = user.totalConsumptionLiters;
-    const currentBalance = totalAvailableLiters - consumedLitersThisMonth;
+    const currentBalance = totalAvailableLiters;
 
     const consumedPercentage = totalAvailableLiters > 0 ? (consumedLitersThisMonth / totalAvailableLiters) * 100 : 0;
     const remainingPercentage = 100 - consumedPercentage;
@@ -236,19 +236,7 @@ export function StatCards({
               <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onConsumptionHistoryClick}>View History</Button>
             </CardFooter>
           </Card>
-          <Card className="flex flex-col">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Available</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-2">
-              <p className="text-2xl md:text-3xl font-bold">{consumptionDetails.currentBalance.toLocaleString()} L</p>
-              <Progress value={consumptionDetails.remainingPercentage} className="h-2" />
-            </CardContent>
-            <CardFooter>
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onSaveLitersClick}>Save Liters</Button>
-            </CardFooter>
-          </Card>
-          <Card>
+          <Card className="col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
