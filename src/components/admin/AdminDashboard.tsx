@@ -581,7 +581,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleProofUpload = async () => {
-        if (!deliveryProofFile || !deliveryToUpdate || !userForHistory || !storage) return;
+        if (!deliveryProofFile || !deliveryToUpdate || !userForHistory || !storage || !auth) return;
     
         setIsSubmitting(true);
         const uploadKey = `proof-${deliveryToUpdate.id}`;
@@ -609,7 +609,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
 
     const handleUploadContract = async () => {
-        if (!contractFile || !userForContract || !storage || !firestore) return;
+        if (!contractFile || !userForContract || !storage || !firestore || !auth) return;
 
         setIsSubmitting(true);
         const uploadKey = `contract-${userForContract.id}`;
@@ -635,7 +635,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !storage) return;
+        if (!userForHistory || !firestore || !storage || !auth) return;
         setIsSubmitting(true);
 
         try {
@@ -648,8 +648,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 adminNotes: values.adminNotes,
             };
 
+            // Step 1: Create the document and wait for it to complete.
             await setDoc(newDeliveryDocRef, newDeliveryData);
 
+            // Step 2: Upload the file if it exists.
             const file = values.proofFile?.[0];
             if (file) {
                 const uploadKey = `delivery-${values.trackingNumber}`;
@@ -657,6 +659,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 await handleFileUpload(file, path, uploadKey);
             }
 
+            // Step 3: Update consumption if delivered.
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
@@ -679,6 +682,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setUploadingFiles({});
         }
     };
+
 
     const handleUpdateDelivery = async (values: DeliveryFormValues) => {
         if (!deliveryToEdit || !userForHistory || !firestore) return;
@@ -816,7 +820,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [selectedUser]);
     
     const handleCreateStation = async (values: NewStationFormValues) => {
-        if (!firestore) return;
+        if (!firestore || !auth || !storage) return;
         setIsSubmitting(true);
         try {
             const newStationData = {
@@ -881,7 +885,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
-        if (!firestore || !selectedUser) return;
+        if (!firestore || !selectedUser || !storage || !auth) return;
         setIsSubmitting(true);
     
         try {
@@ -907,7 +911,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
             const file = values.reportFile?.[0];
             if (file) {
-                const path = `users/${selectedUser.id}/sanitationVisits/${visitRef.id}/${file.name}`;
+                const path = `users/${selectedUser.id}/sanitationVisits/${visitRef.id}-${file.name}`;
                 await handleFileUpload(file, path, `sanitation-${visitRef.id}`);
             }
             
@@ -939,7 +943,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleComplianceReportSubmit = async (values: ComplianceReportFormValues) => {
-        if (!firestore || !stationToUpdate) return;
+        if (!firestore || !stationToUpdate || !auth || !storage) return;
         setIsSubmitting(true);
     
         try {
@@ -2263,7 +2267,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {(() => {
                                     const onUpload = async () => {
-                                        if (!agreementFile || !stationToUpdate || !storage) return;
+                                        if (!agreementFile || !stationToUpdate || !storage || !auth) return;
                                         const docKey = 'agreement';
                                         const stationId = stationToUpdate.id;
                                         const path = `stations/${stationId}/agreement/${agreementFile.name}`;
