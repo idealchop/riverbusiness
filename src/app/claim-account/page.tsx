@@ -107,7 +107,7 @@ export default function ClaimAccountPage() {
           <Logo className="h-16 w-16 mb-4 mx-auto" />
           <CardTitle>Welcome to River Business!</CardTitle>
           <CardDescription>
-            You're one step away! Check your email for the Client ID, then enter it below to unlock your account.
+            You're one step away from unlocking a smarter way to manage your water! We've sent the final piece—your Client ID—to your email. Please enter it below to activate your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
