@@ -274,9 +274,13 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Show welcome dialog every time the dashboard loads for the user.
+    // Show welcome dialog only if it hasn't been shown in this session.
     if (user && !isUserDocLoading) {
-      setDialogState((prev) => ({ ...prev, welcome: true }));
+      const welcomeShown = sessionStorage.getItem('welcomeMessageShown');
+      if (!welcomeShown) {
+        setDialogState((prev) => ({ ...prev, welcome: true }));
+        sessionStorage.setItem('welcomeMessageShown', 'true');
+      }
     }
   }, [user, isUserDocLoading]);
   
