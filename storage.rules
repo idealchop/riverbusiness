@@ -1,43 +1,57 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
 
     function isAdmin() {
-      // The user is an admin if their custom claim 'admin' is true.
-      // Or, as a fallback, if they are the designated admin email.
+      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
     }
 
-    // 1. Global Admin Rule: Admins can read and write ANY file.
-    match /{allPaths=**} {
-      allow read, write: if isAdmin();
+    // --- ADMIN-SPECIFIC WRITE RULES ---
+
+    // Rule for admins uploading delivery proofs or sanitation reports on behalf of users.
+    // This matches the paths used in the AdminDashboard component.
+    match /admin_uploads/{adminId}/{path=**} {
+      allow read, write: if request.auth.uid == adminId && isAdmin();
     }
 
-    // 2. User-Specific Rules: Users can manage files in their own directory.
-    // An admin can also write here because of the global rule above.
-    match /users/{userId}/{allPaths=**} {
-      // Any authenticated user can read files (e.g. profile pictures).
+    // Rule for admins uploading contracts for users.
+    match /userContracts/{userId}/{fileName} {
       allow read: if request.auth != null;
-      // Only the owner of the folder can write files to it.
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if isAdmin();
     }
     
-    // 3. User Contracts: Managed by admins, readable by any authenticated user.
-    match /userContracts/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
-      // Write is handled by the global admin rule.
+    // Rule for admins managing water station documents (agreements, compliance).
+    match /stations/{stationId}/{path=**} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
     }
 
-    // 4. Station Documents: Managed by admins, readable by any authenticated user.
-    match /stations/{stationId}/{allPaths=**} {
+    // --- USER-SPECIFIC WRITE RULES ---
+
+    // Users can upload their own profile photo.
+    match /users/{userId}/profile/{fileName} {
       allow read: if request.auth != null;
-       // Write is handled by the global admin rule.
+      allow write: if request.auth.uid == userId;
     }
 
-    // 5. Public Assets: Read-only for everyone, including unauthenticated users.
-    // This is necessary for images on login/public pages.
+    // Users can upload their own payment proofs.
+    match /users/{userId}/payments/{fileName} {
+       allow read: if request.auth != null;
+       allow write: if request.auth.uid == userId;
+    }
+    
+    // --- READ-ONLY & PUBLIC RULES ---
+
+    // As a fallback, authenticated users can generally read from user folders
+    // (e.g., to see another user's profile picture if needed).
+    // Write access is denied here and must be granted by a more specific rule above.
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Public assets for login/marketing pages are readable by anyone.
     match /River Mobile/{allPaths=**} {
       allow read;
     }

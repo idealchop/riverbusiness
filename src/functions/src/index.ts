@@ -288,18 +288,33 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         logger.log(`Updated contract for user: ${userId}`);
         return;
     }
-
-    if (filePath.startsWith("users/") && filePath.includes("/deliveries/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
+    
+    // Handle admin-uploaded proofs
+    if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
+        const parts = filePath.split('/');
+        const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
         const deliveryId = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
             proofOfDeliveryUrl: url,
         });
-        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId}`);
+        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
         return;
     }
+    
+    // Handle admin-uploaded sanitation reports
+    if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
+        const parts = filePath.split('/');
+        const userId = parts[3]; // admin_uploads/{adminId}/sanitation_for/{userId}/{filename}
+        const visitId = path.basename(filePath).split('-')[0];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
+            reportUrl: url,
+        });
+        logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
+        return;
+    }
+
 
     if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const parts = filePath.split("/");
@@ -339,18 +354,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
-    if (filePath.startsWith("users/") && filePath.includes("/sanitationVisits/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const visitId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
-            reportUrl: url,
-        });
-        logger.log(`Updated report URL for sanitation visit: ${visitId} for user: ${userId}`);
-        return;
-    }
-
     if (filePath.startsWith("stations/")) {
         const parts = filePath.split("/");
         const stationId = parts[1];
