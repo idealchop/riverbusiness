@@ -244,6 +244,8 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
 
 /**
  * Generic Cloud Function for file uploads.
+ * This function now focuses on user-initiated uploads and station document uploads.
+ * Admin-uploaded proofs are handled client-side in the AdminDashboard.
  */
 export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) => {
   const fileBucket = event.data.bucket;
@@ -267,6 +269,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
+    // User profile photo
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -276,6 +279,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
+    // User contract (uploaded by admin)
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -289,33 +293,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
-    // Handle admin-uploaded proofs
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
-        const deliveryId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
-            proofOfDeliveryUrl: url,
-        });
-        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
-        return;
-    }
-    
-    // Handle admin-uploaded sanitation reports
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/sanitation_for/{userId}/{filename}
-        const visitId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
-            reportUrl: url,
-        });
-        logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
-        return;
-    }
-
-
+    // User-uploaded payment proofs
     if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -337,7 +315,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             data: { paymentId: paymentId }
         });
 
-        // Also notify the admin
         const adminId = await getAdminId();
         if (adminId) {
             const userDoc = await db.collection('users').doc(userId).get();
@@ -354,6 +331,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
+    // Station documents (agreements, compliance reports)
     if (filePath.startsWith("stations/")) {
         const parts = filePath.split("/");
         const stationId = parts[1];
@@ -367,9 +345,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             logger.log(`Updated partnership agreement for station: ${stationId}`);
         } else if (docType === "compliance") {
             const reportKey = path.basename(filePath).split('-')[0];
-            
             const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportKey);
-
             await reportRef.update({ reportUrl: url });
             logger.log(`Updated compliance report URL for report '${reportKey}' for station: ${stationId}`);
         }
