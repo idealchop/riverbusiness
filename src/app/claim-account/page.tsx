@@ -25,6 +25,7 @@ export default function ClaimAccountPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user: authUser, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
   const {
     register,
@@ -106,7 +107,7 @@ export default function ClaimAccountPage() {
           <Logo className="h-16 w-16 mb-4 mx-auto" />
           <CardTitle>Welcome to River Business!</CardTitle>
           <CardDescription>
-            You're one step away! We've sent the Client ID to <span className="font-semibold text-primary">{authUser.email}</span>. Please enter it below to unlock your account.
+            You're one step away! Check your email for the Client ID, then enter it below to unlock your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
