@@ -23,9 +23,7 @@ export function Toaster() {
         return (
           <Toast key={id} variant={variant} {...props}>
             <div className="flex items-start gap-3">
-              <Icon className={cn("h-6 w-6 mt-0.5", 
-                variant === 'destructive' ? 'text-primary-foreground' : 'text-success-foreground'
-              )} />
+              <Icon className="h-6 w-6 mt-0.5 text-primary-foreground" />
               <div className="grid gap-1">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && (

@@ -30,7 +30,8 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-success text-success-foreground",
+        default:
+          "group border-transparent bg-gradient-primary text-primary-foreground",
         destructive:
           "destructive group border-transparent bg-gradient-primary text-primary-foreground",
       },
@@ -65,7 +66,7 @@ const ToastAction = React.forwardRef<
     className={cn(
       "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       "group-[.destructive]:border-primary-foreground/40 group-[.destructive]:hover:border-primary/30 group-[.destructive]:hover:bg-primary group-[.destructive]:hover:text-primary-foreground group-[.destructive]:focus:ring-primary",
-      "group-[.default]:border-muted/40 group-[.default]:hover:border-success/30 group-[.default]:hover:bg-success group-[.default]:hover:text-success-foreground group-[.default]:focus:ring-success"
+      "group-[.default]:border-primary-foreground/40 group-[.default]:hover:border-primary/30 group-[.default]:hover:bg-primary group-[.default]:hover:text-primary-foreground group-[.default]:focus:ring-primary"
     )}
     {...props}
   />
@@ -81,7 +82,7 @@ const ToastClose = React.forwardRef<
     className={cn(
       "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100",
       "group-[.destructive]:text-primary-foreground/80 group-[.destructive]:hover:text-primary-foreground group-[.destructive]:focus:ring-ring group-[.destructive]:focus:ring-offset-destructive",
-      "group-[.default]:text-success-foreground/80 group-[.default]:hover:text-success-foreground group-[.default]:focus:ring-ring group-[.default]:focus:ring-offset-success",
+      "group-[.default]:text-primary-foreground/80 group-[.default]:hover:text-primary-foreground group-[.default]:focus:ring-ring group-[.default]:focus:ring-offset-primary",
       className
     )}
     toast-close=""
