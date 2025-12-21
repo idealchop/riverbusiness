@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -45,6 +45,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useMounted } from '@/hooks/use-mounted';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { Progress } from '@/components/ui/progress';
 
 const ICONS: { [key: string]: React.ElementType } = {
   delivery: Truck,
@@ -220,13 +221,20 @@ export default function DashboardLayout({
   }
 
   const handleProofUpload = async () => {
-    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth) return;
+    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth || !firestore) return;
 
     setIsSubmittingProof(true);
     setUploadProgress(0);
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${paymentProofFile.name}`;
 
     try {
+        const paymentRef = doc(firestore, "users", authUser.uid, "payments", selectedInvoice.id);
+
+        // This ensures the status is set before the file upload triggers the backend function.
+        await setDoc(paymentRef, {
+            status: "Pending Review",
+        }, { merge: true });
+
         await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, {}, setUploadProgress);
         
         toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
@@ -699,9 +707,7 @@ export default function DashboardLayout({
                                 <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmittingProof} />
                             </div>
                             {uploadProgress > 0 && (
-                                <div className="w-full bg-muted rounded-full h-2.5">
-                                    <div className="bg-primary h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
-                                </div>
+                                <Progress value={uploadProgress} className="mt-2 h-2.5" />
                             )}
                             <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmittingProof}>
                                 {isSubmittingProof ? 'Uploading...' : 'Submit Proof'}

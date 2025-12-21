@@ -35,6 +35,7 @@ import { enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
+import { Progress } from '@/components/ui/progress';
 
 
 // State Management with useReducer
@@ -539,7 +540,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                               </Avatar>
                               {(isPending || uploadProgress > 0) && (
                                 <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                    <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                                    {uploadProgress < 100 ? (
+                                        <Progress value={uploadProgress} className="h-1 w-16" />
+                                    ) : (
+                                        <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                                    )}
                                 </div>
                               )}
                               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -996,6 +1001,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <div className="my-4 flex justify-center">
             {state.profilePhotoPreview && <Image src={state.profilePhotoPreview} alt="Preview" width={200} height={200} className="rounded-full aspect-square object-cover" />}
           </div>
+          {isPending && <Progress value={uploadProgress} className="w-full" />}
           <DialogFooter>
             <Button variant="outline" onClick={() => dispatch({type: 'RESET_UPLOAD'})} disabled={isPending}>Cancel</Button>
             <Button onClick={handleProfilePhotoUpload} disabled={isPending}>

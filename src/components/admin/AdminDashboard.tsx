@@ -568,16 +568,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     ) => {
       if (!storage || !auth) throw new Error("Firebase not initialized");
       
-      return uploadFileWithProgress(
-        storage,
-        auth,
-        path,
-        file,
-        {}, // Metadata can be empty
-        (progress) => {
-          setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
-        }
-      );
+      setUploadingFiles(prev => ({ ...prev, [uploadKey]: 0 }));
+      try {
+        await uploadFileWithProgress(
+            storage,
+            auth,
+            path,
+            file,
+            {}, // Metadata can be empty
+            (progress) => {
+              setUploadingFiles(prev => ({ ...prev, [uploadKey]: progress }));
+            }
+        );
+      } finally {
+        setUploadingFiles(prev => {
+            const newUploadingFiles = { ...prev };
+            delete newUploadingFiles[uploadKey];
+            return newUploadingFiles;
+        });
+      }
     };
 
     const handleProofUpload = async () => {
@@ -599,11 +608,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
         } finally {
             setIsSubmitting(false);
-            setUploadingFiles(prev => {
-                const newUploadingFiles = { ...prev };
-                delete newUploadingFiles[uploadKey];
-                return newUploadingFiles;
-            });
         }
     };
 
@@ -626,11 +630,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
         } finally {
             setIsSubmitting(false);
-            setUploadingFiles(prev => {
-                const newUploadingFiles = { ...prev };
-                delete newUploadingFiles[uploadKey];
-                return newUploadingFiles;
-            });
         }
     };
 
@@ -648,10 +647,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 adminNotes: values.adminNotes,
             };
 
-            // Step 1: Create the document and wait for it to complete.
             await setDoc(newDeliveryDocRef, newDeliveryData);
 
-            // Step 2: Upload the file if it exists.
             const file = values.proofFile?.[0];
             if (file) {
                 const uploadKey = `delivery-${values.trackingNumber}`;
@@ -659,7 +656,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 await handleFileUpload(file, path, uploadKey);
             }
 
-            // Step 3: Update consumption if delivered.
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
@@ -679,7 +675,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
         } finally {
             setIsSubmitting(false);
-            setUploadingFiles({});
         }
     };
 
@@ -961,7 +956,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 await updateDoc(reportRef, reportData);
                 toast({ title: 'Report Updated', description: 'The compliance report has been updated.' });
             } else {
-                reportRef = await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
+                const newReportData = await addDoc(collection(firestore, 'waterStations', stationToUpdate.id, 'complianceReports'), reportData);
+                reportRef = newReportData;
                 toast({ title: 'Report Created', description: 'A new compliance report has been created.' });
             }
     
@@ -1559,8 +1555,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <FormControl>
                                        <Input type="file" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} />
                                     </FormControl>
-                                    {uploadingFiles[`delivery-${deliveryForm.watch('trackingNumber')}`] > 0 && (
-                                        <Progress value={uploadingFiles[`delivery-${deliveryForm.watch('trackingNumber')}`]} className="mt-2" />
+                                    {uploadingFiles[`delivery-${deliveryForm.getValues('trackingNumber')}`] > 0 && (
+                                        <Progress value={uploadingFiles[`delivery-${deliveryForm.getValues('trackingNumber')}`]} className="mt-2" />
                                     )}
                                     <FormMessage />
                                 </FormItem>
@@ -2266,29 +2262,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <p className="text-sm text-muted-foreground mb-4">Review and accept the partnership agreement.</p>
                             <div className="flex items-center gap-4 p-4 border rounded-lg">
                                 {(() => {
-                                    const onUpload = async () => {
-                                        if (!agreementFile || !stationToUpdate || !storage || !auth) return;
-                                        const docKey = 'agreement';
-                                        const stationId = stationToUpdate.id;
-                                        const path = `stations/${stationId}/agreement/${agreementFile.name}`;
-                                        const uploadKey = `${docKey}-${stationId}`;
-                                        try {
-                                            await handleFileUpload(agreementFile, path, uploadKey);
-                                            toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
-                                            setAgreementFile(null);
-                                        } catch (err) {
-                                            console.error(err);
-                                            toast({variant: 'destructive', title: 'Upload Failed'});
-                                        } finally {
-                                            setUploadingFiles(prev => {
-                                                const newState = {...prev};
-                                                delete newState[uploadKey];
-                                                return newState;
-                                            });
-                                        }
-                                    };
-                                    
-                                    const progress = uploadingFiles[`agreement-${stationToUpdate?.id}`];
+                                    const uploadKey = `agreement-${stationToUpdate?.id}`;
+                                    const progress = uploadingFiles[uploadKey];
                                     const isUploadingFile = progress > 0 && progress < 100;
 
                                     if (isUploadingFile) {
@@ -2311,7 +2286,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <p className="font-medium truncate">{agreementFile.name}</p>
                                                     <p className="text-xs text-muted-foreground">Ready to upload</p>
                                                 </div>
-                                                {<Button disabled={isSubmitting || !stationToUpdate} onClick={onUpload}><Upload className="mr-2 h-4 w-4"/> Upload</Button>}
+                                                {<Button disabled={isSubmitting || !stationToUpdate} onClick={async () => {
+                                                    if (!agreementFile || !stationToUpdate || !storage || !auth) return;
+                                                     try {
+                                                        const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
+                                                        await handleFileUpload(agreementFile, path, uploadKey);
+                                                        toast({ title: 'Agreement Uploaded', description: 'The partnership agreement is being processed.' });
+                                                        setAgreementFile(null);
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        toast({variant: 'destructive', title: 'Upload Failed'});
+                                                    }
+                                                }}><Upload className="mr-2 h-4 w-4"/> Upload</Button>}
                                                 <Button size="icon" variant="ghost" onClick={() => setAgreementFile(null)} disabled={isSubmitting}><X className="h-4 w-4"/></Button>
                                             </>
                                         );
@@ -2412,6 +2398,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <FormItem>
                                 <FormLabel>Attach Report File (Optional)</FormLabel>
                                 <FormControl><Input type="file" accept="application/pdf,image/*" onChange={(e) => field.onChange(e.target.files)} disabled={isSubmitting} /></FormControl>
+                                {isSubmitting && uploadingFiles[`compliance-${complianceReportForm.getValues('resultId')}`] > 0 && (
+                                    <Progress value={uploadingFiles[`compliance-${complianceReportForm.getValues('resultId')}`]} className="mt-2" />
+                                )}
                                 <FormDescription>
                                     {complianceReportToEdit?.reportUrl ? "Attaching a new file will replace the existing one." : "Attach the official report document."}
                                 </FormDescription>
@@ -2574,6 +2563,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     disabled={isSubmitting}
                                                 />
                                             </FormControl>
+                                            {isSubmitting && uploadingFiles[`sanitation-${visitToEdit?.id}`] > 0 && (
+                                                <Progress value={uploadingFiles[`sanitation-${visitToEdit?.id}`]} className="mt-2" />
+                                            )}
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -2851,4 +2843,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-    
