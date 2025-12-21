@@ -223,12 +223,13 @@ export default function DashboardLayout({
     if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth) return;
 
     setIsSubmittingProof(true);
+    setUploadProgress(0);
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${paymentProofFile.name}`;
 
     try {
         await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, {}, setUploadProgress);
         
-        toast({ title: 'Upload Complete', description: 'Your proof of payment is being processed and will be reviewed shortly.' });
+        toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
         setIsPaymentDialogOpen(false);
 
     } catch (error: any) {
