@@ -194,6 +194,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [localSearchTerm, setLocalSearchTerm] = React.useState('');
     const [currentPage, setCurrentPage] = React.useState(1);
+    const [itemsPerPage, setItemsPerPage] = React.useState(20);
+
     const [isManageInvoiceOpen, setIsManageInvoiceOpen] = React.useState(false);
     const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
     const [rejectionReason, setRejectionReason] = React.useState('');
@@ -208,8 +210,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [uploadedProofUrl, setUploadedProofUrl] = useState<string | null>(null);
     const [uploadedAgreementUrl, setUploadedAgreementUrl] = useState<string | null>(null);
 
-
-    const ITEMS_PER_PAGE = 20;
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
@@ -701,13 +701,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         );
     }, [appUsers, localSearchTerm]);
 
-    const paginatedUsers = React.useMemo(() => {
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        const endIndex = startIndex + ITEMS_PER_PAGE;
-        return filteredUsers.slice(startIndex, endIndex);
-    }, [filteredUsers, currentPage]);
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
-    const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+    const paginatedUsers = React.useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return filteredUsers.slice(startIndex, endIndex);
+    }, [filteredUsers, currentPage, itemsPerPage]);
 
     const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
@@ -1790,7 +1790,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <TabsContent value="user-management">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Client Accounts</CardTitle>
+                            <CardTitle>Client Accounts ({filteredUsers.length})</CardTitle>
                             <CardDescription>Manage all active and pending user accounts.</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -1940,6 +1940,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </Table>
                                     </div>
                                     <div className="flex items-center justify-end space-x-2 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <Label htmlFor="items-per-page" className="text-sm font-normal">Rows per page:</Label>
+                                            <Select
+                                                value={String(itemsPerPage)}
+                                                onValueChange={(value) => {
+                                                    setItemsPerPage(Number(value));
+                                                    setCurrentPage(1);
+                                                }}
+                                            >
+                                                <SelectTrigger id="items-per-page" className="w-20 h-9">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="20">20</SelectItem>
+                                                    <SelectItem value="50">50</SelectItem>
+                                                    <SelectItem value="100">100</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         <span className="text-sm text-muted-foreground">
                                             Page {currentPage} of {totalPages}
                                         </span>
