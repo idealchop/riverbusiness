@@ -577,7 +577,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
-                proofOfDeliveryUrl: uploadedProofUrl, // Use the URL from state
+                proofOfDeliveryUrl: uploadedProofUrl,
             };
     
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
@@ -615,7 +615,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setUploadProgress(0);
 
         try {
-            const path = `users/${userForHistory.id}/deliveries/${deliveryForm.getValues('trackingNumber') || Date.now()}-${file.name}`;
+            const path = `admin_uploads/${auth.currentUser?.uid}/proofs_for/${userForHistory.id}/${deliveryForm.getValues('trackingNumber') || Date.now()}-${file.name}`;
             const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
             setUploadedProofUrl(downloadURL);
             toast({ title: "Upload Complete", description: "Proof of delivery is ready to be attached." });
@@ -859,7 +859,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             const file = values.reportFile?.[0];
             if (file) {
-                 const path = `users/${selectedUser.id}/sanitationVisits/${Date.now()}-${file.name}`;
+                 const path = `admin_uploads/${auth.currentUser?.uid}/sanitation_for/${selectedUser.id}/${Date.now()}-${file.name}`;
                  const downloadURL = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
                  visitData.reportUrl = downloadURL;
             }
