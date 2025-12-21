@@ -102,32 +102,39 @@ export default function ClaimAccountPage() {
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Logo className="h-16 w-16 mb-4 mx-auto" />
-          <CardTitle>Welcome to River Business!</CardTitle>
-          <CardDescription>
-            You're one step away from unlocking a smarter way to manage your water! We've sent the final piece—your Client ID—to your email. Please enter it below to activate your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="clientId">Client ID</Label>
-              <Input
-                id="clientId"
-                placeholder="e.g. C-12345"
-                {...register('clientId')}
-                disabled={isSubmitting}
-              />
-              {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Claiming...' : 'Claim Profile'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center gap-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <Logo className="h-16 w-16 mb-4 mx-auto" />
+            <CardTitle>Welcome to River Business!</CardTitle>
+            <CardDescription>
+              You're one step away from unlocking a smarter way to manage your water! We've sent the final piece—your Client ID—to your email. Please enter it below to activate your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="clientId">Client ID</Label>
+                <Input
+                  id="clientId"
+                  placeholder="e.g. C-12345"
+                  {...register('clientId')}
+                  disabled={isSubmitting}
+                />
+                {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
+              </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Claiming...' : 'Claim Profile'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <div className="text-center text-xs text-muted-foreground max-w-sm">
+          <p>
+            Trouble getting your account? Send us an email at <a href="mailto:customer@riverph.com" className="font-semibold text-primary hover:underline">customer@riverph.com</a> or reach out to your sales executive.
+          </p>
+        </div>
+      </div>
     </main>
   );
 }
