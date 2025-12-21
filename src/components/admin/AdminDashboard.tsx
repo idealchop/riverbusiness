@@ -697,11 +697,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const newLiters = (values.status === 'Delivered') ? containerToLiter(values.volumeContainers) : 0;
         const adjustment = oldLiters - newLiters; 
     
-        await updateDocumentNonBlocking(deliveryRef, updatedData);
+        await updateDoc(deliveryRef, updatedData);
     
         if (adjustment !== 0) {
             const userRef = doc(firestore, 'users', userForHistory.id);
-            await updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(adjustment) });
+            await updateDoc(userRef, { totalConsumptionLiters: increment(adjustment) });
         }
     
         toast({ title: "Delivery Updated", description: `Delivery ${deliveryToEdit.id} has been successfully updated.` });
@@ -2853,6 +2853,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-
-    
