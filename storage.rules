@@ -8,10 +8,10 @@ service firebase.storage {
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
 
-    // Users can only read/write to their own folder.
+    // Users can only read/write to their own folder, but Admins can also write.
     match /users/{userId}/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
     // Admins can manage user contracts. Any auth'd user can read.

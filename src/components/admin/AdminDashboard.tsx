@@ -205,7 +205,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
-    const [proofFileUrl, setProofFileUrl] = useState<string | null>(null);
 
 
     const ITEMS_PER_PAGE = 20;
@@ -582,6 +581,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof.' });
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
 
@@ -603,26 +603,36 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
     
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore) return;
+        if (!userForHistory || !firestore || !storage || !auth) return;
         setIsSubmitting(true);
-        
+    
         try {
-            const newDeliveryDocRef = doc(collection(firestore, 'users', userForHistory.id, 'deliveries'), values.trackingNumber);
-            
             const deliveryData = {
+                id: values.trackingNumber,
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
                 adminNotes: values.adminNotes,
-                ...(proofFileUrl && { proofOfDeliveryUrl: proofFileUrl }),
             };
     
-            await setDoc(newDeliveryDocRef, deliveryData);
+            // Step 1: Create the document first.
+            const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
+            await setDoc(deliveryRef, deliveryData);
             
+            // Step 2: Upload the file if it exists.
+            const file = deliveryForm.getValues('proofFile');
+            if (file) {
+                const path = `users/${userForHistory.id}/deliveries/${values.trackingNumber}-${file.name}`;
+                // The backend function will attach the URL, no need to await here for that part.
+                await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+            }
+            
+            // Step 3: Adjust user's consumption if delivered
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
@@ -630,9 +640,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
     
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
+            
             deliveryForm.reset();
             setUploadProgress(0);
-            setProofFileUrl(null);
             setIsCreateDeliveryOpen(false);
     
         } catch (error) {
@@ -808,6 +818,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
     
@@ -893,6 +904,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: "Operation Failed", description: "Could not save the sanitation visit." });
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
 
@@ -946,6 +958,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             toast({ variant: 'destructive', title: 'Operation Failed', description: 'Could not save the compliance report.' });
         } finally {
             setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
 
@@ -1416,7 +1429,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </AlertDialogContent>
         </AlertDialog>
 
-        <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); setIsUploading(false); setProofFileUrl(null); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
+        <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); setIsUploading(false); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Create Manual Delivery</DialogTitle>
@@ -1431,7 +1444,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Tracking Number</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., DEL-00123" {...field} disabled={isSubmitting || isUploading} />
+                                        <Input placeholder="e.g., DEL-00123" {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -1452,7 +1465,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         "w-full text-left font-normal",
                                                         !field.value && "text-muted-foreground"
                                                     )}
-                                                    disabled={isSubmitting || isUploading}
+                                                    disabled={isSubmitting}
                                                 >
                                                     {field.value ? (
                                                         format(field.value, "PPP")
@@ -1484,7 +1497,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Volume (Containers)</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="e.g., 50" {...field} disabled={isSubmitting || isUploading} />
+                                        <Input type="number" placeholder="e.g., 50" {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormDescription>
                                         1 container = 19.5 liters. Total: { (watchedDeliveryContainers * 19.5).toLocaleString() } liters.
@@ -1499,7 +1512,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting || isUploading}>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a status" />
@@ -1520,40 +1533,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             name="proofFile"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Proof of Delivery (Optional)</FormLabel>
-                                <FormControl>
-                                    <Input
-                                    type="file"
-                                    onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        field.onChange(file); // Inform RHF about the file
-                                        if (!file || !userForHistory || !auth || !storage) return;
-
-                                        const trackingNumber = deliveryForm.getValues('trackingNumber');
-                                        if (!trackingNumber) {
-                                            toast({ variant: 'destructive', title: 'Tracking Number Required', description: 'Please enter a Tracking Number before uploading a file.'});
-                                            return;
-                                        }
-
-                                        setIsUploading(true);
-                                        const path = `users/${userForHistory.id}/deliveries/${trackingNumber}-${file.name}`;
-                                        try {
-                                            await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
-                                            // The backend function will provide the URL. For now, we just know it's done.
-                                            setProofFileUrl(path); // Store the path to link later.
-                                            toast({ title: 'Upload Complete', description: 'File is ready to be attached.' });
-                                        } catch (error) {
-                                            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload proof file.' });
-                                        } finally {
-                                            setIsUploading(false);
-                                        }
-                                    }}
-                                    disabled={isSubmitting || isUploading || !deliveryForm.getValues('trackingNumber')}
-                                    />
-                                </FormControl>
-                                {!deliveryForm.getValues('trackingNumber') && <FormDescription className="text-destructive">Please enter a Tracking Number before uploading a file.</FormDescription>}
-                                {isUploading && <Progress value={uploadProgress} className="mt-2" />}
-                                <FormMessage />
+                                    <FormLabel>Proof of Delivery (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            onChange={(e) => field.onChange(e.target.files ? e.target.files[0] : null)}
+                                            disabled={isSubmitting}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />
@@ -1564,16 +1552,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormItem>
                                     <FormLabel>Admin Notes (Optional)</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} disabled={isSubmitting || isUploading} />
+                                        <Textarea placeholder="Add any specific notes for this delivery..." {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                         <DialogFooter>
-                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting || isUploading}>Cancel</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting || isUploading}>
-                                {isUploading ? "Uploading..." : isSubmitting ? "Creating..." : "Create Delivery"}
+                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? "Creating..." : "Create Delivery"}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -2162,7 +2150,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <FormField control={stationForm.control} name="name" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Station Name</FormLabel>
-                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!stationToUpdate && isSubmitting}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate || isSubmitting}/></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
@@ -2281,6 +2269,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 </div>
                                                 {<Button disabled={isSubmitting || !stationToUpdate} onClick={async () => {
                                                     if (!agreementFile || !stationToUpdate || !storage || !auth) return;
+                                                     setIsSubmitting(true);
                                                      try {
                                                         const path = `stations/${stationToUpdate.id}/agreement/${agreementFile.name}`;
                                                         await uploadFileWithProgress(storage, auth, path, agreementFile, {}, setUploadProgress);
@@ -2289,6 +2278,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     } catch (err) {
                                                         console.error(err);
                                                         toast({variant: 'destructive', title: 'Upload Failed'});
+                                                    } finally {
+                                                        setIsSubmitting(false);
+                                                        setUploadProgress(0);
                                                     }
                                                 }}><Upload className="mr-2 h-4 w-4"/> Upload</Button>}
                                                 <Button size="icon" variant="ghost" onClick={() => setAgreementFile(null)} disabled={isSubmitting}><X className="h-4 w-4"/></Button>
