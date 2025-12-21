@@ -33,8 +33,8 @@ import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, Comp
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, useStorage, useAuth, addDocumentNonBlocking } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, arrayUnion } from 'firebase/firestore';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -184,22 +184,22 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!userDocRef || !auth) return;
 
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'hidden') {
-        updateDocumentNonBlocking(userDocRef, { accountStatus: 'Inactive' });
+        await updateDoc(userDocRef, { accountStatus: 'Inactive' });
       } else {
-        updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
+        await updateDoc(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
       }
     };
 
-    updateDocumentNonBlocking(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
+    updateDoc(userDocRef, { accountStatus: 'Active', lastLogin: new Date().toISOString() });
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (auth.currentUser) {
-        updateDocumentNonBlocking(userDocRef, { accountStatus: 'Inactive' });
+        updateDoc(userDocRef, { accountStatus: 'Inactive' });
       }
     };
   }, [userDocRef, auth]);

@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useStorage, useAuth, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
@@ -303,7 +303,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     });
   };
 
-  const handleConfirmPlanChange = () => {
+  const handleConfirmPlanChange = async () => {
     if (!authUser || !firestore || !state.selectedNewPlan) return;
     
     const now = new Date();
@@ -311,7 +311,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
     const userDocRef = doc(firestore, 'users', authUser.uid);
 
-    updateDocumentNonBlocking(userDocRef, {
+    await updateDoc(userDocRef, {
         pendingPlan: state.selectedNewPlan,
         planChangeEffectiveDate: firstDayOfNextMonth,
     });
@@ -325,11 +325,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: null});
   };
 
-  const handleUndoPlanChange = () => {
+  const handleUndoPlanChange = async () => {
     if (!authUser || !firestore) return;
     
     const userDocRef = doc(firestore, 'users', authUser.uid);
-    updateDocumentNonBlocking(userDocRef, {
+    await updateDoc(userDocRef, {
       pendingPlan: deleteField(),
       planChangeEffectiveDate: deleteField(),
     });

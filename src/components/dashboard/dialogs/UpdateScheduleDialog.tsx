@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking } from '@/firebase';
-import { DocumentReference } from 'firebase/firestore';
+import { DocumentReference, updateDoc } from 'firebase/firestore';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -31,19 +31,23 @@ export function UpdateScheduleDialog({ isOpen, onOpenChange, userDocRef, customP
     }
   }, [customPlanDetails]);
 
-  const handleScheduleUpdate = () => {
+  const handleScheduleUpdate = async () => {
     if (!userDocRef || !newDeliveryDay || !newDeliveryTime) {
       toast({ variant: "destructive", title: "Update Failed", description: "Please select a valid day and time." });
       return;
     }
+    try {
+        await updateDoc(userDocRef, {
+            'customPlanDetails.deliveryDay': newDeliveryDay,
+            'customPlanDetails.deliveryTime': newDeliveryTime,
+        });
 
-    updateDocumentNonBlocking(userDocRef, {
-      'customPlanDetails.deliveryDay': newDeliveryDay,
-      'customPlanDetails.deliveryTime': newDeliveryTime,
-    });
-
-    toast({ title: "Schedule Updated", description: "Your delivery schedule has been updated successfully." });
-    onOpenChange(false);
+        toast({ title: "Schedule Updated", description: "Your delivery schedule has been updated successfully." });
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Failed to update schedule:", error);
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not save your schedule changes." });
+    }
   };
 
   return (

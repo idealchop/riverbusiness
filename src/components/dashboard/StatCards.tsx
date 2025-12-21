@@ -10,9 +10,9 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowRight, History, Edit, Calendar as CalendarIcon } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore } from 'date-fns';
-import { updateDocumentNonBlocking, useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { DocumentReference, doc } from 'firebase/firestore';
+import { DocumentReference, doc, updateDoc } from 'firebase/firestore';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -95,19 +95,28 @@ export function StatCards({
 }, [user, deliveries]);
 
 
-  const handleAutoRefillToggle = (checked: boolean) => {
+  const handleAutoRefillToggle = async (checked: boolean) => {
     if (!user?.id || !firestore) return;
 
     const userDocRef = doc(firestore, 'users', user.id);
     
-    updateDocumentNonBlocking(userDocRef, {
-        'customPlanDetails.autoRefillEnabled': checked,
-    });
+    try {
+        await updateDoc(userDocRef, {
+            'customPlanDetails.autoRefillEnabled': checked,
+        });
 
-    toast({
-        title: checked ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
-        description: checked ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
-    });
+        toast({
+            title: checked ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
+            description: checked ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
+        });
+    } catch (error) {
+        console.error("Failed to update auto-refill status:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update your auto-refill preference.",
+        });
+    }
   };
   
   const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
