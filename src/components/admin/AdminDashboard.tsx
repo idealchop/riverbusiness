@@ -1450,7 +1450,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
             <DialogContent>
@@ -2327,7 +2327,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                              <Button asChild variant="outline" disabled={isSubmitting}>
                                                 <Label className={cn("flex items-center", !isSubmitting ? "cursor-pointer" : "cursor-not-allowed")}>
                                                     <Paperclip className="mr-2 h-4 w-4" /> Attach
-                                                    <Input type="file" accept="application/pdf" className="hidden" disabled={isSubmitting} onChange={(e) => e.target.files?.[0] && setAgreementFile(e.target.files[0])} />
+                                                    <Input type="file" accept="application/pdf,image/*" className="hidden" disabled={isSubmitting} onChange={(e) => e.target.files?.[0] && setAgreementFile(e.target.files[0])} />
                                                 </Label>
                                             </Button>
                                         </>
@@ -2660,7 +2660,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Sanitation</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
@@ -2851,5 +2851,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
