@@ -36,7 +36,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useDoc, deleteDocumentNonBlocking, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -648,7 +648,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 adminNotes: values.adminNotes,
             };
     
-            await setDocumentNonBlocking(newDeliveryDocRef, newDeliveryData);
+            // Ensure document is created before file upload
+            await setDoc(newDeliveryDocRef, newDeliveryData);
     
             const file = values.proofFile?.[0];
             if (file) {
@@ -658,9 +659,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
     
             if (values.status === 'Delivered') {
-                const litersToDeduct = values.volumeContainers * 19.5;
+                const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
-                await updateDocumentNonBlocking(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
+                await updateDoc(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
             }
     
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
@@ -668,10 +669,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             setIsCreateDeliveryOpen(false);
     
         } catch (error) {
+            console.error("Delivery creation failed: ", error);
             toast({
                 variant: 'destructive',
                 title: 'Creation Failed',
-                description: 'Could not create delivery record.',
+                description: 'Could not create delivery record. Please try again.',
             });
         } finally {
             setIsSubmitting(false);
@@ -2851,3 +2853,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+
+    
