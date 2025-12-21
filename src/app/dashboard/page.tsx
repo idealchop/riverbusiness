@@ -134,6 +134,7 @@ export default function DashboardPage() {
 
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
+  const [welcomeShown, setWelcomeShown] = useState(false);
 
   const deliveriesQuery = useMemoFirebase(
     () => (firestore && user ? collection(firestore, 'users', user.id, 'deliveries') : null),
@@ -274,15 +275,11 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Show welcome dialog only if it hasn't been shown in this session.
-    if (user && !isUserDocLoading) {
-      const welcomeShown = sessionStorage.getItem('welcomeMessageShown');
-      if (!welcomeShown) {
-        setDialogState((prev) => ({ ...prev, welcome: true }));
-        sessionStorage.setItem('welcomeMessageShown', 'true');
-      }
+    if (user && !isUserDocLoading && !welcomeShown) {
+      setDialogState((prev) => ({ ...prev, welcome: true }));
+      setWelcomeShown(true);
     }
-  }, [user, isUserDocLoading]);
+  }, [user, isUserDocLoading, welcomeShown]);
   
   const handleScheduledRefill = async (date: Date, containers: number) => {
     if (!user || !firestore || !authUser) {
