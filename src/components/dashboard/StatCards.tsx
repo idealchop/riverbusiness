@@ -42,9 +42,6 @@ export function StatCards({
   const consumptionDetails = useMemo(() => {
     const now = new Date();
     const emptyState = {
-        monthlyPlanLiters: 0,
-        bonusLiters: 0,
-        rolloverLiters: 0,
         totalLitersForMonth: 0,
         consumedLitersThisMonth: 0,
         currentBalance: user?.totalConsumptionLiters || 0,
@@ -56,7 +53,6 @@ export function StatCards({
         return emptyState;
     }
 
-    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
 
@@ -65,39 +61,31 @@ export function StatCards({
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
     const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-
-    if (user.plan.isConsumptionBased) {
-        return {
-            ...emptyState,
-            consumedLitersThisMonth,
-            currentBalance: 0, // Not applicable for consumption plan
-            estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
-        };
-    }
     
-    // For fixed plans:
-    const monthlyPlanLiters = planDetails?.litersPerMonth || 0;
-    const bonusLiters = planDetails?.bonusLiters || 0;
-    
-    // The user's total available credit at any time is totalConsumptionLiters.
+    // This is the user's real-time balance from the database.
     const currentBalance = user.totalConsumptionLiters;
     
-    // The starting balance for the month is the current balance plus what's been consumed.
+    // The balance at the start of the month was the current balance PLUS what's been consumed this month.
     const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
-
-    const rolloverLiters = Math.max(0, startingBalanceForMonth - (monthlyPlanLiters + bonusLiters));
 
     const consumedPercentage = startingBalanceForMonth > 0 
       ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 
       : 0;
 
+    if (user.plan.isConsumptionBased) {
+        return {
+            ...emptyState,
+            consumedLitersThisMonth,
+            currentBalance: 0, // Not applicable for consumption plan, show 0
+            estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
+        };
+    }
+    
+    // For fixed plans:
     return {
-        monthlyPlanLiters,
-        bonusLiters,
-        rolloverLiters,
         totalLitersForMonth: startingBalanceForMonth,
         consumedLitersThisMonth,
-        currentBalance,
+        currentBalance, // The real remaining balance.
         consumedPercentage,
         estimatedCost: user.plan.price || 0,
     };
@@ -217,24 +205,24 @@ export function StatCards({
           <Card className="flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                Total for Month
+                Remaining Balance
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
               <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.currentBalance.toLocaleString()} L</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex justify-between"><span>Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
-                <div className="flex justify-between"><span>Bonus:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
-                <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
+                <p>
+                  Started with {consumptionDetails.totalLitersForMonth.toLocaleString()} L this month.
+                </p>
               </div>
             </CardContent>
-            <CardFooter className="pt-0">
-               <Progress value={consumptionDetails.consumedPercentage} className="h-2" />
+             <CardFooter className="pt-0">
+               <Progress value={100 - consumptionDetails.consumedPercentage} className="h-2" />
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Consumed</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Consumed this Month</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 space-y-2">
               <p className="text-2xl md:text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
@@ -310,5 +298,3 @@ export function StatCards({
     </>
   );
 }
-
-    
