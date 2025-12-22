@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -39,17 +39,16 @@ export function StatCards({
   const [isConfirmingToggle, setIsConfirmingToggle] = useState(false);
   const [toggleTargetState, setToggleTargetState] = useState<boolean | null>(null);
   
-  const consumptionDetails = React.useMemo(() => {
+  const consumptionDetails = useMemo(() => {
     const now = new Date();
     const emptyState = {
         monthlyPlanLiters: 0,
         bonusLiters: 0,
         rolloverLiters: 0,
-        totalLitersForMonth: user?.totalConsumptionLiters || 0,
+        totalLitersForMonth: 0,
         consumedLitersThisMonth: 0,
         currentBalance: user?.totalConsumptionLiters || 0,
         consumedPercentage: 0,
-        remainingPercentage: 100,
         estimatedCost: 0,
     };
 
@@ -77,25 +76,29 @@ export function StatCards({
     }
     
     // For fixed plans:
-    const totalAvailableLiters = user.totalConsumptionLiters; // This is the user's total credit.
-    const currentBalance = totalAvailableLiters - consumedLitersThisMonth; // This is the true remaining balance.
+    const monthlyPlanLiters = planDetails?.litersPerMonth || 0;
+    const bonusLiters = planDetails?.bonusLiters || 0;
+    const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+    
+    // The user's total available credit at any time is totalConsumptionLiters.
+    // The balance for the month is this credit minus what's been used this month.
+    const currentBalance = user.totalConsumptionLiters;
+    
+    // To calculate the percentage, we need the *starting* balance for the month.
+    // This is the current balance plus what's been consumed.
+    const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
 
-    // Base the percentage on the *initial* total for the month before consumption.
-    // If rollovers are complex, basing on a simple monthly allocation might be clearer.
-    const monthlyAllocation = (planDetails?.litersPerMonth || 0) + (planDetails?.bonusLiters || 0);
-    const totalAllocationForCycle = totalAvailableLiters; // Assuming totalConsumptionLiters reflects start-of-month balance
-
-    const consumedPercentage = totalAllocationForCycle > 0 
-      ? (consumedLitersThisMonth / totalAllocationForCycle) * 100 
+    const consumedPercentage = startingBalanceForMonth > 0 
+      ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 
       : 0;
 
     return {
         ...emptyState,
-        monthlyPlanLiters: planDetails?.litersPerMonth || 0,
-        bonusLiters: planDetails?.bonusLiters || 0,
-        // Rollover logic can be complex, let's derive it for display if needed
-        rolloverLiters: Math.max(0, totalAvailableLiters - monthlyAllocation),
-        totalLitersForMonth: totalAvailableLiters, // This is the total available at the start of the month
+        monthlyPlanLiters,
+        bonusLiters,
+        // Rollover is the starting balance minus the standard monthly allocation
+        rolloverLiters: Math.max(0, startingBalanceForMonth - totalMonthlyAllocation),
+        totalLitersForMonth: startingBalanceForMonth,
         consumedLitersThisMonth,
         currentBalance,
         consumedPercentage,
@@ -229,7 +232,7 @@ export function StatCards({
               </div>
             </CardContent>
             <CardFooter className="pt-0">
-              <Progress value={100 - consumptionDetails.consumedPercentage} className="h-2" />
+               <Progress value={consumptionDetails.totalLitersForMonth > 0 ? (consumptionDetails.currentBalance / consumptionDetails.totalLitersForMonth) * 100 : 0} className="h-2" />
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
