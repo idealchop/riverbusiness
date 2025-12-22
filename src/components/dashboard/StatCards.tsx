@@ -155,6 +155,11 @@ export function StatCards({
   const estimatedWeeklyLiters = containerToLiter(weeklyContainers);
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
+  
+  const startingBalance = useMemo(() => {
+    if (isFlowPlan) return 0;
+    return consumptionDetails.totalLitersForMonth;
+  }, [isFlowPlan, consumptionDetails.totalLitersForMonth]);
 
   return (
     <>
@@ -236,16 +241,17 @@ export function StatCards({
             </CardHeader>
             <CardContent className="flex-1">
               <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.currentBalance.toLocaleString()} L</p>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                  <div className="flex justify-between"><span>Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
-                  <div className="flex justify-between"><span>Bonus:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
+               <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex justify-between"><span>Plan Liters:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
+                  <div className="flex justify-between"><span>Bonus Liters:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
                   <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
               </div>
             </CardContent>
              <CardFooter className="pt-0">
-               <Progress value={100 - consumptionDetails.consumedPercentage} className="h-2" />
+               <Progress value={consumptionDetails.currentBalance / startingBalance * 100} className="h-2" />
             </CardFooter>
           </Card>
+
           <Card className="flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Consumed this Month</CardTitle>
@@ -258,7 +264,8 @@ export function StatCards({
               <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onConsumptionHistoryClick}>View History</Button>
             </CardFooter>
           </Card>
-          <Card className="col-span-2">
+
+          <Card className="lg:col-span-2 col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
