@@ -76,25 +76,33 @@ export function StatCards({
         };
     }
     
-    // For fixed plans, the total available balance is the source of truth.
-    const totalAvailableLiters = user.totalConsumptionLiters;
-    const currentBalance = totalAvailableLiters;
+    // For fixed plans:
+    const totalAvailableLiters = user.totalConsumptionLiters; // This is the user's total credit.
+    const currentBalance = totalAvailableLiters - consumedLitersThisMonth; // This is the true remaining balance.
 
-    const consumedPercentage = totalAvailableLiters > 0 ? (consumedLitersThisMonth / totalAvailableLiters) * 100 : 0;
-    const remainingPercentage = 100 - consumedPercentage;
-    
+    // Base the percentage on the *initial* total for the month before consumption.
+    // If rollovers are complex, basing on a simple monthly allocation might be clearer.
+    const monthlyAllocation = (planDetails?.litersPerMonth || 0) + (planDetails?.bonusLiters || 0);
+    const totalAllocationForCycle = totalAvailableLiters; // Assuming totalConsumptionLiters reflects start-of-month balance
+
+    const consumedPercentage = totalAllocationForCycle > 0 
+      ? (consumedLitersThisMonth / totalAllocationForCycle) * 100 
+      : 0;
+
     return {
         ...emptyState,
         monthlyPlanLiters: planDetails?.litersPerMonth || 0,
         bonusLiters: planDetails?.bonusLiters || 0,
-        totalLitersForMonth: totalAvailableLiters,
+        // Rollover logic can be complex, let's derive it for display if needed
+        rolloverLiters: Math.max(0, totalAvailableLiters - monthlyAllocation),
+        totalLitersForMonth: totalAvailableLiters, // This is the total available at the start of the month
         consumedLitersThisMonth,
         currentBalance,
         consumedPercentage,
-        remainingPercentage,
         estimatedCost: user.plan.price || 0,
     };
-}, [user, deliveries]);
+  }, [user, deliveries]);
+
 
   const handleToggleConfirmation = () => {
     if (toggleTargetState === null || !user?.id || !firestore) return;
@@ -213,7 +221,7 @@ export function StatCards({
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
-              <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.totalLitersForMonth.toLocaleString()} L</p>
+              <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.currentBalance.toLocaleString()} L</p>
               <div className="space-y-1 text-xs text-muted-foreground">
                 <div className="flex justify-between"><span>Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
                 <div className="flex justify-between"><span>Bonus:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
@@ -221,7 +229,7 @@ export function StatCards({
               </div>
             </CardContent>
             <CardFooter className="pt-0">
-              <Progress value={100} className="h-2" />
+              <Progress value={100 - consumptionDetails.consumedPercentage} className="h-2" />
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
