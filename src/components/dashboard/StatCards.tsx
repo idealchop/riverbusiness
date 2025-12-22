@@ -229,7 +229,7 @@ export function StatCards({
               </div>
             </CardContent>
             <CardFooter className="pt-0">
-               <Progress value={consumptionDetails.totalLitersForMonth > 0 ? (consumptionDetails.consumedLitersThisMonth / consumptionDetails.totalLitersForMonth) * 100 : 0} className="h-2" />
+               <Progress value={consumptionDetails.consumedPercentage} className="h-2" />
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
@@ -310,3 +310,5 @@ export function StatCards({
     </>
   );
 }
+
+    
