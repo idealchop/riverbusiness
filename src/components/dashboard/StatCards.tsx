@@ -78,26 +78,23 @@ export function StatCards({
     // For fixed plans:
     const monthlyPlanLiters = planDetails?.litersPerMonth || 0;
     const bonusLiters = planDetails?.bonusLiters || 0;
-    const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
     
     // The user's total available credit at any time is totalConsumptionLiters.
-    // The balance for the month is this credit minus what's been used this month.
     const currentBalance = user.totalConsumptionLiters;
     
-    // To calculate the percentage, we need the *starting* balance for the month.
-    // This is the current balance plus what's been consumed.
+    // The starting balance for the month is the current balance plus what's been consumed.
     const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
+
+    const rolloverLiters = Math.max(0, startingBalanceForMonth - (monthlyPlanLiters + bonusLiters));
 
     const consumedPercentage = startingBalanceForMonth > 0 
       ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 
       : 0;
 
     return {
-        ...emptyState,
         monthlyPlanLiters,
         bonusLiters,
-        // Rollover is the starting balance minus the standard monthly allocation
-        rolloverLiters: Math.max(0, startingBalanceForMonth - totalMonthlyAllocation),
+        rolloverLiters,
         totalLitersForMonth: startingBalanceForMonth,
         consumedLitersThisMonth,
         currentBalance,
@@ -232,7 +229,7 @@ export function StatCards({
               </div>
             </CardContent>
             <CardFooter className="pt-0">
-               <Progress value={consumptionDetails.totalLitersForMonth > 0 ? (consumptionDetails.currentBalance / consumptionDetails.totalLitersForMonth) * 100 : 0} className="h-2" />
+               <Progress value={consumptionDetails.totalLitersForMonth > 0 ? (consumptionDetails.consumedLitersThisMonth / consumptionDetails.totalLitersForMonth) * 100 : 0} className="h-2" />
             </CardFooter>
           </Card>
           <Card className="flex flex-col">
