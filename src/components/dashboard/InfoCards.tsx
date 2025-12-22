@@ -2,11 +2,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import Image from 'next/image';
-import { CheckCircle, ExternalLink, Gift, Lightbulb, MapPin, Rocket, Users, Target } from 'lucide-react';
+import { CheckCircle, ExternalLink, Gift, Lightbulb, MapPin, Rocket, Users, Target, Calendar, Edit, BellRing } from 'lucide-react';
+import { AppUser } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const perks = [
     { 
@@ -23,10 +29,79 @@ const perks = [
     },
 ];
 
-export function InfoCards() {
+interface InfoCardsProps {
+  user: AppUser | null;
+  onUpdateScheduleClick: () => void;
+}
+
+export function InfoCards({ user, onUpdateScheduleClick }: InfoCardsProps) {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const [isConfirmingToggle, setIsConfirmingToggle] = useState(false);
+  const [toggleTargetState, setToggleTargetState] = useState<boolean | null>(null);
+
+  const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
+  const autoRefill = planDetails?.autoRefillEnabled ?? true;
+  const nextRefillDay = planDetails?.deliveryDay || 'Not set';
+
+  const handleToggleConfirmation = () => {
+    if (toggleTargetState === null || !user?.id || !firestore) return;
+
+    const userDocRef = doc(firestore, 'users', user.id);
+    
+    updateDoc(userDocRef, {
+        'customPlanDetails.autoRefillEnabled': toggleTargetState,
+    }).then(() => {
+        toast({
+            title: toggleTargetState ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
+            description: toggleTargetState ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
+        });
+    }).catch((error) => {
+        console.error("Failed to update auto-refill status:", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update your auto-refill preference.",
+        });
+    }).finally(() => {
+        setIsConfirmingToggle(false);
+        setToggleTargetState(null);
+    });
+  };
+
+  const onSwitchChange = (checked: boolean) => {
+    setToggleTargetState(checked);
+    setIsConfirmingToggle(true);
+  }
 
   return (
     <div className="space-y-6">
+       <Card>
+        <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+            <Label htmlFor="auto-refill-info" className="font-bold text-base">Auto Refill</Label>
+            <Switch id="auto-refill-info" checked={autoRefill} onCheckedChange={onSwitchChange} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+            {autoRefill ? "Deliveries will be auto-scheduled based on your plan." : "Deliveries are paused. Schedule manually."}
+            </p>
+            {autoRefill && (
+                <div className="border-t pt-3 flex justify-between items-center">
+                    <div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" />Next Refill</p>
+                        <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="text-xs" onClick={onUpdateScheduleClick}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Customize
+                    </Button>
+                </div>
+            )}
+        </CardContent>
+      </Card>
       <Dialog>
         <DialogTrigger asChild>
           <Card className="cursor-pointer hover:border-primary">

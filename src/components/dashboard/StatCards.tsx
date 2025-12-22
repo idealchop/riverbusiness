@@ -163,9 +163,9 @@ export function StatCards({
 
   return (
     <>
-    <div className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {isFlowPlan ? (
-        <div className="col-span-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <>
           <Card className="flex flex-col lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
@@ -189,7 +189,7 @@ export function StatCards({
               <p className="text-xs text-muted-foreground">Billed at the end of the month based on consumption.</p>
             </CardFooter>
           </Card>
-          <Card className="lg:col-span-1">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
@@ -230,7 +230,7 @@ export function StatCards({
               </div>
             </CardContent>
           </Card>
-        </div>
+        </>
       ) : (
         <>
           <Card className="flex flex-col">
@@ -265,7 +265,7 @@ export function StatCards({
             </CardFooter>
           </Card>
 
-          <Card className="lg:col-span-2 col-span-2">
+          <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
