@@ -42,6 +42,9 @@ export function StatCards({
   const consumptionDetails = useMemo(() => {
     const now = new Date();
     const emptyState = {
+        monthlyPlanLiters: 0,
+        bonusLiters: 0,
+        rolloverLiters: 0,
         totalLitersForMonth: 0,
         consumedLitersThisMonth: 0,
         currentBalance: user?.totalConsumptionLiters || 0,
@@ -55,37 +58,60 @@ export function StatCards({
 
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
-
+    
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
     const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
-    // This is the user's real-time balance from the database.
     const currentBalance = user.totalConsumptionLiters;
     
-    // The balance at the start of the month was the current balance PLUS what's been consumed this month.
-    const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
-
-    const consumedPercentage = startingBalanceForMonth > 0 
-      ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 
-      : 0;
-
     if (user.plan.isConsumptionBased) {
         return {
             ...emptyState,
             consumedLitersThisMonth,
-            currentBalance: 0, // Not applicable for consumption plan, show 0
+            currentBalance: 0,
             estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
         };
     }
     
-    // For fixed plans:
+    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
+    if (!planDetails || !user.createdAt) {
+        const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
+        const consumedPercentage = startingBalanceForMonth > 0 ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 : 0;
+        return { ...emptyState, currentBalance, consumedLitersThisMonth, totalLitersForMonth: startingBalanceForMonth, consumedPercentage };
+    }
+
+    const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
+        ? (user.createdAt as any).toDate() 
+        : new Date(user.createdAt as string);
+
+    const lastMonth = subMonths(now, 1);
+    const lastCycleStart = startOfMonth(lastMonth);
+    
+    const monthlyPlanLiters = planDetails.litersPerMonth || 0;
+    const bonusLiters = planDetails.bonusLiters || 0;
+    const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+    
+    let rolloverLiters = 0;
+    if (isBefore(createdAtDate, lastCycleStart)) {
+        const lastCycleEnd = endOfMonth(lastMonth);
+        const deliveriesLastCycle = deliveries.filter(d => isWithinInterval(new Date(d.date), { start: lastCycleStart, end: lastCycleEnd }));
+        const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
+    }
+    
+    const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
+    const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
+    
     return {
-        totalLitersForMonth: startingBalanceForMonth,
+        monthlyPlanLiters,
+        bonusLiters,
+        rolloverLiters,
+        totalLitersForMonth,
         consumedLitersThisMonth,
-        currentBalance, // The real remaining balance.
+        currentBalance,
         consumedPercentage,
         estimatedCost: user.plan.price || 0,
     };
@@ -211,9 +237,9 @@ export function StatCards({
             <CardContent className="flex-1">
               <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.currentBalance.toLocaleString()} L</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p>
-                  Started with {consumptionDetails.totalLitersForMonth.toLocaleString()} L this month.
-                </p>
+                  <div className="flex justify-between"><span>Plan:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
+                  <div className="flex justify-between"><span>Bonus:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
+                  <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
               </div>
             </CardContent>
              <CardFooter className="pt-0">
