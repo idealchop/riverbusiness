@@ -120,6 +120,13 @@ export default function DashboardLayout({
   const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
+  const planImage = useMemo(() => {
+    if (!user?.clientType) return null;
+    const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
+    if (!clientTypeDetails) return null;
+    return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
+  }, [user]);
+
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
   
   useEffect(() => {
@@ -163,12 +170,6 @@ export default function DashboardLayout({
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
   ]);
     
-  const planImage = useMemo(() => {
-    if (!user?.clientType) return null;
-    const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
-    if (!clientTypeDetails) return null;
-    return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
-  }, [user]);
   
   React.useEffect(() => {
     if (isUserLoading || !auth) return;
