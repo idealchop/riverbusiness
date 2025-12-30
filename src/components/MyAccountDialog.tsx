@@ -958,7 +958,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
             <DialogDescription>
-              This is a breakdown of the total amount for invoice {state.invoiceForBreakdown?.id}.
+              This is a breakdown of the total amount for invoice {state.invoiceForBreakdown?.id.split('-').pop()}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -976,18 +976,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                     <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
                   </div>
                 )}
-                {breakdownDetails.gallonCost > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Container Rental ({user.customPlanDetails?.gallonQuantity} units)</span>
-                    <span className="font-medium">P{breakdownDetails.gallonCost.toFixed(2)}</span>
-                  </div>
-                )}
-                {breakdownDetails.dispenserCost > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Dispenser Rental ({user.customPlanDetails?.dispenserQuantity} units)</span>
-                    <span className="font-medium">P{breakdownDetails.dispenserCost.toFixed(2)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Container Rental ({user.customPlanDetails?.gallonQuantity || 0} units)</span>
+                    <span className="font-medium">P{(breakdownDetails.gallonCost || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Dispenser Rental ({user.customPlanDetails?.dispenserQuantity || 0} units)</span>
+                    <span className="font-medium">P{(breakdownDetails.dispenserCost || 0).toFixed(2)}</span>
+                </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total Amount</span>
@@ -1001,6 +997,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
               </p>
             )}
           </div>
+           <DialogFooter>
+             <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1324,4 +1323,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   );
 }
 
-    
