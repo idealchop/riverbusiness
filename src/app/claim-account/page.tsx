@@ -9,11 +9,14 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, writeBatch } from 'firebase/firestore';
+import type { AppUser } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
+import { CheckCircle } from 'lucide-react';
 
 const claimSchema = z.object({
   clientId: z.string().min(1, { message: 'Client ID is required.' }),
@@ -26,6 +29,7 @@ export default function ClaimAccountPage() {
   const { toast } = useToast();
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [claimedProfile, setClaimedProfile] = useState<AppUser | null>(null);
 
   const {
     register,
@@ -36,7 +40,6 @@ export default function ClaimAccountPage() {
   });
 
   useEffect(() => {
-    // If not loading and no user, redirect to login
     if (!isUserLoading && !authUser) {
       router.push('/login');
     }
@@ -53,9 +56,6 @@ export default function ClaimAccountPage() {
     try {
       const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', clientId);
       const userProfileRef = doc(firestore, 'users', authUser.uid);
-
-      const batch = writeBatch(firestore);
-
       const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
 
       if (!unclaimedProfileSnap.exists()) {
@@ -64,12 +64,8 @@ export default function ClaimAccountPage() {
       }
 
       const unclaimedData = unclaimedProfileSnap.data();
-      
-      // The definitive fix: Ensure all data from the unclaimed profile,
-      // including the top-level customPlanDetails and totalConsumptionLiters,
-      // is correctly copied to the new user profile.
       const newUserData = {
-        ...unclaimedData, // This carries over all fields like customPlanDetails, totalConsumptionLiters, etc.
+        ...unclaimedData,
         id: authUser.uid,
         email: authUser.email,
         onboardingComplete: true,
@@ -78,13 +74,13 @@ export default function ClaimAccountPage() {
         accountStatus: 'Active',
       };
 
+      const batch = writeBatch(firestore);
       batch.set(userProfileRef, newUserData);
       batch.delete(unclaimedProfileRef);
-      
       await batch.commit();
 
-      toast({ title: 'Profile Claimed!', description: 'Your account is ready. Welcome to River Business!' });
-      router.push('/dashboard');
+      toast({ title: 'Profile Claimed!', description: "Please review your account details below." });
+      setClaimedProfile(newUserData as AppUser);
 
     } catch (error) {
       console.error("Error claiming profile: ", error);
@@ -98,6 +94,56 @@ export default function ClaimAccountPage() {
         <p>Loading...</p>
       </div>
     );
+  }
+
+  if (claimedProfile) {
+    return (
+      <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="text-center">
+            <CheckCircle className="h-16 w-16 mb-4 mx-auto text-green-500" />
+            <CardTitle>Welcome, {claimedProfile.businessName}!</CardTitle>
+            <CardDescription>
+              Your account has been successfully claimed. Please confirm the details below.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm space-y-4">
+            <div className="space-y-2 rounded-lg border p-4">
+                <h4 className="font-semibold">Business Details</h4>
+                <Separator />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                    <div><span className="font-medium text-muted-foreground">Client ID:</span> {claimedProfile.clientId}</div>
+                    <div><span className="font-medium text-muted-foreground">Business Name:</span> {claimedProfile.businessName}</div>
+                    <div><span className="font-medium text-muted-foreground">Contact Name:</span> {claimedProfile.name}</div>
+                    <div><span className="font-medium text-muted-foreground">Contact Number:</span> {claimedProfile.contactNumber}</div>
+                    <div className="md:col-span-2"><span className="font-medium text-muted-foreground">Address:</span> {claimedProfile.address}</div>
+                </div>
+            </div>
+             <div className="space-y-2 rounded-lg border p-4">
+                <h4 className="font-semibold">Plan Details</h4>
+                <Separator />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                    <div><span className="font-medium text-muted-foreground">Plan Name:</span> {claimedProfile.plan?.name}</div>
+                    {claimedProfile.plan?.isConsumptionBased ? (
+                         <div><span className="font-medium text-muted-foreground">Rate:</span> P{claimedProfile.plan?.price}/liter</div>
+                    ) : (
+                        <>
+                         <div><span className="font-medium text-muted-foreground">Monthly Fee:</span> P{claimedProfile.plan?.price?.toLocaleString()}</div>
+                         <div><span className="font-medium text-muted-foreground">Monthly Liters:</span> {claimedProfile.customPlanDetails?.litersPerMonth?.toLocaleString()} L</div>
+                        </>
+                    )}
+                    <div><span className="font-medium text-muted-foreground">Delivery Schedule:</span> {claimedProfile.customPlanDetails?.deliveryDay} at {claimedProfile.customPlanDetails?.deliveryTime}</div>
+                </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={() => router.push('/dashboard')} className="w-full">
+              Proceed to Dashboard
+            </Button>
+          </CardFooter>
+        </Card>
+      </main>
+    )
   }
 
   return (
