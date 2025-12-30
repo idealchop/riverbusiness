@@ -269,10 +269,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
 
         let estimatedCost = 0;
+        const monthlyEquipmentCost = (userToCalc.customPlanDetails?.gallonPrice || 0) + (userToCalc.customPlanDetails?.dispenserPrice || 0);
+
         if (userToCalc.plan?.isConsumptionBased) {
-            estimatedCost = consumedLitersThisMonth * (userToCalc.plan.price || 0);
+            const consumptionCost = consumedLitersThisMonth * (userToCalc.plan.price || 0);
+            estimatedCost = consumptionCost + monthlyEquipmentCost;
         } else {
-            estimatedCost = userToCalc.plan?.price || 0;
+            estimatedCost = (userToCalc.plan?.price || 0) + monthlyEquipmentCost;
         }
 
         return {
@@ -1403,7 +1406,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>

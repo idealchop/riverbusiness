@@ -192,7 +192,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     if (!user?.plan || !deliveries) {
         return { estimatedCost: 0 };
     }
-
+    
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
@@ -200,10 +200,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
     let estimatedCost = 0;
+    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+
     if (user.plan.isConsumptionBased) {
-        estimatedCost = consumedLitersThisMonth * (user.plan.price || 0);
+        const consumptionCost = consumedLitersThisMonth * (user.plan.price || 0);
+        estimatedCost = consumptionCost + monthlyEquipmentCost;
     } else {
-        estimatedCost = user.plan.price || 0;
+        estimatedCost = (user.plan.price || 0) + monthlyEquipmentCost;
     }
 
     return { estimatedCost };

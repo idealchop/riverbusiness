@@ -66,13 +66,15 @@ export function StatCards({
     const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
     const currentBalance = user.totalConsumptionLiters;
-    
+    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+
     if (user.plan.isConsumptionBased) {
+        const consumptionCost = consumedLitersThisMonth * (user.plan.price || 0);
         return {
             ...emptyState,
             consumedLitersThisMonth,
             currentBalance: 0,
-            estimatedCost: consumedLitersThisMonth * (user.plan.price || 0),
+            estimatedCost: consumptionCost + monthlyEquipmentCost,
         };
     }
     
@@ -80,7 +82,7 @@ export function StatCards({
     if (!planDetails || !user.createdAt) {
         const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
         const consumedPercentage = startingBalanceForMonth > 0 ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 : 0;
-        return { ...emptyState, currentBalance, consumedLitersThisMonth, totalLitersForMonth: startingBalanceForMonth, consumedPercentage };
+        return { ...emptyState, currentBalance, consumedLitersThisMonth, totalLitersForMonth: startingBalanceForMonth, consumedPercentage, estimatedCost: (user.plan.price || 0) + monthlyEquipmentCost, };
     }
 
     const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
@@ -113,7 +115,7 @@ export function StatCards({
         consumedLitersThisMonth,
         currentBalance,
         consumedPercentage,
-        estimatedCost: user.plan.price || 0,
+        estimatedCost: (user.plan.price || 0) + monthlyEquipmentCost,
     };
   }, [user, deliveries]);
 
