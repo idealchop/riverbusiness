@@ -28,7 +28,7 @@ import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/fir
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -45,6 +45,7 @@ type State = {
   isChangePlanDialogOpen: boolean;
   isSoaDialogOpen: boolean;
   isInvoiceDetailOpen: boolean;
+  isBreakdownDialogOpen: boolean;
   selectedNewPlan: any | null;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
@@ -56,6 +57,7 @@ type State = {
   showNewPassword: boolean;
   showConfirmPassword: boolean;
   selectedInvoiceForDetail: Payment | null;
+  invoiceForBreakdown: Payment | null;
 };
 
 type Action =
@@ -65,7 +67,9 @@ type Action =
   | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
   | { type: 'SET_SOA_DIALOG'; payload: boolean }
   | { type: 'SET_INVOICE_DETAIL_DIALOG'; payload: boolean }
+  | { type: 'SET_BREAKDOWN_DIALOG'; payload: boolean }
   | { type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: Payment | null }
+  | { type: 'SET_INVOICE_FOR_BREAKDOWN', payload: Payment | null }
   | { type: 'SET_SELECTED_NEW_PLAN'; payload: any | null }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
@@ -81,6 +85,7 @@ const initialState: State = {
   isChangePlanDialogOpen: false,
   isSoaDialogOpen: false,
   isInvoiceDetailOpen: false,
+  isBreakdownDialogOpen: false,
   selectedNewPlan: null,
   profilePhotoFile: null,
   profilePhotoPreview: null,
@@ -92,6 +97,7 @@ const initialState: State = {
   showNewPassword: false,
   showConfirmPassword: false,
   selectedInvoiceForDetail: null,
+  invoiceForBreakdown: null,
 };
 
 function reducer(state: State, action: Action): State {
@@ -101,7 +107,9 @@ function reducer(state: State, action: Action): State {
     case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
     case 'SET_SOA_DIALOG': return { ...state, isSoaDialogOpen: action.payload };
     case 'SET_INVOICE_DETAIL_DIALOG': return { ...state, isInvoiceDetailOpen: action.payload };
+    case 'SET_BREAKDOWN_DIALOG': return { ...state, isBreakdownDialogOpen: action.payload };
     case 'SET_SELECTED_INVOICE_FOR_DETAIL': return { ...state, selectedInvoiceForDetail: action.payload };
+    case 'SET_INVOICE_FOR_BREAKDOWN': return { ...state, invoiceForBreakdown: action.payload };
     case 'SET_SELECTED_NEW_PLAN': return { ...state, selectedNewPlan: action.payload };
     case 'SET_PHOTO_FILE': return { ...state, profilePhotoFile: action.payload.file, profilePhotoPreview: action.payload.preview };
     case 'SET_FORM_DATA': return { ...state, editableFormData: action.payload };
@@ -190,7 +198,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     const cycleEnd = endOfMonth(now);
 
     if (!user?.plan || !deliveries) {
-        return { estimatedCost: 0 };
+        return { estimatedCost: 0, consumedLitersThisMonth: 0 };
     }
     
     const deliveriesThisCycle = deliveries.filter(d => {
@@ -209,7 +217,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         estimatedCost = (user.plan.price || 0) + monthlyEquipmentCost;
     }
 
-    return { estimatedCost };
+    return { estimatedCost, consumedLitersThisMonth };
   }, [user, deliveries]);
 
 
@@ -381,10 +389,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     const consumedLitersThisMonth = monthlyDeliveries.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
     let totalAmount = 0;
+    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+
     if (user.plan?.isConsumptionBased) {
-        totalAmount = consumedLitersThisMonth * (user.plan.price || 0);
+        totalAmount = consumedLitersThisMonth * (user.plan.price || 0) + monthlyEquipmentCost;
     } else {
-        totalAmount = user.plan?.price || 0;
+        totalAmount = (user.plan?.price || 0) + monthlyEquipmentCost;
     }
     
     if (soaMonth === specialPeriodKey && !user.plan?.isConsumptionBased) {
@@ -512,6 +522,39 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
       toast({ title: `${label} Copied!`, description: 'The ID has been copied to your clipboard.' });
     });
   };
+  
+  const handleViewBreakdown = (invoice: Payment) => {
+    dispatch({ type: 'SET_INVOICE_FOR_BREAKDOWN', payload: invoice });
+    dispatch({ type: 'SET_BREAKDOWN_DIALOG', payload: true });
+  };
+  
+  const breakdownDetails = useMemo(() => {
+    if (!user || !state.invoiceForBreakdown) {
+      return { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
+    }
+
+    const gallonCost = user.customPlanDetails?.gallonPrice || 0;
+    const dispenserCost = user.customPlanDetails?.dispenserPrice || 0;
+    const isCurrent = state.invoiceForBreakdown.id === currentMonthInvoice.id;
+    let planCost = 0;
+    let consumptionCost = 0;
+
+    if (user.plan?.isConsumptionBased) {
+      // For consumption plans, planCost is 0. The main cost is consumption.
+      // For current month, we have live consumption data.
+      // For past months, we derive consumption from the total invoice amount.
+      if (isCurrent) {
+        consumptionCost = consumptionDetails.consumedLitersThisMonth * (user.plan.price || 0);
+      } else {
+        consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
+      }
+    } else {
+      // For fixed plans, the planCost is the plan's price.
+      planCost = user.plan?.price || 0;
+    }
+
+    return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
+  }, [user, state.invoiceForBreakdown, currentMonthInvoice.id, consumptionDetails]);
 
   return (
     <AlertDialog>
@@ -802,7 +845,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                             {currentMonthInvoice.status}
                                         </span>
                                     </TableCell>
-                                    <TableCell className="text-right">P{currentMonthInvoice.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex flex-col items-end">
+                                        <span>P{currentMonthInvoice.amount.toFixed(2)}</span>
+                                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(currentMonthInvoice)}>View details</Button>
+                                      </div>
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
                                     </TableCell>
@@ -822,7 +870,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                                 {invoice.status}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-right">P{invoice.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">
+                                          <div className="flex flex-col items-end">
+                                            <span>P{invoice.amount.toFixed(2)}</span>
+                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                                          </div>
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             {invoice.status === 'Paid' ? (
                                                 <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
@@ -852,6 +905,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 <div>
                                     <p className="font-semibold">{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</p>
                                     <p className="text-sm">P{currentMonthInvoice.amount.toFixed(2)}</p>
+                                    <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(currentMonthInvoice)}>View details</Button>
                                 </div>
                                 <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
                             </CardContent>
@@ -865,6 +919,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                         <div>
                                             <p className="font-semibold">{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</p>
                                             <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
+                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                                         </div>
                                         <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
                                             invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
@@ -896,6 +951,59 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Breakdown Dialog */}
+      <Dialog open={state.isBreakdownDialogOpen} onOpenChange={(open) => { if (!open) { dispatch({type: 'SET_INVOICE_FOR_BREAKDOWN', payload: null}); } dispatch({type: 'SET_BREAKDOWN_DIALOG', payload: open}); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
+            <DialogDescription>
+              This is a breakdown of the total amount for invoice {state.invoiceForBreakdown?.id}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <Card>
+              <CardContent className="p-4 space-y-2 text-sm">
+                {!user.plan?.isConsumptionBased && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Base Plan ({user.plan?.name})</span>
+                    <span className="font-medium">P{breakdownDetails.planCost.toFixed(2)}</span>
+                  </div>
+                )}
+                 {user.plan?.isConsumptionBased && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Water Consumption</span>
+                    <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
+                  </div>
+                )}
+                {breakdownDetails.gallonCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Container Rental ({user.customPlanDetails?.gallonQuantity} units)</span>
+                    <span className="font-medium">P{breakdownDetails.gallonCost.toFixed(2)}</span>
+                  </div>
+                )}
+                {breakdownDetails.dispenserCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Dispenser Rental ({user.customPlanDetails?.dispenserQuantity} units)</span>
+                    <span className="font-medium">P{breakdownDetails.dispenserCost.toFixed(2)}</span>
+                  </div>
+                )}
+                <Separator className="my-2" />
+                <div className="flex justify-between font-bold text-base">
+                  <span>Total Amount</span>
+                  <span>P{state.invoiceForBreakdown?.amount.toFixed(2)}</span>
+                </div>
+              </CardContent>
+            </Card>
+            {breakdownDetails.isCurrent && (
+              <p className="text-xs text-muted-foreground text-center">
+                This is a live estimate for the current billing period. Final amount may vary.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Invoice Detail Dialog */}
         <Dialog open={state.isInvoiceDetailOpen} onOpenChange={(open) => {
@@ -1215,3 +1323,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
+
+    
