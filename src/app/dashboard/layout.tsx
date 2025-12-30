@@ -162,6 +162,13 @@ export default function DashboardLayout({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
   ]);
+    
+  const planImage = useMemo(() => {
+    if (!user?.clientType) return null;
+    const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
+    if (!clientTypeDetails) return null;
+    return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
+  }, [user]);
   
   React.useEffect(() => {
     if (isUserLoading || !auth) return;
@@ -174,8 +181,8 @@ export default function DashboardLayout({
     const checkOnboarding = async () => {
         if (!firestore) return;
         const userDoc = await getDoc(doc(firestore, 'users', authUser.uid));
-        if (!userDoc.exists() || !userDoc.data()?.onboardingComplete) {
-            router.push('/onboarding');
+        if (!userDoc.exists()) {
+            router.push('/claim-account');
         }
     }
     checkOnboarding();
@@ -303,56 +310,49 @@ export default function DashboardLayout({
       setHasNewMessage(true);
     }, 1500);
   };
-
-    const planImage = useMemo(() => {
-      if (!user?.clientType) return null;
-      const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
-      if (!clientTypeDetails) return null;
-      return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
-    }, [user]);
     
-    const handlePayNow = (invoice: Payment) => {
-        setSelectedInvoice(invoice);
-        setIsPaymentDialogOpen(true);
-    };
+  const handlePayNow = (invoice: Payment) => {
+      setSelectedInvoice(invoice);
+      setIsPaymentDialogOpen(true);
+  };
 
-    const handleMobileRefillClick = () => {
-        window.dispatchEvent(new CustomEvent('request-asap-refill'));
-    };
+  const handleMobileRefillClick = () => {
+      window.dispatchEvent(new CustomEvent('request-asap-refill'));
+  };
 
-    const handleNotificationClick = (notification: NotificationType) => {
-        if (!notification.data) return;
+  const handleNotificationClick = (notification: NotificationType) => {
+      if (!notification.data) return;
 
-        let eventName: string | null = null;
-        let eventDetail: any = {};
+      let eventName: string | null = null;
+      let eventDetail: any = {};
 
-        switch (notification.type) {
-            case 'payment':
-                eventName = 'open-payment-dialog';
-                eventDetail = { invoiceId: notification.data.paymentId };
-                break;
-            case 'delivery':
-                eventName = 'open-delivery-history';
-                eventDetail = { deliveryId: notification.data.deliveryId };
-                break;
-            case 'sanitation':
-                eventName = 'open-compliance-dialog';
-                eventDetail = { tab: 'sanitation' };
-                break;
-            case 'compliance':
-                 eventName = 'open-compliance-dialog';
-                 eventDetail = { tab: 'compliance' };
-                 break;
-        }
+      switch (notification.type) {
+          case 'payment':
+              eventName = 'open-payment-dialog';
+              eventDetail = { invoiceId: notification.data.paymentId };
+              break;
+          case 'delivery':
+              eventName = 'open-delivery-history';
+              eventDetail = { deliveryId: notification.data.deliveryId };
+              break;
+          case 'sanitation':
+              eventName = 'open-compliance-dialog';
+              eventDetail = { tab: 'sanitation' };
+              break;
+          case 'compliance':
+               eventName = 'open-compliance-dialog';
+               eventDetail = { tab: 'compliance' };
+               break;
+      }
 
-        if (eventName) {
-            window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
-        }
-    }
+      if (eventName) {
+          window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
+      }
+  }
 
-    const handleComplianceClick = () => {
-        window.dispatchEvent(new CustomEvent('open-compliance-dialog'));
-    }
+  const handleComplianceClick = () => {
+      window.dispatchEvent(new CustomEvent('open-compliance-dialog'));
+  }
 
   if (isUserLoading || isUserDocLoading || !isMounted || !auth) {
     return <DashboardLayoutSkeleton />;
