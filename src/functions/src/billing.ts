@@ -148,19 +148,21 @@ async function generateInvoiceForUser(
         return sum + containerToLiter(delivery.volumeContainers);
     }, 0);
 
+    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+
     if (user.plan.isConsumptionBased) {
-        // Consumption-based billing
-        if (consumedLitersInPeriod > 0) {
-            amount = consumedLitersInPeriod * (user.plan.price || 0);
-            description = `Water Consumption for ${billingPeriod}`;
-        }
+        // Consumption-based billing (Flow Plans)
+        const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
+        amount = consumptionCost + equipmentCostForPeriod;
+        description = `Bill for ${billingPeriod}`;
     } else {
         // Fixed-plan billing
-        // The charge is always the plan's monthly price, multiplied by the number of months in the billing period.
-        amount = (user.plan.price || 0) * monthsToBill;
+        const planCost = (user.plan.price || 0) * monthsToBill;
+        amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
-        // Rollover logic needs to consider the total allocation for the billing period (1 or 2 months).
+        // Rollover logic needs to consider the standard monthly allocation, even in a 2-month billing period.
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
             const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
@@ -208,4 +210,3 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
-
