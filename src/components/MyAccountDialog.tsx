@@ -496,7 +496,34 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     }
     return null;
   };
+  
+  const breakdownDetails = useMemo(() => {
+    if (!user || !state.invoiceForBreakdown) {
+      return { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
+    }
 
+    const gallonCost = user.customPlanDetails?.gallonPrice || 0;
+    const dispenserCost = user.customPlanDetails?.dispenserPrice || 0;
+    const isCurrent = state.invoiceForBreakdown.id === currentMonthInvoice.id;
+    let planCost = 0;
+    let consumptionCost = 0;
+
+    if (user.plan?.isConsumptionBased) {
+      // For consumption plans, planCost is 0. The main cost is consumption.
+      // For current month, we have live consumption data.
+      // For past months, we derive consumption from the total invoice amount.
+      if (isCurrent) {
+        consumptionCost = consumptionDetails.consumedLitersThisMonth * (user.plan.price || 0);
+      } else {
+        consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
+      }
+    } else {
+      // For fixed plans, the planCost is the plan's price.
+      planCost = user.plan?.price || 0;
+    }
+
+    return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
+  }, [user, state.invoiceForBreakdown, currentMonthInvoice.id, consumptionDetails]);
 
   if (!user) return <>{children}</>;
 
@@ -528,34 +555,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     dispatch({ type: 'SET_BREAKDOWN_DIALOG', payload: true });
   };
   
-  const breakdownDetails = useMemo(() => {
-    if (!user || !state.invoiceForBreakdown) {
-      return { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
-    }
-
-    const gallonCost = user.customPlanDetails?.gallonPrice || 0;
-    const dispenserCost = user.customPlanDetails?.dispenserPrice || 0;
-    const isCurrent = state.invoiceForBreakdown.id === currentMonthInvoice.id;
-    let planCost = 0;
-    let consumptionCost = 0;
-
-    if (user.plan?.isConsumptionBased) {
-      // For consumption plans, planCost is 0. The main cost is consumption.
-      // For current month, we have live consumption data.
-      // For past months, we derive consumption from the total invoice amount.
-      if (isCurrent) {
-        consumptionCost = consumptionDetails.consumedLitersThisMonth * (user.plan.price || 0);
-      } else {
-        consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
-      }
-    } else {
-      // For fixed plans, the planCost is the plan's price.
-      planCost = user.plan?.price || 0;
-    }
-
-    return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
-  }, [user, state.invoiceForBreakdown, currentMonthInvoice.id, consumptionDetails]);
-
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -1322,4 +1321,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
