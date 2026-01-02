@@ -191,43 +191,52 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-
-  const consumptionDetails = React.useMemo(() => {
+  const currentMonthInvoice: Payment = useMemo(() => {
     const now = new Date();
-    const cycleStart = startOfMonth(now);
-    const cycleEnd = endOfMonth(now);
+    const currentYear = getYear(now);
+    const currentMonth = getMonth(now); // 0 for Jan, 1 for Feb, etc.
 
-    if (!user?.plan || !deliveries) {
-        return { estimatedCost: 0, consumedLitersThisMonth: 0 };
+    let cycleStart = startOfMonth(now);
+    let cycleEnd = endOfMonth(now);
+    let monthsToBill = 1;
+    let description = `Bill for ${format(now, 'MMMM yyyy')}`;
+
+    // Special case for January 2026: The "current" bill should reflect Dec 2025 + Jan 2026
+    if (currentYear === 2026 && currentMonth === 0) {
+        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+        cycleEnd = endOfMonth(now); // Jan 31, 2026
+        monthsToBill = 2;
+        description = 'Bill for December 2025 - January 2026';
     }
-    
-    const deliveriesThisCycle = deliveries.filter(d => {
+
+    const deliveriesThisCycle = (deliveries || []).filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
-    const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    
+    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+
+    const monthlyEquipmentCost = (user?.customPlanDetails?.gallonPrice || 0) + (user?.customPlanDetails?.dispenserPrice || 0);
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
     
     let estimatedCost = 0;
-    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
-
-    if (user.plan.isConsumptionBased) {
-        const consumptionCost = consumedLitersThisMonth * (user.plan.price || 0);
-        estimatedCost = consumptionCost + monthlyEquipmentCost;
+    if (user?.plan?.isConsumptionBased) {
+        const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
+        estimatedCost = consumptionCost + equipmentCostForPeriod;
     } else {
-        estimatedCost = (user.plan.price || 0) + monthlyEquipmentCost;
+        const planCost = (user?.plan?.price || 0) * monthsToBill;
+        estimatedCost = planCost + equipmentCostForPeriod;
     }
 
-    return { estimatedCost, consumedLitersThisMonth };
-  }, [user, deliveries]);
+    return {
+        id: `INV-${format(new Date(), 'yyyy-MMM').toUpperCase()}`,
+        date: new Date().toISOString(),
+        description: description,
+        amount: estimatedCost,
+        status: 'Upcoming',
+    };
+}, [user, deliveries]);
 
-
-  const currentMonthInvoice: Payment = {
-    id: `INV-${format(new Date(), 'yyyy-MMM').toUpperCase()}`,
-    date: new Date().toISOString(),
-    description: `Bill for ${format(new Date(), 'MMMM yyyy')}`,
-    amount: consumptionDetails.estimatedCost,
-    status: 'Upcoming',
-  };
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
 
@@ -502,29 +511,30 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
       return { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
     }
 
-    const gallonCost = user.customPlanDetails?.gallonPrice || 0;
-    const dispenserCost = user.customPlanDetails?.dispenserPrice || 0;
+    const isCombinedPeriod = state.invoiceForBreakdown.id.includes('202512-202601');
+    const monthsToBill = isCombinedPeriod ? 2 : 1;
+
+    const gallonCost = (user.customPlanDetails?.gallonPrice || 0) * monthsToBill;
+    const dispenserCost = (user.customPlanDetails?.dispenserPrice || 0) * monthsToBill;
     const isCurrent = state.invoiceForBreakdown.id === currentMonthInvoice.id;
     let planCost = 0;
     let consumptionCost = 0;
 
     if (user.plan?.isConsumptionBased) {
-      if (isCurrent) {
-        consumptionCost = consumptionDetails.consumedLitersThisMonth * (user.plan.price || 0);
-      } else {
-        // For past consumption invoices, the total amount should already be correct.
-        // We subtract known equipment costs to derive consumption cost.
-        consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
-      }
+        // For current estimate, consumptionCost is already calculated in `currentMonthInvoice`
+        // so we derive it from the total.
+        if (isCurrent) {
+          consumptionCost = currentMonthInvoice.amount - gallonCost - dispenserCost;
+        } else {
+            // For past consumption invoices, derive from total
+            consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
+        }
     } else {
-      planCost = user.plan?.price || 0;
-       if (state.invoiceForBreakdown.id.endsWith('202512-202601')) {
-          planCost *= 2;
-      }
+        planCost = (user.plan?.price || 0) * monthsToBill;
     }
 
     return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
-  }, [user, state.invoiceForBreakdown, currentMonthInvoice.id, consumptionDetails]);
+  }, [user, state.invoiceForBreakdown, currentMonthInvoice]);
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
@@ -552,7 +562,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   };
   
   if (!user) {
-    return null;
+    return <>{children}</>;
   }
 
   const displayPhoto = user.photoURL;
@@ -853,7 +863,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             </TableHeader>
                             <TableBody>
                                 <TableRow className="bg-muted/50 font-semibold">
-                                    <TableCell>{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</TableCell>
+                                    <TableCell>{currentMonthInvoice.id.includes('202512-202601') ? 'Dec 2025 - Jan 2026' : format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</TableCell>
                                     <TableCell>
                                         <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
                                             {currentMonthInvoice.status}
@@ -916,7 +926,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         <Card className="bg-muted/50">
                             <CardContent className="p-4 flex justify-between items-center">
                                 <div>
-                                    <p className="font-semibold">{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</p>
+                                    <p className="font-semibold">{currentMonthInvoice.id.includes('202512-202601') ? 'Dec 2025 - Jan 2026' : format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</p>
                                     <p className="text-sm">P{currentMonthInvoice.amount.toFixed(2)}</p>
                                     <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(currentMonthInvoice)}>View details</Button>
                                 </div>
@@ -976,13 +986,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <div className="py-4 space-y-4">
             <Card>
               <CardContent className="p-4 space-y-2 text-sm">
-                {!user.plan?.isConsumptionBased && (
+                {breakdownDetails.planCost > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Base Plan ({user.plan?.name})</span>
                     <span className="font-medium">P{breakdownDetails.planCost.toFixed(2)}</span>
                   </div>
                 )}
-                 {user.plan?.isConsumptionBased && (
+                 {breakdownDetails.consumptionCost > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Water Consumption</span>
                     <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
@@ -1334,3 +1344,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
+
+    
