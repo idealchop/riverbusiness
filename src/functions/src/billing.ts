@@ -39,7 +39,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         billingCycleStart = new Date(2025, 11, 1); // Dec 1, 2025
         billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
         billingPeriod = 'December 2025 - January 2026';
-        monthsToBill = 2;
+        monthsToBill = 2; // Keep this to calculate rollover correctly over 2 months
     } else {
         // Standard logic for all other months
         const previousMonth = subMonths(now, 1);
@@ -115,7 +115,7 @@ async function generateInvoiceForUser(
     billingPeriod: string,
     billingCycleStart: Date,
     billingCycleEnd: Date,
-    monthsToBill: number = 1
+    monthsToBill: number = 1 // Retained for accurate rollover calculation
 ) {
     // Skip admins or users without a plan
     if (user.role === 'Admin' || !user.plan) {
@@ -141,6 +141,7 @@ async function generateInvoiceForUser(
     }, 0);
 
     const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+    // For combined invoices, we still charge for equipment for each month in the period.
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     if (user.plan.isConsumptionBased) {
@@ -150,7 +151,7 @@ async function generateInvoiceForUser(
         description = `Bill for ${billingPeriod}`;
     } else {
         // Fixed-plan billing
-        const planCost = (user.plan.price || 0) * monthsToBill;
+        const planCost = user.plan.price || 0; // The plan cost is a single amount per billing cycle.
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
@@ -202,4 +203,3 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
-
