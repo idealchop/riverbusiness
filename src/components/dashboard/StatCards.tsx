@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, 'use-memo-one';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -360,3 +360,5 @@ export function StatCards({
     </>
   );
 }
+
+    
