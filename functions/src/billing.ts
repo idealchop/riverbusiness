@@ -2,21 +2,13 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth, startOfYear } from 'date-fns';
-import type { Notification } from './types'; // Assuming types are defined in a shared file
+import { createNotification } from './index';
+import type { Notification } from './types'; 
 
 const db = admin.firestore();
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
-    const notificationWithMeta = {
-      ...notificationData,
-      userId: userId,
-      date: admin.firestore.FieldValue.serverTimestamp(),
-      isRead: false,
-    };
-    await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
-  }
   
 
 /**
@@ -47,7 +39,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         billingCycleStart = new Date(2025, 11, 1); // Dec 1, 2025
         billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
         billingPeriod = 'December 2025 - January 2026';
-        monthsToBill = 2;
+        monthsToBill = 2; 
     } else {
         // Standard logic for all other months
         const previousMonth = subMonths(now, 1);
@@ -77,7 +69,6 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                 console.log(`Activating new plan for user ${userDoc.id}.`);
                 
                 // Always generate the invoice for the PREVIOUS period using the OLD plan
-                // This will correctly handle the special Feb 1 case by billing for Dec/Jan on the old plan
                 promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
                 
                 // Then, update the user's plan
@@ -130,6 +121,13 @@ async function generateInvoiceForUser(
         return;
     }
 
+    // *** FIX: For the combined period, if the user has a fixed plan, do not generate any invoice at all.
+    // The regular Jan invoice will be generated in February.
+    if (monthsToBill > 1 && !user.plan.isConsumptionBased) {
+        console.log(`Skipping combined invoice for fixed-plan user ${userRef.id}.`);
+        return;
+    }
+
     const paymentsRef = userRef.collection('payments');
     const notificationsRef = userRef.collection('notifications');
     const deliveriesRef = userRef.collection('deliveries');
@@ -148,23 +146,24 @@ async function generateInvoiceForUser(
         return sum + containerToLiter(delivery.volumeContainers);
     }, 0);
 
+    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+
     if (user.plan.isConsumptionBased) {
-        // Consumption-based billing
-        if (consumedLitersInPeriod > 0) {
-            amount = consumedLitersInPeriod * (user.plan.price || 0);
-            description = `Water Consumption for ${billingPeriod}`;
-        }
+        // Consumption-based billing (Flow Plans)
+        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+        const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
+        amount = consumptionCost + equipmentCostForPeriod;
+        description = `Bill for ${billingPeriod}`;
     } else {
-        // Fixed-plan billing
-        // For the special case, this will be the price * 2
-        amount = (user.plan.price || 0) * monthsToBill;
+        // Fixed-plan billing - THIS WILL NOW ONLY RUN FOR SINGLE MONTHS
+        const planCost = user.plan.price || 0;
+        amount = planCost + monthlyEquipmentCost;
         description = `Monthly Subscription for ${billingPeriod}`;
 
-        // Rollover logic needs to consider the standard monthly allocation, even in a 2-month billing period.
+        // Rollover logic for the single month
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
-            const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
-            const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
+            const rolloverLiters = Math.max(0, monthlyAllocation - consumedLitersInPeriod);
 
             if (rolloverLiters > 0) {
                 const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
