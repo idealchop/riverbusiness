@@ -591,13 +591,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     }
     // Filter out any potential null/undefined entries before sorting
     return invoices
-      .filter((invoice): invoice is Payment => !!invoice)
+      .filter((invoice): invoice is Payment => {
+        if (!invoice) return false;
+        // Add a guard clause for safety when sorting
+        const date = toSafeDate(invoice.date);
+        return date instanceof Date && !isNaN(date.getTime());
+      })
       .sort((a, b) => {
-        // Add guard clauses for safety
-        if (!a || !b) return 0;
-        const dateA = toSafeDate(a.date);
-        const dateB = toSafeDate(b.date);
-        if (!dateA || !dateB) return 0;
+        const dateA = toSafeDate(a.date)!;
+        const dateB = toSafeDate(b.date)!;
         return dateB.getTime() - dateA.getTime();
       });
   }, [paymentHistory, showCurrentMonthInvoice, currentMonthInvoice]);
@@ -737,7 +739,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
                                     <div className="flex items-center gap-2">
                                         <Input id="uid" value={user.id} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={()={() => copyToClipboard(user.id, 'User ID')}>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(user.id, 'User ID')}>
                                             <Copy className="h-4 w-4" />
                                         </Button>
                                     </div>
@@ -1397,5 +1399,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
-    
