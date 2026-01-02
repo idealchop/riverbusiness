@@ -270,36 +270,58 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const currentMonthInvoice = React.useMemo(() => {
         const userToCalc = userForInvoices || selectedUser;
         if (!userToCalc) return null;
-
+    
         const now = new Date();
-        const cycleStart = startOfMonth(now);
-        const cycleEnd = endOfMonth(now);
-        
+        const currentYear = getYear(now);
+        const currentMonth = getMonth(now);
+    
+        let cycleStart: Date;
+        let cycleEnd: Date;
+        let monthsToBill = 1;
+        let description: string;
+        let invoiceIdSuffix: string;
+    
+        // Special Case for combined Dec-Jan billing period (when viewing in January)
+        if (currentYear === 2026 && currentMonth === 0) { // January 2026
+            cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+            cycleEnd = endOfMonth(now); // End of Jan 2026
+            monthsToBill = 2;
+            description = 'Bill for December 2025 - January 2026';
+            invoiceIdSuffix = '202512-202601';
+        } else {
+            cycleStart = startOfMonth(now);
+            cycleEnd = endOfMonth(now);
+            description = `Bill for ${format(now, 'MMMM yyyy')}`;
+            invoiceIdSuffix = format(now, 'yyyyMM');
+        }
+    
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
         });
-
-        const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-
+    
+        const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    
         let estimatedCost = 0;
         const monthlyEquipmentCost = (userToCalc.customPlanDetails?.gallonPrice || 0) + (userToCalc.customPlanDetails?.dispenserPrice || 0);
-
+        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+    
         if (userToCalc.plan?.isConsumptionBased) {
-            const consumptionCost = consumedLitersThisMonth * (userToCalc.plan.price || 0);
-            estimatedCost = consumptionCost + monthlyEquipmentCost;
+            const consumptionCost = consumedLitersThisCycle * (userToCalc.plan.price || 0);
+            estimatedCost = consumptionCost + equipmentCostForPeriod;
         } else {
-            estimatedCost = (userToCalc.plan?.price || 0) + monthlyEquipmentCost;
+            const planCost = (userToCalc.plan?.price || 0) * monthsToBill;
+            estimatedCost = planCost + equipmentCostForPeriod;
         }
-
+    
         return {
-            id: `INV-${format(new Date(), 'yyyy-MMM').toUpperCase()}`,
+            id: `INV-${userToCalc.id.substring(0, 5)}-${invoiceIdSuffix}`,
             date: new Date().toISOString(),
-            description: `Bill for ${format(new Date(), 'MMMM yyyy')}`,
+            description: description,
             amount: estimatedCost,
             status: 'Upcoming',
         } as Payment;
-
+    
     }, [userForInvoices, selectedUser, userDeliveriesData]);
     
     const consumptionDetails = React.useMemo(() => {
