@@ -202,3 +202,5 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
+
+    
