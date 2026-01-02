@@ -39,7 +39,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         billingCycleStart = new Date(2025, 11, 1); // Dec 1, 2025
         billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
         billingPeriod = 'December 2025 - January 2026';
-        monthsToBill = 2; // Keep this to calculate rollover correctly over 2 months
+        monthsToBill = 2; 
     } else {
         // Standard logic for all other months
         const previousMonth = subMonths(now, 1);
@@ -69,7 +69,6 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                 console.log(`Activating new plan for user ${userDoc.id}.`);
                 
                 // Always generate the invoice for the PREVIOUS period using the OLD plan
-                // This will correctly handle the special Feb 1 case by billing for Dec/Jan on the old plan
                 promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
                 
                 // Then, update the user's plan
@@ -115,7 +114,7 @@ async function generateInvoiceForUser(
     billingPeriod: string,
     billingCycleStart: Date,
     billingCycleEnd: Date,
-    monthsToBill: number = 1 // Retained for accurate rollover calculation
+    monthsToBill: number = 1
 ) {
     // Skip admins or users without a plan
     if (user.role === 'Admin' || !user.plan) {
@@ -141,23 +140,25 @@ async function generateInvoiceForUser(
     }, 0);
 
     const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
-    // For combined invoices, we still charge for equipment for each month in the period.
-    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     if (user.plan.isConsumptionBased) {
         // Consumption-based billing (Flow Plans)
+        // For combined invoices, equipment is charged for each month.
+        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
         const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
         amount = consumptionCost + equipmentCostForPeriod;
         description = `Bill for ${billingPeriod}`;
     } else {
         // Fixed-plan billing
-        const planCost = user.plan.price || 0; // The plan cost is a single amount per billing cycle.
-        amount = planCost + equipmentCostForPeriod;
+        const planCost = user.plan.price || 0;
+        // For fixed plans, the amount is the plan cost + one month of equipment cost, regardless of billing period length.
+        amount = planCost + monthlyEquipmentCost;
         description = `Monthly Subscription for ${billingPeriod}`;
 
         // Rollover logic needs to consider the standard monthly allocation, even in a 2-month billing period.
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
+            // Allocation for the period is based on the number of months in the cycle.
             const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
             const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
