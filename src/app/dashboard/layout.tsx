@@ -115,7 +115,7 @@ export default function DashboardLayout({
   const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
 
   const paymentsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'payments') : null, [firestore, authUser]);
-  const { data: paymentHistoryFromDb } = useCollection<Payment>(paymentsQuery);
+  const { data: paymentHistoryFromDb, isLoading: paymentsLoading } = useCollection<Payment>(paymentsQuery);
   
   const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
@@ -513,6 +513,7 @@ export default function DashboardLayout({
             authUser={authUser}
             planImage={planImage}
             paymentHistory={paymentHistoryFromDb || []}
+            paymentsLoading={paymentsLoading}
             onLogout={handleLogout}
             onPayNow={handlePayNow}
             isOpen={isAccountDialogOpen}

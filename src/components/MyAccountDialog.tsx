@@ -36,6 +36,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from './ui/skeleton';
 
 
 // State Management with useReducer
@@ -163,6 +164,7 @@ interface MyAccountDialogProps {
   authUser: User | null;
   planImage: ImagePlaceholder | null;
   paymentHistory: Payment[];
+  paymentsLoading: boolean;
   onLogout: () => void;
   children: React.ReactNode;
   onPayNow: (invoice: Payment) => void;
@@ -170,7 +172,7 @@ interface MyAccountDialogProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -905,47 +907,57 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedInvoices.map((invoice) => {
-                                    if (!invoice) return null;
-                                    const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
-                                    return (
-                                     <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
-                                        <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
-                                        <TableCell>
-                                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
-                                                isCurrentEst ? 'bg-blue-100 text-blue-800' :
-                                                invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                                invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                                invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            )}>
-                                                {invoice.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <div className="flex flex-col items-end">
-                                            <span>P{invoice.amount.toFixed(2)}</span>
-                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                             {isCurrentEst ? (
-                                                isPayday ? (
-                                                    <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                {paymentsLoading ? (
+                                    Array.from({ length: 3 }).map((_, i) => (
+                                        <TableRow key={`skel-inv-${i}`}>
+                                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : paginatedInvoices.length > 0 ? (
+                                    paginatedInvoices.map((invoice) => {
+                                        if (!invoice) return null;
+                                        const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
+                                        return (
+                                        <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
+                                            <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
+                                            <TableCell>
+                                                <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                    isCurrentEst ? 'bg-blue-100 text-blue-800' :
+                                                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                                    invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                )}>
+                                                    {invoice.status}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                            <div className="flex flex-col items-end">
+                                                <span>P{invoice.amount.toFixed(2)}</span>
+                                                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                                            </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {isCurrentEst ? (
+                                                    isPayday ? (
+                                                        <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
+                                                    )
+                                                ) : invoice.status === 'Paid' ? (
+                                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                                ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
+                                                    <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                                 ) : (
-                                                    <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
-                                                )
-                                             ) : invoice.status === 'Paid' ? (
-                                                <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                             ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
-                                                <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                             ) : (
-                                                <span className="text-xs text-muted-foreground">{invoice.status}</span>
-                                             )}
-                                        </TableCell>
-                                    </TableRow>
-                                )})}
-                                {paginatedInvoices.length === 0 && (
+                                                    <span className="text-xs text-muted-foreground">{invoice.status}</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    )})
+                                ) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
                                             No invoices found.
@@ -958,43 +970,59 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
                     {/* Mobile Card View */}
                     <div className="space-y-4 md:hidden">
-                        {paginatedInvoices.map((invoice) => {
-                            if (!invoice) return null;
-                            const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
-                             return (
-                            <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
-                                <CardContent className="p-4 space-y-2">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <p className="font-semibold">{getInvoiceDisplayDate(invoice)}</p>
-                                            <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
-                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                        {paymentsLoading ? (
+                             Array.from({ length: 3 }).map((_, i) => (
+                                <Card key={`skel-inv-mob-${i}`}>
+                                    <CardContent className="p-4 space-y-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Skeleton className="h-5 w-24 mb-1" />
+                                                <Skeleton className="h-6 w-20" />
+                                            </div>
+                                            <Skeleton className="h-6 w-24 rounded-full" />
                                         </div>
-                                        <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
-                                            isCurrentEst ? 'bg-blue-100 text-blue-800' :
-                                            invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                            invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                            invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-gray-100 text-gray-800'
-                                        )}>
-                                            {invoice.status}
-                                        </span>
-                                    </div>
-                                    {isCurrentEst ? (
-                                        isPayday ? (
-                                            <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                        ) : (
-                                            <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
-                                        )
-                                    ) : (invoice.status === 'Paid') ? (
-                                        <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                    ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
-                                        <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )})}
-                        {paginatedInvoices.length === 0 && (
+                                        <Skeleton className="h-9 w-full" />
+                                    </CardContent>
+                                </Card>
+                            ))
+                        ) : paginatedInvoices.length > 0 ? (
+                            paginatedInvoices.map((invoice) => {
+                                if (!invoice) return null;
+                                const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
+                                return (
+                                <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
+                                    <CardContent className="p-4 space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-semibold">{getInvoiceDisplayDate(invoice)}</p>
+                                                <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
+                                                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                                            </div>
+                                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                isCurrentEst ? 'bg-blue-100 text-blue-800' :
+                                                invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                                invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                                invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            )}>
+                                                {invoice.status}
+                                            </span>
+                                        </div>
+                                        {isCurrentEst ? (
+                                            isPayday ? (
+                                                <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                            ) : (
+                                                <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
+                                            )
+                                        ) : (invoice.status === 'Paid') ? (
+                                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                        ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
+                                            <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )})
+                        ) : (
                            <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
                         )}
                     </div>
@@ -1008,13 +1036,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             Previous
                         </Button>
                         <span className="text-sm text-muted-foreground">
-                            Page {invoiceCurrentPage} of {totalInvoicePages}
+                            Page {invoiceCurrentPage} of {totalInvoicePages > 0 ? totalInvoicePages : 1}
                         </span>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
-                            disabled={invoiceCurrentPage === totalInvoicePages}
+                            disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
                         >
                             Next
                         </Button>
