@@ -28,7 +28,7 @@ import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/fir
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -509,26 +509,19 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     let consumptionCost = 0;
 
     if (user.plan?.isConsumptionBased) {
-      // For consumption plans, planCost is 0. The main cost is consumption.
-      // For current month, we have live consumption data.
-      // For past months, we derive consumption from the total invoice amount.
       if (isCurrent) {
         consumptionCost = consumptionDetails.consumedLitersThisMonth * (user.plan.price || 0);
       } else {
+        // For past consumption invoices, the total amount should already be correct.
+        // We subtract known equipment costs to derive consumption cost.
         consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
       }
     } else {
-      // For fixed plans, the planCost is the plan's price.
       planCost = user.plan?.price || 0;
     }
 
     return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
   }, [user, state.invoiceForBreakdown, currentMonthInvoice.id, consumptionDetails]);
-
-  if (!user) return <>{children}</>;
-
-  const displayPhoto = user.photoURL;
-  const userFirstName = user.name.split(' ')[0];
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
@@ -554,6 +547,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     dispatch({ type: 'SET_INVOICE_FOR_BREAKDOWN', payload: invoice });
     dispatch({ type: 'SET_BREAKDOWN_DIALOG', payload: true });
   };
+  
+  if (!user) {
+    return <>{children}</>;
+  }
+
+  const displayPhoto = user.photoURL;
+  const userFirstName = user.name.split(' ')[0];
   
   return (
     <AlertDialog>
@@ -824,7 +824,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                         </CardContent>
                     </Card>
                 </TabsContent>
-                 <TabsContent value="invoices" className="py-4">
+                 <TabsContent value="invoices" className="py-4 space-y-4">
+                    <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
+                        <Info className="h-5 w-5 shrink-0" />
+                        <p>Note: December and January will be combined into a single invoice, generated on February 1st.</p>
+                    </div>
                     {/* Desktop Table View */}
                     <div className="hidden md:block">
                         <Table>
