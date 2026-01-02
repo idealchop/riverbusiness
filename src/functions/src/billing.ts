@@ -2,21 +2,13 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth, startOfYear } from 'date-fns';
-import type { Notification } from './types'; // Assuming types are defined in a shared file
+import { createNotification } from './index';
+import type { Notification } from './types'; 
 
 const db = admin.firestore();
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
-    const notificationWithMeta = {
-      ...notificationData,
-      userId: userId,
-      date: admin.firestore.FieldValue.serverTimestamp(),
-      isRead: false,
-    };
-    await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
-  }
   
 
 /**

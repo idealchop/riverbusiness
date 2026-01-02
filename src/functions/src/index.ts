@@ -161,6 +161,76 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
 });
 
 /**
+ * Cloud Function to send notifications for sanitation visit creations.
+ */
+export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const visit = event.data.data();
+
+    const scheduledDate = new Date(visit.scheduledDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const notification = {
+        type: 'sanitation',
+        title: 'Sanitation Visit Scheduled',
+        description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
+        data: { visitId: event.params.visitId }
+    };
+
+    await createNotification(userId, notification);
+});
+
+/**
+ * Cloud Function to send notifications for sanitation visit updates.
+ */
+export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (before.status === after.status) return; // No change, no notification
+
+    const scheduledDate = new Date(after.scheduledDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const notification = {
+        type: 'sanitation',
+        title: `Sanitation Visit: ${after.status}`,
+        description: `Your sanitation visit for ${scheduledDate} is now ${after.status}.`,
+        data: { visitId: event.params.visitId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
+/**
+ * Cloud Function to send notifications for refill request updates.
+ */
+export const onrefillrequestupdate = onDocumentUpdated("users/{userId}/refillRequests/{requestId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (before.status === after.status) return; // No change
+
+    const userId = event.params.userId;
+    
+    const notification = {
+        type: 'delivery', // Using delivery icon for this
+        title: `Refill Request: ${after.status}`,
+        description: `Your refill request is now ${after.status}.`,
+        data: { requestId: event.params.requestId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
+/**
  * Cloud Function to notify admin on user profile changes.
  */
 export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) => {
@@ -239,6 +309,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             contractStatus: "Active",
         });
         logger.log(`Updated contract for user: ${userId}`);
+         await createNotification(userId, {
+            type: 'general',
+            title: 'New Contract Uploaded',
+            description: 'A new contract has been uploaded to your account. You can view it in your account details.',
+            data: { userId: userId }
+        });
         return;
     }
     
@@ -252,6 +328,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             proofOfDeliveryUrl: url,
         });
         logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
+        await createNotification(userId, {
+            type: 'delivery',
+            title: 'Proof of Delivery Uploaded',
+            description: `A proof of delivery for order ${deliveryId} has been uploaded.`,
+            data: { deliveryId: deliveryId }
+        });
         return;
     }
     
@@ -265,6 +347,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             reportUrl: url,
         });
         logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
+        await createNotification(userId, {
+            type: 'sanitation',
+            title: 'Sanitation Report Available',
+            description: 'Your latest sanitation report is now available to view.',
+            data: { visitId: visitId }
+        });
         return;
     }
 
