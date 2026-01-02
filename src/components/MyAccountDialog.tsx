@@ -203,7 +203,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     let monthsToBill = 1;
     let description = `Bill for ${format(now, 'MMMM yyyy')}`;
 
-    // Special case for January 2026: The "current" bill should reflect Dec 2025 + Jan 2026
     if (currentYear === 2026 && currentMonth === 0) {
         cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
         cycleEnd = endOfMonth(now); // Jan 31, 2026
@@ -239,7 +238,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         amount: estimatedCost,
         status: 'Upcoming',
     };
-}, [user, deliveries]);
+  }, [user, deliveries]);
 
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
@@ -526,12 +525,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     let consumptionCost = 0;
 
     if (user.plan?.isConsumptionBased) {
-        // For current estimate, consumptionCost is already calculated in `currentMonthInvoice`
-        // so we derive it from the total.
         if (isCurrent && currentMonthInvoice) {
           consumptionCost = currentMonthInvoice.amount - gallonCost - dispenserCost;
         } else {
-            // For past consumption invoices, derive from total
             consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
         }
     } else {
@@ -574,8 +570,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     return safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date';
   };
   
+  const showCurrentMonthInvoice = useMemo(() => {
+    if (!currentMonthInvoice) return false;
+    // Don't show the virtual invoice if a real one for the same period already exists in history
+    return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
+  }, [currentMonthInvoice, paymentHistory]);
+
   if (!user) {
-    return null;
+    return <>{children}</>;
   }
   
   const displayPhoto = user.photoURL;
@@ -867,7 +869,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentMonthInvoice && (
+                                {showCurrentMonthInvoice && currentMonthInvoice && (
                                      <TableRow className="bg-muted/50 font-semibold">
                                         <TableCell>{getInvoiceDisplayDate(currentMonthInvoice)}</TableCell>
                                         <TableCell>
@@ -934,7 +936,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
                     {/* Mobile Card View */}
                     <div className="space-y-4 md:hidden">
-                        {currentMonthInvoice && (
+                        {showCurrentMonthInvoice && currentMonthInvoice && (
                             <Card className="bg-muted/50">
                                 <CardContent className="p-4 flex justify-between items-center">
                                     <div>
@@ -1362,3 +1364,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   );
 }
 
+    
