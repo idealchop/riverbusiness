@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ArrowRight, History, Edit, Calendar as CalendarIcon, BellRing, Info } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
-import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { DocumentReference, doc, updateDoc } from 'firebase/firestore';
@@ -41,6 +41,9 @@ export function StatCards({
   
   const consumptionDetails = useMemo(() => {
     const now = new Date();
+    const currentYear = getYear(now);
+    const currentMonth = getMonth(now);
+    
     const emptyState = {
         monthlyPlanLiters: 0,
         bonusLiters: 0,
@@ -56,33 +59,46 @@ export function StatCards({
         return emptyState;
     }
 
-    const cycleStart = startOfMonth(now);
-    const cycleEnd = endOfMonth(now);
+    let cycleStart: Date;
+    let cycleEnd: Date;
+    let monthsToBill = 1;
+
+    // Special Case for combined Dec-Jan billing period (when viewing in January)
+    if (currentYear === 2026 && currentMonth === 0) { // January 2026
+        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+        cycleEnd = endOfMonth(now); // End of Jan 2026
+        monthsToBill = 2;
+    } else {
+        cycleStart = startOfMonth(now);
+        cycleEnd = endOfMonth(now);
+    }
     
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
-    const consumedLitersThisMonth = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
     const currentBalance = user.totalConsumptionLiters;
     const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     if (user.plan.isConsumptionBased) {
-        const consumptionCost = consumedLitersThisMonth * (user.plan.price || 0);
+        const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
         return {
             ...emptyState,
-            consumedLitersThisMonth,
-            currentBalance: 0,
-            estimatedCost: consumptionCost + monthlyEquipmentCost,
+            consumedLitersThisMonth: consumedLitersThisCycle,
+            currentBalance: 0, // Not applicable for Flow plan
+            estimatedCost: consumptionCost + equipmentCostForPeriod,
         };
     }
     
+    // Logic for Fixed Plans
     const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
     if (!planDetails || !user.createdAt) {
-        const startingBalanceForMonth = currentBalance + consumedLitersThisMonth;
-        const consumedPercentage = startingBalanceForMonth > 0 ? (consumedLitersThisMonth / startingBalanceForMonth) * 100 : 0;
-        return { ...emptyState, currentBalance, consumedLitersThisMonth, totalLitersForMonth: startingBalanceForMonth, consumedPercentage, estimatedCost: (user.plan.price || 0) + monthlyEquipmentCost, };
+        const startingBalanceForMonth = currentBalance + consumedLitersThisCycle;
+        const consumedPercentage = startingBalanceForMonth > 0 ? (consumedLitersThisCycle / startingBalanceForMonth) * 100 : 0;
+        return { ...emptyState, currentBalance, consumedLitersThisMonth: consumedLitersThisCycle, totalLitersForMonth: startingBalanceForMonth, consumedPercentage, estimatedCost: (user.plan.price || 0) + equipmentCostForPeriod };
     }
 
     const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
@@ -104,18 +120,20 @@ export function StatCards({
         rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
     }
     
-    const totalLitersForMonth = totalMonthlyAllocation + rolloverLiters;
-    const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisMonth / totalLitersForMonth) * 100 : 0;
+    // For combined period, add two months of allocation
+    const allocationForPeriod = totalMonthlyAllocation * monthsToBill;
+    const totalLitersForMonth = allocationForPeriod + rolloverLiters;
+    const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisCycle / totalLitersForMonth) * 100 : 0;
     
     return {
         monthlyPlanLiters,
         bonusLiters,
         rolloverLiters,
         totalLitersForMonth,
-        consumedLitersThisMonth,
+        consumedLitersThisMonth: consumedLitersThisCycle,
         currentBalance,
         consumedPercentage,
-        estimatedCost: (user.plan.price || 0) + monthlyEquipmentCost,
+        estimatedCost: (user.plan.price || 0) * monthsToBill + equipmentCostForPeriod,
     };
   }, [user, deliveries]);
 
@@ -180,7 +198,7 @@ export function StatCards({
               </p>
               <div className="space-y-1 text-xs text-muted-foreground">
                 <div className="flex justify-between">
-                  <span>Consumed this month:</span> <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                  <span>Consumed this period:</span> <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Rate:</span> <span>₱{user?.plan?.price || 3}/Liter</span>
