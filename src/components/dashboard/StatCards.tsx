@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, 'use-memo-one';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -36,8 +36,8 @@ export function StatCards({
 }: StatCardsProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [isConfirmingToggle, setIsConfirmingToggle] = useState(false);
-  const [toggleTargetState, setToggleTargetState] = useState<boolean | null>(null);
+  const [isConfirmingToggle, setIsConfirmingToggle] = React.useState(false);
+  const [toggleTargetState, setToggleTargetState] = React.useState<boolean | null>(null);
   
   const consumptionDetails = useMemo(() => {
     const now = new Date();
@@ -181,6 +181,15 @@ export function StatCards({
     return consumptionDetails.totalLitersForMonth;
   }, [isFlowPlan, consumptionDetails.totalLitersForMonth]);
 
+  const remainingBalancePercentage = useMemo(() => {
+      if (startingBalance <= 0) {
+          return 0; // Avoid division by zero
+      }
+      const percentage = (consumptionDetails.currentBalance / startingBalance) * 100;
+      return Math.max(0, Math.min(100, percentage)); // Clamp between 0 and 100
+  }, [consumptionDetails.currentBalance, startingBalance]);
+
+
   return (
     <>
     <div className="grid grid-cols-2 gap-6 lg:grid-cols-3">
@@ -268,7 +277,7 @@ export function StatCards({
               </div>
             </CardContent>
              <CardFooter className="pt-0">
-               <Progress value={consumptionDetails.currentBalance / startingBalance * 100} className="h-2" />
+               <Progress value={remainingBalancePercentage} className="h-2" />
             </CardFooter>
           </Card>
 
