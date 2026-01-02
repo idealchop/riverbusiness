@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -140,8 +139,10 @@ export default function DashboardLayout({
     if (!open && unreadNotifications.length > 0 && firestore && authUser) {
         const batch = writeBatch(firestore);
         unreadNotifications.forEach(notif => {
-            const notifRef = doc(firestore, 'users', authUser.uid, 'notifications', notif.id);
-            batch.update(notifRef, { isRead: true });
+            if (notif.id) { // Ensure the notification has an ID
+                const notifRef = doc(firestore, 'users', authUser.uid, 'notifications', notif.id);
+                batch.update(notifRef, { isRead: true });
+            }
         });
         batch.commit().catch(err => console.error("Failed to mark notifications as read:", err));
     }
