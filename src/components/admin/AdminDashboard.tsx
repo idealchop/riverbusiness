@@ -512,6 +512,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         control: sanitationVisitForm.control,
         name: "checklist",
     });
+    const watchedChecklist = sanitationVisitForm.watch("checklist");
 
     React.useEffect(() => {
         if (visitToEdit) {
@@ -1589,7 +1590,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>
