@@ -1251,6 +1251,27 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <Separator/>
                                         <div className="flex justify-between items-center"><span>Consumed:</span><span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span></div>
                                         <div className="flex justify-between items-center font-semibold text-lg border-t pt-2 mt-2"><span>Current Balance:</span><span>{consumptionDetails.currentBalance.toLocaleString()} L</span></div>
+                                        <Separator />
+                                        <div className='pt-2'>
+                                            <h4 className='font-medium text-sm mb-2'>Monthly History</h4>
+                                            <ScrollArea className="h-24">
+                                                <div className='space-y-1 pr-4'>
+                                                    {monthlyConsumptionHistory.length > 0 ? (
+                                                        monthlyConsumptionHistory.map(item => (
+                                                            <div key={item.month} className='flex justify-between items-center text-xs p-1 rounded-sm hover:bg-muted'>
+                                                                <span className='text-muted-foreground'>{item.month}</span>
+                                                                <div className='text-right'>
+                                                                    <span className='font-medium block'>{item.liters.toLocaleString()} L</span>
+                                                                    <span className='text-muted-foreground'>₱{item.cost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p className='text-xs text-muted-foreground text-center pt-4'>No historical data yet.</p>
+                                                    )}
+                                                </div>
+                                            </ScrollArea>
+                                        </div>
                                     </CardContent>
                                 )}
                             </Card>
