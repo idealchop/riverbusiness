@@ -210,7 +210,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [uploadedProofUrl, setUploadedProofUrl] = useState<string | null>(null);
     const [uploadedAgreementUrl, setUploadedAgreementUrl] = useState<string | null>(null);
 
-
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
@@ -374,6 +373,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     );
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
+    const createNotification = async (userId: string, notificationData: Omit<Notification, 'id' | 'date' | 'isRead'>) => {
+        if (!firestore) return;
+        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
+        const newNotification = {
+            ...notificationData,
+            date: serverTimestamp(),
+            isRead: false
+        };
+        await addDoc(notificationsCol, newNotification);
+    };
 
     React.useEffect(() => {
         const openAccountDialog = () => {
@@ -738,6 +747,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
         
+        await createNotification(request.userId, {
+            type: 'delivery',
+            title: `Refill Request: ${newStatus}`,
+            description: `Your refill request is now ${newStatus}.`,
+            data: { requestId: request.id }
+        });
+
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };
 
@@ -858,22 +874,28 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             visitData.reportUrl = reportUrl;
             delete (visitData as any).reportFile;
     
-            let isNewVisit = false;
-    
             if (visitToEdit) {
                 const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
                 await updateDoc(visitRef, visitData);
                 toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
+                
+                if (visitToEdit.status !== values.status) {
+                     await createNotification(selectedUser.id, {
+                        type: 'sanitation',
+                        title: `Sanitation Visit: ${values.status}`,
+                        description: `Your sanitation visit for ${format(values.scheduledDate, 'PP')} is now ${values.status}.`,
+                        data: { visitId: visitToEdit.id }
+                    });
+                }
             } else {
-                isNewVisit = true;
                 const visitRef = await addDoc(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
-            }
-            
-            if (isNewVisit) {
-                 toast({title: 'Notification Sent', description: 'User has been notified of the scheduled visit.'})
-            } else if (visitToEdit?.status !== values.status) {
-                 toast({title: 'Notification Sent', description: `User has been notified that the visit is now ${values.status}.`})
+                 await createNotification(selectedUser.id, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A sanitation visit is scheduled for your office on ${format(values.scheduledDate, 'PP')}.`,
+                    data: { visitId: visitRef.id }
+                });
             }
     
             setIsSanitationVisitDialogOpen(false);
@@ -896,6 +918,30 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
         setVisitToDelete(null);
+    };
+
+    const handleContractUpload = async () => {
+        if (!contractFile || !userForContract || !storage || !auth) return;
+        setIsSubmitting(true);
+        try {
+            const path = `userContracts/${userForContract.id}/${contractFile.name}`;
+            await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
+            
+            await createNotification(userForContract.id, {
+                type: 'general',
+                title: 'New Contract Uploaded',
+                description: 'A new contract has been uploaded to your account. You can view it in your account details.',
+                data: { userId: userForContract.id }
+            });
+
+            toast({ title: 'Upload Complete', description: 'The contract is being processed and the user has been notified.' });
+            setIsUploadContractOpen(false);
+            setContractFile(null);
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleComplianceReportSubmit = async (values: ComplianceReportFormValues) => {
@@ -1665,21 +1711,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsUploadContractOpen(false)} disabled={isSubmitting}>Cancel</Button>
-                    <Button onClick={async () => {
-                        if (!contractFile || !userForContract || !storage || !auth) return;
-                        setIsSubmitting(true);
-                        try {
-                            const path = `userContracts/${userForContract.id}/${contractFile.name}`;
-                            await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
-                            toast({ title: 'Upload Complete', description: 'The contract is being processed.' });
-                            setIsUploadContractOpen(false);
-                            setContractFile(null);
-                        } catch (error) {
-                            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload contract.' });
-                        } finally {
-                            setIsSubmitting(false);
-                        }
-                    }} disabled={!contractFile || isSubmitting}>
+                    <Button onClick={handleContractUpload} disabled={!contractFile || isSubmitting}>
                         {isSubmitting ? 'Uploading...' : 'Attach'}
                     </Button>
                 </DialogFooter>
@@ -2779,5 +2811,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
