@@ -206,9 +206,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     let description: string;
     let invoiceIdSuffix: string;
 
-    if (currentYear === 2026 && currentMonth === 0) { // January 2026
+    // This handles the combined Dec-Jan billing in January.
+    if (currentYear === 2026 && currentMonth === 0) {
         cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-        cycleEnd = endOfMonth(now);
+        cycleEnd = endOfMonth(now); // End of Jan 2026
         monthsToBill = 2;
         description = 'Bill for December 2025 - January 2026';
         invoiceIdSuffix = '202512-202601';
@@ -245,7 +246,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         amount: estimatedCost,
         status: 'Upcoming',
     };
-  }, [user, deliveries]);
+}, [user, deliveries]);
 
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
@@ -566,7 +567,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   
   const handleViewBreakdown = (invoice: Payment) => {
     dispatch({ type: 'SET_INVOICE_FOR_BREAKDOWN', payload: invoice });
-    dispatch({ type: 'SET_BREAKDOWN_DIALOG', payload: open });
+    dispatch({ type: 'SET_BREAKDOWN_DIALOG', payload: true });
   };
 
   const getInvoiceDisplayDate = (invoice: Payment) => {
@@ -579,6 +580,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   
   const showCurrentMonthInvoice = useMemo(() => {
     if (!currentMonthInvoice) return false;
+    // Don't show the live estimate if an official invoice for that period already exists.
     return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
   }, [currentMonthInvoice, paymentHistory]);
 
@@ -604,7 +606,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
 
   if (!user) {
-    return null;
+    return <>{children}</>;
   }
   
   const displayPhoto = user.photoURL;
@@ -896,8 +898,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {paginatedInvoices.map((invoice, index) => {
-                                    const isCurrentEst = showCurrentMonthInvoice && index === 0;
+                                {paginatedInvoices.map((invoice) => {
+                                    const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                                     return (
                                      <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
                                         <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
@@ -948,8 +950,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
                     {/* Mobile Card View */}
                     <div className="space-y-4 md:hidden">
-                        {paginatedInvoices.map((invoice, index) => {
-                            const isCurrentEst = showCurrentMonthInvoice && index === 0 && invoiceCurrentPage === 1;
+                        {paginatedInvoices.map((invoice) => {
+                            const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                              return (
                             <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
                                 <CardContent className="p-4 space-y-2">
@@ -997,13 +999,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             Previous
                         </Button>
                         <span className="text-sm text-muted-foreground">
-                            Page {invoiceCurrentPage} of {totalPages}
+                            Page {invoiceCurrentPage} of {totalInvoicePages}
                         </span>
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setInvoiceCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={invoiceCurrentPage === totalPages}
+                            onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
+                            disabled={invoiceCurrentPage === totalInvoicePages}
                         >
                             Next
                         </Button>
@@ -1024,7 +1026,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
             <DialogDescription>
-              This is a breakdown of the total amount for invoice {state.invoiceForBreakdown?.id.includes('202512-202601') ? "for the Dec 2025 - Jan 2026 period" : state.invoiceForBreakdown?.id.split('-').pop()}.
+               This is a breakdown of the total amount for invoice {state.invoiceForBreakdown?.id.includes('202512-202601') ? "for the Dec 2025 - Jan 2026 period" : `for ${getInvoiceDisplayDate(state.invoiceForBreakdown!)}`}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -1388,3 +1390,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
+
+    
