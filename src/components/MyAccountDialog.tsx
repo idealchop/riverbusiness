@@ -207,7 +207,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     let invoiceIdSuffix: string;
 
     // This handles the combined Dec-Jan billing in January.
-    if (currentYear === 2026 && currentMonth === 0) {
+    if (currentYear === 2026 && currentMonth === 0) { // January
         cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
         cycleEnd = endOfMonth(now); // End of Jan 2026
         monthsToBill = 2;
@@ -589,12 +589,17 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     if (showCurrentMonthInvoice && currentMonthInvoice) {
       invoices.unshift(currentMonthInvoice);
     }
-    return invoices.sort((a, b) => {
+    // Filter out any potential null/undefined entries before sorting
+    return invoices
+      .filter((invoice): invoice is Payment => !!invoice)
+      .sort((a, b) => {
+        // Add guard clauses for safety
+        if (!a || !b) return 0;
         const dateA = toSafeDate(a.date);
         const dateB = toSafeDate(b.date);
         if (!dateA || !dateB) return 0;
         return dateB.getTime() - dateA.getTime();
-    });
+      });
   }, [paymentHistory, showCurrentMonthInvoice, currentMonthInvoice]);
 
   const totalInvoicePages = Math.ceil(allInvoices.length / INVOICES_PER_PAGE);
@@ -732,7 +737,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
                                     <div className="flex items-center gap-2">
                                         <Input id="uid" value={user.id} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(user.id, 'User ID')}>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={()={() => copyToClipboard(user.id, 'User ID')}>
                                             <Copy className="h-4 w-4" />
                                         </Button>
                                     </div>
@@ -1028,7 +1033,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
             <DialogDescription>
-               This is a breakdown of the total amount for {state.invoiceForBreakdown?.id.includes('202512-202601') ? "the Dec 2025 - Jan 2026 period" : `invoice for ${getInvoiceDisplayDate(state.invoiceForBreakdown!)}`}.
+               This is a breakdown of the total amount for {state.invoiceForBreakdown?.id.includes('202512-202601') ? "the Dec 2025 - Jan 2026 period" : `invoice for ${state.invoiceForBreakdown ? getInvoiceDisplayDate(state.invoiceForBreakdown) : ''}`}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -1393,3 +1398,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   );
 }
 
+    
