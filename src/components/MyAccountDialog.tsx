@@ -198,22 +198,28 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
     const now = new Date();
     const currentYear = getYear(now);
-    const currentMonth = getMonth(now); // 0 for Jan, 1 for Feb, etc.
+    const currentMonth = getMonth(now);
 
-    let cycleStart = startOfMonth(now);
-    let cycleEnd = endOfMonth(now);
+    let cycleStart: Date;
+    let cycleEnd: Date;
     let monthsToBill = 1;
-    let description = `Bill for ${format(now, 'MMMM yyyy')}`;
+    let description: string;
+    let invoiceIdSuffix: string;
 
-    // Special case for combined billing in January
-    if (currentYear === 2026 && currentMonth === 0) {
+    if (currentYear === 2026 && currentMonth === 0) { // January 2026
         cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+        cycleEnd = endOfMonth(now);
         monthsToBill = 2;
         description = 'Bill for December 2025 - January 2026';
+        invoiceIdSuffix = '202512-202601';
+    } else {
+        cycleStart = startOfMonth(now);
+        cycleEnd = endOfMonth(now);
+        description = `Bill for ${format(now, 'MMMM yyyy')}`;
+        invoiceIdSuffix = format(now, 'yyyyMM');
     }
 
-
-    const deliveriesThisCycle = (deliveries || []).filter(d => {
+    const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
@@ -232,8 +238,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
         estimatedCost = planCost + equipmentCostForPeriod;
     }
     
-    const invoiceIdSuffix = monthsToBill > 1 ? '202512-202601' : format(now, 'yyyyMM');
-
     return {
         id: `INV-${user.id.substring(0, 5)}-${invoiceIdSuffix}`,
         date: new Date().toISOString(),
@@ -575,7 +579,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   
   const showCurrentMonthInvoice = useMemo(() => {
     if (!currentMonthInvoice) return false;
-    // Don't show the virtual invoice if a real one for the same period already exists in history
     return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
   }, [currentMonthInvoice, paymentHistory]);
 
@@ -584,7 +587,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     if (showCurrentMonthInvoice && currentMonthInvoice) {
       invoices.unshift(currentMonthInvoice);
     }
-    return invoices;
+    return invoices.sort((a, b) => {
+        const dateA = toSafeDate(a.date);
+        const dateB = toSafeDate(b.date);
+        if (!dateA || !dateB) return 0;
+        return dateB.getTime() - dateA.getTime();
+    });
   }, [paymentHistory, showCurrentMonthInvoice, currentMonthInvoice]);
 
   const totalInvoicePages = Math.ceil(allInvoices.length / INVOICES_PER_PAGE);
@@ -596,7 +604,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
 
   if (!user) {
-    return <>{children}</>;
+    return null;
   }
   
   const displayPhoto = user.photoURL;
@@ -979,29 +987,27 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                            <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
                         )}
                     </div>
-                    {totalInvoicePages > 1 && (
-                      <div className="flex items-center justify-end space-x-2 pt-4">
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
-                              disabled={invoiceCurrentPage === 1}
-                          >
-                              Previous
-                          </Button>
-                          <span className="text-sm text-muted-foreground">
-                              Page {invoiceCurrentPage} of {totalInvoicePages}
-                          </span>
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
-                              disabled={invoiceCurrentPage === totalInvoicePages}
-                          >
-                              Next
-                          </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-end space-x-2 pt-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={invoiceCurrentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                            Page {invoiceCurrentPage} of {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setInvoiceCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={invoiceCurrentPage === totalPages}
+                        >
+                            Next
+                        </Button>
+                    </div>
                 </TabsContent>
               </Tabs>
             </div>
@@ -1382,4 +1388,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     </AlertDialog>
   );
 }
-
