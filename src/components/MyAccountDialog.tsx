@@ -518,6 +518,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
       }
     } else {
       planCost = user.plan?.price || 0;
+       if (state.invoiceForBreakdown.id.endsWith('202512-202601')) {
+          planCost *= 2;
+      }
     }
 
     return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
@@ -549,12 +552,20 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   };
   
   if (!user) {
-    return <>{children}</>;
+    return null;
   }
 
   const displayPhoto = user.photoURL;
   const userFirstName = user.name.split(' ')[0];
   
+  const getInvoiceDisplayDate = (invoice: Payment) => {
+    if (invoice.id.includes('202512-202601')) {
+        return 'Dec 2025 - Jan 2026';
+    }
+    const safeDate = toSafeDate(invoice.date);
+    return safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date';
+  };
+
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -859,10 +870,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                     </TableCell>
                                 </TableRow>
                                 {paymentHistory.map((invoice) => {
-                                    const safeDate = toSafeDate(invoice.date);
                                     return (
                                     <TableRow key={invoice.id}>
-                                        <TableCell>{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</TableCell>
+                                        <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
                                         <TableCell>
                                             <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
                                                 invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
@@ -914,13 +924,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             </CardContent>
                         </Card>
                         {paymentHistory.map((invoice) => {
-                             const safeDate = toSafeDate(invoice.date);
                              return (
                             <Card key={invoice.id}>
                                 <CardContent className="p-4 space-y-2">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <p className="font-semibold">{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</p>
+                                            <p className="font-semibold">{getInvoiceDisplayDate(invoice)}</p>
                                             <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
                                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                                         </div>
