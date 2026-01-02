@@ -24,7 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow } from 'date-fns';
+import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
@@ -364,6 +364,46 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         };
     }, [selectedUser, userDeliveriesData]);
 
+    const monthlyConsumptionHistory = React.useMemo(() => {
+        if (!userDeliveriesData || !selectedUser?.plan) return [];
+
+        const history: { [month: string]: { liters: number; cost: number } } = {};
+        const rate = selectedUser.plan.isConsumptionBased ? (selectedUser.plan.price || 3) : 0;
+
+        userDeliveriesData.forEach(delivery => {
+            const date = new Date(delivery.date);
+            const monthKey = format(date, 'yyyy-MM');
+            const liters = containerToLiter(delivery.volumeContainers);
+
+            if (!history[monthKey]) {
+                history[monthKey] = { liters: 0, cost: 0 };
+            }
+            history[monthKey].liters += liters;
+            if (selectedUser.plan?.isConsumptionBased) {
+                history[monthKey].cost += liters * rate;
+            } else {
+                // Cost for fixed plans is trickier to calculate historically without snapshots of plan data
+                // For simplicity, we can show consumption and maybe a fixed plan cost if needed
+            }
+        });
+        
+        // For fixed plans, let's assign the monthly plan price.
+        if (!selectedUser.plan?.isConsumptionBased) {
+            Object.keys(history).forEach(monthKey => {
+                 history[monthKey].cost = selectedUser.plan?.price || 0;
+            });
+        }
+
+        return Object.entries(history)
+            .map(([month, data]) => ({
+                month: format(new Date(month + '-02'), 'MMM yyyy'),
+                liters: data.liters,
+                cost: data.cost
+            }))
+            .sort((a, b) => new Date(b.month).getTime() - new Date(a.month).getTime());
+
+    }, [userDeliveriesData, selectedUser?.plan]);
+
 
     const complianceReportsQuery = useMemoFirebase(() => 
         (firestore && stationToUpdate?.id) 
@@ -372,17 +412,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         [firestore, stationToUpdate?.id, complianceRefresher]
     );
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
-
-    const createNotification = async (userId: string, notificationData: Omit<Notification, 'id' | 'date' | 'isRead'>) => {
-        if (!firestore) return;
-        const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-        const newNotification = {
-            ...notificationData,
-            date: serverTimestamp(),
-            isRead: false
-        };
-        await addDoc(notificationsCol, newNotification);
-    };
 
     React.useEffect(() => {
         const openAccountDialog = () => {
@@ -746,14 +775,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
-        
-        await createNotification(request.userId, {
-            type: 'delivery',
-            title: `Refill Request: ${newStatus}`,
-            description: `Your refill request is now ${newStatus}.`,
-            data: { requestId: request.id }
-        });
-
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };
 
@@ -878,24 +899,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
                 await updateDoc(visitRef, visitData);
                 toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
-                
-                if (visitToEdit.status !== values.status) {
-                     await createNotification(selectedUser.id, {
-                        type: 'sanitation',
-                        title: `Sanitation Visit: ${values.status}`,
-                        description: `Your sanitation visit for ${format(values.scheduledDate, 'PP')} is now ${values.status}.`,
-                        data: { visitId: visitToEdit.id }
-                    });
-                }
             } else {
                 const visitRef = await addDoc(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
-                 await createNotification(selectedUser.id, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Scheduled',
-                    description: `A sanitation visit is scheduled for your office on ${format(values.scheduledDate, 'PP')}.`,
-                    data: { visitId: visitRef.id }
-                });
             }
     
             setIsSanitationVisitDialogOpen(false);
@@ -927,14 +933,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
             await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
             
-            await createNotification(userForContract.id, {
-                type: 'general',
-                title: 'New Contract Uploaded',
-                description: 'A new contract has been uploaded to your account. You can view it in your account details.',
-                data: { userId: userForContract.id }
-            });
-
-            toast({ title: 'Upload Complete', description: 'The contract is being processed and the user has been notified.' });
+            toast({ title: 'Upload Complete', description: 'The contract is being processed and will update shortly.' });
             setIsUploadContractOpen(false);
             setContractFile(null);
         } catch (error) {
@@ -1211,6 +1210,27 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <div className="flex justify-between items-center">
                                             <span className="text-muted-foreground">Rate:</span>
                                             <span className="font-medium">₱{selectedUser.plan.price}/Liter</span>
+                                        </div>
+                                        <Separator />
+                                        <div className='pt-2'>
+                                            <h4 className='font-medium text-sm mb-2'>Monthly History</h4>
+                                            <ScrollArea className="h-24">
+                                                <div className='space-y-1 pr-4'>
+                                                    {monthlyConsumptionHistory.length > 0 ? (
+                                                        monthlyConsumptionHistory.map(item => (
+                                                            <div key={item.month} className='flex justify-between items-center text-xs p-1 rounded-sm hover:bg-muted'>
+                                                                <span className='text-muted-foreground'>{item.month}</span>
+                                                                <div className='text-right'>
+                                                                    <span className='font-medium block'>{item.liters.toLocaleString()} L</span>
+                                                                    <span className='text-muted-foreground'>~ ₱{item.cost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p className='text-xs text-muted-foreground text-center pt-4'>No historical data yet.</p>
+                                                    )}
+                                                </div>
+                                            </ScrollArea>
                                         </div>
                                     </CardContent>
                                 ) : (
