@@ -899,6 +899,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                             </TableHeader>
                             <TableBody>
                                 {paginatedInvoices.map((invoice) => {
+                                    if (!invoice) return null;
                                     const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                                     return (
                                      <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
@@ -951,6 +952,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                     {/* Mobile Card View */}
                     <div className="space-y-4 md:hidden">
                         {paginatedInvoices.map((invoice) => {
+                            if (!invoice) return null;
                             const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                              return (
                             <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
@@ -1026,7 +1028,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
             <DialogDescription>
-               This is a breakdown of the total amount for invoice {state.invoiceForBreakdown?.id.includes('202512-202601') ? "for the Dec 2025 - Jan 2026 period" : `for ${getInvoiceDisplayDate(state.invoiceForBreakdown!)}`}.
+               This is a breakdown of the total amount for {state.invoiceForBreakdown?.id.includes('202512-202601') ? "the Dec 2025 - Jan 2026 period" : `invoice for ${getInvoiceDisplayDate(state.invoiceForBreakdown!)}`}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -1391,4 +1393,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   );
 }
 
-    
