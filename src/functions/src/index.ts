@@ -57,53 +57,6 @@ export async function createNotification(userId: string, notificationData: Omit<
 
 
 /**
- * Cloud Function to create a notification when a delivery is first created.
- */
-export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
-    if (!event.data) return;
-
-    const userId = event.params.userId;
-    const delivery = event.data.data();
-
-    const notification = {
-        type: 'delivery',
-        title: 'Delivery Scheduled',
-        description: `Delivery of ${delivery.volumeContainers} containers is scheduled.`,
-        data: { deliveryId: event.params.deliveryId }
-    };
-    
-    await createNotification(userId, notification);
-});
-
-
-/**
- * Cloud Function to create a notification when a delivery is updated.
- */
-export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{deliveryId}", async (event) => {
-    if (!event.data) return;
-
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-
-    // Only notify if the status has changed.
-    if (before.status === after.status) {
-        return;
-    }
-    
-    const userId = event.params.userId;
-    const delivery = after;
-
-    const notification = {
-        type: 'delivery',
-        title: `Delivery ${delivery.status}`,
-        description: `Delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
-        data: { deliveryId: event.params.deliveryId }
-    };
-    
-    await createNotification(userId, notification);
-});
-
-/**
  * Cloud Function to create notifications when a payment status is updated by an admin.
  */
 export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{paymentId}", async (event) => {
@@ -159,121 +112,6 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     }
 });
 
-/**
- * Cloud Function to send notifications for sanitation visit creations.
- */
-export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
-    if (!event.data) return;
-    const userId = event.params.userId;
-    const visit = event.data.data();
-
-    const scheduledDate = new Date(visit.scheduledDate).toLocaleDateString('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric'
-    });
-
-    const notification = {
-        type: 'sanitation',
-        title: 'Sanitation Visit Scheduled',
-        description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
-        data: { visitId: event.params.visitId }
-    };
-
-    await createNotification(userId, notification);
-});
-
-/**
- * Cloud Function to send notifications for sanitation visit updates.
- */
-export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
-    if (!event.data) return;
-    const userId = event.params.userId;
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-
-    if (before.status === after.status) return; // No change, no notification
-
-    const scheduledDate = new Date(after.scheduledDate).toLocaleDateString('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric'
-    });
-
-    const notification = {
-        type: 'sanitation',
-        title: `Sanitation Visit: ${after.status}`,
-        description: `Your sanitation visit for ${scheduledDate} is now ${after.status}.`,
-        data: { visitId: event.params.visitId }
-    };
-    
-    await createNotification(userId, notification);
-});
-
-/**
- * Cloud Function to send notifications for refill request updates.
- */
-export const onrefillrequestupdate = onDocumentUpdated("users/{userId}/refillRequests/{requestId}", async (event) => {
-    if (!event.data) return;
-
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-
-    if (before.status === after.status) return; // No change
-
-    const userId = event.params.userId;
-    
-    const notification = {
-        type: 'delivery', // Using delivery icon for this
-        title: `Refill Request: ${after.status}`,
-        description: `Your refill request is now ${after.status}.`,
-        data: { requestId: event.params.requestId }
-    };
-    
-    await createNotification(userId, notification);
-});
-
-/**
- * Cloud Function to notify admin on user profile changes.
- */
-export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) => {
-    if (!event.data) return;
-
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-    const userId = event.params.userId;
-    const adminId = await getAdminId();
-    
-    if (!adminId || userId === adminId) return; // Don't notify admin about their own changes.
-
-    // Notify on plan change request
-    if (!before.pendingPlan && after.pendingPlan) {
-        await createNotification(adminId, {
-            type: 'general',
-            title: 'Plan Change Request',
-            description: `${after.businessName} has requested to change their plan to ${after.pendingPlan.name}.`,
-            data: { userId: userId }
-        });
-    }
-
-    if (before.customPlanDetails?.autoRefillEnabled !== after.customPlanDetails?.autoRefillEnabled) {
-         await createNotification(adminId, {
-            type: 'general',
-            title: 'Auto-Refill Changed',
-            description: `${after.businessName} has ${after.customPlanDetails.autoRefillEnabled ? 'enabled' : 'disabled'} auto-refill.`,
-            data: { userId: userId }
-        });
-    }
-
-    // Notify on station assignment change
-    if (before.assignedWaterStationId !== after.assignedWaterStationId && after.assignedWaterStationId) {
-        const stationDoc = await db.collection('waterStations').doc(after.assignedWaterStationId).get();
-        const stationName = stationDoc.exists ? stationDoc.data()?.name : 'a new station';
-        await createNotification(userId, {
-            type: 'general',
-            title: 'Water Station Assigned',
-            description: `You have been assigned to a new water station: ${stationName}.`,
-            data: { userId: userId }
-        });
-    }
-});
-
 
 /**
  * Generic Cloud Function for file uploads.
@@ -308,63 +146,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         logger.log(`Updated profile photo for user: ${userId}`);
         return;
     }
-
-    if (filePath.startsWith("userContracts/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).update({
-            currentContractUrl: url,
-            contractUploadedDate: FieldValue.serverTimestamp(),
-            contractStatus: "Active",
-        });
-        logger.log(`Updated contract for user: ${userId}`);
-         await createNotification(userId, {
-            type: 'general',
-            title: 'New Contract Uploaded',
-            description: 'A new contract has been uploaded to your account. You can view it in your account details.',
-            data: { userId: userId }
-        });
-        return;
-    }
     
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; 
-        const deliveryId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
-            proofOfDeliveryUrl: url,
-        });
-        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
-        await createNotification(userId, {
-            type: 'delivery',
-            title: 'Proof of Delivery Uploaded',
-            description: `A proof of delivery for order ${deliveryId} has been uploaded.`,
-            data: { deliveryId: deliveryId }
-        });
-        return;
-    }
-    
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; 
-        const visitId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
-            reportUrl: url,
-        });
-        logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
-        await createNotification(userId, {
-            type: 'sanitation',
-            title: 'Sanitation Report Available',
-            description: 'Your latest sanitation report is now available to view.',
-            data: { visitId: visitId }
-        });
-        return;
-    }
-
-
     if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -386,6 +168,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             data: { paymentId: paymentId }
         });
 
+        // Also notify the admin
         const adminId = await getAdminId();
         if (adminId) {
             const userDoc = await db.collection('users').doc(userId).get();

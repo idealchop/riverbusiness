@@ -252,6 +252,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }, {} as Record<string, Payment[]>);
     }, [allPayments]);
 
+    const createNotification = async (userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
+        if (!firestore) return;
+        try {
+            const notificationWithMeta = {
+                ...notificationData,
+                userId,
+                date: serverTimestamp(),
+                isRead: false,
+            };
+            await addDoc(collection(firestore, 'users', userId, 'notifications'), notificationWithMeta);
+        } catch (error) {
+            console.error("Failed to create notification:", error);
+        }
+    };
+
     const currentMonthInvoice = React.useMemo(() => {
         const userToCalc = userForInvoices || selectedUser;
         if (!userToCalc) return null;
@@ -381,13 +396,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             history[monthKey].liters += liters;
             if (selectedUser.plan?.isConsumptionBased) {
                 history[monthKey].cost += liters * rate;
-            } else {
-                // Cost for fixed plans is trickier to calculate historically without snapshots of plan data
-                // For simplicity, we can show consumption and maybe a fixed plan cost if needed
             }
         });
         
-        // For fixed plans, let's assign the monthly plan price.
         if (!selectedUser.plan?.isConsumptionBased) {
             Object.keys(history).forEach(monthKey => {
                  history[monthKey].cost = selectedUser.plan?.price || 0;
@@ -502,8 +513,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         name: "checklist",
     });
 
-    const watchedChecklist = sanitationVisitForm.watch("checklist");
-
     React.useEffect(() => {
         if (visitToEdit) {
             sanitationVisitForm.reset({
@@ -598,6 +607,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
         const userRef = doc(firestore, 'users', selectedUser.id);
         await updateDoc(userRef, { assignedWaterStationId: stationToAssign });
+
+        const station = waterStations?.find(ws => ws.id === stationToAssign);
+        await createNotification(selectedUser.id, {
+            type: 'general',
+            title: 'Water Station Assigned',
+            description: `You have been assigned to a new water station: ${station?.name || 'a new station'}.`,
+            data: { userId: selectedUser.id }
+        });
         
         setSelectedUser(prev => prev ? { ...prev, assignedWaterStationId: stationToAssign } : null);
 
@@ -617,6 +634,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const path = `admin_uploads/${authUser.uid}/proofs_for/${userForHistory.id}/${values.trackingNumber}-${file.name}`;
                 proofUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+                await createNotification(userForHistory.id, {
+                    type: 'delivery',
+                    title: 'Proof of Delivery Uploaded',
+                    description: `A proof of delivery for order ${values.trackingNumber} has been uploaded.`,
+                    data: { deliveryId: values.trackingNumber }
+                });
             }
     
             const deliveryData: any = {
@@ -630,6 +653,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
             await setDoc(deliveryRef, deliveryData);
+
+            await createNotification(userForHistory.id, {
+                type: 'delivery',
+                title: 'Delivery Scheduled',
+                description: `A delivery of ${values.volumeContainers} containers has been scheduled.`,
+                data: { deliveryId: values.trackingNumber }
+            });
             
             if (values.status === 'Delivered') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
@@ -672,6 +702,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const adjustment = oldLiters - newLiters; 
     
         await updateDoc(deliveryRef, updatedData);
+
+        if (deliveryToEdit.status !== values.status) {
+            await createNotification(userForHistory.id, {
+                type: 'delivery',
+                title: `Delivery ${values.status}`,
+                description: `Your delivery of ${values.volumeContainers} containers is now ${values.status}.`,
+                data: { deliveryId: deliveryToEdit.id }
+            });
+        }
     
         if (adjustment !== 0) {
             const userRef = doc(firestore, 'users', userForHistory.id);
@@ -774,6 +813,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             status: newStatus,
             statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
         });
+        await createNotification(request.userId, {
+            type: 'delivery',
+            title: `Refill Request: ${newStatus}`,
+            description: `Your refill request is now ${newStatus}.`,
+            data: { requestId: request.id }
+        });
         toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
     };
 
@@ -859,6 +904,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
             await updateDoc(invoiceRef, updatePayload);
         }
+
+        if (newStatus === 'Paid') {
+            await createNotification(userToUpdate.id, {
+                type: 'payment',
+                title: 'Payment Confirmed',
+                description: `Your payment for invoice ${selectedInvoice.id} has been confirmed. Thank you!`,
+                data: { paymentId: selectedInvoice.id }
+            });
+        } else {
+             await createNotification(userToUpdate.id, {
+                type: 'payment',
+                title: 'Payment Action Required',
+                description: `Your payment for invoice ${selectedInvoice.id} requires attention. Reason: ${rejectionReason || 'Please contact support.'}`,
+                data: { paymentId: selectedInvoice.id }
+            });
+        }
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
     
@@ -890,6 +951,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const visitId = visitToEdit?.id || Date.now();
                 const path = `admin_uploads/${authUser.uid}/sanitation_for/${selectedUser.id}/${visitId}-${file.name}`;
                 reportUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+                await createNotification(selectedUser.id, {
+                    type: 'sanitation',
+                    title: 'Sanitation Report Available',
+                    description: 'Your latest sanitation report is now available to view.',
+                    data: { visitId: visitToEdit?.id || visitId }
+                });
             }
             visitData.reportUrl = reportUrl;
             delete (visitData as any).reportFile;
@@ -898,8 +965,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToEdit.id);
                 await updateDoc(visitRef, visitData);
                 toast({ title: "Visit Updated", description: "The sanitation visit has been updated." });
+                if (visitToEdit.status !== values.status) {
+                    const scheduledDate = new Date(values.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    await createNotification(selectedUser.id, {
+                        type: 'sanitation',
+                        title: `Sanitation Visit: ${values.status}`,
+                        description: `Your sanitation visit for ${scheduledDate} is now ${values.status}.`,
+                        data: { visitId: visitToEdit.id }
+                    });
+                }
             } else {
                 const visitRef = await addDoc(collection(firestore, 'users', selectedUser.id, 'sanitationVisits'), visitData);
+                const scheduledDate = new Date(values.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                 await createNotification(selectedUser.id, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
+                    data: { visitId: visitRef.id }
+                });
                 toast({ title: "Visit Scheduled", description: "A new sanitation visit has been scheduled." });
             }
     
@@ -930,9 +1013,23 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
         try {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
-            await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
+            const url = await uploadFileWithProgress(storage, auth, path, contractFile, {}, setUploadProgress);
+
+            const userRef = doc(firestore, 'users', userForContract.id);
+            await updateDoc(userRef, {
+                currentContractUrl: url,
+                contractUploadedDate: serverTimestamp(),
+                contractStatus: "Active",
+            });
             
-            toast({ title: 'Upload Complete', description: 'The contract is being processed and will update shortly.' });
+            await createNotification(userForContract.id, {
+                type: 'general',
+                title: 'New Contract Uploaded',
+                description: 'A new contract has been uploaded to your account. You can view it in your account details.',
+                data: { userId: userForContract.id }
+            });
+            
+            toast({ title: 'Upload Complete', description: 'The contract has been attached to the user profile.' });
             setIsUploadContractOpen(false);
             setContractFile(null);
         } catch (error) {
@@ -1492,7 +1589,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>
