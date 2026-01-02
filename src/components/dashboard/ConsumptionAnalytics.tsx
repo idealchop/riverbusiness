@@ -18,7 +18,7 @@ interface ConsumptionAnalyticsProps {
 }
 
 export function ConsumptionAnalytics({ deliveries, onHistoryClick }: ConsumptionAnalyticsProps) {
-  const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
+  const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly' | 'yearly' | '2025'>('weekly');
 
   const consumptionChartData = useMemo(() => {
     const sourceDeliveries = deliveries || [];
@@ -56,6 +56,25 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
         }
       });
       return weeklyData;
+    } else if (analyticsFilter === '2025') {
+        const year = 2025;
+        const yearStart = new Date(year, 0, 1);
+        const yearEnd = new Date(year, 11, 31);
+
+        const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+            name: format(new Date(year, i), 'MMM'),
+            displayName: format(new Date(year, i), 'MMM'),
+            value: 0
+        }));
+
+        sourceDeliveries.forEach(d => {
+            const deliveryDate = new Date(d.date);
+            if (deliveryDate >= yearStart && deliveryDate <= yearEnd) {
+                const month = getMonth(deliveryDate);
+                monthlyData[month].value += containerToLiter(d.volumeContainers);
+            }
+        });
+        return monthlyData;
     } else { // yearly
         const now = new Date();
         const yearStart = startOfYear(now);
@@ -86,7 +105,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
           <CardTitle>Consumption Analytics</CardTitle>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as 'weekly' | 'monthly' | 'yearly')}>
+          <Select value={analyticsFilter} onValueChange={(value) => setAnalyticsFilter(value as 'weekly' | 'monthly' | 'yearly' | '2025')}>
             <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue placeholder="Filter..." />
             </SelectTrigger>
@@ -94,6 +113,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick }: Consumption
               <SelectItem value="weekly">This Week</SelectItem>
               <SelectItem value="monthly">This Month</SelectItem>
               <SelectItem value="yearly">This Year</SelectItem>
+              <SelectItem value="2025">2025</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={onHistoryClick} variant="outline" className="w-full sm:w-auto">
