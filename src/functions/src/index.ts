@@ -1,5 +1,4 @@
 
-
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -253,12 +252,23 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
         });
     }
 
-    // You can add more checks here for other fields like auto-refill, account info, etc.
     if (before.customPlanDetails?.autoRefillEnabled !== after.customPlanDetails?.autoRefillEnabled) {
          await createNotification(adminId, {
             type: 'general',
             title: 'Auto-Refill Changed',
             description: `${after.businessName} has ${after.customPlanDetails.autoRefillEnabled ? 'enabled' : 'disabled'} auto-refill.`,
+            data: { userId: userId }
+        });
+    }
+
+    // Notify on station assignment change
+    if (before.assignedWaterStationId !== after.assignedWaterStationId && after.assignedWaterStationId) {
+        const stationDoc = await db.collection('waterStations').doc(after.assignedWaterStationId).get();
+        const stationName = stationDoc.exists ? stationDoc.data()?.name : 'a new station';
+        await createNotification(userId, {
+            type: 'general',
+            title: 'Water Station Assigned',
+            description: `You have been assigned to a new water station: ${stationName}.`,
             data: { userId: userId }
         });
     }
@@ -318,10 +328,9 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
-    // Handle admin-uploaded proofs
     if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
         const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
+        const userId = parts[3]; 
         const deliveryId = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
@@ -337,10 +346,9 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
-    // Handle admin-uploaded sanitation reports
     if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
         const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/sanitation_for/{userId}/{filename}
+        const userId = parts[3]; 
         const visitId = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
@@ -378,7 +386,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             data: { paymentId: paymentId }
         });
 
-        // Also notify the admin
         const adminId = await getAdminId();
         if (adminId) {
             const userDoc = await db.collection('users').doc(userId).get();

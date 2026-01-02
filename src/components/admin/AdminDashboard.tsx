@@ -597,12 +597,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!selectedUser || !stationToAssign || !firestore) return;
 
         const userRef = doc(firestore, 'users', selectedUser.id);
-        const stationName = waterStations?.find(ws => ws.id === stationToAssign)?.name || 'a new station';
         await updateDoc(userRef, { assignedWaterStationId: stationToAssign });
         
         setSelectedUser(prev => prev ? { ...prev, assignedWaterStationId: stationToAssign } : null);
 
-        toast({ title: 'Station Assigned', description: `${stationName} has been assigned to ${selectedUser.name}.` });
+        toast({ title: 'Station Assigned', description: `A new station has been assigned to ${selectedUser.name}.` });
         setIsAssignStationOpen(false);
         setStationToAssign(undefined);
     };
