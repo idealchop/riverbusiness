@@ -27,7 +27,7 @@ import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } fro
 import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth } from 'date-fns';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
@@ -190,6 +190,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
+  const INVOICES_PER_PAGE = 5;
 
   const currentMonthInvoice: Payment | null = useMemo(() => {
     if (!user || !deliveries) return null;
@@ -203,12 +205,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     let monthsToBill = 1;
     let description = `Bill for ${format(now, 'MMMM yyyy')}`;
 
+    // Special case for combined billing in January
     if (currentYear === 2026 && currentMonth === 0) {
         cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-        cycleEnd = endOfMonth(now); // Jan 31, 2026
         monthsToBill = 2;
         description = 'Bill for December 2025 - January 2026';
     }
+
 
     const deliveriesThisCycle = (deliveries || []).filter(d => {
         const deliveryDate = new Date(d.date);
@@ -242,7 +245,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
-  const isPayday = new Date().getDate() === 1;
+  const isPayday = isToday(startOfMonth(new Date()));
 
   useEffect(() => {
     if (user) {
@@ -576,6 +579,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
     return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
   }, [currentMonthInvoice, paymentHistory]);
 
+  const allInvoices = useMemo(() => {
+    const invoices = [...paymentHistory];
+    if (showCurrentMonthInvoice && currentMonthInvoice) {
+      invoices.unshift(currentMonthInvoice);
+    }
+    return invoices;
+  }, [paymentHistory, showCurrentMonthInvoice, currentMonthInvoice]);
+
+  const totalInvoicePages = Math.ceil(allInvoices.length / INVOICES_PER_PAGE);
+
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (invoiceCurrentPage - 1) * INVOICES_PER_PAGE;
+    return allInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
+  }, [allInvoices, invoiceCurrentPage]);
+
+
   if (!user) {
     return <>{children}</>;
   }
@@ -869,35 +888,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {showCurrentMonthInvoice && currentMonthInvoice && (
-                                     <TableRow className="bg-muted/50 font-semibold">
-                                        <TableCell>{getInvoiceDisplayDate(currentMonthInvoice)}</TableCell>
-                                        <TableCell>
-                                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800')}>
-                                                {currentMonthInvoice.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <div className="flex flex-col items-end">
-                                            <span>P{currentMonthInvoice.amount.toFixed(2)}</span>
-                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(currentMonthInvoice)}>View details</Button>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                             {isPayday ? (
-                                                <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
-                                             ) : (
-                                                <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
-                                             )}
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                                {paymentHistory.map((invoice) => {
+                                {paginatedInvoices.map((invoice, index) => {
+                                    const isCurrentEst = showCurrentMonthInvoice && index === 0;
                                     return (
-                                    <TableRow key={invoice.id}>
+                                     <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
                                         <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
                                         <TableCell>
                                             <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                isCurrentEst ? 'bg-blue-100 text-blue-800' :
                                                 invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                                 invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
                                                 invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
@@ -913,20 +911,26 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                           </div>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {invoice.status === 'Paid' ? (
+                                             {isCurrentEst ? (
+                                                isPayday ? (
+                                                    <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
+                                                )
+                                             ) : invoice.status === 'Paid' ? (
                                                 <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                            ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
+                                             ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
                                                 <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                            ) : (
+                                             ) : (
                                                 <span className="text-xs text-muted-foreground">{invoice.status}</span>
-                                            )}
+                                             )}
                                         </TableCell>
                                     </TableRow>
                                 )})}
-                                {paymentHistory.length === 0 && !currentMonthInvoice && (
+                                {paginatedInvoices.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
-                                            No past invoices found.
+                                            No invoices found.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -936,25 +940,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
 
                     {/* Mobile Card View */}
                     <div className="space-y-4 md:hidden">
-                        {showCurrentMonthInvoice && currentMonthInvoice && (
-                            <Card className="bg-muted/50">
-                                <CardContent className="p-4 flex justify-between items-center">
-                                    <div>
-                                        <p className="font-semibold">{getInvoiceDisplayDate(currentMonthInvoice)}</p>
-                                        <p className="text-sm">P{currentMonthInvoice.amount.toFixed(2)}</p>
-                                        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(currentMonthInvoice)}>View details</Button>
-                                    </div>
-                                    {isPayday ? (
-                                        <Button size="sm" onClick={() => onPayNow(currentMonthInvoice)}>Pay Now</Button>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground text-right">Payment starts on the 1st</span>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-                        {paymentHistory.map((invoice) => {
+                        {paginatedInvoices.map((invoice, index) => {
+                            const isCurrentEst = showCurrentMonthInvoice && index === 0 && invoiceCurrentPage === 1;
                              return (
-                            <Card key={invoice.id}>
+                            <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
                                 <CardContent className="p-4 space-y-2">
                                     <div className="flex justify-between items-start">
                                         <div>
@@ -963,6 +952,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                             <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                                         </div>
                                         <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                            isCurrentEst ? 'bg-blue-100 text-blue-800' :
                                             invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                             invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
                                             invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
@@ -971,7 +961,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                             {invoice.status}
                                         </span>
                                     </div>
-                                    {(invoice.status === 'Paid') ? (
+                                    {isCurrentEst ? (
+                                        isPayday ? (
+                                            <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                        ) : (
+                                            <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
+                                        )
+                                    ) : (invoice.status === 'Paid') ? (
                                         <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                     ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
                                         <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
@@ -979,10 +975,33 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
                                 </CardContent>
                             </Card>
                         )})}
-                        {paymentHistory.length === 0 && !currentMonthInvoice && (
-                           <p className="text-center py-10 text-sm text-muted-foreground">No past invoices found.</p>
+                        {paginatedInvoices.length === 0 && (
+                           <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
                         )}
                     </div>
+                    {totalInvoicePages > 1 && (
+                      <div className="flex items-center justify-end space-x-2 pt-4">
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
+                              disabled={invoiceCurrentPage === 1}
+                          >
+                              Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                              Page {invoiceCurrentPage} of {totalInvoicePages}
+                          </span>
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
+                              disabled={invoiceCurrentPage === totalInvoicePages}
+                          >
+                              Next
+                          </Button>
+                      </div>
+                    )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -1364,4 +1383,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, onL
   );
 }
 
-    
