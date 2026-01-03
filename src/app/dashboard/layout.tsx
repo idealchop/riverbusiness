@@ -26,7 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { LiveChat, type Message as ChatMessage } from '@/components/live-chat';
+import { LiveChat, type ChatMessage } from '@/components/live-chat';
 import { format, differenceInMonths, addMonths, subHours, formatDistanceToNow } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableRow, TableHead } from '@/components/ui/table';
 import type { Payment, ImagePlaceholder, Feedback, PaymentOption, Delivery, ComplianceReport, SanitationVisit, WaterStation, AppUser, Notification as NotificationType, RefillRequest, RefillRequestStatus } from '@/lib/types';
@@ -110,6 +110,10 @@ export default function DashboardLayout({
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+
+  const adminQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'Admin'), where('email', '==', 'admin@riverph.com')) : null, [firestore]);
+  const { data: adminUsers } = useCollection<AppUser>(adminQuery);
+  const adminAgent = useMemo(() => (adminUsers && adminUsers.length > 0) ? adminUsers[0] : null, [adminUsers]);
   
   const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
   const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
@@ -408,9 +412,10 @@ export default function DashboardLayout({
                 <div className="flex-1 flex flex-col min-h-0">
                     <div className="flex-1 min-h-0">
                          <LiveChat
-                            messages={chatMessages || []}
+                            chatMessages={chatMessages || []}
                             onMessageSubmit={handleMessageSubmit}
                             user={user}
+                            agent={adminAgent}
                          />
                     </div>
                     <div className="shrink-0 pt-4 mt-auto border-t">

@@ -2340,9 +2340,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <div className="flex flex-col">
                                     {selectedChatUser ? (
                                         <LiveChat
-                                            messages={chatMessages || []}
+                                            chatMessages={chatMessages || []}
                                             onMessageSubmit={handleAdminMessageSubmit}
                                             user={selectedChatUser}
+                                            agent={adminUser}
                                         />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
@@ -3122,4 +3123,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-

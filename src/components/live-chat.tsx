@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, 'useRef', useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -15,21 +15,16 @@ import { Send, User, UserCog } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
-import type { AppUser } from '@/lib/types';
-
-export interface Message {
-  id: string;
-  role: 'user' | 'admin';
-  content: string;
-}
+import type { AppUser, ChatMessage } from '@/lib/types';
 
 interface LiveChatProps {
-    messages: Message[];
+    chatMessages: ChatMessage[];
     onMessageSubmit: (content: string) => void;
     user: AppUser | null;
+    agent: AppUser | null; // The admin or support agent
 }
 
-export function LiveChat({ messages, onMessageSubmit, user }: LiveChatProps) {
+export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveChatProps) {
   const [input, setInput] = React.useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -51,46 +46,44 @@ export function LiveChat({ messages, onMessageSubmit, user }: LiveChatProps) {
             viewport.scrollTop = viewport.scrollHeight;
         }
     }
-  }, [messages]);
+  }, [chatMessages]);
 
   return (
     <Card className="flex flex-col h-full border-0 shadow-none">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          Live Support
-        </CardTitle>
-        <CardDescription>
-          Chat with a support agent.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
+      <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden pt-6">
         <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
-            {messages.map((m) => (
-              <div key={m.id} className={cn("flex gap-3 text-sm", m.role === 'user' ? 'justify-end' : '')}>
-                 {m.role === 'admin' && (
+            {(chatMessages || []).map((m) => {
+              const isUserMessage = m.role === 'user';
+              const sender = isUserMessage ? user : agent;
+              const FallbackIcon = isUserMessage ? User : UserCog;
+
+              return (
+              <div key={m.id} className={cn("flex gap-3 text-sm", isUserMessage ? 'justify-end' : '')}>
+                 {!isUserMessage && (
                   <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
+                     <AvatarImage src={sender?.photoURL ?? undefined} alt={sender?.name || 'Agent'} />
                     <AvatarFallback>
-                      <UserCog />
+                      <FallbackIcon />
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div className={cn(
                     "flex-1 max-w-[80%] p-3 rounded-lg",
-                    m.role === 'user' ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                    isUserMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
                 )}>
                   <div className="prose-sm max-w-full">{m.content}</div>
                 </div>
-                {m.role === 'user' && (
+                {isUserMessage && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.photoURL ?? undefined} alt={user?.name || ''} />
+                    <AvatarImage src={sender?.photoURL ?? undefined} alt={sender?.name || 'User'} />
                     <AvatarFallback>
-                      <User />
+                      <FallbackIcon />
                     </AvatarFallback>
                   </Avatar>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </ScrollArea>
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
