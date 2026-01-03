@@ -25,9 +25,14 @@ service cloud.firestore {
       allow create: if request.auth != null;
     }
     
-    // Users can manage all subcollections within their own user document.
-    match /users/{userId}/{document=**} {
-      allow read, list, write, delete: if isOwner(userId);
+    // Specific rule for chat messages to allow admin access.
+    match /users/{userId}/chatMessages/{messageId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Users can manage all other subcollections within their own user document.
+    match /users/{userId}/{subcollection}/{docId} {
+      allow read, list, write, delete: if subcollection != 'chatMessages' && isOwner(userId);
     }
     
     match /unclaimedProfiles/{clientId} {
@@ -60,5 +65,3 @@ service cloud.firestore {
     }
   }
 }
-
-      
