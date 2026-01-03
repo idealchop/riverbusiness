@@ -10,7 +10,7 @@ import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection 
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser, Notification as NotificationType } from '@/lib/types';
-import { doc, collection, query, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, collection, query, writeBatch, Timestamp, where } from 'firebase/firestore';
 import { useMounted } from '@/hooks/use-mounted';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +65,11 @@ export default function AdminLayout({
 
   const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
+  
+  const usersWithUnreadQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('hasUnreadUserMessages', '==', true)) : null, [firestore]);
+  const { data: usersWithUnreadMessages } = useCollection(usersWithUnreadQuery);
+
+  const hasUnreadChatMessages = useMemo(() => (usersWithUnreadMessages?.length || 0) > 0, [usersWithUnreadMessages]);
   
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
   
@@ -123,11 +128,21 @@ export default function AdminLayout({
         </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" className="rounded-full" asChild>
+          <Button variant="outline" className="rounded-full relative" asChild>
             <Link href="/admin/live-chat">
-                <MessageSquare className="h-5 w-5" />
+                <span className="relative flex items-center mr-2">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                </span>
+                <span className="mr-2 hidden sm:inline">Live Support</span>
+                {hasUnreadChatMessages && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />
+                )}
             </Link>
           </Button>
+
           <Popover onOpenChange={handleNotificationOpenChange}>
             <PopoverTrigger asChild>
               <Button
