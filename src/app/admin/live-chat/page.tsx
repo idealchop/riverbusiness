@@ -3,15 +3,16 @@
 
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useAuth, useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, orderBy, query, updateDoc, where } from 'firebase/firestore';
-import type { AppUser, ChatMessage } from '@/lib/types';
+import type { AppUser } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { LiveChat } from '@/components/live-chat';
+import { LiveChat, type ChatMessage } from '@/components/live-chat';
 import { MessageSquare } from 'lucide-react';
 import { AdminDashboardSkeleton } from '@/components/admin/AdminDashboardSkeleton';
+import { addDoc } from 'firebase/firestore';
 
 export default function LiveChatPage() {
     const { user: authUser, isUserLoading } = useUser();
@@ -22,7 +23,7 @@ export default function LiveChatPage() {
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-    const { data: adminUser } = useCollection<AppUser>(adminUserDocRef);
+    const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
     const chatMessagesQuery = useMemoFirebase(() => {
         if (!firestore || !selectedChatUser) return null;
