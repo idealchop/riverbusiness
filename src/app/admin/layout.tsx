@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bell, User, Receipt, FileUp, Info } from 'lucide-react';
+import { Bell, User, Receipt, FileUp, Info, MessageSquare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
@@ -123,6 +123,11 @@ export default function AdminLayout({
         </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" className="rounded-full" asChild>
+            <Link href="/admin/live-chat">
+                <MessageSquare className="h-5 w-5" />
+            </Link>
+          </Button>
           <Popover onOpenChange={handleNotificationOpenChange}>
             <PopoverTrigger asChild>
               <Button

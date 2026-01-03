@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, ChatMessage } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -187,9 +187,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [complianceReportToEdit, setComplianceReportToEdit] = React.useState<ComplianceReport | null>(null);
     const [complianceReportToDelete, setComplianceReportToDelete] = React.useState<ComplianceReport | null>(null);
 
-    const [selectedChatUser, setSelectedChatUser] = useState<AppUser | null>(null);
-
-
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [complianceRefresher, setComplianceRefresher] = React.useState(0);
     const [isScheduleDialogOpen, setIsScheduleDialogOpen] = React.useState(false);
@@ -236,13 +233,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [firestore, selectedUser]);
     const { data: sanitationVisitsData, isLoading: sanitationVisitsLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
     
-    const chatMessagesQuery = useMemoFirebase(() => {
-        if (!firestore || !selectedChatUser) return null;
-        return query(collection(firestore, 'users', selectedChatUser.id, 'chatMessages'), orderBy('timestamp', 'asc'));
-    }, [firestore, selectedChatUser]);
-    const { data: chatMessages } = useCollection<ChatMessage>(chatMessagesQuery);
-
-
     const allPaymentsQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'payments') : null, [firestore]);
     const { data: allPayments, isLoading: allPaymentsLoading } = useCollection<Payment & { parentId: string }>(allPaymentsQuery, {
         idField: 'parentId'
@@ -1229,29 +1219,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     }
     
-    const handleAdminMessageSubmit = async (messageContent: string) => {
-        if (!firestore || !selectedChatUser) return;
-        const messagesCollection = collection(firestore, 'users', selectedChatUser.id, 'chatMessages');
-        
-        const adminMessage: Omit<ChatMessage, 'id'> = {
-          text: messageContent,
-          role: 'admin',
-          timestamp: serverTimestamp(),
-        };
-    
-        try {
-            await addDoc(messagesCollection, adminMessage);
-            const userRef = doc(firestore, 'users', selectedChatUser.id);
-            await updateDoc(userRef, {
-                lastChatMessage: messageContent,
-                lastChatTimestamp: serverTimestamp(),
-                hasUnreadAdminMessages: true
-            });
-        } catch(error) {
-            console.error("Error sending admin chat message:", error);
-            toast({ variant: 'destructive', title: 'Message Failed', description: 'Could not send your message.' });
-        }
-    };
     const selectedPlan = newUserForm.watch('plan');
 
      useEffect(() => {
@@ -1275,16 +1242,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
         return () => subscription.unsubscribe();
     }, [newUserForm]);
-
-    const chatUsers = useMemo(() => {
-        if (!appUsers) return [];
-        return [...appUsers].sort((a, b) => {
-            const timeA = a.lastChatTimestamp ? (a.lastChatTimestamp as any).toMillis() : 0;
-            const timeB = b.lastChatTimestamp ? (b.lastChatTimestamp as any).toMillis() : 0;
-            return timeB - timeA;
-        });
-    }, [appUsers]);
-
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
@@ -2044,16 +2001,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <Tabs defaultValue="user-management">
                 <TabsList>
                     <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
-                    <TabsTrigger value="live-chat" className="relative">
-                        <MessageSquare className="mr-2 h-4 w-4"/>
-                        Live Chat
-                        {chatUsers.some(u => u.hasUnreadUserMessages) && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                            </span>
-                        )}
-                    </TabsTrigger>
                     <TabsTrigger value="station-management"><Building className="mr-2 h-4 w-4" />Station Management</TabsTrigger>
                 </TabsList>
                 <TabsContent value="user-management">
@@ -2291,70 +2238,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </Table>
                                 </TabsContent>
                             </Tabs>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="live-chat">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Live Chat Support</CardTitle>
-                            <CardDescription>Respond to user messages in real-time.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[60vh] border rounded-lg">
-                                <div className="border-r">
-                                    <ScrollArea className="h-full">
-                                        <div className="p-2">
-                                            {chatUsers.map(user => (
-                                                <div
-                                                    key={user.id}
-                                                    className={cn(
-                                                        "flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted",
-                                                        selectedChatUser?.id === user.id && 'bg-muted'
-                                                    )}
-                                                    onClick={() => {
-                                                        setSelectedChatUser(user);
-                                                        if (user.hasUnreadUserMessages && firestore) {
-                                                            updateDoc(doc(firestore, 'users', user.id), { hasUnreadUserMessages: false });
-                                                        }
-                                                    }}
-                                                >
-                                                    <Avatar className="h-10 w-10">
-                                                        <AvatarImage src={user.photoURL || undefined} />
-                                                        <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex-1 truncate">
-                                                        <div className="flex justify-between items-center">
-                                                            <p className="font-semibold text-sm truncate">{user.businessName}</p>
-                                                            {user.hasUnreadUserMessages && (
-                                                                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0"></span>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground">{user.clientId}</p>
-                                                        <p className="text-xs text-muted-foreground truncate">{user.lastChatMessage || 'No messages yet'}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </div>
-                                <div className="flex flex-col">
-                                    {selectedChatUser ? (
-                                        <LiveChat
-                                            chatMessages={chatMessages || []}
-                                            onMessageSubmit={handleAdminMessageSubmit}
-                                            user={selectedChatUser}
-                                            agent={adminUser}
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                                            <MessageSquare className="h-12 w-12 mb-4" />
-                                            <p className="font-semibold">Select a conversation</p>
-                                            <p className="text-sm">Choose a user from the left panel to start chatting.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
