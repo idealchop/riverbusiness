@@ -183,7 +183,7 @@ export interface Notification {
     
 export interface ChatMessage {
   id: string;
-  content: string;
+  text: string;
   role: 'user' | 'admin';
   timestamp: FieldValue | Timestamp;
 }

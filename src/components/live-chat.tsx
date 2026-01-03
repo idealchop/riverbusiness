@@ -18,7 +18,7 @@ interface LiveChatProps {
     chatMessages: ChatMessage[];
     onMessageSubmit: (content: string) => void;
     user: AppUser | null;
-    agent: AppUser | null; // The admin or support agent
+    agent: AppUser | null;
 }
 
 export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveChatProps) {
@@ -54,7 +54,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
               const isUserMessage = m.role === 'user';
               const sender = isUserMessage ? user : agent;
               const FallbackIcon = isUserMessage ? User : UserCog;
-              const messageContent = m.content || m.text;
+              const messageContent = m.text;
 
 
               return (
