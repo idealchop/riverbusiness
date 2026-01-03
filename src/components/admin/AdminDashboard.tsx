@@ -2330,6 +2330,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0"></span>
                                                             )}
                                                         </div>
+                                                        <p className="text-xs text-muted-foreground">{user.clientId}</p>
                                                         <p className="text-xs text-muted-foreground truncate">{user.lastChatMessage || 'No messages yet'}</p>
                                                     </div>
                                                 </div>
