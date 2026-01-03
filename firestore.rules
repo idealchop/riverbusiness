@@ -32,7 +32,7 @@ service cloud.firestore {
     
     // Users can manage all other subcollections within their own user document.
     match /users/{userId}/{subcollection}/{docId} {
-      allow read, list, write, delete: if subcollection != 'chatMessages' && isOwner(userId);
+      allow read, list, write, delete: if isOwner(userId);
     }
     
     match /unclaimedProfiles/{clientId} {
