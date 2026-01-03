@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, ChatMessage } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -36,7 +36,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser, useDoc, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc, deleteDoc, orderBy } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -48,6 +48,7 @@ import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdminDashboardSkeleton } from './AdminDashboardSkeleton';
+import { LiveChat } from '../live-chat';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -145,7 +146,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const firestore = useFirestore();
     const router = useRouter();
 
-    const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'users') : null, [firestore, isAdmin]);
+    const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'users'), where('role', '==', 'User')) : null, [firestore, isAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
 
     const unclaimedProfilesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'unclaimedProfiles') : null, [firestore, isAdmin]);
@@ -185,6 +186,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isComplianceReportDialogOpen, setIsComplianceReportDialogOpen] = React.useState(false);
     const [complianceReportToEdit, setComplianceReportToEdit] = React.useState<ComplianceReport | null>(null);
     const [complianceReportToDelete, setComplianceReportToDelete] = React.useState<ComplianceReport | null>(null);
+
+    const [selectedChatUser, setSelectedChatUser] = useState<AppUser | null>(null);
 
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
@@ -232,6 +235,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return collection(firestore, 'users', selectedUser.id, 'sanitationVisits');
     }, [firestore, selectedUser]);
     const { data: sanitationVisitsData, isLoading: sanitationVisitsLoading } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+    
+    const chatMessagesQuery = useMemoFirebase(() => {
+        if (!firestore || !selectedChatUser) return null;
+        return query(collection(firestore, 'users', selectedChatUser.id, 'chatMessages'), orderBy('timestamp', 'asc'));
+    }, [firestore, selectedChatUser]);
+    const { data: chatMessages } = useCollection<ChatMessage>(chatMessagesQuery);
+
 
     const allPaymentsQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'payments') : null, [firestore]);
     const { data: allPayments, isLoading: allPaymentsLoading } = useCollection<Payment & { parentId: string }>(allPaymentsQuery, {
@@ -281,10 +291,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         let description: string;
         let invoiceIdSuffix: string;
     
-        // Special Case for combined Dec-Jan billing period (when viewing in January)
-        if (currentYear === 2026 && currentMonth === 0) { // January 2026
-            cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-            cycleEnd = endOfMonth(now); // End of Jan 2026
+        if (currentYear === 2026 && currentMonth === 0) {
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = endOfMonth(now);
             monthsToBill = 2;
             description = 'Bill for December 2025 - January 2026';
             invoiceIdSuffix = '202512-202601';
@@ -295,6 +304,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             invoiceIdSuffix = format(now, 'yyyyMM');
         }
     
+        if (monthsToBill > 1 && !userToCalc.plan?.isConsumptionBased) {
+            return null;
+        }
+
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
@@ -776,7 +789,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const watchedEditDeliveryContainers = editDeliveryForm.watch('volumeContainers');
 
     const filteredUsers = React.useMemo(() => {
-        const allUsers = appUsers?.filter(user => user.role !== 'Admin') || [];
+        const allUsers = appUsers || [];
         if (!localSearchTerm) {
             return allUsers;
         }
@@ -1047,7 +1060,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const handleContractUpload = async () => {
-        if (!contractFile || !userForContract || !storage || !auth) return;
+        if (!contractFile || !userForContract || !storage || !auth || !firestore) return;
         setIsSubmitting(true);
         try {
             const path = `userContracts/${userForContract.id}/${contractFile.name}`;
@@ -1216,6 +1229,29 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     }
     
+    const handleAdminMessageSubmit = async (messageContent: string) => {
+        if (!firestore || !selectedChatUser) return;
+        const messagesCollection = collection(firestore, 'users', selectedChatUser.id, 'chatMessages');
+        
+        const adminMessage: Omit<ChatMessage, 'id'> = {
+          text: messageContent,
+          role: 'admin',
+          timestamp: serverTimestamp(),
+        };
+    
+        try {
+            await addDoc(messagesCollection, adminMessage);
+            const userRef = doc(firestore, 'users', selectedChatUser.id);
+            await updateDoc(userRef, {
+                lastChatMessage: messageContent,
+                lastChatTimestamp: serverTimestamp(),
+                hasUnreadAdminMessages: true
+            });
+        } catch(error) {
+            console.error("Error sending admin chat message:", error);
+            toast({ variant: 'destructive', title: 'Message Failed', description: 'Could not send your message.' });
+        }
+    };
     const selectedPlan = newUserForm.watch('plan');
 
      useEffect(() => {
@@ -1239,6 +1275,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
         return () => subscription.unsubscribe();
     }, [newUserForm]);
+
+    const chatUsers = useMemo(() => {
+        if (!appUsers) return [];
+        return [...appUsers].sort((a, b) => {
+            const timeA = a.lastChatTimestamp ? (a.lastChatTimestamp as any).toMillis() : 0;
+            const timeB = b.lastChatTimestamp ? (b.lastChatTimestamp as any).toMillis() : 0;
+            return timeB - timeA;
+        });
+    }, [appUsers]);
 
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
@@ -1999,6 +2044,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <Tabs defaultValue="user-management">
                 <TabsList>
                     <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
+                    <TabsTrigger value="live-chat" className="relative">
+                        <MessageSquare className="mr-2 h-4 w-4"/>
+                        Live Chat
+                        {chatUsers.some(u => u.hasUnreadUserMessages) && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                            </span>
+                        )}
+                    </TabsTrigger>
                     <TabsTrigger value="station-management"><Building className="mr-2 h-4 w-4" />Station Management</TabsTrigger>
                 </TabsList>
                 <TabsContent value="user-management">
@@ -2236,6 +2291,68 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     </Table>
                                 </TabsContent>
                             </Tabs>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="live-chat">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Live Chat Support</CardTitle>
+                            <CardDescription>Respond to user messages in real-time.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[60vh] border rounded-lg">
+                                <div className="border-r">
+                                    <ScrollArea className="h-full">
+                                        <div className="p-2">
+                                            {chatUsers.map(user => (
+                                                <div
+                                                    key={user.id}
+                                                    className={cn(
+                                                        "flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted",
+                                                        selectedChatUser?.id === user.id && 'bg-muted'
+                                                    )}
+                                                    onClick={() => {
+                                                        setSelectedChatUser(user);
+                                                        if (user.hasUnreadUserMessages && firestore) {
+                                                            updateDoc(doc(firestore, 'users', user.id), { hasUnreadUserMessages: false });
+                                                        }
+                                                    }}
+                                                >
+                                                    <Avatar className="h-10 w-10">
+                                                        <AvatarImage src={user.photoURL || undefined} />
+                                                        <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 truncate">
+                                                        <div className="flex justify-between items-center">
+                                                            <p className="font-semibold text-sm truncate">{user.businessName}</p>
+                                                            {user.hasUnreadUserMessages && (
+                                                                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0"></span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground truncate">{user.lastChatMessage || 'No messages yet'}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </div>
+                                <div className="flex flex-col">
+                                    {selectedChatUser ? (
+                                        <LiveChat
+                                            messages={chatMessages || []}
+                                            onMessageSubmit={handleAdminMessageSubmit}
+                                            user={selectedChatUser}
+                                        />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                            <MessageSquare className="h-12 w-12 mb-4" />
+                                            <p className="font-semibold">Select a conversation</p>
+                                            <p className="text-sm">Choose a user from the left panel to start chatting.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>

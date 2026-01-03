@@ -28,7 +28,11 @@
         "contractStatus": { "type": "string", "description": "Status of the user's contract." },
         "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." },
         "pendingPlan": { "type": "object", "description": "Details of a pending plan change." },
-        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." }
+        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." },
+        "lastChatMessage": { "type": "string", "description": "The last message sent in the chat." },
+        "lastChatTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last chat message." },
+        "hasUnreadAdminMessages": { "type": "boolean", "description": "True if the user has unread messages from an admin." },
+        "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
@@ -51,6 +55,18 @@
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt"]
+    },
+    "ChatMessage": {
+        "title": "ChatMessage",
+        "type": "object",
+        "description": "Represents a single message in a chat conversation.",
+        "properties": {
+            "id": { "type": "string" },
+            "text": { "type": "string" },
+            "role": { "type": "string", "enum": ["user", "admin"] },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "text", "role", "timestamp"]
     },
     "WaterStation": {
       "title": "WaterStation",
@@ -241,6 +257,10 @@
       "schema": { "$ref": "#/entities/RefillRequest" },
       "description": "Subcollection for user's one-time refill requests."
     },
+    "/users/{userId}/chatMessages/{messageId}": {
+        "schema": { "$ref": "#/entities/ChatMessage" },
+        "description": "Subcollection for a user's live chat messages."
+    },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
@@ -259,5 +279,3 @@
     }
   }
 }
-
-    

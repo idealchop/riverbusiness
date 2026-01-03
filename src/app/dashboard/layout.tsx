@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -33,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc, setDoc } from 'firebase/firestore';
+import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc, setDoc, orderBy } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -119,6 +120,12 @@ export default function DashboardLayout({
   const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
+  const chatMessagesQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, 'users', authUser.uid, 'chatMessages'), orderBy('timestamp', 'asc'));
+  }, [firestore, authUser]);
+  const { data: chatMessages } = useCollection<ChatMessage>(chatMessagesQuery);
+  
   const planImage = useMemo(() => {
     if (!user?.clientType) return null;
     const clientTypeDetails = clientTypes.find(ct => ct.name === user.clientType);
@@ -166,12 +173,7 @@ export default function DashboardLayout({
   const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
 
-  
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'admin', content: "Hello! How can I help you today?" }
-  ]);
     
-  
   React.useEffect(() => {
     if (isUserLoading || !auth) return;
 
@@ -294,23 +296,29 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-  const handleMessageSubmit = (messageContent: string) => {
-    const newUserMessage: ChatMessage = {
-      id: Date.now().toString(),
+  const handleMessageSubmit = async (messageContent: string) => {
+    if (!firestore || !authUser || !user) return;
+    
+    const messagesCollection = collection(firestore, 'users', authUser.uid, 'chatMessages');
+    
+    const userMessage: Omit<ChatMessage, 'id'> = {
+      text: messageContent,
       role: 'user',
-      content: messageContent,
+      timestamp: serverTimestamp(),
     };
-    setChatMessages((prev) => [...prev, newUserMessage]);
 
-    setTimeout(() => {
-      const adminResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'admin',
-        content: "Thanks for your message. An admin will be with you shortly."
-      };
-      setChatMessages((prev) => [...prev, adminResponse]);
-      setHasNewMessage(true);
-    }, 1500);
+    try {
+        await addDoc(messagesCollection, userMessage);
+        // Also update the user doc to indicate a new message for the admin
+        await updateDoc(userDocRef, {
+            lastChatMessage: messageContent,
+            lastChatTimestamp: serverTimestamp(),
+            hasUnreadUserMessages: true
+        });
+    } catch(error) {
+        console.error("Error sending chat message:", error);
+        toast({ variant: 'destructive', title: 'Message Failed', description: 'Could not send your message.' });
+    }
   };
     
   const handlePayNow = (invoice: Payment) => {
@@ -372,7 +380,12 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
-          <Dialog onOpenChange={(open) => !open && setHasNewMessage(false)}>
+          <Dialog onOpenChange={(open) => {
+              if (!open && user?.hasUnreadAdminMessages) {
+                  updateDoc(userDocRef, { hasUnreadAdminMessages: false });
+              }
+              setHasNewMessage(false);
+          }}>
             <DialogTrigger asChild>
                <Button variant="outline" className="rounded-full relative">
                 <span className="relative flex items-center mr-2">
@@ -382,7 +395,7 @@ export default function DashboardLayout({
                   </span>
                 </span>
                 <span className="mr-2 hidden sm:inline">Live Support</span>
-                {hasNewMessage && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
+                {(user?.hasUnreadAdminMessages) && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col sm:rounded-lg">
@@ -395,7 +408,7 @@ export default function DashboardLayout({
                 <div className="flex-1 flex flex-col min-h-0">
                     <div className="flex-1 min-h-0">
                          <LiveChat
-                            messages={chatMessages}
+                            messages={chatMessages || []}
                             onMessageSubmit={handleMessageSubmit}
                             user={user}
                          />

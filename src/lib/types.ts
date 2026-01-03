@@ -86,6 +86,10 @@ export interface AppUser {
     lastDeliveryStatus?: 'Delivered' | 'In Transit' | 'Pending' | 'No Delivery';
     pendingPlan?: any;
     planChangeEffectiveDate?: any;
+    lastChatMessage?: string;
+    lastChatTimestamp?: FieldValue | Timestamp;
+    hasUnreadAdminMessages?: boolean;
+    hasUnreadUserMessages?: boolean;
 }
 
 export interface LoginLog {
@@ -177,3 +181,9 @@ export interface Notification {
   data?: any;
 }
     
+export interface ChatMessage {
+  id: string;
+  text: string;
+  role: 'user' | 'admin';
+  timestamp: FieldValue | Timestamp;
+}
