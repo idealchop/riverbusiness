@@ -794,13 +794,28 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return filteredUsers.slice(startIndex, endIndex);
     }, [filteredUsers, currentPage, itemsPerPage]);
 
-    const filteredDeliveries = (userDeliveriesData || []).filter(delivery => {
+    const filteredDeliveries = React.useMemo(() => (userDeliveriesData || []).filter(delivery => {
         if (!deliveryDateRange?.from) return true;
         const fromDate = deliveryDateRange.from;
         const toDate = deliveryDateRange.to || fromDate;
         const deliveryDate = new Date(delivery.date);
         return deliveryDate >= fromDate && deliveryDate <= toDate;
-    });
+    }), [userDeliveriesData, deliveryDateRange]);
+
+    const [deliveryCurrentPage, setDeliveryCurrentPage] = React.useState(1);
+    const DELIVERY_ITEMS_PER_PAGE = 8;
+    const totalDeliveryPages = Math.ceil(filteredDeliveries.length / DELIVERY_ITEMS_PER_PAGE);
+
+    const paginatedDeliveries = React.useMemo(() => {
+        const startIndex = (deliveryCurrentPage - 1) * DELIVERY_ITEMS_PER_PAGE;
+        const endIndex = startIndex + DELIVERY_ITEMS_PER_PAGE;
+        return filteredDeliveries.slice(startIndex, endIndex);
+    }, [filteredDeliveries, deliveryCurrentPage]);
+    
+    React.useEffect(() => {
+      setDeliveryCurrentPage(1);
+    }, [deliveryDateRange]);
+
 
     const handleDownloadDeliveries = () => {
         const headers = ["ID", "Date", "Volume (Containers)", "Status", "Proof of Delivery URL"];
@@ -1475,14 +1490,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         </Dialog>
 
          <Dialog open={isDeliveryHistoryOpen} onOpenChange={setIsDeliveryHistoryOpen}>
-            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0">
+                <DialogHeader className="p-6 pb-0">
                     <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5"/> Delivery History for {userForHistory?.name}</DialogTitle>
-                    <DialogDescription>
-                        A log of all past deliveries for this user.
-                    </DialogDescription>
+                    <DialogDescription>A log of all past deliveries for this user.</DialogDescription>
                 </DialogHeader>
-                <div className="flex items-center gap-2 py-4">
+                <div className="flex items-center gap-2 px-6 pt-4 flex-shrink-0">
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -1528,7 +1541,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         Create Delivery
                     </Button>
                 </div>
-                 <ScrollArea className="pr-2 -mr-2">
+                 <ScrollArea className="px-6 flex-1 min-h-0">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -1540,8 +1553,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {userDeliveriesData && userDeliveriesData.length > 0 ? (
-                                filteredDeliveries.map(delivery => {
+                            {paginatedDeliveries.length > 0 ? (
+                                paginatedDeliveries.map(delivery => {
                                     const liters = delivery.volumeContainers * 19.5;
                                     const isUploadingProof = uploadProgress > 0 && uploadProgress < 100;
                                     return (
@@ -1593,8 +1606,29 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </TableBody>
                     </Table>
                 </ScrollArea>
-                 <DialogFooter className="pt-4 border-t">
+                 <DialogFooter className="pt-4 p-6 border-t flex-shrink-0 flex justify-between items-center">
                     <Button variant="outline" onClick={() => setIsDeliveryHistoryOpen(false)}>Close</Button>
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeliveryCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={deliveryCurrentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                            Page {deliveryCurrentPage} of {totalDeliveryPages > 0 ? totalDeliveryPages : 1}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeliveryCurrentPage(p => Math.min(totalDeliveryPages, p + 1))}
+                            disabled={deliveryCurrentPage === totalDeliveryPages || totalDeliveryPages === 0}
+                        >
+                            Next
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
