@@ -1,13 +1,10 @@
 
 'use client';
 
-import React, 'useRef', useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,6 +54,8 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
               const isUserMessage = m.role === 'user';
               const sender = isUserMessage ? user : agent;
               const FallbackIcon = isUserMessage ? User : UserCog;
+              const messageContent = m.content || m.text;
+
 
               return (
               <div key={m.id} className={cn("flex gap-3 text-sm", isUserMessage ? 'justify-end' : '')}>
@@ -72,7 +71,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                     "flex-1 max-w-[80%] p-3 rounded-lg",
                     isUserMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
                 )}>
-                  <div className="prose-sm max-w-full">{m.content}</div>
+                  <div className="prose-sm max-w-full">{messageContent}</div>
                 </div>
                 {isUserMessage && (
                   <Avatar className="h-8 w-8">
