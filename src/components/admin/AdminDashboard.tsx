@@ -2676,7 +2676,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Quality Officer</TableHead>
-                                    <TableHead className="text-right"></TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -2694,15 +2694,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             >{visit.status}</Badge>
                                         </TableCell>
                                         <TableCell>{visit.assignedTo}</TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent>
-                                                    <DropdownMenuItem onClick={() => setVisitToEdit(visit)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleShareVisit(visit)}><Share2 className="mr-2 h-4 w-4"/> Share</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive" onClick={() => setVisitToDelete(visit)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                        <TableCell className="text-right space-x-2">
+                                            <Button variant="outline" size="sm" onClick={() => setVisitToEdit(visit)}>View</Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleShareVisit(visit)}>
+                                                <Share2 className="h-4 w-4" />
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
