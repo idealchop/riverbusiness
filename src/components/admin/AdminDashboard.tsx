@@ -820,7 +820,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const startIndex = (deliveryCurrentPage - 1) * DELIVERY_ITEMS_PER_PAGE;
         const endIndex = startIndex + DELIVERY_ITEMS_PER_PAGE;
         return filteredDeliveries.slice(startIndex, endIndex);
-    }, [filteredDeliveries, deliveryCurrentPage]);
+    }, [filteredDeliveries, deliveryCurrentPage, DELIVERY_ITEMS_PER_PAGE]);
     
     React.useEffect(() => {
       setDeliveryCurrentPage(1);
@@ -1062,15 +1062,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToDelete.id);
             await deleteDoc(visitRef);
     
-            // Check if there's a shareable link and delete it too.
-            // A simple implementation could be to use the visitId as the public link's document ID.
-            if (visitToDelete.shareableLink) {
-                const linkId = visitToDelete.id; // Assuming linkId is the same as visitId
-                const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
-                const linkSnap = await getDoc(linkRef);
-                if (linkSnap.exists()) {
-                    await deleteDoc(linkRef);
-                }
+            const linkId = visitToDelete.id;
+            const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
+            const linkSnap = await getDoc(linkRef);
+            if (linkSnap.exists()) {
+                await deleteDoc(linkRef);
             }
     
             toast({
@@ -1078,8 +1074,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 description: "The sanitation visit and its associated public link have been removed.",
             });
     
-            setVisitToDelete(null); // Close the confirmation dialog
-            // If the edit dialog is open, close it as well since the item is gone.
+            setVisitToDelete(null);
             if (isSanitationVisitDialogOpen) {
                 setIsSanitationVisitDialogOpen(false);
             }
@@ -1280,22 +1275,39 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             const { customPlanDetails, plan, ...rest } = values;
 
-            // This is the correct structure.
             const profileData = {
-                ...rest, // name, businessName, address, etc.
-                customPlanDetails, // The detailed configuration object at the top level
+                ...rest, 
+                customPlanDetails, 
                 plan: {
                     name: plan.name,
                     price: plan.price,
                     isConsumptionBased: plan.isConsumptionBased || false,
                 },
                 role: 'User',
-                // Correctly set initial liter balance
                 totalConsumptionLiters: plan.isConsumptionBased ? 0 : (customPlanDetails.litersPerMonth || 0) + (customPlanDetails.bonusLiters || 0),
                 adminCreatedAt: serverTimestamp(),
             };
             
             await setDoc(unclaimedProfileRef, profileData);
+            
+            let oneTimeFee = 0;
+            if (customPlanDetails.gallonPaymentType === 'One-Time') {
+                oneTimeFee += customPlanDetails.gallonPrice || 0;
+            }
+            if (customPlanDetails.dispenserPaymentType === 'One-Time') {
+                oneTimeFee += customPlanDetails.dispenserPrice || 0;
+            }
+            
+            if (oneTimeFee > 0) {
+                const initialInvoice: Omit<Payment, 'id'> = {
+                    date: new Date().toISOString(),
+                    description: "One-Time Equipment Rental Fees",
+                    amount: oneTimeFee,
+                    status: 'Upcoming'
+                };
+                const paymentsCollectionRef = collection(firestore, 'unclaimedProfiles', values.clientId, 'payments');
+                await addDoc(paymentsCollectionRef, initialInvoice);
+            }
 
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
             setIsCreateUserOpen(false);
@@ -2887,28 +2899,28 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     </ScrollArea>
                     <DialogFooter className="pt-6 flex justify-between w-full">
                         <div>
-                           {visitToEdit && (
-                               <AlertDialog>
+                            {visitToEdit && (
+                                <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                       <Button variant="destructive" type="button" disabled={isSubmitting}>
-                                           <Trash2 className="mr-2 h-4 w-4"/>
-                                           Delete Visit
-                                       </Button>
+                                        <Button variant="destructive" type="button" disabled={isSubmitting}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete Visit
+                                        </Button>
                                     </AlertDialogTrigger>
-                                   <AlertDialogContent>
-                                       <AlertDialogHeader>
-                                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                           <AlertDialogDescription>
-                                               This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                                           </AlertDialogDescription>
-                                       </AlertDialogHeader>
-                                       <AlertDialogFooter>
-                                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                           <AlertDialogAction onClick={() => handleDeleteSanitationVisit()}>Delete Visit</AlertDialogAction>
-                                       </AlertDialogFooter>
-                                   </AlertDialogContent>
-                               </AlertDialog>
-                           )}
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => { setVisitToDelete(visitToEdit); handleDeleteSanitationVisit(); }}>Delete Visit</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                         </div>
                         <div className="flex gap-2">
                             <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
