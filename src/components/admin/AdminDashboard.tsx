@@ -818,7 +818,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const paginatedDeliveries = React.useMemo(() => {
         const startIndex = (deliveryCurrentPage - 1) * DELIVERY_ITEMS_PER_PAGE;
-        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const endIndex = startIndex + DELIVERY_ITEMS_PER_PAGE;
         return filteredDeliveries.slice(startIndex, endIndex);
     }, [filteredDeliveries, deliveryCurrentPage]);
     
@@ -1057,23 +1057,39 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const handleDeleteSanitationVisit = async () => {
         if (!firestore || !selectedUser || !visitToDelete) return;
-        
+    
         try {
             const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToDelete.id);
             await deleteDoc(visitRef);
     
             // Check if there's a shareable link and delete it too.
-            // The public link ID is the same as the visit ID.
+            // A simple implementation could be to use the visitId as the public link's document ID.
             if (visitToDelete.shareableLink) {
-                const linkRef = doc(firestore, 'publicSanitationLinks', visitToDelete.id);
-                await deleteDoc(linkRef);
+                const linkId = visitToDelete.id; // Assuming linkId is the same as visitId
+                const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
+                const linkSnap = await getDoc(linkRef);
+                if (linkSnap.exists()) {
+                    await deleteDoc(linkRef);
+                }
             }
     
-            toast({ title: "Visit Deleted", description: "The sanitation visit and its public link have been removed." });
-            setVisitToDelete(null);
+            toast({
+                title: "Visit Deleted",
+                description: "The sanitation visit and its associated public link have been removed.",
+            });
+    
+            setVisitToDelete(null); // Close the confirmation dialog
+            // If the edit dialog is open, close it as well since the item is gone.
+            if (isSanitationVisitDialogOpen) {
+                setIsSanitationVisitDialogOpen(false);
+            }
         } catch (error) {
             console.error("Error deleting visit:", error);
-            toast({ variant: 'destructive', title: "Deletion Failed", description: "There was an error removing the sanitation visit."});
+            toast({
+                variant: 'destructive',
+                title: "Deletion Failed",
+                description: "There was an error removing the sanitation visit.",
+            });
         }
     };
 
@@ -2870,28 +2886,30 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                     </ScrollArea>
                     <DialogFooter className="pt-6 flex justify-between w-full">
-                        <AlertDialog open={!!visitToDelete} onOpenChange={(open) => {if(!open) setVisitToDelete(null)}}>
-                            <AlertDialogTrigger asChild>
-                                {visitToEdit && (
-                                    <Button variant="destructive" type="button" onClick={() => setVisitToDelete(visitToEdit)} disabled={isSubmitting}>
-                                        <Trash2 className="mr-2 h-4 w-4"/>
-                                        Delete Visit
-                                    </Button>
-                                )}
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                        <div>
+                           {visitToEdit && (
+                               <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                       <Button variant="destructive" type="button" disabled={isSubmitting}>
+                                           <Trash2 className="mr-2 h-4 w-4"/>
+                                           Delete Visit
+                                       </Button>
+                                    </AlertDialogTrigger>
+                                   <AlertDialogContent>
+                                       <AlertDialogHeader>
+                                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                           <AlertDialogDescription>
+                                               This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                                           </AlertDialogDescription>
+                                       </AlertDialogHeader>
+                                       <AlertDialogFooter>
+                                           <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                           <AlertDialogAction onClick={() => handleDeleteSanitationVisit()}>Delete Visit</AlertDialogAction>
+                                       </AlertDialogFooter>
+                                   </AlertDialogContent>
+                               </AlertDialog>
+                           )}
+                        </div>
                         <div className="flex gap-2">
                             <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
