@@ -97,20 +97,40 @@ export default function LoginPage() {
       }
 
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        let title = 'Login Failed';
+        let description = 'An unexpected error occurred. Please try again.';
+
+        switch (error.code) {
+            case 'auth/invalid-credential':
+                title = 'Invalid Credentials';
+                description = 'The email or password you entered is incorrect. Please check your details and try again.';
+                break;
+            case 'auth/user-not-found': // This is less common now but good to keep as a fallback
+                 title = 'No Account Found';
+                 description = 'There is no account associated with this email. Would you like to sign up?';
+                 break;
+            case 'auth/wrong-password': // Also less common
+                title = 'Incorrect Password';
+                description = 'The password you entered is incorrect. Please try again.';
+                break;
+            case 'auth/too-many-requests':
+                title = 'Too Many Attempts';
+                description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can reset your password or try again later.';
+                break;
+            case 'auth/user-disabled':
+                title = 'Account Disabled';
+                description = 'This account has been disabled. Please contact support for assistance.';
+                break;
+            default:
+                 console.error('Login Error:', error);
+                 break;
+        }
+
         toast({
             variant: 'destructive',
-            title: 'No Account Found',
-            description: 'Would you like to create one?',
-            action: <Button variant="secondary" size="sm" onClick={() => router.push('/signup')}>Sign Up</Button>
+            title: title,
+            description: description,
         });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'Please check your credentials and try again.',
-        });
-      }
     }
   };
   
