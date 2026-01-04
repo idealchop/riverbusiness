@@ -198,8 +198,8 @@ export default function SanitationReportPage() {
     const handleSubmitReport = async () => {
         if (!firestore || !linkId || !visitData) return;
 
-        if (!visitData.officerSignature || !visitData.clientSignature || !visitData.clientRepName || !visitData.clientSignatureDate) {
-            toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all signatures, names, and dates are provided." });
+        if (!visitData.officerSignature || !visitData.clientSignature || !visitData.clientRepName) {
+            toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all signatures and names are provided." });
             return;
         }
 
@@ -268,7 +268,7 @@ export default function SanitationReportPage() {
          )
     }
 
-    const allSignaturesCompleted = visitData?.officerSignature && visitData?.clientSignature && visitData?.clientRepName && visitData?.clientSignatureDate;
+    const allSignaturesCompleted = visitData?.officerSignature && visitData?.clientSignature && visitData?.clientRepName;
 
     return (
         <main className="min-h-screen w-full bg-muted p-4 sm:p-8">
@@ -342,7 +342,7 @@ export default function SanitationReportPage() {
                                     <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
                                     <div className="border rounded-md p-3 bg-muted text-sm space-y-2">
                                         <p><span className="font-medium">Name:</span> {visitData.assignedTo}</p>
-                                        <p><span className="font-medium">Date:</span> {visitData.officerSignatureDate ? format(new Date(visitData.officerSignatureDate), 'PP') : ''}</p>
+                                        <p><span className="font-medium">Date:</span> {visitData.officerSignatureDate ? format(new Date(visitData.officerSignatureDate), 'PPp') : ''}</p>
                                     </div>
                                     <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo Signature</Button>
                                 </div>
@@ -357,9 +357,9 @@ export default function SanitationReportPage() {
                                     <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
                                      <div className="border rounded-md p-3 bg-muted text-sm space-y-2">
                                         <p><span className="font-medium">Name:</span> {visitData.clientRepName}</p>
-                                        <p><span className="font-medium">Date:</span> {visitData.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), 'PP') : ''}</p>
+                                        <p><span className="font-medium">Date:</span> {visitData.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), 'PPp') : ''}</p>
                                     </div>
-                                    <Button size="sm" variant="outline" onClick={() => handleSaveSignature('client', '')}>Redo Signature</Button>
+                                    <Button size="sm" variant="outline" onClick={() => setVisitData(prev => ({...prev, clientSignature: '', clientRepName: '', clientSignatureDate: ''}))}>Redo Signature</Button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -367,31 +367,6 @@ export default function SanitationReportPage() {
                                      <div>
                                         <Label htmlFor="clientRepName">Representative Name</Label>
                                         <Input id="clientRepName" value={visitData?.clientRepName || ''} onChange={(e) => handleFieldChange('clientRepName', e.target.value)} />
-                                     </div>
-                                     <div>
-                                        <Label htmlFor="clientRepDate">Date</Label>
-                                         <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full justify-start text-left font-normal",
-                                                        !visitData?.clientSignatureDate && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {visitData?.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), "PPP") : <span>Pick a date</span>}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={visitData?.clientSignatureDate ? new Date(visitData.clientSignatureDate) : undefined}
-                                                    onSelect={(date) => handleFieldChange('clientSignatureDate', date?.toISOString())}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
                                      </div>
                                 </div>
                             )}
@@ -409,5 +384,3 @@ export default function SanitationReportPage() {
         </main>
     );
 }
-
-    
