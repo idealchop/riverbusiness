@@ -139,7 +139,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     try {
       await updateDoc(adminUserDocRef, state.editableFormData);
       dispatch({ type: 'SET_EDIT_DETAILS', payload: false });
-      toast({ title: "Changes Saved", description: "Your account details have been updated." });
+      toast({ title: "Changes Saved", description: "Your support profile has been updated." });
     } catch (error) {
       console.error("Error saving changes: ", error);
       toast({ variant: "destructive", title: "Save Failed", description: "Could not save your changes." });
@@ -166,12 +166,14 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   const handleProfilePhotoUpload = async () => {
     if (!state.profilePhotoFile || !auth.currentUser || !storage || !auth) return;
 
-    const filePath = `users/${auth.currentUser.uid}/profile/profile-photo-${Date.now()}`;
+    const filePath = `users/${auth.currentUser.uid}/support_profile/photo-${Date.now()}`;
     
     startTransition(() => {
         uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress)
-        .then(() => {
-            toast({ title: 'Upload Complete', description: 'Your photo is being processed and will update shortly.' });
+        .then(async (url) => {
+            const adminUserDocRef = doc(firestore!, 'users', auth.currentUser!.uid);
+            await updateDoc(adminUserDocRef, { supportPhotoURL: url });
+            toast({ title: 'Upload Complete', description: 'Your support photo has been updated.' });
         })
         .catch((error) => {
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
@@ -184,13 +186,13 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoDelete = async () => {
-    if (!auth.currentUser || !adminUser?.photoURL || !firestore) return;
+    if (!auth.currentUser || !adminUser?.supportPhotoURL || !firestore) return;
     
     startTransition(async () => {
         const userDocRef = doc(firestore, 'users', auth.currentUser!.uid);
         try {
-            await updateDoc(userDocRef, { photoURL: null });
-            toast({ title: 'Profile Photo Removed' });
+            await updateDoc(userDocRef, { supportPhotoURL: null });
+            toast({ title: 'Support Photo Removed' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
         }
@@ -199,7 +201,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
 
   if (!adminUser) return null;
 
-  const displayPhoto = adminUser.photoURL;
+  const displayPhoto = adminUser.supportPhotoURL;
 
   return (
     <AlertDialog>
@@ -207,85 +209,84 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>My Account</DialogTitle>
-            <DialogDescription>Manage your account details.</DialogDescription>
+            <DialogDescription>Manage your personal account and public support profile.</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] w-full">
             <div className="pr-6 py-4 space-y-6">
                 <div>
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-semibold">Support Profile</h4>
+                        {!state.isEditingDetails && <Button variant="outline" size="sm" onClick={() => dispatch({type: 'SET_EDIT_DETAILS', payload: true})}><Edit className="mr-2 h-4 w-4" />Edit Profile</Button>}
+                    </div>
                     <div className="flex items-center gap-4 mb-4">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <div className="relative group cursor-pointer">
-                            <Avatar className="h-20 w-20">
-                            <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.name || ''} />
-                            <AvatarFallback className="text-3xl">{adminUser.name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            {(isPending || uploadProgress > 0) && (
-                                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                    <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <div className="relative group cursor-pointer">
+                                <Avatar className="h-20 w-20">
+                                <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.supportDisplayName || ''} />
+                                <AvatarFallback className="text-3xl">{adminUser.supportDisplayName?.charAt(0) || 'A'}</AvatarFallback>
+                                </Avatar>
+                                {(isPending || uploadProgress > 0) && (
+                                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                                        <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                                    </div>
+                                )}
+                                <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Pencil className="h-6 w-6 text-white" />
                                 </div>
+                            </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                            <DropdownMenuLabel>Support Photo</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Label htmlFor="admin-photo-upload" className="w-full cursor-pointer">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload new photo
+                                </Label>
+                            </DropdownMenuItem>
+                            {displayPhoto && (
+                                <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Remove photo
+                                </DropdownMenuItem>
+                                </AlertDialogTrigger>
                             )}
-                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Pencil className="h-6 w-6 text-white" />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
+                        <div className="space-y-1 flex-1">
+                            <div className="grid grid-cols-[100px_1fr] items-center gap-x-4">
+                                <Label htmlFor="supportDisplayName" className="text-right">Display Name</Label>
+                                <Input id="supportDisplayName" name="supportDisplayName" value={state.editableFormData.supportDisplayName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDisplayName', value: e.target.value}})} disabled={!state.isEditingDetails} />
+                            </div>
+                             <div className="grid grid-cols-[100px_1fr] items-center gap-x-4 mt-2">
+                                <Label htmlFor="supportDescription" className="text-right">Description</Label>
+                                <Input id="supportDescription" name="supportDescription" value={state.editableFormData.supportDescription || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDescription', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                             </div>
                         </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                        <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Label htmlFor="admin-photo-upload" className="w-full cursor-pointer">
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload new photo
-                            </Label>
-                        </DropdownMenuItem>
-                        {displayPhoto && (
-                            <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Remove photo
-                            </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                        )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
-                    <div className="space-y-1">
-                        <h4 className="font-semibold">{adminUser.name}</h4>
-                        <p className="text-sm text-muted-foreground">Update your account details.</p>
                     </div>
-                    </div>
+                     {state.isEditingDetails && (
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="secondary" onClick={() => {dispatch({type: 'SET_EDIT_DETAILS', payload: false}); dispatch({type: 'SET_FORM_DATA', payload: adminUser})}}>Cancel</Button>
+                            <Button onClick={handleSaveChanges}>Save Changes</Button>
+                        </div>
+                    )}
                 </div>
                 <Separator />
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-semibold">Your Details</h4>
-                    {!state.isEditingDetails && <Button variant="outline" size="sm" onClick={() => dispatch({type: 'SET_EDIT_DETAILS', payload: true})}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+                    <h4 className="font-semibold mb-4">Personal Account</h4>
+                     <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-4">
+                            <Label className="w-24 text-right text-muted-foreground">Name</Label>
+                            <p className="font-medium">{adminUser.name}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <Label className="w-24 text-right text-muted-foreground">Login Email</Label>
+                            <p className="font-medium">{adminUser.email}</p>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Name</Label>
-                        <Input id="name" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!state.isEditingDetails} />
-                    </div>
-                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <Label htmlFor="email" className="text-right">Login Email</Label>
-                        <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
-                    </div>
-                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <Label htmlFor="description" className="text-right">Description</Label>
-                        <Input id="description" name="description" value={(state.editableFormData as any).description || 'Customer Support'} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'description', value: e.target.value}})} disabled={!state.isEditingDetails}/>
-                    </div>
-                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                        <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!state.isEditingDetails}/>
-                    </div>
-                    </div>
-                    {state.isEditingDetails && (
-                    <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="secondary" onClick={() => {dispatch({type: 'SET_EDIT_DETAILS', payload: false}); dispatch({type: 'SET_FORM_DATA', payload: adminUser})}}>Cancel</Button>
-                        <Button onClick={handleSaveChanges}>Save Changes</Button>
-                    </div>
-                    )}
                 </div>
                 <Separator />
                 <div>
@@ -304,7 +305,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>This will permanently remove your profile photo.</AlertDialogDescription>
+          <AlertDialogDescription>This will permanently remove your support profile photo.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -315,7 +316,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
       <Dialog open={state.isPhotoPreviewOpen} onOpenChange={(isOpen) => { if (!isPending) dispatch({type: 'SET_PHOTO_PREVIEW_DIALOG', payload: isOpen}); }}>
         <DialogContent onInteractOutside={(e) => { if (isPending) e.preventDefault(); }}>
           <DialogHeader>
-            <DialogTitle>Preview Profile Photo</DialogTitle>
+            <DialogTitle>Preview Support Photo</DialogTitle>
           </DialogHeader>
           <div className="my-4 flex justify-center">
             {state.profilePhotoPreview && <Image src={state.profilePhotoPreview} alt="Preview" width={200} height={200} className="rounded-full aspect-square object-cover" />}
@@ -366,3 +367,5 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     </AlertDialog>
   );
 }
+
+    

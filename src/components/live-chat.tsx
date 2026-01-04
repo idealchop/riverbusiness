@@ -132,29 +132,33 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
               const FallbackIcon = isUserMessage ? User : UserCog;
               const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date();
 
+              const displayName = !isUserMessage ? (agent?.supportDisplayName || agent?.name) : user?.name;
+              const displayDescription = !isUserMessage ? (agent?.supportDescription || "Customer Support") : user?.businessName;
+              const displayPhoto = !isUserMessage ? agent?.supportPhotoURL : user?.photoURL;
+
               return (
               <div key={m.id} className={cn("flex items-start gap-3 text-sm", isUserMessage ? 'justify-end' : 'justify-start')}>
                  {!isUserMessage && (
                   <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
-                     <AvatarImage src={sender?.photoURL ?? undefined} alt={sender?.name || 'Agent'} />
+                     <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'Agent'} />
                     <AvatarFallback>
                       <FallbackIcon />
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div className={cn(
-                    "flex flex-col max-w-[50%]",
+                    "flex flex-col max-w-[80%]",
                     isUserMessage ? 'items-end' : 'items-start'
                 )}>
                     {isUserMessage ? (
                       <div className="flex items-center gap-2 mb-1 justify-end">
-                        <span className="font-semibold text-xs">{sender?.name || 'User'}</span>
-                        <span className="text-xs text-muted-foreground">{sender?.businessName}</span>
+                        <span className="font-semibold text-xs">{displayName || 'User'}</span>
+                        <span className="text-xs text-muted-foreground">{displayDescription}</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-xs">{sender?.name || 'Admin'}</span>
-                        <span className="text-xs text-muted-foreground">{(sender as any)?.description || 'Customer Support'}</span>
+                        <span className="font-semibold text-xs">{displayName || 'Admin'}</span>
+                        <span className="text-xs text-muted-foreground">{displayDescription}</span>
                       </div>
                     )}
                   <div className={cn(
@@ -187,7 +191,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                 </div>
                 {isUserMessage && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={sender?.photoURL ?? undefined} alt={sender?.name || 'User'} />
+                    <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'User'} />
                     <AvatarFallback>
                       <FallbackIcon />
                     </AvatarFallback>
@@ -238,3 +242,5 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
     </Card>
   );
 }
+
+    

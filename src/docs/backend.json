@@ -33,7 +33,9 @@
         "lastChatTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last chat message." },
         "hasUnreadAdminMessages": { "type": "boolean", "description": "True if the user has unread messages from an admin." },
         "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." },
-        "description": { "type": "string", "description": "A short description or title, e.g. 'Customer Support'." }
+        "supportDisplayName": { "type": "string", "description": "Public display name for the support agent in chat." },
+        "supportDescription": { "type": "string", "description": "Public description for the support agent (e.g., 'Customer Support')." },
+        "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
@@ -282,3 +284,5 @@
     }
   }
 }
+
+    

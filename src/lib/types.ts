@@ -90,7 +90,9 @@ export interface AppUser {
     lastChatTimestamp?: FieldValue | Timestamp;
     hasUnreadAdminMessages?: boolean;
     hasUnreadUserMessages?: boolean;
-    description?: string;
+    supportDisplayName?: string;
+    supportDescription?: string;
+    supportPhotoURL?: string;
 }
 
 export interface LoginLog {
@@ -190,3 +192,5 @@ export interface ChatMessage {
   attachmentUrl?: string;
   attachmentType?: string;
 }
+
+    
