@@ -818,7 +818,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const paginatedDeliveries = React.useMemo(() => {
         const startIndex = (deliveryCurrentPage - 1) * DELIVERY_ITEMS_PER_PAGE;
-        const endIndex = startIndex + DELIVERY_ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
         return filteredDeliveries.slice(startIndex, endIndex);
     }, [filteredDeliveries, deliveryCurrentPage]);
     
@@ -1058,11 +1058,23 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const handleDeleteSanitationVisit = async () => {
         if (!firestore || !selectedUser || !visitToDelete) return;
         
-        const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToDelete.id);
-        await deleteDoc(visitRef);
-        
-        toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
-        setVisitToDelete(null);
+        try {
+            const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visitToDelete.id);
+            await deleteDoc(visitRef);
+    
+            // Check if there's a shareable link and delete it too.
+            // The public link ID is the same as the visit ID.
+            if (visitToDelete.shareableLink) {
+                const linkRef = doc(firestore, 'publicSanitationLinks', visitToDelete.id);
+                await deleteDoc(linkRef);
+            }
+    
+            toast({ title: "Visit Deleted", description: "The sanitation visit and its public link have been removed." });
+            setVisitToDelete(null);
+        } catch (error) {
+            console.error("Error deleting visit:", error);
+            toast({ variant: 'destructive', title: "Deletion Failed", description: "There was an error removing the sanitation visit."});
+        }
     };
 
     const handleShareVisit = async (visit: SanitationVisit) => {
@@ -2723,21 +2735,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <AlertDialog open={!!visitToDelete} onOpenChange={(open) => {if(!open) setVisitToDelete(null)}}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-
         <Dialog open={isSanitationVisitDialogOpen} onOpenChange={setIsSanitationVisitDialogOpen}>
             <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                  <DialogHeader>
@@ -2873,15 +2870,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                     </ScrollArea>
                     <DialogFooter className="pt-6 flex justify-between w-full">
-                        <AlertDialog>
-                            {visitToEdit && (
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" type="button" disabled={isSubmitting}>
+                        <AlertDialog open={!!visitToDelete} onOpenChange={(open) => {if(!open) setVisitToDelete(null)}}>
+                            <AlertDialogTrigger asChild>
+                                {visitToEdit && (
+                                    <Button variant="destructive" type="button" onClick={() => setVisitToDelete(visitToEdit)} disabled={isSubmitting}>
                                         <Trash2 className="mr-2 h-4 w-4"/>
                                         Delete Visit
                                     </Button>
-                                </AlertDialogTrigger>
-                            )}
+                                )}
+                            </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -3109,5 +3106,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
