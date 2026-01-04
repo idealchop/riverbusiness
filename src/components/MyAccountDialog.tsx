@@ -199,10 +199,37 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (!user || !deliveries) return null;
 
     const now = new Date();
-    const cycleStart = startOfMonth(now);
-    const cycleEnd = endOfMonth(now);
-    const description = `Bill for ${format(now, 'MMMM yyyy')}`;
-    const invoiceIdSuffix = format(now, 'yyyyMM');
+    const currentYear = getYear(now);
+    const currentMonth = getMonth(now);
+
+    let cycleStart: Date;
+    let cycleEnd: Date;
+    let description: string;
+    let invoiceIdSuffix: string;
+    let monthsToBill = 1;
+
+    // Special Case for combined Dec-Jan billing period (when viewing in January or February)
+    if (currentYear === 2026 && (currentMonth === 0 || currentMonth === 1)) {
+        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+        cycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
+        description = 'Bill for December 2025 - January 2026';
+        invoiceIdSuffix = '202512-202601';
+        if (user.plan?.isConsumptionBased) {
+            monthsToBill = 2;
+        } else {
+             // For fixed plans, the special invoice only covers December.
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = endOfMonth(cycleStart);
+            description = 'Bill for December 2025';
+            invoiceIdSuffix = '202512';
+            monthsToBill = 1;
+        }
+    } else {
+        cycleStart = startOfMonth(now);
+        cycleEnd = endOfMonth(now);
+        description = `Bill for ${format(now, 'MMMM yyyy')}`;
+        invoiceIdSuffix = format(now, 'yyyyMM');
+    }
 
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
@@ -219,13 +246,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
     }
     
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+
     let estimatedCost = 0;
     if (user?.plan?.isConsumptionBased) {
         const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
-        estimatedCost = consumptionCost + monthlyEquipmentCost;
+        estimatedCost = consumptionCost + equipmentCostForPeriod;
     } else {
         const planCost = (user?.plan?.price || 0);
-        estimatedCost = planCost + monthlyEquipmentCost;
+        estimatedCost = planCost + (monthlyEquipmentCost * 1); // Always 1 for fixed plans
     }
     
     return {
