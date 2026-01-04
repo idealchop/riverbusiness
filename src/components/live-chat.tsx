@@ -134,7 +134,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                   </Avatar>
                 )}
                 <div className={cn(
-                    "flex flex-col max-w-[80%]",
+                    "flex flex-col max-w-[50%]",
                     isUserMessage ? 'items-end' : 'items-start'
                 )}>
                     {isUserMessage ? (
@@ -208,17 +208,19 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
             </div>
         )}
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
-            <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                <Paperclip className="h-4 w-4" />
-            </Button>
-            <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-          <Input
-            value={input}
-            onChange={handleInputChange}
-            placeholder="Type your message..."
-            className="flex-1"
-            disabled={isUploading}
-          />
+            <div className="relative flex-1">
+              <Input
+                value={input}
+                onChange={handleInputChange}
+                placeholder="Type your message..."
+                className="pl-10"
+                disabled={isUploading}
+              />
+              <Button type="button" variant="ghost" size="icon" className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                  <Paperclip className="h-4 w-4" />
+              </Button>
+               <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+            </div>
           <Button type="submit" size="icon" disabled={isUploading || (!input.trim() && !attachment)}>
             {isUploading ? <div className="h-4 w-4 border-2 border-dashed rounded-full animate-spin"></div> : <Send className="h-4 w-4" />}
           </Button>
