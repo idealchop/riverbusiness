@@ -9,23 +9,37 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Allow full access for the designated admin email.
+      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
       return request.auth != null && request.auth.token.email == 'admin@riverph.com';
     }
 
-    // Admins have global access to all documents for management purposes.
+    // Admins have global read/write access to all documents for management purposes.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
     match /users/{userId} {
-      // A user can read, update, or delete their own profile.
-      allow read, update, delete: if isOwner(userId);
+      // A user can read/get their own profile, and any authenticated user can read an admin's profile.
+      allow get: if request.auth != null;
+      allow list, read: if isOwner(userId);
+      
+      // A user can update specific fields on their own profile.
+      allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny([
+            'name', 'businessEmail', 'address', 'contactNumber', 'photoURL',
+            'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
+            'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
+            'accountStatus', 'lastLogin'
+        ]);
+
+      // A user can delete their own profile (though this is not a current app feature).
+      allow delete: if isOwner(userId);
+      
       // Any authenticated user can create their own user document (happens during profile claim).
       allow create: if request.auth != null;
     }
     
-    // Specific rule for chat messages to allow admin access.
+    // Users and Admins can manage messages within a user's chat subcollection.
     match /users/{userId}/chatMessages/{messageId} {
         allow read, write: if isOwner(userId) || isAdmin();
     }
@@ -36,30 +50,25 @@ service cloud.firestore {
     }
     
     match /unclaimedProfiles/{clientId} {
-      // Admins can create and manage unclaimed profiles (covered by global admin rule).
-      
       // A newly signed-up user can read and delete their own unclaimed profile to claim it.
-      // We verify they are a new user by checking that a document for them does NOT yet exist in the main /users collection.
       allow read, delete: if request.auth != null && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    // Any authenticated user can read station and schedule information.
     match /waterStations/{stationId} {
       allow read: if request.auth != null;
     }
-    
     match /waterStations/{stationId}/{document=**} {
         allow read, list: if request.auth != null;
     }
-
     match /schedules/currentSchedule {
       allow read: if request.auth != null;
     }
 
-    // Collection Group Queries for Admin Panel
+    // Admins can perform collection group queries needed for the admin panel.
      match /{path=**}/payments/{paymentId} {
       allow list: if isAdmin();
     }
-
     match /{path=**}/refillRequests/{requestId} {
       allow list: if isAdmin();
     }
