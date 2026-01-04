@@ -78,7 +78,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                   </Avatar>
                 )}
                 <div className={cn(
-                    "flex-1 max-w-[80%]",
+                    "flex-1 max-w-[50%]",
                     isUserMessage ? 'flex items-end flex-col' : ''
                 )}>
                   {isUserMessage ? (
