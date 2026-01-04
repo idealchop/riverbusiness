@@ -813,14 +813,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                         <Package className="h-4 w-4"/>
                                         <span>
                                             {user.customPlanDetails.gallonQuantity || 0} Containers 
-                                            ({user.customPlanDetails.gallonPrice > 0 ? `P${user.customPlanDetails.gallonPrice}/mo` : 'Free'})
+                                            ({user.customPlanDetails.gallonPrice && user.customPlanDetails.gallonPrice > 0 ? `P${user.customPlanDetails.gallonPrice}${user.customPlanDetails.gallonPaymentType === 'Monthly' ? '/mo' : '/one-time'}` : 'Free'})
                                         </span>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Package className="h-4 w-4"/>
                                         <span>
                                             {user.customPlanDetails.dispenserQuantity || 0} Dispensers 
-                                            ({user.customPlanDetails.dispenserPrice > 0 ? `P${user.customPlanDetails.dispenserPrice}/mo` : 'Free'})
+                                            ({user.customPlanDetails.dispenserPrice && user.customPlanDetails.dispenserPrice > 0 ? `P${user.customPlanDetails.dispenserPrice}${user.customPlanDetails.dispenserPaymentType === 'Monthly' ? '/mo' : '/one-time'}` : 'Free'})
                                         </span>
                                     </li>
                                 </ul>
@@ -1427,3 +1427,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+

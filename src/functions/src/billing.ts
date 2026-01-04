@@ -138,8 +138,14 @@ async function generateInvoiceForUser(
         const delivery = doc.data();
         return sum + containerToLiter(delivery.volumeContainers);
     }, 0);
-
-    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+    
+    let monthlyEquipmentCost = 0;
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+    }
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+    }
 
     if (user.plan.isConsumptionBased) {
         // Consumption-based billing (Flow Plans)
@@ -150,9 +156,9 @@ async function generateInvoiceForUser(
         description = `Bill for ${billingPeriod}`;
     } else {
         // Fixed-plan billing
-        const planCost = user.plan.price || 0;
-        // For fixed plans, the amount is the plan cost + one month of equipment cost, regardless of billing period length.
-        amount = planCost + monthlyEquipmentCost;
+        const planCost = (user.plan.price || 0) * monthsToBill;
+        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+        amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
         // Rollover logic needs to consider the standard monthly allocation, even in a 2-month billing period.
