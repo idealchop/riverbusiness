@@ -2874,7 +2874,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                     </ScrollArea>
                         <DialogFooter className="pt-6 flex justify-between w-full">
-                           <div>
+                           <AlertDialog>
                                 {visitToEdit && (
                                     <AlertDialogTrigger asChild>
                                         <Button variant="destructive" type="button" disabled={isSubmitting}>
@@ -2883,7 +2883,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </Button>
                                     </AlertDialogTrigger>
                                 )}
-                            </div>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                             <div className="flex gap-2">
                                 <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
                                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
