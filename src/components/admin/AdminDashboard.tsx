@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -1369,7 +1368,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
                                         <Upload className="mr-2 h-4 w-4" /> Contract
                                     </Button>
-                                </CardContent>
+                                 </CardContent>
                              </Card>
                         </div>
 
@@ -2873,34 +2872,34 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </div>
                         </div>
                     </ScrollArea>
-                        <DialogFooter className="pt-6 flex justify-between w-full">
-                           <AlertDialog>
-                                {visitToEdit && (
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" type="button" disabled={isSubmitting}>
-                                            <Trash2 className="mr-2 h-4 w-4"/>
-                                            Delete Visit
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                )}
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                            <div className="flex gap-2">
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
-                            </div>
-                        </DialogFooter>
+                    <DialogFooter className="pt-6 flex justify-between w-full">
+                        <AlertDialog>
+                            {visitToEdit && (
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" type="button" disabled={isSubmitting}>
+                                        <Trash2 className="mr-2 h-4 w-4"/>
+                                        Delete Visit
+                                    </Button>
+                                </AlertDialogTrigger>
+                            )}
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        <div className="flex gap-2">
+                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
+                        </div>
+                    </DialogFooter>
                     </form>
                 </Form>
             </DialogContent>
@@ -3110,3 +3109,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
