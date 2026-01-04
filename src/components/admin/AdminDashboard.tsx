@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -210,6 +210,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadedProofUrl, setUploadedProofUrl] = useState<string | null>(null);
     const [uploadedAgreementUrl, setUploadedAgreementUrl] = useState<string | null>(null);
+    const [sharingVisitId, setSharingVisitId] = useState<string | null>(null);
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
@@ -551,7 +552,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     dispenserCode: dr.dispenserCode,
                 })),
             });
-            setIsSanitationVisitDialogOpen(true);
         } else {
             sanitationVisitForm.reset({
                 status: 'Scheduled',
@@ -1060,11 +1060,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
         setVisitToDelete(null);
-        setIsSanitationVisitDialogOpen(false); // Close the edit dialog after deleting
     };
 
     const handleShareVisit = async (visit: SanitationVisit) => {
         if (!firestore || !selectedUser) return;
+        setSharingVisitId(visit.id);
         
         try {
             const linkId = visit.id; 
@@ -1103,6 +1103,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 title: "Error",
                 description: "Could not create a shareable link.",
             });
+        } finally {
+            setSharingVisitId(null);
         }
     };
 
@@ -2697,8 +2699,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <TableCell>{visit.assignedTo}</TableCell>
                                         <TableCell className="text-right space-x-2">
                                             <Button variant="outline" size="sm" onClick={() => { setVisitToEdit(visit); setIsSanitationVisitDialogOpen(true); }}>View</Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleShareVisit(visit)}>
-                                                <Share2 className="h-4 w-4" />
+                                            <Button variant="ghost" size="icon" onClick={() => handleShareVisit(visit)} disabled={sharingVisitId === visit.id}>
+                                                {sharingVisitId === visit.id ? (
+                                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                  <Share2 className="h-4 w-4" />
+                                                )}
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -2715,173 +2721,173 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); sanitationVisitForm.reset(); } setIsSanitationVisitDialogOpen(open);}}>
-            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
-                    <DialogDescription>
-                        {visitToEdit ? 'Update the details for this sanitation visit.' : `Schedule a new sanitation visit for ${selectedUser?.businessName}.`}
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...sanitationVisitForm}>
-                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4 flex-1 min-h-0 flex flex-col">
-                    <ScrollArea className="pr-6 -mr-6 flex-1">
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Scheduled Date</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Quality Officer</FormLabel>
-                                        <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                                <SelectItem value="Completed">Completed</SelectItem>
-                                                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                 <FormField
-                                    control={sanitationVisitForm.control}
-                                    name="reportFile"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Attach Report (Optional)</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    type="file"
-                                                    accept="application/pdf,image/*"
-                                                    onChange={(e) => field.onChange(e.target.files)}
-                                                    disabled={isSubmitting}
-                                                />
-                                            </FormControl>
-                                            {isSubmitting && uploadProgress > 0 && (
-                                                <Progress value={uploadProgress} className="mt-2" />
-                                            )}
+        <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); } setIsSanitationVisitDialogOpen(open);}}>
+            <AlertDialog>
+                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
+                        <DialogDescription>
+                            {visitToEdit ? 'Update the details for this sanitation visit.' : `Schedule a new sanitation visit for ${selectedUser?.businessName}.`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Form {...sanitationVisitForm}>
+                        <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4 flex-1 min-h-0 flex flex-col">
+                        <ScrollArea className="pr-6 -mr-6 flex-1">
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Scheduled Date</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                                </PopoverContent>
+                                            </Popover>
                                             <FormMessage />
                                         </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="space-y-4">
-                                <h4 className="font-semibold text-sm">Dispensers to Inspect</h4>
-                                {dispenserFields.map((field, index) => (
-                                  <div key={field.id} className="flex items-start gap-2">
-                                    <div className="grid grid-cols-2 gap-2 flex-1">
-                                        <FormField
-                                            control={sanitationVisitForm.control}
-                                            name={`dispenserReports.${index}.dispenserName`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                        <Input {...field} placeholder={`Name (e.g. Lobby)`} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                         <FormField
-                                            control={sanitationVisitForm.control}
-                                            name={`dispenserReports.${index}.dispenserCode`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                        <Input {...field} placeholder={`Code (e.g. D-001)`} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
+                                    )}/>
+                                    <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Quality Officer</FormLabel>
+                                            <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Status</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                                    <SelectItem value="Completed">Completed</SelectItem>
+                                                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                     <FormField
+                                        control={sanitationVisitForm.control}
+                                        name="reportFile"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Attach Report (Optional)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="file"
+                                                        accept="application/pdf,image/*"
+                                                        onChange={(e) => field.onChange(e.target.files)}
+                                                        disabled={isSubmitting}
+                                                    />
+                                                </FormControl>
+                                                {isSubmitting && uploadProgress > 0 && (
+                                                    <Progress value={uploadProgress} className="mt-2" />
+                                                )}
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="space-y-4">
+                                    <h4 className="font-semibold text-sm">Dispensers to Inspect</h4>
+                                    {dispenserFields.map((field, index) => (
+                                      <div key={field.id} className="flex items-start gap-2">
+                                        <div className="grid grid-cols-2 gap-2 flex-1">
+                                            <FormField
+                                                control={sanitationVisitForm.control}
+                                                name={`dispenserReports.${index}.dispenserName`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormControl>
+                                                            <Input {...field} placeholder={`Name (e.g. Lobby)`} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                             <FormField
+                                                control={sanitationVisitForm.control}
+                                                name={`dispenserReports.${index}.dispenserCode`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormControl>
+                                                            <Input {...field} placeholder={`Code (e.g. D-001)`} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => removeDispenser(index)}
+                                          disabled={dispenserFields.length <= 1}
+                                          className="mt-2"
+                                        >
+                                          <MinusCircle className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
                                     <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => removeDispenser(index)}
-                                      disabled={dispenserFields.length <= 1}
-                                      className="mt-2"
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => appendDispenser({ 
+                                            dispenserId: `dispenser-${Date.now()}`, 
+                                            dispenserName: ``, 
+                                            dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` 
+                                        })}
                                     >
-                                      <MinusCircle className="h-4 w-4" />
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Add another dispenser
                                     </Button>
-                                  </div>
-                                ))}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => appendDispenser({ 
-                                        dispenserId: `dispenser-${Date.now()}`, 
-                                        dispenserName: ``, 
-                                        dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` 
-                                    })}
-                                >
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Add another dispenser
-                                </Button>
-                                 <FormMessage>{sanitationVisitForm.formState.errors.dispenserReports?.root?.message}</FormMessage>
+                                     <FormMessage>{sanitationVisitForm.formState.errors.dispenserReports?.root?.message}</FormMessage>
+                                </div>
                             </div>
-                        </div>
-                    </ScrollArea>
-                        <DialogFooter className="pt-6 flex justify-between w-full">
-                            <div>
-                                {visitToEdit && (
-                                    <AlertDialog>
+                        </ScrollArea>
+                            <DialogFooter className="pt-6 flex justify-between w-full">
+                                <div>
+                                    {visitToEdit && (
                                         <AlertDialogTrigger asChild>
                                             <Button variant="destructive" type="button" disabled={isSubmitting}>
                                                 <Trash2 className="mr-2 h-4 w-4"/>
                                                 Delete Visit
                                             </Button>
                                         </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
-                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
-                            </div>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                                    <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
+                                </div>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                     <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </DialogContent>
+            </AlertDialog>
         </Dialog>
 
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
