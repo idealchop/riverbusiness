@@ -247,7 +247,7 @@ export function ComplianceDialog({
       </Dialog>
       
       <Dialog open={!!selectedSanitationVisit} onOpenChange={() => setSelectedSanitationVisit(null)}>
-        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
                 <DialogTitle>Sanitation Visit Report</DialogTitle>
                 <DialogDescription>
@@ -255,7 +255,7 @@ export function ComplianceDialog({
                 </DialogDescription>
             </DialogHeader>
 
-            <div className="flex-1 min-h-0">
+            <div className="max-h-[60vh]">
                 <ScrollArea className="h-full pr-6 -mr-6">
                     <div className="py-4 space-y-6">
                         {selectedSanitationVisit?.status === 'Completed' ? (
