@@ -276,11 +276,11 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     
      // --- Equipment Details ---
      if (user.customPlanDetails) {
-        const { gallonQuantity, dispenserQuantity, litersPerMonth } = user.customPlanDetails;
+        const { gallonQuantity, dispenserQuantity, litersPerMonth, gallonPaymentType, dispenserPaymentType } = user.customPlanDetails;
         let equipmentBody: string[][] = [];
         if(litersPerMonth > 0) equipmentBody.push(['Purchased Liters', `${litersPerMonth.toLocaleString()} L/month`]);
-        if (gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity}`]);
-        if (dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity}`]);
+        if (gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity} (${gallonPaymentType})`]);
+        if (dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity} (${dispenserPaymentType})`]);
         
         if (equipmentBody.length > 0) {
             lastY = renderTable('Subscription Details', [], equipmentBody, lastY);
@@ -453,8 +453,17 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     const planName = user.plan?.name || 'N/A';
     let litersText = '';
     if (user.plan?.isConsumptionBased) {
+        let monthlyEquipmentCost = 0;
+        if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+            monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+        }
+        if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+            monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+        }
+        
         const pricePerLiter = user.plan.price || 1; // Avoid division by zero
-        const consumedLiters = invoice.amount / pricePerLiter;
+        const consumptionAmount = invoice.amount - monthlyEquipmentCost;
+        const consumedLiters = consumptionAmount > 0 ? consumptionAmount / pricePerLiter : 0;
         litersText = `(${consumedLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L consumed)`;
     } else {
         const monthlyLiters = user.customPlanDetails?.litersPerMonth?.toLocaleString();

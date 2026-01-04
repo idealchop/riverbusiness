@@ -229,7 +229,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
 
-    const monthlyEquipmentCost = (user?.customPlanDetails?.gallonPrice || 0) + (user?.customPlanDetails?.dispenserPrice || 0);
+    let monthlyEquipmentCost = 0;
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+    }
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+    }
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
     
     let estimatedCost = 0;
@@ -412,16 +418,24 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     const consumedLitersThisMonth = monthlyDeliveries.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
     let totalAmount = 0;
-    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+    
+    let monthlyEquipmentCost = 0;
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+    }
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+    }
+
+    const monthsToBill = soaMonth === specialPeriodKey ? 2 : 1;
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+
 
     if (user.plan?.isConsumptionBased) {
-        totalAmount = consumedLitersThisMonth * (user.plan.price || 0) + monthlyEquipmentCost;
+        totalAmount = consumedLitersThisMonth * (user.plan.price || 0) + equipmentCostForPeriod;
     } else {
-        totalAmount = (user.plan?.price || 0) + monthlyEquipmentCost;
-    }
-    
-    if (soaMonth === specialPeriodKey && !user.plan?.isConsumptionBased) {
-        totalAmount *= 2;
+        const planCost = (user.plan?.price || 0) * monthsToBill;
+        totalAmount = planCost + equipmentCostForPeriod;
     }
 
     generateMonthlySOA({
@@ -527,20 +541,27 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
     const isCombinedPeriod = state.invoiceForBreakdown.id.includes('202512-202601');
     const monthsToBill = isCombinedPeriod ? 2 : 1;
-
-    const gallonCost = (user.customPlanDetails?.gallonPrice || 0) * monthsToBill;
-    const dispenserCost = (user.customPlanDetails?.dispenserPrice || 0) * monthsToBill;
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
+
+    let gallonCost = 0;
+    let dispenserCost = 0;
+    
+    // Only add equipment cost if it's a monthly charge
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+        gallonCost = (user.customPlanDetails?.gallonPrice || 0) * monthsToBill;
+    }
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+        dispenserCost = (user.customPlanDetails?.dispenserPrice || 0) * monthsToBill;
+    }
+    
     let planCost = 0;
     let consumptionCost = 0;
 
     if (user.plan?.isConsumptionBased) {
-        if (isCurrent && currentMonthInvoice) {
-          consumptionCost = currentMonthInvoice.amount - gallonCost - dispenserCost;
-        } else {
-            consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
-        }
+        // For consumption-based, cost is whatever is left after monthly equipment fees
+        consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
     } else {
+        // For fixed plans, cost is the plan price * months
         planCost = (user.plan?.price || 0) * monthsToBill;
     }
 
