@@ -345,9 +345,9 @@ export default function SanitationReportPage() {
                             {visitData?.officerSignature ? (
                                 <div className="space-y-2">
                                     <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                    <div className="border rounded-md p-3 bg-muted text-sm space-y-2">
-                                        <p><span className="font-medium">Name:</span> {visitData.assignedTo}</p>
-                                        <p><span className="font-medium">Date:</span> {visitData.officerSignatureDate ? format(new Date(visitData.officerSignatureDate), 'PP') : ''}</p>
+                                    <div className="text-center md:text-left pt-1">
+                                        <p className="font-semibold text-sm">{visitData.assignedTo}</p>
+                                        <p className="text-xs text-muted-foreground">{visitData.officerSignatureDate ? format(new Date(visitData.officerSignatureDate), 'PP') : ''}</p>
                                     </div>
                                     <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo Signature</Button>
                                 </div>
@@ -360,9 +360,9 @@ export default function SanitationReportPage() {
                             {visitData?.clientSignature ? (
                                 <div className="space-y-2">
                                     <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                     <div className="border rounded-md p-3 bg-muted text-sm space-y-2">
-                                        <p><span className="font-medium">Name:</span> {visitData.clientRepName}</p>
-                                        <p><span className="font-medium">Date:</span> {visitData.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), 'PP') : ''}</p>
+                                     <div className="text-center md:text-left pt-1">
+                                        <p className="font-semibold text-sm">{visitData.clientRepName}</p>
+                                        <p className="text-xs text-muted-foreground">{visitData.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), 'PP') : ''}</p>
                                     </div>
                                     <Button size="sm" variant="outline" onClick={() => setVisitData(prev => ({...prev, clientSignature: '', clientRepName: '', clientSignatureDate: ''}))}>Redo Signature</Button>
                                 </div>
