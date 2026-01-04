@@ -111,9 +111,12 @@ export default function DashboardLayout({
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
-  const adminQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'Admin'), where('email', '==', 'admin@riverph.com')) : null, [firestore]);
-  const { data: adminUsers } = useCollection<AppUser>(adminQuery);
-  const adminAgent = useMemo(() => (adminUsers && adminUsers.length > 0) ? adminUsers[0] : null, [adminUsers]);
+  // --- FIX START ---
+  // The admin UID is static and known. Hardcode it for a direct, efficient fetch.
+  const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2';
+  const adminDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', ADMIN_UID) : null, [firestore]);
+  const { data: adminAgent } = useDoc<AppUser>(adminDocRef);
+  // --- FIX END ---
   
   const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
   const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
