@@ -296,9 +296,10 @@ export function ComplianceDialog({
                               <CardHeader>
                                   <CardTitle className="text-base flex items-center gap-2">
                                       <Droplet className="h-5 w-5 text-primary"/>
-                                      Checklist for: <span className="font-bold">{report.dispenserName}</span>
+                                      {report.dispenserName}
                                       {report.dispenserCode && <Badge variant="secondary">{report.dispenserCode}</Badge>}
                                   </CardTitle>
+                                   <CardDescription>Sanitation Checklist</CardDescription>
                               </CardHeader>
                               <CardContent>
                                   <Table>

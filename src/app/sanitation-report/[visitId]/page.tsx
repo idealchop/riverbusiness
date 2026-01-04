@@ -298,8 +298,11 @@ export default function SanitationReportPage() {
                         <TabsContent key={report.dispenserId} value={report.dispenserId} className="mt-4">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">Sanitation Checklist for: <span className="text-primary">{report.dispenserName}</span> {report.dispenserCode && <Badge variant="outline">{report.dispenserCode}</Badge>}</CardTitle>
-                                    <CardDescription>Please complete the following checklist. Any unchecked items require remarks.</CardDescription>
+                                    <CardTitle className="flex items-center gap-2">
+                                        {report.dispenserName}
+                                        {report.dispenserCode && <Badge variant="outline">{report.dispenserCode}</Badge>}
+                                    </CardTitle>
+                                    <CardDescription>Sanitation Checklist. Please complete all items. Any unchecked items require remarks.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
