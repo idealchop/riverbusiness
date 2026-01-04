@@ -12,9 +12,17 @@ import { Send, User, UserCog } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
-import type { AppUser, ChatMessage } from '@/lib/types';
+import type { AppUser } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
+
+// Add ChatMessage to local types as it's not in the shared file yet
+export interface ChatMessage {
+  id: string;
+  text: string;
+  role: 'user' | 'admin';
+  timestamp: Timestamp;
+}
 
 interface LiveChatProps {
     chatMessages: ChatMessage[];
@@ -73,17 +81,22 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                     "flex-1 max-w-[80%]",
                     isUserMessage ? 'flex items-end flex-col' : ''
                 )}>
-                  {!isUserMessage && (
+                  {isUserMessage ? (
+                    <div className="flex items-center gap-2 mb-1 justify-end">
+                      <span className="font-semibold text-xs">{sender?.name || 'User'}</span>
+                      <span className="text-xs text-muted-foreground">{sender?.businessName}</span>
+                    </div>
+                  ) : (
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-semibold text-xs">{sender?.name || 'Admin'}</span>
                       <span className="text-xs text-muted-foreground">Customer Support</span>
                     </div>
                   )}
                   <div className={cn(
-                      "p-3 rounded-lg",
+                      "p-3 rounded-lg break-words",
                       isUserMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
                   )}>
-                    <div className="prose-sm max-w-full break-words">{messageContent}</div>
+                    <div className="prose-sm max-w-full">{messageContent}</div>
                   </div>
                    <div className="text-xs text-muted-foreground mt-1 px-1">
                         {formatDistanceToNow(messageDate, { addSuffix: true })}
