@@ -156,8 +156,12 @@ async function generateInvoiceForUser(
         description = `Bill for ${billingPeriod}`;
     } else {
         // Fixed-plan billing
-        const planCost = (user.plan.price || 0) * monthsToBill;
+        const planCost = user.plan.price || 0;
+        // For a combined invoice, equipment is charged for each month.
+        // For a standard invoice, monthsToBill is 1.
         const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+        // For a combined invoice (monthsToBill > 1), we charge the plan cost only ONCE.
+        // For a standard invoice, this is just planCost + equipmentCost.
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
