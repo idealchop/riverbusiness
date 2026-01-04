@@ -363,11 +363,11 @@ export function ComplianceDialog({
                               </div>
                           )}
                       </CardContent>
-                       <CardFooter>
-                        <p className="text-xs text-muted-foreground">
-                            We ensure your water is safe to drink through rigorous testing and regular sanitation. For any concerns, please contact us at <a href="mailto:customer@riverph.com" className="text-primary hover:underline">customer@riverph.com</a>.
-                        </p>
-                    </CardFooter>
+                       <CardFooter className="justify-center text-center">
+                            <p className="text-xs text-muted-foreground">
+                                We ensure your water is safe to drink through rigorous testing and regular sanitation. For any concerns, please contact us at <a href="mailto:customer@riverph.com" className="text-primary hover:underline">customer@riverph.com</a>.
+                            </p>
+                        </CardFooter>
                   </Card>
                   )}
               </div>
@@ -389,5 +389,3 @@ export function ComplianceDialog({
     </>
   );
 }
-
-    
