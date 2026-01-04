@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2 } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -1066,10 +1066,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visit.id);
             await updateDoc(visitRef, { shareableLink });
 
-            navigator.clipboard.writeText(shareableLink);
             toast({
-                title: "Link Copied!",
-                description: "Shareable link for the report has been copied to your clipboard.",
+                title: "Link Ready to Share!",
+                description: (
+                    <div className="flex items-center gap-2">
+                        <Input value={shareableLink} readOnly className="h-8 text-xs" />
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                navigator.clipboard.writeText(shareableLink);
+                                toast({ title: "Copied!" });
+                            }}
+                        >
+                            <Copy className="h-3 w-3" />
+                        </Button>
+                    </div>
+                ),
             });
         } catch (error) {
             console.error("Error creating shareable link:", error);
