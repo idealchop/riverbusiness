@@ -55,7 +55,14 @@
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
-        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
+        "customPlanDetails": { 
+          "type": "object", 
+          "description": "Details of the user's custom plan.",
+          "properties": {
+            "gallonPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
+            "dispenserPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] }
+          }
+        }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt"]
     },

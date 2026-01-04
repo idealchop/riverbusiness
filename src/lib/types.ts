@@ -91,7 +91,20 @@ export interface AppUser {
     onboardingComplete?: boolean;
     plan?: any;
     clientType?: string | null;
-    customPlanDetails?: any;
+    customPlanDetails?: {
+        litersPerMonth?: number;
+        bonusLiters?: number;
+        gallonQuantity?: number;
+        gallonPrice?: number;
+        gallonPaymentType?: 'Monthly' | 'One-Time';
+        dispenserQuantity?: number;
+        dispenserPrice?: number;
+        dispenserPaymentType?: 'Monthly' | 'One-Time';
+        deliveryFrequency?: string;
+        deliveryDay?: string;
+        deliveryTime?: string;
+        autoRefillEnabled?: boolean;
+    };
     currentContractUrl?: string;
     photoURL?: string;
     contractStatus?: string;
@@ -205,5 +218,7 @@ export interface ChatMessage {
   attachmentUrl?: string;
   attachmentType?: string;
 }
+
+    
 
     

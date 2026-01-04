@@ -99,8 +99,10 @@ const planDetailsSchema = z.object({
   bonusLiters: z.coerce.number().optional(),
   gallonQuantity: z.coerce.number().min(0, "Cannot be negative"),
   gallonPrice: z.coerce.number().min(0, "Cannot be negative"),
+  gallonPaymentType: z.enum(['Monthly', 'One-Time']),
   dispenserQuantity: z.coerce.number().min(0, "Cannot be negative"),
   dispenserPrice: z.coerce.number().min(0, "Cannot be negative"),
+  dispenserPaymentType: z.enum(['Monthly', 'One-Time']),
   deliveryFrequency: z.string().min(1, "Frequency is required"),
   deliveryDay: z.string().min(1, "Day is required"),
   deliveryTime: z.string().min(1, "Time is required"),
@@ -506,8 +508,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 bonusLiters: 0,
                 gallonQuantity: 0,
                 gallonPrice: 0,
+                gallonPaymentType: 'Monthly',
                 dispenserQuantity: 0,
                 dispenserPrice: 0,
+                dispenserPaymentType: 'Monthly',
                 deliveryFrequency: 'Weekly',
                 deliveryDay: 'Monday',
                 deliveryTime: '09:00',
@@ -2721,174 +2725,170 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={isSanitationVisitDialogOpen} onOpenChange={(open) => { if (!open) { setVisitToEdit(null); } setIsSanitationVisitDialogOpen(open);}}>
-            <AlertDialog>
-                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
-                        <DialogDescription>
-                            {visitToEdit ? 'Update the details for this sanitation visit.' : `Schedule a new sanitation visit for ${selectedUser?.businessName}.`}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <Form {...sanitationVisitForm}>
-                        <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4 flex-1 min-h-0 flex flex-col">
-                        <ScrollArea className="pr-6 -mr-6 flex-1">
-                            <div className="grid md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                    <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>Scheduled Date</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                    <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Quality Officer</FormLabel>
-                                            <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                    <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Status</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                                    <SelectItem value="Completed">Completed</SelectItem>
-                                                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                     <FormField
-                                        control={sanitationVisitForm.control}
-                                        name="reportFile"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Attach Report (Optional)</FormLabel>
+        <AlertDialog open={!!visitToDelete} onOpenChange={(open) => {if(!open) setVisitToDelete(null)}}>
+            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
+                    <DialogDescription>
+                        {visitToEdit ? 'Update the details for this sanitation visit.' : `Schedule a new sanitation visit for ${selectedUser?.businessName}.`}
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...sanitationVisitForm}>
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="py-4 flex-1 min-h-0 flex flex-col">
+                    <ScrollArea className="pr-6 -mr-6 flex-1">
+                        <div className="grid md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <FormField control={sanitationVisitForm.control} name="scheduledDate" render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Scheduled Date</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
                                                 <FormControl>
-                                                    <Input
-                                                        type="file"
-                                                        accept="application/pdf,image/*"
-                                                        onChange={(e) => field.onChange(e.target.files)}
-                                                        disabled={isSubmitting}
-                                                    />
+                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
                                                 </FormControl>
-                                                {isSubmitting && uploadProgress > 0 && (
-                                                    <Progress value={uploadProgress} className="mt-2" />
-                                                )}
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="space-y-4">
-                                    <h4 className="font-semibold text-sm">Dispensers to Inspect</h4>
-                                    {dispenserFields.map((field, index) => (
-                                      <div key={field.id} className="flex items-start gap-2">
-                                        <div className="grid grid-cols-2 gap-2 flex-1">
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField control={sanitationVisitForm.control} name="assignedTo" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Quality Officer</FormLabel>
+                                        <FormControl><Input placeholder="e.g. John Doe" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField control={sanitationVisitForm.control} name="status" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Status</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select status..." /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                                <SelectItem value="Completed">Completed</SelectItem>
+                                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                    <FormField
+                                    control={sanitationVisitForm.control}
+                                    name="reportFile"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Attach Report (Optional)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="file"
+                                                    accept="application/pdf,image/*"
+                                                    onChange={(e) => field.onChange(e.target.files)}
+                                                    disabled={isSubmitting}
+                                                />
+                                            </FormControl>
+                                            {isSubmitting && uploadProgress > 0 && (
+                                                <Progress value={uploadProgress} className="mt-2" />
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="space-y-4">
+                                <h4 className="font-semibold text-sm">Dispensers to Inspect</h4>
+                                {dispenserFields.map((field, index) => (
+                                    <div key={field.id} className="flex items-start gap-2">
+                                    <div className="grid grid-cols-2 gap-2 flex-1">
+                                        <FormField
+                                            control={sanitationVisitForm.control}
+                                            name={`dispenserReports.${index}.dispenserName`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input {...field} placeholder={`Name (e.g. Lobby)`} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
                                             <FormField
-                                                control={sanitationVisitForm.control}
-                                                name={`dispenserReports.${index}.dispenserName`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormControl>
-                                                            <Input {...field} placeholder={`Name (e.g. Lobby)`} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                             <FormField
-                                                control={sanitationVisitForm.control}
-                                                name={`dispenserReports.${index}.dispenserCode`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormControl>
-                                                            <Input {...field} placeholder={`Code (e.g. D-001)`} />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => removeDispenser(index)}
-                                          disabled={dispenserFields.length <= 1}
-                                          className="mt-2"
-                                        >
-                                          <MinusCircle className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    ))}
+                                            control={sanitationVisitForm.control}
+                                            name={`dispenserReports.${index}.dispenserCode`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input {...field} placeholder={`Code (e.g. D-001)`} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                     <Button
                                         type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => appendDispenser({ 
-                                            dispenserId: `dispenser-${Date.now()}`, 
-                                            dispenserName: ``, 
-                                            dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` 
-                                        })}
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeDispenser(index)}
+                                        disabled={dispenserFields.length <= 1}
+                                        className="mt-2"
                                     >
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                        Add another dispenser
+                                        <MinusCircle className="h-4 w-4" />
                                     </Button>
-                                     <FormMessage>{sanitationVisitForm.formState.errors.dispenserReports?.root?.message}</FormMessage>
-                                </div>
+                                    </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => appendDispenser({ 
+                                        dispenserId: `dispenser-${Date.now()}`, 
+                                        dispenserName: ``, 
+                                        dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` 
+                                    })}
+                                >
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Add another dispenser
+                                </Button>
+                                    <FormMessage>{sanitationVisitForm.formState.errors.dispenserReports?.root?.message}</FormMessage>
                             </div>
-                        </ScrollArea>
-                            <DialogFooter className="pt-6 flex justify-between w-full">
-                                <div>
-                                    {visitToEdit && (
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" type="button" disabled={isSubmitting}>
-                                                <Trash2 className="mr-2 h-4 w-4"/>
-                                                Delete Visit
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                    )}
-                                </div>
-                                <div className="flex gap-2">
-                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
-                                    <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
-                                </div>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                     <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </DialogContent>
-            </AlertDialog>
-        </Dialog>
+                        </div>
+                    </ScrollArea>
+                        <DialogFooter className="pt-6 flex justify-between w-full">
+                            <div>
+                                {visitToEdit && (
+                                    <Button variant="destructive" type="button" onClick={() => setVisitToDelete(visitToEdit)} disabled={isSubmitting}>
+                                        <Trash2 className="mr-2 h-4 w-4"/>
+                                        Delete Visit
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
+                            </div>
+                        </DialogFooter>
+                    </form>
+                </Form>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </DialogContent>
+        </AlertDialog>
 
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
             <DialogContent className="sm:max-w-4xl">
@@ -3029,18 +3029,32 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             )}
                                              <div className="space-y-4 p-4 border rounded-lg">
                                                 <h4 className="font-medium">Equipment & Schedule</h4>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (
                                                         <FormItem><FormLabel>Gallon Quantity</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
                                                     )}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (
-                                                        <FormItem><FormLabel>Gallon Price (monthly)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        <FormItem><FormLabel>Gallon Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
                                                     )}/>
+                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (
+                                                        <FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                            <SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent>
+                                                        </Select><FormMessage/></FormItem>
+                                                    )}/>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (
-                                                        <FormItem><FormLabel>Dispenser Quantity</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        <FormItem><FormLabel>Dispenser Qty</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
                                                     )}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (
-                                                        <FormItem><FormLabel>Dispenser Price (monthly)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                                        <FormItem><FormLabel>Dispenser Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
+                                                    )}/>
+                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserPaymentType" render={({ field }) => (
+                                                        <FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                            <SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent>
+                                                        </Select><FormMessage/></FormItem>
                                                     )}/>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
@@ -3080,3 +3094,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
