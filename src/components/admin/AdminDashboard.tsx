@@ -158,7 +158,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const waterStationsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'waterStations') : null, [firestore, isAdmin]);
     const { data: waterStations, isLoading: stationsLoading } = useCollection<WaterStation>(waterStationsQuery);
 
-    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? collectionGroup(firestore, 'refillRequests') : null, [firestore, isAdmin]);
+    const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collectionGroup(firestore, 'refillRequests')) : null, [firestore, isAdmin]);
     const { data: refillRequests, isLoading: refillRequestsLoading } = useCollection<RefillRequest>(refillRequestsQuery);
     
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
@@ -2659,7 +2659,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </AlertDialogContent>
         </AlertDialog>
 
-
         <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
             <DialogContent className="sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
@@ -2726,8 +2725,23 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         </Dialog>
         
         <AlertDialog open={!!visitToDelete} onOpenChange={(open) => {if(!open) setVisitToDelete(null)}}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <Dialog open={isSanitationVisitDialogOpen} onOpenChange={setIsSanitationVisitDialogOpen}>
             <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-                <DialogHeader>
+                 <DialogHeader>
                     <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
                     <DialogDescription>
                         {visitToEdit ? 'Update the details for this sanitation visit.' : `Schedule a new sanitation visit for ${selectedUser?.businessName}.`}
@@ -2860,12 +2874,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </div>
                     </ScrollArea>
                         <DialogFooter className="pt-6 flex justify-between w-full">
-                            <div>
+                           <div>
                                 {visitToEdit && (
-                                    <Button variant="destructive" type="button" onClick={() => setVisitToDelete(visitToEdit)} disabled={isSubmitting}>
-                                        <Trash2 className="mr-2 h-4 w-4"/>
-                                        Delete Visit
-                                    </Button>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" type="button" disabled={isSubmitting}>
+                                            <Trash2 className="mr-2 h-4 w-4"/>
+                                            Delete Visit
+                                        </Button>
+                                    </AlertDialogTrigger>
                                 )}
                             </div>
                             <div className="flex gap-2">
@@ -2875,20 +2891,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </DialogFooter>
                     </form>
                 </Form>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
             </DialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
             <DialogContent className="sm:max-w-4xl">
@@ -3094,5 +3098,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
