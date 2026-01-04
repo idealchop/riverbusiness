@@ -247,15 +247,14 @@ export function ComplianceDialog({
       </Dialog>
       
       <Dialog open={!!selectedSanitationVisit} onOpenChange={() => setSelectedSanitationVisit(null)}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle>Sanitation Visit Report</DialogTitle>
                 <DialogDescription>
                     Report for {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PP') : ''} by Quality Officer {selectedSanitationVisit?.assignedTo}.
                 </DialogDescription>
             </DialogHeader>
-
-            <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+             <div className="flex-1 overflow-y-auto -mx-6 px-6">
               <div className="py-4 space-y-6">
                   {selectedSanitationVisit?.status === 'Completed' ? (
                       <Card>
@@ -342,15 +341,23 @@ export function ComplianceDialog({
                       <CardHeader><CardTitle className="text-base">Signatures</CardTitle></CardHeader>
                       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedSanitationVisit.officerSignature && (
-                          <div className="space-y-2 text-center">
-                          <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                          <p className="text-xs font-semibold">Quality Officer</p>
+                          <div className="space-y-2">
+                              <p className="text-xs font-semibold text-center">Quality Officer</p>
+                              <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                              <div className="border rounded-md p-2 bg-muted text-xs space-y-1 text-center">
+                                  <p><span className="font-medium">{selectedSanitationVisit.assignedTo}</span></p>
+                                  <p>{selectedSanitationVisit.officerSignatureDate ? format(new Date(selectedSanitationVisit.officerSignatureDate), 'PP') : ''}</p>
+                              </div>
                           </div>
                       )}
                       {selectedSanitationVisit.clientSignature && (
-                          <div className="space-y-2 text-center">
-                          <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                          <p className="text-xs font-semibold">Client Representative</p>
+                          <div className="space-y-2">
+                              <p className="text-xs font-semibold text-center">Client Representative</p>
+                              <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                              <div className="border rounded-md p-2 bg-muted text-xs space-y-1 text-center">
+                                  <p><span className="font-medium">{selectedSanitationVisit.clientRepName}</span></p>
+                                  <p>{selectedSanitationVisit.clientSignatureDate ? format(new Date(selectedSanitationVisit.clientSignatureDate), 'PP') : ''}</p>
+                              </div>
                           </div>
                       )}
                       </CardContent>
@@ -360,8 +367,8 @@ export function ComplianceDialog({
                       <p>We ensure your water is safe to drink. In case of any concerns or issues, please reach out to us at <a href="mailto:customer@riverph.com" className="font-semibold text-primary hover:underline">customer@riverph.com</a>.</p>
                   </div>
               </div>
-            </ScrollArea>
-            <DialogFooter className="justify-between pt-6 border-t">
+            </div>
+            <DialogFooter className="justify-between pt-6 border-t -mx-6 px-6 pb-6">
                 <div>
                   {selectedSanitationVisit?.reportUrl && (
                       <Button variant="outline" asChild>
@@ -378,5 +385,3 @@ export function ComplianceDialog({
     </>
   );
 }
-
-    
