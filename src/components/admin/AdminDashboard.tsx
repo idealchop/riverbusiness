@@ -1060,6 +1060,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
         setVisitToDelete(null);
+        setIsSanitationVisitDialogOpen(false); // Close the edit dialog after deleting
     };
 
     const handleShareVisit = async (visit: SanitationVisit) => {
@@ -2695,7 +2696,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </TableCell>
                                         <TableCell>{visit.assignedTo}</TableCell>
                                         <TableCell className="text-right space-x-2">
-                                            <Button variant="outline" size="sm" onClick={() => setVisitToEdit(visit)}>View</Button>
+                                            <Button variant="outline" size="sm" onClick={() => { setVisitToEdit(visit); setIsSanitationVisitDialogOpen(true); }}>View</Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleShareVisit(visit)}>
                                                 <Share2 className="h-4 w-4" />
                                             </Button>
@@ -2848,9 +2849,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             </div>
                         </div>
                     </ScrollArea>
-                        <DialogFooter className="pt-6">
-                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
+                        <DialogFooter className="pt-6 flex justify-between w-full">
+                            <div>
+                                {visitToEdit && (
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" type="button" disabled={isSubmitting}>
+                                            <Trash2 className="mr-2 h-4 w-4"/>
+                                            Delete Visit
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Visit"}</Button>
+                            </div>
                         </DialogFooter>
                     </form>
                 </Form>
@@ -2866,7 +2879,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Sanitation</AlertDialogAction>
+                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
