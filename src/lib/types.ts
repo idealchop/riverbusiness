@@ -38,8 +38,6 @@ export interface DispenserReport {
     dispenserId: string;
     dispenserName: string;
     checklist: SanitationChecklistItem[];
-    officerSignature?: string;
-    clientSignature?: string;
 }
 
 export interface SanitationVisit {
@@ -51,6 +49,8 @@ export interface SanitationVisit {
   reportUrl?: string; // This might be a summary report URL now
   dispenserReports?: DispenserReport[]; // Replaces single checklist
   shareableLink?: string;
+  officerSignature?: string;
+  clientSignature?: string;
 }
 
 export interface WaterStation {

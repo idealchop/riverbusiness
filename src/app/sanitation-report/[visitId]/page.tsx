@@ -162,44 +162,36 @@ export default function SanitationReportPage() {
     }, [firestore, linkId]);
 
     const handleChecklistChange = (dispenserId: string, itemIndex: number, field: 'checked' | 'remarks', value: boolean | string) => {
-        if (!visitData) return;
-
-        const updatedReports = visitData.dispenserReports?.map(report => {
-            if (report.dispenserId === dispenserId) {
-                const newChecklist = [...report.checklist];
-                (newChecklist[itemIndex] as any)[field] = value;
-                return { ...report, checklist: newChecklist };
-            }
-            return report;
+        setVisitData(prevVisitData => {
+            if (!prevVisitData) return null;
+    
+            const updatedReports = prevVisitData.dispenserReports?.map(report => {
+                if (report.dispenserId === dispenserId) {
+                    const newChecklist = [...report.checklist];
+                    (newChecklist[itemIndex] as any)[field] = value;
+                    return { ...report, checklist: newChecklist };
+                }
+                return report;
+            });
+    
+            return { ...prevVisitData, dispenserReports: updatedReports };
         });
-
-        setVisitData({ ...visitData, dispenserReports: updatedReports });
     };
     
-    const handleSaveSignature = (dispenserId: string, type: 'officer' | 'client', dataUrl: string) => {
-        if (!visitData) return;
-        
-        const updatedReports = visitData.dispenserReports?.map(report => {
-            if (report.dispenserId === dispenserId) {
-                if (type === 'officer') {
-                    return { ...report, officerSignature: dataUrl };
-                } else {
-                    return { ...report, clientSignature: dataUrl };
-                }
-            }
-            return report;
+    const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
+        setVisitData(prevVisitData => {
+            if (!prevVisitData) return null;
+            return { ...prevVisitData, [`${type}Signature`]: dataUrl };
         });
-        
-        setVisitData({ ...visitData, dispenserReports: updatedReports });
-        toast({ title: "Signature Captured!", description: "The signature has been added to the report for this dispenser." });
+        toast({ title: "Signature Captured!", description: `The ${type}'s signature has been added to the report.` });
     };
+    
     
     const handleSubmitReport = async () => {
         if (!firestore || !linkId || !visitData) return;
 
-        const allSigned = visitData.dispenserReports?.every(dr => dr.officerSignature && dr.clientSignature);
-        if (!allSigned) {
-            toast({ variant: 'destructive', title: "Incomplete Signatures", description: "Please ensure all dispenser reports are signed by both parties." });
+        if (!visitData.officerSignature || !visitData.clientSignature) {
+            toast({ variant: 'destructive', title: "Incomplete Signatures", description: "Please ensure the report is signed by both parties." });
             return;
         }
 
@@ -210,10 +202,16 @@ export default function SanitationReportPage() {
             const { userId, visitId } = linkSnap.data() as any;
 
             const visitRef = doc(firestore, 'users', userId, 'sanitationVisits', visitId);
-            await updateDoc(visitRef, {
+            
+            // Prepare the data to be updated
+            const updateData: Partial<SanitationVisit> = {
                 dispenserReports: visitData.dispenserReports,
+                officerSignature: visitData.officerSignature,
+                clientSignature: visitData.clientSignature,
                 status: 'Completed'
-            });
+            };
+
+            await updateDoc(visitRef, updateData);
 
             toast({ title: "Report Submitted!", description: "The sanitation report has been successfully saved." });
         } catch (error) {
@@ -256,14 +254,14 @@ export default function SanitationReportPage() {
          )
     }
 
-    const allSignaturesCompleted = visitData?.dispenserReports?.every(r => r.officerSignature && r.clientSignature);
+    const allSignaturesCompleted = visitData?.officerSignature && visitData?.clientSignature;
 
     return (
         <main className="min-h-screen w-full bg-muted p-4 sm:p-8">
             <div className="mx-auto max-w-4xl space-y-6">
-                <header className="flex items-center gap-4">
+                <header className="flex flex-col sm:flex-row items-center gap-4">
                     <Logo className="h-12 w-12 sm:h-16 sm:w-16" />
-                    <div>
+                    <div className="text-center sm:text-left">
                         <h1 className="text-2xl sm:text-3xl font-bold">Sanitation Visit Report</h1>
                         <p className="text-muted-foreground">
                             {clientData?.businessName} - {visitData ? format(new Date(visitData.scheduledDate), 'PP') : ''}
@@ -277,12 +275,11 @@ export default function SanitationReportPage() {
                             <TabsTrigger key={report.dispenserId} value={report.dispenserId} className="flex items-center gap-2">
                                 <Droplet className="h-4 w-4"/>
                                 {report.dispenserName}
-                                {(report.officerSignature && report.clientSignature) && <CheckCircle className="h-4 w-4 text-green-500" />}
                             </TabsTrigger>
                         ))}
                     </TabsList>
                     {visitData?.dispenserReports?.map((report, dispenserIndex) => (
-                        <TabsContent key={report.dispenserId} value={report.dispenserId} className="mt-4 space-y-6">
+                        <TabsContent key={report.dispenserId} value={report.dispenserId} className="mt-4">
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Sanitation Checklist for: <span className="text-primary">{report.dispenserName}</span></CardTitle>
@@ -314,36 +311,36 @@ export default function SanitationReportPage() {
                                     </div>
                                 </CardContent>
                             </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle>
-                                    <CardDescription>Please provide digital signatures to confirm the completion and accuracy of this report.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {report.officerSignature ? (
-                                        <div className="space-y-2">
-                                            <Label>Quality Officer's Signature</Label>
-                                            <Image src={report.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                            <Button size="sm" variant="outline" onClick={() => handleSaveSignature(report.dispenserId, 'officer', '')}>Redo</Button>
-                                        </div>
-                                    ) : (
-                                         <SignaturePad onSave={(dataUrl) => handleSaveSignature(report.dispenserId, 'officer', dataUrl)} label="Quality Officer's Signature" />
-                                    )}
-                                     {report.clientSignature ? (
-                                        <div className="space-y-2">
-                                            <Label>Client Representative's Signature</Label>
-                                            <Image src={report.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                            <Button size="sm" variant="outline" onClick={() => handleSaveSignature(report.dispenserId, 'client', '')}>Redo</Button>
-                                        </div>
-                                    ) : (
-                                         <SignaturePad onSave={(dataUrl) => handleSaveSignature(report.dispenserId, 'client', dataUrl)} label="Client Representative's Signature" />
-                                    )}
-                                </CardContent>
-                            </Card>
                         </TabsContent>
                     ))}
                 </Tabs>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle>
+                        <CardDescription>Please provide digital signatures to confirm the completion and accuracy of this report.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {visitData?.officerSignature ? (
+                            <div className="space-y-2">
+                                <Label>Quality Officer's Signature</Label>
+                                <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo</Button>
+                            </div>
+                        ) : (
+                                <SignaturePad onSave={(dataUrl) => handleSaveSignature('officer', dataUrl)} label="Quality Officer's Signature" />
+                        )}
+                            {visitData?.clientSignature ? (
+                            <div className="space-y-2">
+                                <Label>Client Representative's Signature</Label>
+                                <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                <Button size="sm" variant="outline" onClick={() => handleSaveSignature('client', '')}>Redo</Button>
+                            </div>
+                        ) : (
+                                <SignaturePad onSave={(dataUrl) => handleSaveSignature('client', dataUrl)} label="Client Representative's Signature" />
+                        )}
+                    </CardContent>
+                </Card>
                 
                  <div className="flex justify-end pt-4">
                     <Button onClick={handleSubmitReport} disabled={isSubmitting || !allSignaturesCompleted}>

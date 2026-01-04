@@ -87,12 +87,12 @@ service cloud.firestore {
     // The rule on the user's subcollection needs to be adjusted.
     match /users/{userId}/sanitationVisits/{visitId} {
       // Admins and owners have full access.
-      allow read, list, write, delete: if isOwner(userId) || isAdmin();
+      allow write, delete: if isOwner(userId) || isAdmin();
       // Allow public read for the specific report page.
-      allow get: if true;
+      allow read: if true;
       // Allow public update for specific fields related to the report submission.
       allow update: if request.auth == null && request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['dispenserReports', 'status']);
+        .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature']);
     }
 
     // All other user subcollections are private to the owner.
