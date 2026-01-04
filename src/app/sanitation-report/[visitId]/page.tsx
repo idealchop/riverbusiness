@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
@@ -289,6 +290,7 @@ export default function SanitationReportPage() {
                             <TabsTrigger key={report.dispenserId} value={report.dispenserId} className="flex items-center gap-2">
                                 <Droplet className="h-4 w-4"/>
                                 {report.dispenserName}
+                                {report.dispenserCode && <Badge variant="secondary">{report.dispenserCode}</Badge>}
                             </TabsTrigger>
                         ))}
                     </TabsList>
@@ -296,7 +298,7 @@ export default function SanitationReportPage() {
                         <TabsContent key={report.dispenserId} value={report.dispenserId} className="mt-4">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Sanitation Checklist for: <span className="text-primary">{report.dispenserName}</span></CardTitle>
+                                    <CardTitle className="flex items-center gap-2">Sanitation Checklist for: <span className="text-primary">{report.dispenserName}</span> {report.dispenserCode && <Badge variant="outline">{report.dispenserCode}</Badge>}</CardTitle>
                                     <CardDescription>Please complete the following checklist. Any unchecked items require remarks.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
