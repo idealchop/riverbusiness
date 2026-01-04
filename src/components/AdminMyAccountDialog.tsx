@@ -49,7 +49,7 @@ type Action =
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
   | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
-  | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
+  | { type: 'UPDATE_FORM_DATA'; payload: { name: string, value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
   | { type: 'TOGGLE_PASSWORD_VISIBILITY'; payload: 'current' | 'new' | 'confirm' }
   | { type: 'RESET_PASSWORD_FORM' }
@@ -164,7 +164,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser || !storage) return;
+    if (!state.profilePhotoFile || !auth.currentUser || !storage || !auth) return;
 
     const filePath = `users/${auth.currentUser.uid}/profile/profile-photo-${Date.now()}`;
     
@@ -264,16 +264,16 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                        <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!state.isEditingDetails} />
+                        <Label htmlFor="name" className="text-right">Name</Label>
+                        <Input id="name" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!state.isEditingDetails} />
                     </div>
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                         <Label htmlFor="email" className="text-right">Login Email</Label>
                         <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
                     </div>
-                    <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <Label htmlFor="address" className="text-right">Address</Label>
-                        <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!state.isEditingDetails}/>
+                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                        <Label htmlFor="description" className="text-right">Description</Label>
+                        <Input id="description" name="description" value={(state.editableFormData as any).description || 'Customer Support'} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'description', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                     </div>
                     <div className="grid grid-cols-[100px_1fr] items-center gap-4">
                         <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
@@ -358,7 +358,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => dispatch({type: 'SET_PASSWORD_DIALOG', payload: false})}>Cancel</Button>
+            <Button variant="secondary" onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: false })}>Cancel</Button>
             <Button onClick={handlePasswordChange}>Change Password</Button>
           </DialogFooter>
         </DialogContent>

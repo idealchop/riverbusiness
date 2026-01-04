@@ -90,6 +90,7 @@ export interface AppUser {
     lastChatTimestamp?: FieldValue | Timestamp;
     hasUnreadAdminMessages?: boolean;
     hasUnreadUserMessages?: boolean;
+    description?: string;
 }
 
 export interface LoginLog {

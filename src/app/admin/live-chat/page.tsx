@@ -10,14 +10,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { LiveChat, type ChatMessage } from '@/components/live-chat';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Edit } from 'lucide-react';
 import { AdminDashboardSkeleton } from '@/components/admin/AdminDashboardSkeleton';
 import { addDoc } from 'firebase/firestore';
+import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
+import { Button } from '@/components/ui/button';
 
 export default function LiveChatPage() {
     const { user: authUser, isUserLoading } = useUser();
     const firestore = useFirestore();
     const [selectedChatUser, setSelectedChatUser] = useState<AppUser | null>(null);
+    const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
 
     const usersQuery = useMemoFirebase(() => (firestore) ? query(collection(firestore, 'users'), where('role', '==', 'User')) : null, [firestore]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
@@ -40,21 +43,23 @@ export default function LiveChatPage() {
         });
     }, [appUsers]);
 
-    const handleAdminMessageSubmit = async (messageContent: string) => {
-        if (!firestore || !selectedChatUser) return;
+    const handleAdminMessageSubmit = async (messageContent: string, attachmentUrl?: string, attachmentType?: string) => {
+        if (!firestore || !selectedChatUser || !authUser) return;
         const messagesCollection = collection(firestore, 'users', selectedChatUser.id, 'chatMessages');
         
         const adminMessage: Omit<ChatMessage, 'id'> = {
-          text: messageContent,
+          text: messageContent || undefined,
           role: 'admin',
           timestamp: new Date(),
+          attachmentUrl: attachmentUrl,
+          attachmentType: attachmentType,
         };
     
         try {
             await addDoc(messagesCollection, adminMessage);
             const userRef = doc(firestore, 'users', selectedChatUser.id);
             await updateDoc(userRef, {
-                lastChatMessage: messageContent,
+                lastChatMessage: messageContent || 'Attachment',
                 lastChatTimestamp: new Date(),
                 hasUnreadAdminMessages: true
             });
@@ -70,14 +75,20 @@ export default function LiveChatPage() {
 
     return (
         <div className="flex flex-col gap-6">
-            <h1 className="text-3xl font-bold">Live Chat</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold">Live Chat</h1>
+                <Button onClick={() => setIsAccountDialogOpen(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Support Profile
+                </Button>
+            </div>
              <Card>
                 <CardHeader>
                     <CardTitle>Client Conversations</CardTitle>
                     <CardDescription>Respond to user messages in real-time.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-22rem)] border rounded-lg">
+                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-25rem)] border rounded-lg">
                         <div className="border-r">
                             <ScrollArea className="h-full">
                                 <div className="p-2">
@@ -133,6 +144,11 @@ export default function LiveChatPage() {
                     </div>
                 </CardContent>
             </Card>
+            <AdminMyAccountDialog
+                adminUser={adminUser}
+                isOpen={isAccountDialogOpen}
+                onOpenChange={setIsAccountDialogOpen}
+            />
         </div>
     )
 }

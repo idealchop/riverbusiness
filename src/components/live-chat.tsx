@@ -34,10 +34,13 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const firestore = useFirestore();
+  const storage = useStorage();
+  const auth = useAuth();
+  const { toast } = useToast();
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
@@ -79,24 +82,30 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
     e.preventDefault();
     if (input.trim() === '' && !attachment) return;
 
-    if (attachment) {
+    let attachmentUrl: string | undefined = undefined;
+    let attachmentType: string | undefined = undefined;
+
+    if (attachment && auth && storage) {
         setIsUploading(true);
         setUploadProgress(0);
+        const filePath = `chats/${user?.id || 'unknown'}/${Date.now()}-${attachment.name}`;
         try {
-            // The onMessageSubmit prop now handles the upload logic.
-            await onMessageSubmit(input.trim(), URL.createObjectURL(attachment)); // This is a placeholder, real logic in parent
+            attachmentUrl = await uploadFileWithProgress(storage, auth, filePath, attachment, {}, setUploadProgress);
+            attachmentType = attachment.type;
         } catch(error) {
-            console.error(error);
+            console.error("Error uploading attachment:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your file.'});
+            setIsUploading(false);
+            return;
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
-            removeAttachment();
-            setInput('');
         }
-    } else {
-        onMessageSubmit(input.trim());
-        setInput('');
     }
+    
+    onMessageSubmit(input.trim(), attachmentUrl, attachmentType);
+    setInput('');
+    removeAttachment();
   };
 
   useEffect(() => {
@@ -145,7 +154,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                     ) : (
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-xs">{sender?.name || 'Admin'}</span>
-                        <span className="text-xs text-muted-foreground">Customer Support</span>
+                        <span className="text-xs text-muted-foreground">{(sender as any)?.description || 'Customer Support'}</span>
                       </div>
                     )}
                   <div className={cn(

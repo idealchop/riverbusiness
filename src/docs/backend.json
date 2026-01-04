@@ -32,7 +32,8 @@
         "lastChatMessage": { "type": "string", "description": "The last message sent in the chat." },
         "lastChatTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last chat message." },
         "hasUnreadAdminMessages": { "type": "boolean", "description": "True if the user has unread messages from an admin." },
-        "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." }
+        "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." },
+        "description": { "type": "string", "description": "A short description or title, e.g. 'Customer Support'." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
