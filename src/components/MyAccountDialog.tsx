@@ -199,28 +199,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (!user || !deliveries) return null;
 
     const now = new Date();
-    const currentYear = getYear(now);
-    const currentMonth = getMonth(now);
-
-    let cycleStart: Date;
-    let cycleEnd: Date;
-    let monthsToBill = 1;
-    let description: string;
-    let invoiceIdSuffix: string;
-
-    // This handles the combined Dec-Jan billing in January.
-    if (currentYear === 2026 && currentMonth === 0) { // January
-        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-        cycleEnd = endOfMonth(now); // End of Jan 2026
-        monthsToBill = 2;
-        description = 'Bill for December 2025 - January 2026';
-        invoiceIdSuffix = '202512-202601';
-    } else {
-        cycleStart = startOfMonth(now);
-        cycleEnd = endOfMonth(now);
-        description = `Bill for ${format(now, 'MMMM yyyy')}`;
-        invoiceIdSuffix = format(now, 'yyyyMM');
-    }
+    const cycleStart = startOfMonth(now);
+    const cycleEnd = endOfMonth(now);
+    const description = `Bill for ${format(now, 'MMMM yyyy')}`;
+    const invoiceIdSuffix = format(now, 'yyyyMM');
 
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
@@ -236,15 +218,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
         monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
     }
-    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
     
     let estimatedCost = 0;
     if (user?.plan?.isConsumptionBased) {
         const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
-        estimatedCost = consumptionCost + equipmentCostForPeriod;
+        estimatedCost = consumptionCost + monthlyEquipmentCost;
     } else {
-        const planCost = (user?.plan?.price || 0) * monthsToBill;
-        estimatedCost = planCost + equipmentCostForPeriod;
+        const planCost = (user?.plan?.price || 0);
+        estimatedCost = planCost + monthlyEquipmentCost;
     }
     
     return {
@@ -393,24 +374,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
 
     const currentYear = getYear(new Date());
-    const nextYear = currentYear + 1;
-    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
-
-    let dateRangeForPDF: { from: Date; to: Date; };
-    let soaTitleMonth: string;
+    const [year, month] = soaMonth.split('-').map(Number);
+    const selectedMonthDate = new Date(year, month - 1, 2);
+    const dateRangeForPDF = { from: startOfMonth(selectedMonthDate), to: endOfMonth(selectedMonthDate) };
+    const soaTitleMonth = format(dateRangeForPDF.from, 'MMMM yyyy');
     
-    if (soaMonth === specialPeriodKey) {
-        const decThisYear = new Date(currentYear, 11, 1); // December of current year
-        const janNextYear = new Date(nextYear, 0, 1);    // January of next year
-        dateRangeForPDF = { from: decThisYear, to: endOfMonth(janNextYear) };
-        soaTitleMonth = `Dec ${currentYear} - Jan ${nextYear}`;
-    } else {
-        const [year, month] = soaMonth.split('-').map(Number);
-        const selectedMonthDate = new Date(year, month - 1, 2);
-        dateRangeForPDF = { from: startOfMonth(selectedMonthDate), to: endOfMonth(selectedMonthDate) };
-        soaTitleMonth = format(dateRangeForPDF.from, 'MMMM yyyy');
-    }
-
     const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), dateRangeForPDF));
     const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), dateRangeForPDF)) || [];
     const monthlyCompliance = complianceReports?.filter(r => r.date && isWithinInterval((r.date as any).toDate(), dateRangeForPDF)) || [];
@@ -427,15 +395,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
     }
 
-    const monthsToBill = soaMonth === specialPeriodKey ? 2 : 1;
-    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
-
-
     if (user.plan?.isConsumptionBased) {
-        totalAmount = consumedLitersThisMonth * (user.plan.price || 0) + equipmentCostForPeriod;
+        totalAmount = consumedLitersThisMonth * (user.plan.price || 0) + monthlyEquipmentCost;
     } else {
-        const planCost = (user.plan?.price || 0) * monthsToBill;
-        totalAmount = planCost + equipmentCostForPeriod;
+        totalAmount = (user.plan?.price || 0) + monthlyEquipmentCost;
     }
 
     generateMonthlySOA({
@@ -456,14 +419,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const availableMonths = useMemo(() => {
-    const currentYear = getYear(new Date());
-    const nextYear = currentYear + 1;
-    let months: {value: string, label: string}[] = [];
-
-    // Special combined period for the current year's December and next year's January
-    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
-    months.push({ value: specialPeriodKey, label: `Dec ${currentYear} - Jan ${nextYear}` });
-    
+    const months: {value: string, label: string}[] = [];
+    const now = new Date();
+    for (let i=0; i < 6; i++) {
+        const monthDate = subMonths(now, i);
+        months.push({
+            value: format(monthDate, 'yyyy-MM'),
+            label: format(monthDate, 'MMMM yyyy')
+        });
+    }
     return months;
   }, []);
   
@@ -471,31 +435,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const isSoaReady = useMemo(() => {
     if (!soaMonth) return false;
     const today = endOfDay(new Date());
-    
-    const currentYear = getYear(new Date());
-    const nextYear = currentYear + 1;
-    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
-
-    if (soaMonth === specialPeriodKey) {
-        const endOfJanNextYear = endOfMonth(new Date(nextYear, 0, 1));
-        return isAfter(today, endOfJanNextYear);
-    }
-    
     const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
     return isAfter(today, endOfSelectedMonth);
   }, [soaMonth]);
   
   const soaNotReadyMessage = useMemo(() => {
     if (isSoaReady || !soaMonth || !user) return null;
-    
-    const currentYear = getYear(new Date());
-    const nextYear = currentYear + 1;
-    const specialPeriodKey = `${currentYear}-12-${nextYear}-01`;
-
-    const monthLabel = soaMonth === specialPeriodKey
-        ? `Dec ${currentYear} - Jan ${nextYear}`
-        : format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
         
+    const monthLabel = format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
     const userName = user.name.split(' ')[0] || 'there';
 
     return (
@@ -539,30 +486,25 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       return { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
     }
 
-    const isCombinedPeriod = state.invoiceForBreakdown.id.includes('202512-202601');
-    const monthsToBill = isCombinedPeriod ? 2 : 1;
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
 
     let gallonCost = 0;
     let dispenserCost = 0;
     
-    // Only add equipment cost if it's a monthly charge
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-        gallonCost = (user.customPlanDetails?.gallonPrice || 0) * monthsToBill;
+        gallonCost = (user.customPlanDetails?.gallonPrice || 0);
     }
     if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-        dispenserCost = (user.customPlanDetails?.dispenserPrice || 0) * monthsToBill;
+        dispenserCost = (user.customPlanDetails?.dispenserPrice || 0);
     }
     
     let planCost = 0;
     let consumptionCost = 0;
 
     if (user.plan?.isConsumptionBased) {
-        // For consumption-based, cost is whatever is left after monthly equipment fees
         consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
     } else {
-        // For fixed plans, cost is the plan price * months
-        planCost = (user.plan?.price || 0) * monthsToBill;
+        planCost = (user.plan?.price || 0);
     }
 
     return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
@@ -594,16 +536,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const getInvoiceDisplayDate = (invoice: Payment) => {
-    if (invoice.id.includes('202512-202601')) {
-        return 'Dec 2025 - Jan 2026';
-    }
     const safeDate = toSafeDate(invoice.date);
     return safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date';
   };
   
   const showCurrentMonthInvoice = useMemo(() => {
     if (!currentMonthInvoice) return false;
-    // Don't show the live estimate if an official invoice for that period already exists.
     return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
   }, [currentMonthInvoice, paymentHistory]);
 
@@ -612,11 +550,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (showCurrentMonthInvoice && currentMonthInvoice) {
       invoices.unshift(currentMonthInvoice);
     }
-    // Filter out any potential null/undefined entries before sorting
     return invoices
       .filter((invoice): invoice is Payment => {
         if (!invoice) return false;
-        // Add a guard clause for safety when sorting
         const date = toSafeDate(invoice.date);
         return date instanceof Date && !isNaN(date.getTime());
       })
@@ -914,7 +850,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                  <TabsContent value="invoices" className="py-4 space-y-4">
                     <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
                         <Info className="h-5 w-5 shrink-0" />
-                        <p>Note: December and January will be combined into a single invoice, generated on February 1st.</p>
+                        <p>Note: December and January billing will be handled separately for your plan.</p>
                     </div>
                     {/* Desktop Table View */}
                     <div className="hidden md:block">
@@ -1084,7 +1020,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
             <DialogDescription>
-               This is a breakdown of the total amount for {state.invoiceForBreakdown?.id.includes('202512-202601') ? "the Dec 2025 - Jan 2026 period" : `invoice for ${state.invoiceForBreakdown ? getInvoiceDisplayDate(state.invoiceForBreakdown) : ''}`}.
+               This is a breakdown of the total amount for the invoice for {state.invoiceForBreakdown ? getInvoiceDisplayDate(state.invoiceForBreakdown) : ''}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">

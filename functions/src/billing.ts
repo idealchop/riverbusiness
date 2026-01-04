@@ -20,34 +20,13 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
     
     const now = new Date();
     const currentYear = getYear(now);
-    const currentMonth = getMonth(now); // 0-indexed (Jan=0, Feb=1, etc.)
+    const currentMonth = getMonth(now);
 
-    // Special Case: On Jan 1, 2026, do nothing. The invoice for Dec 2025 will be combined with Jan 2026's.
-    if (currentYear === 2026 && currentMonth === 0) { // currentMonth is 0 for January
-        console.log('Skipping invoice generation for Jan 1, 2026, to create a combined Dec-Jan invoice in February.');
+    // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
+    if (currentYear === 2026 && currentMonth === 0) {
+        console.log('Skipping invoice generation for Jan 1, 2026. Combined invoice will be handled in February.');
         return null;
     }
-
-    let billingPeriod: string;
-    let billingCycleStart: Date;
-    let billingCycleEnd: Date;
-    let monthsToBill = 1;
-
-    // Special Case: On Feb 1, 2026, generate a combined invoice for Dec 2025 and Jan 2026.
-    if (currentYear === 2026 && currentMonth === 1) { // currentMonth is 1 for February
-        console.log('Running special combined invoice generation for Dec 2025 - Jan 2026.');
-        billingCycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-        billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
-        billingPeriod = 'December 2025 - January 2026';
-        monthsToBill = 2; 
-    } else {
-        // Standard logic for all other months
-        const previousMonth = subMonths(now, 1);
-        billingPeriod = format(previousMonth, 'MMMM yyyy');
-        billingCycleStart = startOfMonth(previousMonth);
-        billingCycleEnd = endOfMonth(previousMonth);
-    }
-
 
     const usersSnapshot = await db.collection('users').get();
     if (usersSnapshot.empty) {
@@ -61,7 +40,38 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         const userRef = userDoc.ref;
         let user = userDoc.data();
         
-        // --- Step 1: Handle Pending Plan Change ---
+        let billingPeriod: string;
+        let billingCycleStart: Date;
+        let billingCycleEnd: Date;
+        let monthsToBill = 1;
+
+        // Special Case: On Feb 1, 2026, handle combined/separate logic.
+        if (currentYear === 2026 && currentMonth === 1) { // February 2026
+            if (user.plan?.isConsumptionBased) {
+                // Consumption users get a combined bill for Dec & Jan.
+                console.log(`Running special combined invoice for consumption user ${userDoc.id}.`);
+                billingCycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+                billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59); // Jan 31, 2026
+                billingPeriod = 'December 2025 - January 2026';
+                monthsToBill = 2;
+            } else {
+                // Fixed-plan users get a bill for ONLY December 2025. January is skipped.
+                console.log(`Running standard Dec 2025 invoice for fixed-plan user ${userDoc.id}.`);
+                const dec2025 = new Date(2025, 11, 1);
+                billingPeriod = format(dec2025, 'MMMM yyyy');
+                billingCycleStart = startOfMonth(dec2025);
+                billingCycleEnd = endOfMonth(dec2025);
+                monthsToBill = 1; 
+            }
+        } else {
+            // Standard logic for all other months
+            const previousMonth = subMonths(now, 1);
+            billingPeriod = format(previousMonth, 'MMMM yyyy');
+            billingCycleStart = startOfMonth(previousMonth);
+            billingCycleEnd = endOfMonth(previousMonth);
+        }
+
+        // --- Handle Pending Plan Change ---
         if (user.pendingPlan && user.planChangeEffectiveDate) {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
             // Check if the effective date is today (the 1st of the month)
@@ -88,20 +98,17 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                 });
 
                 promises.push(planUpdatePromise);
-
                 console.log(`Plan for user ${userDoc.id} updated to ${user.pendingPlan.name}.`);
-                
-                // Continue to the next user as billing and plan update are handled.
-                continue;
+                continue; 
             }
         }
         
-        // --- Step 2: Generate Invoice for users without a plan change ---
+        // --- Generate Invoice for users without a plan change ---
         promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
     }
 
     await Promise.all(promises);
-    console.log(`Invoice generation and plan update job completed for period: ${billingPeriod}.`);
+    console.log(`Invoice generation and plan update job completed.`);
     return null;
 });
 
@@ -146,27 +153,27 @@ async function generateInvoiceForUser(
     if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
         monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
     }
+    
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     if (user.plan.isConsumptionBased) {
         // Consumption-based billing (Flow Plans)
-        // For combined invoices, equipment is charged for each month.
-        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
         const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
         amount = consumptionCost + equipmentCostForPeriod;
         description = `Bill for ${billingPeriod}`;
     } else {
         // Fixed-plan billing
-        // For combined invoice, charge plan price only once.
         const planCost = user.plan.price || 0;
-        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+        // For standard invoice, monthsToBill is 1.
+        // For combined invoice, fixed-plan users are billed for Dec only, so monthsToBill is also 1.
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
-        // Rollover logic needs to consider the standard monthly allocation, even in a 2-month billing period.
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
-            // Allocation for the period is based on the number of months in the cycle.
-            const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
+            // Rollover for fixed-plan users in Feb needs to account for 2 months of allocation vs 2 months of use.
+            const allocationMonths = (userRef.id.includes('202512-202601')) ? 2 : 1;
+            const totalAllocationForPeriod = monthlyAllocation * allocationMonths;
             const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
             if (rolloverLiters > 0) {
@@ -184,7 +191,7 @@ async function generateInvoiceForUser(
     }
 
     if (amount > 0) {
-        const invoiceIdSuffix = monthsToBill > 1 ? '202512-202601' : format(billingCycleStart, 'yyyyMM');
+        const invoiceIdSuffix = billingPeriod.replace(/\s/g, '-');
         const invoiceId = `INV-${userRef.id.substring(0, 5)}-${invoiceIdSuffix}`;
 
         const newInvoice = {
@@ -196,7 +203,6 @@ async function generateInvoiceForUser(
         };
         console.log(`Generating invoice ${invoiceId} for user ${userRef.id} for amount ${amount}.`);
 
-        // Create notification for the new invoice
         const invoiceNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
             type: 'payment',
             title: 'New Invoice',
