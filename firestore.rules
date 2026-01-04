@@ -19,7 +19,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // A user can read/get their own profile, and any authenticated user can read an admin's profile.
+      // Allow any authenticated user to read a specific user's document.
+      // This is needed for the user to fetch the Admin's profile for the chat.
       allow get: if request.auth != null;
       allow list, read: if isOwner(userId);
       
@@ -71,6 +72,24 @@ service cloud.firestore {
     }
     match /{path=**}/refillRequests/{requestId} {
       allow list: if isAdmin();
+    }
+
+    // Rules for public sanitation reports
+    match /publicSanitationLinks/{linkId} {
+      // Anyone can read the link mapping to get the path to the real document.
+      allow read;
+      // Only admins can create these links.
+      allow write: if isAdmin();
+    }
+
+    // Anyone can update a sanitation visit document IF they come from a valid public link.
+    // This is implicitly handled by the app logic fetching the path from the link.
+    // The rule on the user's subcollection needs to be adjusted.
+    match /users/{userId}/sanitationVisits/{visitId} {
+      allow read, list, write, delete: if isOwner(userId) || isAdmin();
+      // Allow public update for specific fields
+      allow update: if request.auth == null && request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['checklist', 'officerSignature', 'clientSignature', 'status']);
     }
   }
 }

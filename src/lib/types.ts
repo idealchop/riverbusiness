@@ -42,6 +42,9 @@ export interface SanitationVisit {
   assignedTo: string;
   reportUrl?: string;
   checklist?: SanitationChecklistItem[];
+  shareableLink?: string;
+  officerSignature?: string;
+  clientSignature?: string;
 }
 
 export interface WaterStation {
@@ -192,5 +195,3 @@ export interface ChatMessage {
   attachmentUrl?: string;
   attachmentType?: string;
 }
-
-    

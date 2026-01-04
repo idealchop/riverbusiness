@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -7,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -1047,6 +1048,37 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
         setVisitToDelete(null);
+    };
+
+    const handleShareVisit = async (visit: SanitationVisit) => {
+        if (!firestore || !selectedUser) return;
+        
+        try {
+            const linkId = visit.id; 
+            const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
+            await setDoc(linkRef, {
+                userId: selectedUser.id,
+                visitId: visit.id
+            });
+            
+            const shareableLink = `${window.location.origin}/sanitation-report/${linkId}`;
+            
+            const visitRef = doc(firestore, 'users', selectedUser.id, 'sanitationVisits', visit.id);
+            await updateDoc(visitRef, { shareableLink });
+
+            navigator.clipboard.writeText(shareableLink);
+            toast({
+                title: "Link Copied!",
+                description: "Shareable link for the report has been copied to your clipboard.",
+            });
+        } catch (error) {
+            console.error("Error creating shareable link:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Could not create a shareable link.",
+            });
+        }
     };
 
     const handleContractUpload = async () => {
@@ -2643,6 +2675,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent>
                                                     <DropdownMenuItem onClick={() => setVisitToEdit(visit)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleShareVisit(visit)}><Share2 className="mr-2 h-4 w-4"/> Share</DropdownMenuItem>
                                                     <DropdownMenuItem className="text-destructive" onClick={() => setVisitToDelete(visit)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

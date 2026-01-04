@@ -153,6 +153,9 @@
         "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
         "assignedTo": { "type": "string" },
         "reportUrl": { "type": "string", "format": "uri", "description": "URL to the sanitation report attachment." },
+        "shareableLink": { "type": "string", "format": "uri", "description": "A public, shareable link to the report." },
+        "officerSignature": { "type": "string", "format": "uri", "description": "Data URI of the officer's signature." },
+        "clientSignature": { "type": "string", "format": "uri", "description": "Data URI of the client's signature." },
         "checklist": {
             "type": "array",
             "description": "An array of checklist items for the sanitation visit.",
@@ -162,6 +165,17 @@
         }
       },
       "required": ["id", "userId", "scheduledDate", "status"]
+    },
+    "PublicSanitationLink": {
+        "title": "PublicSanitationLink",
+        "type": "object",
+        "description": "Maps a unique, unguessable ID to a sanitation visit for public access.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "visitId": { "type": "string" }
+        },
+        "required": ["userId", "visitId"]
     },
     "Schedule": {
       "title": "Schedule",
@@ -281,8 +295,10 @@
     "/unclaimedProfiles/{clientId}": {
       "schema": { "$ref": "#/entities/UnclaimedProfile" },
       "description": "Stores pre-configured profiles created by an admin, waiting to be claimed. The document ID is the clientId."
+    },
+    "/publicSanitationLinks/{linkId}": {
+      "schema": { "$ref": "#/entities/PublicSanitationLink" },
+      "description": "Stores mappings for public sanitation report links."
     }
   }
 }
-
-    
