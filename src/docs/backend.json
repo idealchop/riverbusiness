@@ -62,11 +62,13 @@
         "description": "Represents a single message in a chat conversation.",
         "properties": {
             "id": { "type": "string" },
-            "text": { "type": "string" },
+            "text": { "type": "string", "description": "The text content of the message. Optional if there is an attachment." },
             "role": { "type": "string", "enum": ["user", "admin"] },
-            "timestamp": { "type": "string", "format": "date-time" }
+            "timestamp": { "type": "string", "format": "date-time" },
+            "attachmentUrl": { "type": "string", "format": "uri", "description": "URL to an uploaded attachment." },
+            "attachmentType": { "type": "string", "description": "MIME type of the attachment (e.g., 'image/png')." }
         },
-        "required": ["id", "text", "role", "timestamp"]
+        "required": ["id", "role", "timestamp"]
     },
     "WaterStation": {
       "title": "WaterStation",

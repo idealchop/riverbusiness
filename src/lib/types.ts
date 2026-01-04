@@ -183,7 +183,9 @@ export interface Notification {
     
 export interface ChatMessage {
   id: string;
-  text: string;
+  text?: string;
   role: 'user' | 'admin';
   timestamp: FieldValue | Timestamp;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }

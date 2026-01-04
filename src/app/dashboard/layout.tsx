@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle, FileX, RefreshCw, Pencil, Trash2, FileHeart, UserCog } from 'lucide-react';
+import { Bell, Truck, User, KeyRound, Info, Camera, Eye, EyeOff, LifeBuoy, Mail, Phone, Home, Layers, Receipt, Check, CreditCard, Download, QrCode, FileText, Upload, ArrowLeft, Droplets, MessageSquare, Edit, ShieldCheck, Send, Star, AlertTriangle, FileUp, Building, FileClock, History, Hourglass, Shield, Package, Calendar, Repeat, Wrench, Headset, Rocket, LayoutGrid, Thermometer, CalendarCheck, HelpCircle, FileX, RefreshCw, Pencil, Trash2, FileHeart, UserCog, Paperclip } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -303,22 +303,37 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-  const handleMessageSubmit = async (messageContent: string) => {
-    if (!firestore || !authUser || !user) return;
+  const handleMessageSubmit = async (messageContent: string, attachmentFile?: File) => {
+    if (!firestore || !authUser || !user || !storage || !auth) return;
+
+    let attachmentUrl = '';
+    let attachmentType = '';
+
+    if (attachmentFile) {
+        const filePath = `chats/${authUser.uid}/${Date.now()}-${attachmentFile.name}`;
+        try {
+            attachmentUrl = await uploadFileWithProgress(storage, auth, filePath, attachmentFile, {}, (p) => {});
+            attachmentType = attachmentFile.type;
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Attachment Failed', description: 'Could not upload your file.' });
+            return;
+        }
+    }
     
     const messagesCollection = collection(firestore, 'users', authUser.uid, 'chatMessages');
     
     const userMessage: Omit<ChatMessage, 'id'> = {
-      text: messageContent,
+      text: messageContent || undefined,
       role: 'user',
       timestamp: serverTimestamp(),
+      attachmentUrl: attachmentUrl || undefined,
+      attachmentType: attachmentType || undefined,
     };
 
     try {
         await addDoc(messagesCollection, userMessage);
-        // Also update the user doc to indicate a new message for the admin
         await updateDoc(userDocRef, {
-            lastChatMessage: messageContent,
+            lastChatMessage: messageContent || 'Attachment',
             lastChatTimestamp: serverTimestamp(),
             hasUnreadUserMessages: true
         });

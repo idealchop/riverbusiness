@@ -1,0 +1,63 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      // User is an admin if their custom claim 'admin' is true, or their email is the designated admin email.
+      return request.auth.token.admin == true || request.auth.token.email == 'admin@riverph.com';
+    }
+
+    // --- ADMIN-SPECIFIC WRITE RULES ---
+
+    // Rule for admins uploading delivery proofs or sanitation reports on behalf of users.
+    // This matches the paths used in the AdminDashboard component.
+    match /admin_uploads/{adminId}/{path=**} {
+      allow write: if request.auth.uid == adminId && isAdmin();
+    }
+
+    // Rule for admins uploading contracts for users.
+    match /userContracts/{userId}/{fileName} {
+      allow write: if isAdmin();
+    }
+    
+    // Rule for admins managing water station documents (agreements, compliance).
+    match /stations/{stationId}/{path=**} {
+        allow write: if isAdmin();
+    }
+
+    // --- USER-SPECIFIC WRITE RULES ---
+
+    // Users can upload their own profile photo.
+    match /users/{userId}/profile/{fileName} {
+      allow write: if request.auth.uid == userId;
+    }
+
+    // Users can upload their own payment proofs.
+    match /users/{userId}/payments/{fileName} {
+       allow write: if request.auth.uid == userId;
+    }
+
+    // Rule for both users and admins to upload chat attachments.
+    match /chats/{userId}/{fileName} {
+        allow write: if request.auth.uid == userId || isAdmin();
+    }
+    
+    // --- READ RULES ---
+
+    // Allow authenticated users to read from any of these paths.
+    // This covers viewing profile photos, proofs, reports, contracts etc.
+    match /{path=**} {
+      allow read: if request.auth != null;
+    }
+
+    // Public assets for login/marketing pages are readable by anyone.
+    match /Sales Portal/{allPaths=**} {
+      allow read;
+    }
+     match /River Mobile/{allPaths=**} {
+      allow read;
+    }
+  }
+}
