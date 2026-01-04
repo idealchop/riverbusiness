@@ -34,17 +34,23 @@ export interface SanitationChecklistItem {
     remarks: string;
 }
 
+export interface DispenserReport {
+    dispenserId: string;
+    dispenserName: string;
+    checklist: SanitationChecklistItem[];
+    officerSignature?: string;
+    clientSignature?: string;
+}
+
 export interface SanitationVisit {
   id: string;
   userId: string;
   scheduledDate: string;
   status: 'Completed' | 'Scheduled' | 'Cancelled';
   assignedTo: string;
-  reportUrl?: string;
-  checklist?: SanitationChecklistItem[];
+  reportUrl?: string; // This might be a summary report URL now
+  dispenserReports?: DispenserReport[]; // Replaces single checklist
   shareableLink?: string;
-  officerSignature?: string;
-  clientSignature?: string;
 }
 
 export interface WaterStation {

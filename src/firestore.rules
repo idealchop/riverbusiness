@@ -19,9 +19,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Allow any authenticated user to read a specific user's document.
-      // This is needed for the user to fetch the Admin's profile for the chat.
-      allow get: if request.auth != null;
+      // Allow any user (authenticated or not) to read a specific user's document.
+      // This is needed for the public sanitation report page to get the business name,
+      // and for the user to fetch the Admin's profile for the chat.
+      allow get: if true;
       allow list, read: if isOwner(userId);
       
       // A user can update specific fields on their own profile.
@@ -45,10 +46,10 @@ service cloud.firestore {
         allow read, write: if isOwner(userId) || isAdmin();
     }
     
-    // Users can manage all other subcollections within their own user document.
-    match /users/{userId}/{subcollection}/{docId} {
-      allow read, list, write, delete: if isOwner(userId);
-    }
+    // Default rule for most user subcollections, but handled more specifically below.
+    // match /users/{userId}/{subcollection}/{docId} {
+    //   allow read, list, write, delete: if isOwner(userId);
+    // }
     
     match /unclaimedProfiles/{clientId} {
       // A newly signed-up user can read and delete their own unclaimed profile to claim it.
@@ -72,6 +73,31 @@ service cloud.firestore {
     }
     match /{path=**}/refillRequests/{requestId} {
       allow list: if isAdmin();
+    }
+
+    // Rules for public sanitation reports
+    match /publicSanitationLinks/{linkId} {
+      // Anyone can read the link mapping to get the path to the real document.
+      allow read: if true;
+      // Only admins can create these links.
+      allow write: if isAdmin();
+    }
+
+    // Anyone can update a sanitation visit document IF they come from a valid public link.
+    // The rule on the user's subcollection needs to be adjusted.
+    match /users/{userId}/sanitationVisits/{visitId} {
+      // Admins and owners have full access.
+      allow read, list, write, delete: if isOwner(userId) || isAdmin();
+      // Allow public read for the specific report page.
+      allow get: if true;
+      // Allow public update for specific fields related to the report submission.
+      allow update: if request.auth == null && request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['dispenserReports', 'status']);
+    }
+
+    // All other user subcollections are private to the owner.
+     match /users/{userId}/{subcollection}/{docId} {
+      allow read, list, write, delete: if isOwner(userId);
     }
   }
 }

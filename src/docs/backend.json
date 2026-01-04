@@ -140,7 +140,23 @@
             "checked": { "type": "boolean", "description": "Whether the item has been checked off." },
             "remarks": { "type": "string", "description": "Optional remarks for the checklist item." }
         },
-        "required": ["item", "checked", "remarks"]
+        "required": ["item", "checked"]
+    },
+    "DispenserReport": {
+      "title": "DispenserReport",
+      "type": "object",
+      "description": "Represents the full sanitation report for a single dispenser.",
+      "properties": {
+        "dispenserId": { "type": "string", "description": "Unique ID for this dispenser report instance." },
+        "dispenserName": { "type": "string", "description": "The admin-assigned name for the dispenser (e.g., 'Lobby Unit')." },
+        "officerSignature": { "type": "string", "format": "uri", "description": "Data URI of the officer's signature." },
+        "clientSignature": { "type": "string", "format": "uri", "description": "Data URI of the client's signature." },
+        "checklist": {
+            "type": "array",
+            "items": { "$ref": "#/entities/SanitationChecklistItem" }
+        }
+      },
+      "required": ["dispenserId", "dispenserName", "checklist"]
     },
     "SanitationVisit": {
       "title": "SanitationVisit",
@@ -152,16 +168,12 @@
         "scheduledDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
         "assignedTo": { "type": "string" },
-        "reportUrl": { "type": "string", "format": "uri", "description": "URL to the sanitation report attachment." },
+        "reportUrl": { "type": "string", "format": "uri", "description": "URL to a potential summary sanitation report attachment." },
         "shareableLink": { "type": "string", "format": "uri", "description": "A public, shareable link to the report." },
-        "officerSignature": { "type": "string", "format": "uri", "description": "Data URI of the officer's signature." },
-        "clientSignature": { "type": "string", "format": "uri", "description": "Data URI of the client's signature." },
-        "checklist": {
+        "dispenserReports": {
             "type": "array",
-            "description": "An array of checklist items for the sanitation visit.",
-            "items": {
-                "$ref": "#/entities/SanitationChecklistItem"
-            }
+            "description": "An array of reports, one for each dispenser inspected during the visit.",
+            "items": { "$ref": "#/entities/DispenserReport" }
         }
       },
       "required": ["id", "userId", "scheduledDate", "status"]

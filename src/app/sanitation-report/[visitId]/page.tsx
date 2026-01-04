@@ -3,9 +3,9 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import type { SanitationVisit, AppUser } from '@/lib/types';
+import type { SanitationVisit, AppUser, DispenserReport, SanitationChecklistItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,9 +16,11 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Signature, CheckCircle, Save } from 'lucide-react';
+import { AlertTriangle, Signature, CheckCircle, Save, Droplet } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import Image from 'next/image';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, label: string }) => {
@@ -48,6 +50,7 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
 
     const draw = (event: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing) return;
+        event.preventDefault(); // Prevents page scrolling on touch devices
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
         const pos = getPosition(event.nativeEvent);
@@ -81,7 +84,7 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
     return (
         <div className="space-y-2">
             <Label>{label}</Label>
-            <div className="border rounded-md bg-white">
+            <div className="border rounded-md bg-white touch-none">
                 <canvas
                     ref={canvasRef}
                     width={400}
@@ -114,6 +117,7 @@ export default function SanitationReportPage() {
     const [visitData, setVisitData] = useState<SanitationVisit | null>(null);
     const [clientData, setClientData] = useState<AppUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState<string>('');
 
     useEffect(() => {
         if (!firestore || !linkId) return;
@@ -141,7 +145,11 @@ export default function SanitationReportPage() {
                 const clientSnap = await getDoc(clientRef);
                 
                 setClientData(clientSnap.data() as AppUser);
-                setVisitData({ id: visitSnap.id, ...visitSnap.data() } as SanitationVisit);
+                const fetchedVisitData = { id: visitSnap.id, ...visitSnap.data() } as SanitationVisit;
+                setVisitData(fetchedVisitData);
+                if (fetchedVisitData.dispenserReports && fetchedVisitData.dispenserReports.length > 0) {
+                    setActiveTab(fetchedVisitData.dispenserReports[0].dispenserId);
+                }
 
             } catch (err: any) {
                 setError(err.message || "An unexpected error occurred.");
@@ -153,27 +161,47 @@ export default function SanitationReportPage() {
         fetchVisit();
     }, [firestore, linkId]);
 
-    const handleChecklistChange = (index: number, field: 'checked' | 'remarks', value: boolean | string) => {
+    const handleChecklistChange = (dispenserId: string, itemIndex: number, field: 'checked' | 'remarks', value: boolean | string) => {
         if (!visitData) return;
-        const newChecklist = [...(visitData.checklist || [])];
-        (newChecklist[index] as any)[field] = value;
-        setVisitData({ ...visitData, checklist: newChecklist });
+
+        const updatedReports = visitData.dispenserReports?.map(report => {
+            if (report.dispenserId === dispenserId) {
+                const newChecklist = [...report.checklist];
+                (newChecklist[itemIndex] as any)[field] = value;
+                return { ...report, checklist: newChecklist };
+            }
+            return report;
+        });
+
+        setVisitData({ ...visitData, dispenserReports: updatedReports });
     };
     
-    const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
+    const handleSaveSignature = (dispenserId: string, type: 'officer' | 'client', dataUrl: string) => {
         if (!visitData) return;
-        const newVisitData = { ...visitData };
-        if (type === 'officer') {
-            newVisitData.officerSignature = dataUrl;
-        } else {
-            newVisitData.clientSignature = dataUrl;
-        }
-        setVisitData(newVisitData);
-        toast({ title: "Signature Captured!", description: "The signature has been added to the report." });
+        
+        const updatedReports = visitData.dispenserReports?.map(report => {
+            if (report.dispenserId === dispenserId) {
+                if (type === 'officer') {
+                    return { ...report, officerSignature: dataUrl };
+                } else {
+                    return { ...report, clientSignature: dataUrl };
+                }
+            }
+            return report;
+        });
+        
+        setVisitData({ ...visitData, dispenserReports: updatedReports });
+        toast({ title: "Signature Captured!", description: "The signature has been added to the report for this dispenser." });
     };
     
     const handleSubmitReport = async () => {
         if (!firestore || !linkId || !visitData) return;
+
+        const allSigned = visitData.dispenserReports?.every(dr => dr.officerSignature && dr.clientSignature);
+        if (!allSigned) {
+            toast({ variant: 'destructive', title: "Incomplete Signatures", description: "Please ensure all dispenser reports are signed by both parties." });
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -183,9 +211,7 @@ export default function SanitationReportPage() {
 
             const visitRef = doc(firestore, 'users', userId, 'sanitationVisits', visitId);
             await updateDoc(visitRef, {
-                checklist: visitData.checklist,
-                officerSignature: visitData.officerSignature,
-                clientSignature: visitData.clientSignature,
+                dispenserReports: visitData.dispenserReports,
                 status: 'Completed'
             });
 
@@ -198,12 +224,11 @@ export default function SanitationReportPage() {
         }
     };
 
-
     if (isLoading) {
         return (
-            <main className="flex min-h-screen w-full flex-col items-center justify-center bg-muted p-4">
+            <main className="flex min-h-screen w-full flex-col items-center justify-center bg-muted p-4 sm:p-8">
                  <div className="w-full max-w-4xl space-y-4">
-                    <Skeleton className="h-12 w-1/2" />
+                    <div className="flex items-center gap-4"><Logo className="h-16 w-16" /><Skeleton className="h-12 w-1/2" /></div>
                     <Skeleton className="h-6 w-3/4" />
                     <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
                     <Card><CardContent className="p-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
@@ -214,7 +239,7 @@ export default function SanitationReportPage() {
     
     if (error) {
          return (
-            <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4">
+            <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-4 sm:p-8">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
                         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
@@ -231,11 +256,13 @@ export default function SanitationReportPage() {
          )
     }
 
+    const allSignaturesCompleted = visitData?.dispenserReports?.every(r => r.officerSignature && r.clientSignature);
+
     return (
         <main className="min-h-screen w-full bg-muted p-4 sm:p-8">
             <div className="mx-auto max-w-4xl space-y-6">
                 <header className="flex items-center gap-4">
-                    <Logo className="h-16 w-16" />
+                    <Logo className="h-12 w-12 sm:h-16 sm:w-16" />
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold">Sanitation Visit Report</h1>
                         <p className="text-muted-foreground">
@@ -244,67 +271,82 @@ export default function SanitationReportPage() {
                     </div>
                 </header>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Sanitation Checklist</CardTitle>
-                        <CardDescription>Please complete the following checklist. Any unchecked items require remarks.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {visitData?.checklist?.map((item, index) => (
-                                <div key={index} className="flex flex-col sm:flex-row items-start gap-4 p-3 rounded-md border bg-background">
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <Checkbox 
-                                            id={`check-${index}`} 
-                                            checked={item.checked} 
-                                            onCheckedChange={(checked) => handleChecklistChange(index, 'checked', !!checked)}
-                                        />
-                                        <Label htmlFor={`check-${index}`} className="text-sm">{item.item}</Label>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-1 sm:grid-cols-none sm:flex sm:flex-wrap h-auto sm:h-10">
+                        {visitData?.dispenserReports?.map(report => (
+                            <TabsTrigger key={report.dispenserId} value={report.dispenserId} className="flex items-center gap-2">
+                                <Droplet className="h-4 w-4"/>
+                                {report.dispenserName}
+                                {(report.officerSignature && report.clientSignature) && <CheckCircle className="h-4 w-4 text-green-500" />}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                    {visitData?.dispenserReports?.map((report, dispenserIndex) => (
+                        <TabsContent key={report.dispenserId} value={report.dispenserId} className="mt-4 space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Sanitation Checklist for: <span className="text-primary">{report.dispenserName}</span></CardTitle>
+                                    <CardDescription>Please complete the following checklist. Any unchecked items require remarks.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {report.checklist?.map((item, itemIndex) => (
+                                            <div key={itemIndex} className="flex flex-col sm:flex-row items-start gap-4 p-3 rounded-md border bg-background">
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <Checkbox 
+                                                        id={`check-${dispenserIndex}-${itemIndex}`} 
+                                                        checked={item.checked} 
+                                                        onCheckedChange={(checked) => handleChecklistChange(report.dispenserId, itemIndex, 'checked', !!checked)}
+                                                    />
+                                                    <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm">{item.item}</Label>
+                                                </div>
+                                                {!item.checked && (
+                                                     <Input 
+                                                        placeholder="Remarks..." 
+                                                        className="h-9 text-sm"
+                                                        value={item.remarks}
+                                                        onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
+                                                     />
+                                                )}
+                                                {item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block self-center" />}
+                                            </div>
+                                        ))}
                                     </div>
-                                    {!item.checked && (
-                                         <Input 
-                                            placeholder="Remarks..." 
-                                            className="h-9 text-sm"
-                                            value={item.remarks}
-                                            onChange={(e) => handleChecklistChange(index, 'remarks', e.target.value)}
-                                         />
-                                    )}
-                                    {item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block" />}
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                                </CardContent>
+                            </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle>
-                        <CardDescription>Please provide digital signatures to confirm the completion and accuracy of this report.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {visitData?.officerSignature ? (
-                            <div className="space-y-2">
-                                <Label>Quality Officer's Signature</Label>
-                                <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                <Button size="sm" variant="outline" onClick={() => setVisitData(prev => prev ? {...prev, officerSignature: undefined} : null)}>Redo</Button>
-                            </div>
-                        ) : (
-                             <SignaturePad onSave={(dataUrl) => handleSaveSignature('officer', dataUrl)} label="Quality Officer's Signature" />
-                        )}
-                         {visitData?.clientSignature ? (
-                            <div className="space-y-2">
-                                <Label>Client Representative's Signature</Label>
-                                <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                <Button size="sm" variant="outline" onClick={() => setVisitData(prev => prev ? {...prev, clientSignature: undefined} : null)}>Redo</Button>
-                            </div>
-                        ) : (
-                             <SignaturePad onSave={(dataUrl) => handleSaveSignature('client', dataUrl)} label="Client Representative's Signature" />
-                        )}
-                    </CardContent>
-                </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle>
+                                    <CardDescription>Please provide digital signatures to confirm the completion and accuracy of this report.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {report.officerSignature ? (
+                                        <div className="space-y-2">
+                                            <Label>Quality Officer's Signature</Label>
+                                            <Image src={report.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                            <Button size="sm" variant="outline" onClick={() => handleSaveSignature(report.dispenserId, 'officer', '')}>Redo</Button>
+                                        </div>
+                                    ) : (
+                                         <SignaturePad onSave={(dataUrl) => handleSaveSignature(report.dispenserId, 'officer', dataUrl)} label="Quality Officer's Signature" />
+                                    )}
+                                     {report.clientSignature ? (
+                                        <div className="space-y-2">
+                                            <Label>Client Representative's Signature</Label>
+                                            <Image src={report.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                            <Button size="sm" variant="outline" onClick={() => handleSaveSignature(report.dispenserId, 'client', '')}>Redo</Button>
+                                        </div>
+                                    ) : (
+                                         <SignaturePad onSave={(dataUrl) => handleSaveSignature(report.dispenserId, 'client', dataUrl)} label="Client Representative's Signature" />
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    ))}
+                </Tabs>
                 
                  <div className="flex justify-end pt-4">
-                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !visitData?.officerSignature || !visitData?.clientSignature}>
+                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !allSignaturesCompleted}>
                         <Save className="mr-2 h-4 w-4" />
                         {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
                     </Button>

@@ -27,7 +27,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -78,10 +78,9 @@ const deliveryFormSchema = z.object({
 });
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
-const sanitationChecklistItemSchema = z.object({
-    item: z.string(),
-    checked: z.boolean(),
-    remarks: z.string(),
+const dispenserReportSchema = z.object({
+    dispenserId: z.string(),
+    dispenserName: z.string().min(1, "Dispenser name is required"),
 });
 
 const sanitationVisitSchema = z.object({
@@ -89,7 +88,7 @@ const sanitationVisitSchema = z.object({
     status: z.enum(['Scheduled', 'Completed', 'Cancelled']),
     assignedTo: z.string().min(1, "Please assign a team member."),
     reportFile: z.any().optional(),
-    checklist: z.array(sanitationChecklistItemSchema),
+    dispenserReports: z.array(dispenserReportSchema).min(1, 'At least one dispenser is required.'),
 });
 
 type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
@@ -530,15 +529,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: {
             status: 'Scheduled',
             assignedTo: '',
-            checklist: defaultChecklistItems,
+            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1' }],
         }
     });
 
-    const { fields: checklistFields, control: checklistControl } = useFieldArray({
+    const { fields: dispenserFields, append: appendDispenser, remove: removeDispenser } = useFieldArray({
         control: sanitationVisitForm.control,
-        name: "checklist",
+        name: "dispenserReports",
     });
-    const watchedChecklist = sanitationVisitForm.watch("checklist");
 
     React.useEffect(() => {
         if (visitToEdit) {
@@ -546,15 +544,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 scheduledDate: new Date(visitToEdit.scheduledDate),
                 status: visitToEdit.status,
                 assignedTo: visitToEdit.assignedTo,
-                checklist: visitToEdit.checklist || defaultChecklistItems,
+                dispenserReports: visitToEdit.dispenserReports?.map(dr => ({ dispenserId: dr.dispenserId, dispenserName: dr.dispenserName })),
             });
             setIsSanitationVisitDialogOpen(true);
         } else {
             sanitationVisitForm.reset({
                 status: 'Scheduled',
                 assignedTo: '',
-                checklist: defaultChecklistItems,
-                reportFile: null
+                reportFile: null,
+                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1' }],
             });
         }
     }, [visitToEdit, sanitationVisitForm]);
@@ -980,10 +978,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
     
         try {
+            const dispenserReports: DispenserReport[] = values.dispenserReports.map(dr => ({
+                dispenserId: dr.dispenserId,
+                dispenserName: dr.dispenserName,
+                checklist: defaultChecklistItems.map(item => ({...item})), // Create a fresh checklist for each
+            }));
+
             const visitData: Partial<SanitationVisit> = {
-                ...values,
                 scheduledDate: values.scheduledDate.toISOString(),
+                status: values.status,
+                assignedTo: values.assignedTo,
                 userId: selectedUser.id,
+                dispenserReports: dispenserReports
             };
             
             const file = values.reportFile?.[0];
@@ -993,6 +999,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const visitId = visitToEdit?.id || Date.now();
                 const path = `admin_uploads/${authUser.uid}/sanitation_for/${selectedUser.id}/${visitId}-${file.name}`;
                 reportUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+                visitData.reportUrl = reportUrl;
                 await createNotification(selectedUser.id, {
                     type: 'sanitation',
                     title: 'Sanitation Report Available',
@@ -1000,7 +1007,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     data: { visitId: visitToEdit?.id || visitId }
                 });
             }
-            visitData.reportUrl = reportUrl;
             delete (visitData as any).reportFile;
     
             if (visitToEdit) {
@@ -2781,62 +2787,43 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <h4 className="font-semibold text-sm">Sanitation Checklist</h4>
-                                <ScrollArea className="h-72 border rounded-md p-4">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-8"></TableHead>
-                                            <TableHead>Item</TableHead>
-                                            <TableHead>Remarks</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {checklistFields.map((field, index) => (
-                                            <TableRow key={field.id}>
-                                                <TableCell>
-                                                    <FormField
-                                                        control={sanitationVisitForm.control}
-                                                        name={`checklist.${index}.checked`}
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormControl>
-                                                                    <Checkbox
-                                                                        checked={field.value}
-                                                                        onCheckedChange={field.onChange}
-                                                                    />
-                                                                </FormControl>
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-xs">{field.item}</TableCell>
-                                                <TableCell>
-                                                    {watchedChecklist[index]?.checked ? (
-                                                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                                            <CheckCircle className="h-3 w-3 mr-1"/>
-                                                            Passed
-                                                        </Badge>
-                                                    ) : (
-                                                        <FormField
-                                                            control={sanitationVisitForm.control}
-                                                            name={`checklist.${index}.remarks`}
-                                                            render={({ field }) => (
-                                                                <FormItem>
-                                                                    <FormControl>
-                                                                        <Input {...field} placeholder="Remarks..." className="h-7 text-xs" />
-                                                                    </FormControl>
-                                                                </FormItem>
-                                                            )}
-                                                        />
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                                </ScrollArea>
+                            <div className="space-y-4">
+                                <h4 className="font-semibold text-sm">Dispensers to Inspect</h4>
+                                {dispenserFields.map((field, index) => (
+                                  <div key={field.id} className="flex items-center gap-2">
+                                    <FormField
+                                        control={sanitationVisitForm.control}
+                                        name={`dispenserReports.${index}.dispenserName`}
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormControl>
+                                                    <Input {...field} placeholder={`Dispenser ${index + 1} Name...`} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeDispenser(index)}
+                                      disabled={dispenserFields.length <= 1}
+                                    >
+                                      <MinusCircle className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => appendDispenser({ dispenserId: `dispenser-${Date.now()}`, dispenserName: `Dispenser ${dispenserFields.length + 1}`})}
+                                >
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Add another dispenser
+                                </Button>
+                                 <FormMessage>{sanitationVisitForm.formState.errors.dispenserReports?.root?.message}</FormMessage>
                             </div>
                         </div>
                     </ScrollArea>
