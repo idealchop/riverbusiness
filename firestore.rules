@@ -19,9 +19,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Allow any authenticated user to read a specific user's document.
-      // This is needed for the user to fetch the Admin's profile for the chat.
-      allow get: if request.auth != null;
+      // Allow any user (authenticated or not) to read a specific user's document.
+      // This is needed for the public sanitation report page to get the business name,
+      // and for the user to fetch the Admin's profile for the chat.
+      allow get: if true;
       allow list, read: if isOwner(userId);
       
       // A user can update specific fields on their own profile.
@@ -45,7 +46,7 @@ service cloud.firestore {
         allow read, write: if isOwner(userId) || isAdmin();
     }
     
-    // Users can manage all other subcollections within their own user document.
+    // Default rule for most user subcollections.
     match /users/{userId}/{subcollection}/{docId} {
       allow read, list, write, delete: if isOwner(userId);
     }
@@ -77,7 +78,7 @@ service cloud.firestore {
     // Rules for public sanitation reports
     match /publicSanitationLinks/{linkId} {
       // Anyone can read the link mapping to get the path to the real document.
-      allow read;
+      allow read: if true;
       // Only admins can create these links.
       allow write: if isAdmin();
     }
@@ -86,8 +87,11 @@ service cloud.firestore {
     // This is implicitly handled by the app logic fetching the path from the link.
     // The rule on the user's subcollection needs to be adjusted.
     match /users/{userId}/sanitationVisits/{visitId} {
+      // Admins and owners have full access.
       allow read, list, write, delete: if isOwner(userId) || isAdmin();
-      // Allow public update for specific fields
+      // Allow public read for the specific report page.
+      allow get: if true;
+      // Allow public update for specific fields related to the report submission.
       allow update: if request.auth == null && request.resource.data.diff(resource.data).affectedKeys()
         .hasAny(['checklist', 'officerSignature', 'clientSignature', 'status']);
     }
