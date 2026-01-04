@@ -275,32 +275,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!userToCalc) return null;
     
         const now = new Date();
-        const currentYear = getYear(now);
-        const currentMonth = getMonth(now);
+        const cycleStart = startOfMonth(now);
+        const cycleEnd = endOfMonth(now);
+        
+        const description = `Bill for ${format(now, 'MMMM yyyy')}`;
+        const invoiceIdSuffix = format(now, 'yyyyMM');
     
-        let cycleStart: Date;
-        let cycleEnd: Date;
-        let monthsToBill = 1;
-        let description: string;
-        let invoiceIdSuffix: string;
-    
-        if (currentYear === 2026 && currentMonth === 0) {
-            cycleStart = new Date(2025, 11, 1);
-            cycleEnd = endOfMonth(now);
-            monthsToBill = 2;
-            description = 'Bill for December 2025 - January 2026';
-            invoiceIdSuffix = '202512-202601';
-        } else {
-            cycleStart = startOfMonth(now);
-            cycleEnd = endOfMonth(now);
-            description = `Bill for ${format(now, 'MMMM yyyy')}`;
-            invoiceIdSuffix = format(now, 'yyyyMM');
-        }
-    
-        if (monthsToBill > 1 && !userToCalc.plan?.isConsumptionBased) {
-            return null;
-        }
-
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
@@ -309,15 +289,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
         let estimatedCost = 0;
-        const monthlyEquipmentCost = (userToCalc.customPlanDetails?.gallonPrice || 0) + (userToCalc.customPlanDetails?.dispenserPrice || 0);
-        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
-    
+        let monthlyEquipmentCost = 0;
+        if (userToCalc.customPlanDetails?.gallonPaymentType === 'Monthly') {
+            monthlyEquipmentCost += (userToCalc.customPlanDetails?.gallonPrice || 0);
+        }
+        if (userToCalc.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+            monthlyEquipmentCost += (userToCalc.customPlanDetails?.dispenserPrice || 0);
+        }
+
         if (userToCalc.plan?.isConsumptionBased) {
             const consumptionCost = consumedLitersThisCycle * (userToCalc.plan.price || 0);
-            estimatedCost = consumptionCost + equipmentCostForPeriod;
+            estimatedCost = consumptionCost + monthlyEquipmentCost;
         } else {
-            const planCost = (userToCalc.plan?.price || 0) * monthsToBill;
-            estimatedCost = planCost + equipmentCostForPeriod;
+            const planCost = (userToCalc.plan?.price || 0);
+            estimatedCost = planCost + monthlyEquipmentCost;
         }
     
         return {
@@ -820,7 +805,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const startIndex = (deliveryCurrentPage - 1) * DELIVERY_ITEMS_PER_PAGE;
         const endIndex = startIndex + DELIVERY_ITEMS_PER_PAGE;
         return filteredDeliveries.slice(startIndex, endIndex);
-    }, [filteredDeliveries, deliveryCurrentPage, DELIVERY_ITEMS_PER_PAGE]);
+    }, [filteredDeliveries, deliveryCurrentPage]);
     
     React.useEffect(() => {
       setDeliveryCurrentPage(1);
@@ -1306,7 +1291,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     status: 'Upcoming'
                 };
                 const paymentsCollectionRef = collection(firestore, 'unclaimedProfiles', values.clientId, 'payments');
-                await addDoc(paymentsCollectionRef, initialInvoice);
+                const newPaymentDoc = await addDoc(paymentsCollectionRef, {});
+                await updateDoc(newPaymentDoc, {...initialInvoice, id: newPaymentDoc.id});
             }
 
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
@@ -1750,7 +1736,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>

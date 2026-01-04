@@ -166,14 +166,14 @@ async function generateInvoiceForUser(
         const planCost = user.plan.price || 0;
         // For standard invoice, monthsToBill is 1.
         // For combined invoice, fixed-plan users are billed for Dec only, so monthsToBill is also 1.
-        amount = planCost + equipmentCostForPeriod;
+        // The equipmentCostForPeriod will also use monthsToBill=1 in that case, which is correct.
+        amount = planCost + (monthlyEquipmentCost * 1); // Explicitly use 1 for fixed plans always.
         description = `Monthly Subscription for ${billingPeriod}`;
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
-            // Rollover for fixed-plan users in Feb needs to account for 2 months of allocation vs 2 months of use.
-            const allocationMonths = (userRef.id.includes('202512-202601')) ? 2 : 1;
-            const totalAllocationForPeriod = monthlyAllocation * allocationMonths;
+            // For rollover purposes, we still need to consider the full allocation over the period.
+            const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
             const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
             if (rolloverLiters > 0) {

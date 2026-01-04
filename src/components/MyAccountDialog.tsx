@@ -1038,14 +1038,18 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Container Rental ({user.customPlanDetails?.gallonQuantity || 0} units)</span>
-                    <span className="font-medium">P{(breakdownDetails.gallonCost || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Dispenser Rental ({user.customPlanDetails?.dispenserQuantity || 0} units)</span>
-                    <span className="font-medium">P{(breakdownDetails.dispenserCost || 0).toFixed(2)}</span>
-                </div>
+                {user.customPlanDetails?.gallonQuantity > 0 &&
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Container Rental ({user.customPlanDetails?.gallonQuantity || 0} units)</span>
+                        <span className="font-medium">P{(breakdownDetails.gallonCost || 0).toFixed(2)}</span>
+                    </div>
+                }
+                {user.customPlanDetails?.dispenserQuantity > 0 &&
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Dispenser Rental ({user.customPlanDetails?.dispenserQuantity || 0} units)</span>
+                        <span className="font-medium">P{(breakdownDetails.dispenserCost || 0).toFixed(2)}</span>
+                    </div>
+                }
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total Amount</span>
