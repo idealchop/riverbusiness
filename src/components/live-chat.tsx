@@ -13,6 +13,8 @@ import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
 import type { AppUser, ChatMessage } from '@/lib/types';
+import { Timestamp } from 'firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
 
 interface LiveChatProps {
     chatMessages: ChatMessage[];
@@ -55,10 +57,10 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
               const sender = isUserMessage ? user : agent;
               const FallbackIcon = isUserMessage ? User : UserCog;
               const messageContent = m.text;
-
+              const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date();
 
               return (
-              <div key={m.id} className={cn("flex gap-3 text-sm", isUserMessage ? 'justify-end' : '')}>
+              <div key={m.id} className={cn("flex items-start gap-3 text-sm", isUserMessage ? 'justify-end' : 'justify-start')}>
                  {!isUserMessage && (
                   <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
                      <AvatarImage src={sender?.photoURL ?? undefined} alt={sender?.name || 'Agent'} />
@@ -68,10 +70,24 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                   </Avatar>
                 )}
                 <div className={cn(
-                    "flex-1 max-w-[80%] p-3 rounded-lg",
-                    isUserMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                    "flex-1 max-w-[80%]",
+                    isUserMessage ? 'flex items-end flex-col' : ''
                 )}>
-                  <div className="prose-sm max-w-full">{messageContent}</div>
+                  {!isUserMessage && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-xs">{sender?.name || 'Admin'}</span>
+                      <span className="text-xs text-muted-foreground">Customer Support</span>
+                    </div>
+                  )}
+                  <div className={cn(
+                      "p-3 rounded-lg",
+                      isUserMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                  )}>
+                    <div className="prose-sm max-w-full break-words">{messageContent}</div>
+                  </div>
+                   <div className="text-xs text-muted-foreground mt-1 px-1">
+                        {formatDistanceToNow(messageDate, { addSuffix: true })}
+                    </div>
                 </div>
                 {isUserMessage && (
                   <Avatar className="h-8 w-8">
