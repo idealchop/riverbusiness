@@ -149,6 +149,7 @@
       "properties": {
         "dispenserId": { "type": "string", "description": "Unique ID for this dispenser report instance." },
         "dispenserName": { "type": "string", "description": "The admin-assigned name for the dispenser (e.g., 'Lobby Unit')." },
+        "dispenserCode": { "type": "string", "description": "A special code to uniquely identify the equipment." },
         "checklist": {
             "type": "array",
             "items": { "$ref": "#/entities/SanitationChecklistItem" }
@@ -317,5 +318,3 @@
     }
   }
 }
-
-    

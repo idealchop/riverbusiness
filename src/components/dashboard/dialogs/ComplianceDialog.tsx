@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet } from 'lucide-react';
+import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature } from 'lucide-react';
 import Image from 'next/image';
 
 interface ComplianceDialogProps {
@@ -339,20 +339,28 @@ export function ComplianceDialog({
 
                   {selectedSanitationVisit?.status === 'Completed' && (selectedSanitationVisit.officerSignature || selectedSanitationVisit.clientSignature) && (
                   <Card>
-                      <CardHeader><CardTitle className="text-base">Signatures</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle></CardHeader>
                       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedSanitationVisit.officerSignature && (
-                          <div className="space-y-2">
-                              <p className="text-xs font-semibold text-center">Quality Officer</p>
-                              <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                          </div>
-                      )}
-                      {selectedSanitationVisit.clientSignature && (
-                          <div className="space-y-2">
-                              <p className="text-xs font-semibold text-center">Client Representative</p>
-                              <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                          </div>
-                      )}
+                          {selectedSanitationVisit.officerSignature && (
+                              <div className="space-y-2 text-center">
+                                  <p className="text-xs font-semibold">Quality Officer</p>
+                                  <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                                  <div className="text-xs text-muted-foreground">
+                                      <p>{selectedSanitationVisit.assignedTo}</p>
+                                      <p>{selectedSanitationVisit.officerSignatureDate ? format(new Date(selectedSanitationVisit.officerSignatureDate), 'PP') : ''}</p>
+                                  </div>
+                              </div>
+                          )}
+                          {selectedSanitationVisit.clientSignature && (
+                              <div className="space-y-2 text-center">
+                                  <p className="text-xs font-semibold">Client Representative</p>
+                                  <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                                  <div className="text-xs text-muted-foreground">
+                                      <p>{selectedSanitationVisit.clientRepName}</p>
+                                      <p>{selectedSanitationVisit.clientSignatureDate ? format(new Date(selectedSanitationVisit.clientSignatureDate), 'PP') : ''}</p>
+                                  </div>
+                              </div>
+                          )}
                       </CardContent>
                   </Card>
                   )}
@@ -375,5 +383,3 @@ export function ComplianceDialog({
     </>
   );
 }
-
-    

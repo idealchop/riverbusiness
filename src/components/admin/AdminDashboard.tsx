@@ -530,7 +530,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: {
             status: 'Scheduled',
             assignedTo: '',
-            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: '' }],
+            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` }],
         }
     });
 
@@ -557,7 +557,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 status: 'Scheduled',
                 assignedTo: '',
                 reportFile: null,
-                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: '' }],
+                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` }],
             });
         }
     }, [visitToEdit, sanitationVisitForm]);
@@ -2839,7 +2839,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => appendDispenser({ dispenserId: `dispenser-${Date.now()}`, dispenserName: ``, dispenserCode: ''})}
+                                    onClick={() => appendDispenser({ 
+                                        dispenserId: `dispenser-${Date.now()}`, 
+                                        dispenserName: ``, 
+                                        dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` 
+                                    })}
                                 >
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Add another dispenser
@@ -3060,5 +3064,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
