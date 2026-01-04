@@ -158,8 +158,8 @@ export function ComplianceDialog({
                     ))}
                     {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
                       <p className="text-center text-muted-foreground py-10">No compliance reports available.</p>
-                    )}
-                  </div>
+                     )}
+                   </div>
 
                 </CardContent>
               </Card>
