@@ -255,111 +255,112 @@ export function ComplianceDialog({
                 </DialogDescription>
             </DialogHeader>
 
-            <div className="max-h-[60vh]">
-                <ScrollArea className="h-full pr-6 -mr-6">
-                    <div className="py-4 space-y-6">
-                        {selectedSanitationVisit?.status === 'Completed' ? (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-base">Overall Result</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-center mb-4">
-                                        <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {sanitationReportStats.passed} of {sanitationReportStats.total} items passed
-                                        </p>
-                                    </div>
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Progress value={sanitationReportStats.passRate} className="h-2" />
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>{sanitationReportStats.passRate.toFixed(0)}% Pass Rate</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                </CardContent>
-                            </Card>
-                        ) : (
-                            <Card className="border-dashed">
-                                <CardContent className="py-6 flex flex-col items-center justify-center text-center gap-2">
-                                    <Hourglass className="h-8 w-8 text-muted-foreground" />
-                                    <p className="font-semibold">Visit Not Yet Completed</p>
-                                    <p className="text-sm text-muted-foreground">Checklist results will be available once the visit is marked as "Completed" by the admin.</p>
-                                </CardContent>
-                            </Card>
-                        )}
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedSanitationVisit?.dispenserReports?.map(report => (
-                                <Card key={report.dispenserId}>
-                                    <CardHeader>
-                                        <CardTitle className="text-base flex items-center gap-2">
-                                            <Droplet className="h-5 w-5 text-primary"/>
-                                            Checklist for: <span className="font-bold">{report.dispenserName}</span>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Item</TableHead>
-                                                    <TableHead className="text-right w-24">Status</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {report.checklist?.map((item, index) => (
-                                                    <TableRow key={index} className={cn(!item.checked && "bg-destructive/5")}>
-                                                        <TableCell className="font-medium text-xs w-full">
-                                                            {item.item}
-                                                            {selectedSanitationVisit.status === 'Completed' && !item.checked && item.remarks && (
-                                                                <p className="text-destructive text-xs mt-1 pl-2 border-l-2 border-destructive">
-                                                                    <span className="font-bold">Remarks:</span> {item.remarks}
-                                                                </p>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {selectedSanitationVisit.status === 'Scheduled' ? (
-                                                                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
-                                                            ) : item.checked ? (
-                                                                <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
-                                                            ) : (
-                                                                <Badge variant="destructive" className="whitespace-nowrap"><AlertTriangle className="h-3 w-3 mr-1" />Failed</Badge>
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
+            <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+              <div className="py-4 space-y-6">
+                  {selectedSanitationVisit?.status === 'Completed' ? (
+                      <Card>
+                          <CardHeader>
+                              <CardTitle className="text-base">Overall Result</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                              <div className="text-center mb-4">
+                                  <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                      {sanitationReportStats.passed} of {sanitationReportStats.total} items passed
+                                  </p>
+                              </div>
+                              <TooltipProvider>
+                                  <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <Progress value={sanitationReportStats.passRate} className="h-2" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                          <p>{sanitationReportStats.passRate.toFixed(0)}% Pass Rate</p>
+                                      </TooltipContent>
+                                  </Tooltip>
+                              </TooltipProvider>
+                          </CardContent>
+                      </Card>
+                  ) : (
+                      <Card className="border-dashed">
+                          <CardContent className="py-6 flex flex-col items-center justify-center text-center gap-2">
+                              <Hourglass className="h-8 w-8 text-muted-foreground" />
+                              <p className="font-semibold">Visit Not Yet Completed</p>
+                              <p className="text-sm text-muted-foreground">Checklist results will be available once the visit is marked as "Completed" by the admin.</p>
+                          </CardContent>
+                      </Card>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedSanitationVisit?.dispenserReports?.map(report => (
+                          <Card key={report.dispenserId}>
+                              <CardHeader>
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                      <Droplet className="h-5 w-5 text-primary"/>
+                                      Checklist for: <span className="font-bold">{report.dispenserName}</span>
+                                  </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                  <Table>
+                                      <TableHeader>
+                                          <TableRow>
+                                              <TableHead>Item</TableHead>
+                                              <TableHead className="text-right w-24">Status</TableHead>
+                                          </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                          {report.checklist?.map((item, index) => (
+                                              <TableRow key={index} className={cn(!item.checked && "bg-destructive/5")}>
+                                                  <TableCell className="font-medium text-xs w-full">
+                                                      {item.item}
+                                                      {selectedSanitationVisit.status === 'Completed' && !item.checked && item.remarks && (
+                                                          <p className="text-destructive text-xs mt-1 pl-2 border-l-2 border-destructive">
+                                                              <span className="font-bold">Remarks:</span> {item.remarks}
+                                                          </p>
+                                                      )}
+                                                  </TableCell>
+                                                  <TableCell className="text-right">
+                                                      {selectedSanitationVisit.status === 'Scheduled' ? (
+                                                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
+                                                      ) : item.checked ? (
+                                                          <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
+                                                      ) : (
+                                                          <Badge variant="destructive" className="whitespace-nowrap"><AlertTriangle className="h-3 w-3 mr-1" />Failed</Badge>
+                                                      )}
+                                                  </TableCell>
+                                              </TableRow>
+                                          ))}
+                                      </TableBody>
+                                  </Table>
+                              </CardContent>
+                          </Card>
+                      ))}
+                  </div>
 
-                        {selectedSanitationVisit?.status === 'Completed' && (selectedSanitationVisit.officerSignature || selectedSanitationVisit.clientSignature) && (
-                        <Card>
-                            <CardHeader><CardTitle className="text-base">Signatures</CardTitle></CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {selectedSanitationVisit.officerSignature && (
-                                <div className="space-y-2 text-center">
-                                <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                                <p className="text-xs font-semibold">Quality Officer</p>
-                                </div>
-                            )}
-                            {selectedSanitationVisit.clientSignature && (
-                                <div className="space-y-2 text-center">
-                                <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                                <p className="text-xs font-semibold">Client Representative</p>
-                                </div>
-                            )}
-                            </CardContent>
-                        </Card>
-                        )}
-                    </div>
-                </ScrollArea>
-            </div>
+                  {selectedSanitationVisit?.status === 'Completed' && (selectedSanitationVisit.officerSignature || selectedSanitationVisit.clientSignature) && (
+                  <Card>
+                      <CardHeader><CardTitle className="text-base">Signatures</CardTitle></CardHeader>
+                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedSanitationVisit.officerSignature && (
+                          <div className="space-y-2 text-center">
+                          <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                          <p className="text-xs font-semibold">Quality Officer</p>
+                          </div>
+                      )}
+                      {selectedSanitationVisit.clientSignature && (
+                          <div className="space-y-2 text-center">
+                          <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                          <p className="text-xs font-semibold">Client Representative</p>
+                          </div>
+                      )}
+                      </CardContent>
+                  </Card>
+                  )}
+                  <div className="text-center text-xs text-muted-foreground pt-4">
+                      <p>We ensure your water is safe to drink. In case of any concerns or issues, please reach out to us at <a href="mailto:customer@riverph.com" className="font-semibold text-primary hover:underline">customer@riverph.com</a>.</p>
+                  </div>
+              </div>
+            </ScrollArea>
             <DialogFooter className="justify-between pt-6 border-t">
                 <div>
                   {selectedSanitationVisit?.reportUrl && (
@@ -377,3 +378,5 @@ export function ComplianceDialog({
     </>
   );
 }
+
+    
