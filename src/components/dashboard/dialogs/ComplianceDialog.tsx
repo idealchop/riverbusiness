@@ -297,6 +297,7 @@ export function ComplianceDialog({
                                   <CardTitle className="text-base flex items-center gap-2">
                                       <Droplet className="h-5 w-5 text-primary"/>
                                       Checklist for: <span className="font-bold">{report.dispenserName}</span>
+                                      {report.dispenserCode && <Badge variant="secondary">{report.dispenserCode}</Badge>}
                                   </CardTitle>
                               </CardHeader>
                               <CardContent>
@@ -344,28 +345,17 @@ export function ComplianceDialog({
                           <div className="space-y-2">
                               <p className="text-xs font-semibold text-center">Quality Officer</p>
                               <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                              <div className="border rounded-md p-2 bg-muted text-xs space-y-1 text-center">
-                                  <p><span className="font-medium">{selectedSanitationVisit.assignedTo}</span></p>
-                                  <p>{selectedSanitationVisit.officerSignatureDate ? format(new Date(selectedSanitationVisit.officerSignatureDate), 'PP') : ''}</p>
-                              </div>
                           </div>
                       )}
                       {selectedSanitationVisit.clientSignature && (
                           <div className="space-y-2">
                               <p className="text-xs font-semibold text-center">Client Representative</p>
                               <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                              <div className="border rounded-md p-2 bg-muted text-xs space-y-1 text-center">
-                                  <p><span className="font-medium">{selectedSanitationVisit.clientRepName}</span></p>
-                                  <p>{selectedSanitationVisit.clientSignatureDate ? format(new Date(selectedSanitationVisit.clientSignatureDate), 'PP') : ''}</p>
-                              </div>
                           </div>
                       )}
                       </CardContent>
                   </Card>
                   )}
-                  <div className="text-center text-xs text-muted-foreground pt-4">
-                      <p>We ensure your water is safe to drink. In case of any concerns or issues, please reach out to us at <a href="mailto:customer@riverph.com" className="font-semibold text-primary hover:underline">customer@riverph.com</a>.</p>
-                  </div>
               </div>
             </div>
             <DialogFooter className="justify-between pt-6 border-t -mx-6 px-6 pb-6">
@@ -385,3 +375,5 @@ export function ComplianceDialog({
     </>
   );
 }
+
+    

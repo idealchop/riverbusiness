@@ -37,6 +37,7 @@ export interface SanitationChecklistItem {
 export interface DispenserReport {
     dispenserId: string;
     dispenserName: string;
+    dispenserCode?: string;
     checklist: SanitationChecklistItem[];
 }
 

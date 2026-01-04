@@ -149,6 +149,7 @@
       "properties": {
         "dispenserId": { "type": "string", "description": "Unique ID for this dispenser report instance." },
         "dispenserName": { "type": "string", "description": "The admin-assigned name for the dispenser (e.g., 'Lobby Unit')." },
+        "dispenserCode": { "type": "string", "description": "A special code to uniquely identify the equipment." },
         "checklist": {
             "type": "array",
             "items": { "$ref": "#/entities/SanitationChecklistItem" }
@@ -170,6 +171,9 @@
         "shareableLink": { "type": "string", "format": "uri", "description": "A public, shareable link to the report." },
         "officerSignature": { "type": "string", "format": "uri", "description": "Data URI of the officer's signature." },
         "clientSignature": { "type": "string", "format": "uri", "description": "Data URI of the client's signature." },
+        "clientRepName": { "type": "string", "description": "Name of the client representative who signed." },
+        "officerSignatureDate": { "type": "string", "format": "date-time", "description": "Date the officer signed." },
+        "clientSignatureDate": { "type": "string", "format": "date-time", "description": "Date the client signed." },
         "dispenserReports": {
             "type": "array",
             "description": "An array of reports, one for each dispenser inspected during the visit.",
@@ -314,3 +318,5 @@
     }
   }
 }
+
+    

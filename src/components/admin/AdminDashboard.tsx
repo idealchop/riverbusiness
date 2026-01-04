@@ -81,6 +81,7 @@ type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 const dispenserReportSchema = z.object({
     dispenserId: z.string(),
     dispenserName: z.string().min(1, "Dispenser name is required"),
+    dispenserCode: z.string().optional(),
 });
 
 const sanitationVisitSchema = z.object({
@@ -529,7 +530,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: {
             status: 'Scheduled',
             assignedTo: '',
-            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1' }],
+            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: '' }],
         }
     });
 
@@ -544,7 +545,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 scheduledDate: new Date(visitToEdit.scheduledDate),
                 status: visitToEdit.status,
                 assignedTo: visitToEdit.assignedTo,
-                dispenserReports: visitToEdit.dispenserReports?.map(dr => ({ dispenserId: dr.dispenserId, dispenserName: dr.dispenserName })),
+                dispenserReports: visitToEdit.dispenserReports?.map(dr => ({ 
+                    dispenserId: dr.dispenserId, 
+                    dispenserName: dr.dispenserName,
+                    dispenserCode: dr.dispenserCode,
+                })),
             });
             setIsSanitationVisitDialogOpen(true);
         } else {
@@ -552,7 +557,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 status: 'Scheduled',
                 assignedTo: '',
                 reportFile: null,
-                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1' }],
+                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: '' }],
             });
         }
     }, [visitToEdit, sanitationVisitForm]);
@@ -981,6 +986,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const dispenserReports: DispenserReport[] = values.dispenserReports.map(dr => ({
                 dispenserId: dr.dispenserId,
                 dispenserName: dr.dispenserName,
+                dispenserCode: dr.dispenserCode,
                 checklist: defaultChecklistItems.map(item => ({...item})), // Create a fresh checklist for each
             }));
 
@@ -2790,25 +2796,40 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <div className="space-y-4">
                                 <h4 className="font-semibold text-sm">Dispensers to Inspect</h4>
                                 {dispenserFields.map((field, index) => (
-                                  <div key={field.id} className="flex items-center gap-2">
-                                    <FormField
-                                        control={sanitationVisitForm.control}
-                                        name={`dispenserReports.${index}.dispenserName`}
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormControl>
-                                                    <Input {...field} placeholder={`Dispenser ${index + 1} Name...`} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                  <div key={field.id} className="flex items-start gap-2">
+                                    <div className="grid grid-cols-2 gap-2 flex-1">
+                                        <FormField
+                                            control={sanitationVisitForm.control}
+                                            name={`dispenserReports.${index}.dispenserName`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input {...field} placeholder={`Name (e.g. Lobby)`} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                         <FormField
+                                            control={sanitationVisitForm.control}
+                                            name={`dispenserReports.${index}.dispenserCode`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input {...field} placeholder={`Code (e.g. D-001)`} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                     <Button
                                       type="button"
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => removeDispenser(index)}
                                       disabled={dispenserFields.length <= 1}
+                                      className="mt-2"
                                     >
                                       <MinusCircle className="h-4 w-4" />
                                     </Button>
@@ -2818,7 +2839,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => appendDispenser({ dispenserId: `dispenser-${Date.now()}`, dispenserName: `Dispenser ${dispenserFields.length + 1}`})}
+                                    onClick={() => appendDispenser({ dispenserId: `dispenser-${Date.now()}`, dispenserName: ``, dispenserCode: ''})}
                                 >
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Add another dispenser
@@ -3039,3 +3060,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
