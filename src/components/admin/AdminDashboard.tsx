@@ -2852,12 +2852,26 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogFooter className="pt-6 flex justify-between w-full">
                             <div>
                                 {visitToEdit && (
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" type="button" disabled={isSubmitting}>
-                                            <Trash2 className="mr-2 h-4 w-4"/>
-                                            Delete Visit
-                                        </Button>
-                                    </AlertDialogTrigger>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" type="button" disabled={isSubmitting}>
+                                                <Trash2 className="mr-2 h-4 w-4"/>
+                                                Delete Visit
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete the sanitation visit scheduled for {visitToEdit ? format(new Date(visitToEdit.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 )}
                             </div>
                             <div className="flex gap-2">
@@ -2869,20 +2883,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </Form>
             </DialogContent>
         </Dialog>
-         <AlertDialog open={!!visitToDelete} onOpenChange={(open) => !open && setVisitToDelete(null)}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
