@@ -51,6 +51,9 @@ export interface SanitationVisit {
   shareableLink?: string;
   officerSignature?: string;
   clientSignature?: string;
+  clientRepName?: string;
+  officerSignatureDate?: string;
+  clientSignatureDate?: string;
 }
 
 export interface WaterStation {
@@ -201,3 +204,5 @@ export interface ChatMessage {
   attachmentUrl?: string;
   attachmentType?: string;
 }
+
+    

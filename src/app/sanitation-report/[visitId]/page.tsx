@@ -21,9 +21,12 @@ import { Logo } from '@/components/icons';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
 
 // A simple signature pad component
-const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, label: string }) => {
+const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
 
@@ -40,6 +43,7 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
     };
 
     const startDrawing = (event: React.MouseEvent | React.TouchEvent) => {
+        if (disabled) return;
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
         const pos = getPosition(event.nativeEvent);
@@ -49,7 +53,7 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
     };
 
     const draw = (event: React.MouseEvent | React.TouchEvent) => {
-        if (!isDrawing) return;
+        if (!isDrawing || disabled) return;
         event.preventDefault(); // Prevents page scrolling on touch devices
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
@@ -59,6 +63,7 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
     };
 
     const endDrawing = () => {
+        if (disabled) return;
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
         context.closePath();
@@ -84,12 +89,12 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
     return (
         <div className="space-y-2">
             <Label>{label}</Label>
-            <div className="border rounded-md bg-white touch-none">
+            <div className={cn("border rounded-md bg-white touch-none", disabled && "bg-muted cursor-not-allowed")}>
                 <canvas
                     ref={canvasRef}
                     width={400}
                     height={150}
-                    className="w-full h-auto cursor-crosshair"
+                    className={cn("w-full h-auto", disabled ? "cursor-not-allowed" : "cursor-crosshair")}
                     onMouseDown={startDrawing}
                     onMouseMove={draw}
                     onMouseUp={endDrawing}
@@ -100,8 +105,8 @@ const SignaturePad = ({ onSave, label }: { onSave: (dataUrl: string) => void, la
                 />
             </div>
             <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={clearPad}>Clear</Button>
-                <Button size="sm" onClick={handleSave}>Confirm Signature</Button>
+                <Button variant="outline" size="sm" onClick={clearPad} disabled={disabled}>Clear</Button>
+                <Button size="sm" onClick={handleSave} disabled={disabled}>Confirm Signature</Button>
             </div>
         </div>
     );
@@ -114,7 +119,7 @@ export default function SanitationReportPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [visitData, setVisitData] = useState<SanitationVisit | null>(null);
+    const [visitData, setVisitData] = useState<Partial<SanitationVisit> | null>(null);
     const [clientData, setClientData] = useState<AppUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('');
@@ -179,19 +184,22 @@ export default function SanitationReportPage() {
     };
     
     const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
-        setVisitData(prevVisitData => {
-            if (!prevVisitData) return null;
-            return { ...prevVisitData, [`${type}Signature`]: dataUrl };
-        });
-        toast({ title: "Signature Captured!", description: `The ${type}'s signature has been added to the report.` });
+        const signatureDate = new Date().toISOString();
+        if (type === 'officer' && visitData?.assignedTo) {
+            setVisitData(prev => ({...prev, officerSignature: dataUrl, officerSignatureDate: signatureDate }));
+            toast({ title: "Officer Signature Captured!" });
+        } else if (type === 'client') {
+            setVisitData(prev => ({...prev, clientSignature: dataUrl, clientSignatureDate: signatureDate }));
+            toast({ title: "Client Signature Captured!" });
+        }
     };
     
     
     const handleSubmitReport = async () => {
         if (!firestore || !linkId || !visitData) return;
 
-        if (!visitData.officerSignature || !visitData.clientSignature) {
-            toast({ variant: 'destructive', title: "Incomplete Signatures", description: "Please ensure the report is signed by both parties." });
+        if (!visitData.officerSignature || !visitData.clientSignature || !visitData.clientRepName || !visitData.clientSignatureDate) {
+            toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all signatures, names, and dates are provided." });
             return;
         }
 
@@ -203,11 +211,13 @@ export default function SanitationReportPage() {
 
             const visitRef = doc(firestore, 'users', userId, 'sanitationVisits', visitId);
             
-            // Prepare the data to be updated
             const updateData: Partial<SanitationVisit> = {
                 dispenserReports: visitData.dispenserReports,
                 officerSignature: visitData.officerSignature,
+                officerSignatureDate: visitData.officerSignatureDate,
                 clientSignature: visitData.clientSignature,
+                clientRepName: visitData.clientRepName,
+                clientSignatureDate: visitData.clientSignatureDate,
                 status: 'Completed'
             };
 
@@ -221,12 +231,16 @@ export default function SanitationReportPage() {
             setIsSubmitting(false);
         }
     };
+    
+    const handleFieldChange = (field: keyof SanitationVisit, value: any) => {
+        setVisitData(prev => ({ ...prev, [field]: value }));
+    };
 
     if (isLoading) {
         return (
             <main className="flex min-h-screen w-full flex-col items-center justify-center bg-muted p-4 sm:p-8">
                  <div className="w-full max-w-4xl space-y-4">
-                    <div className="flex items-center gap-4"><Logo className="h-16 w-16" /><Skeleton className="h-12 w-1/2" /></div>
+                    <div className="flex items-center gap-4"><Logo className="h-12 w-12 sm:h-16 sm:w-16" /><Skeleton className="h-12 w-1/2" /></div>
                     <Skeleton className="h-6 w-3/4" />
                     <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
                     <Card><CardContent className="p-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
@@ -254,7 +268,7 @@ export default function SanitationReportPage() {
          )
     }
 
-    const allSignaturesCompleted = visitData?.officerSignature && visitData?.clientSignature;
+    const allSignaturesCompleted = visitData?.officerSignature && visitData?.clientSignature && visitData?.clientRepName && visitData?.clientSignatureDate;
 
     return (
         <main className="min-h-screen w-full bg-muted p-4 sm:p-8">
@@ -264,7 +278,7 @@ export default function SanitationReportPage() {
                     <div className="text-center sm:text-left">
                         <h1 className="text-2xl sm:text-3xl font-bold">Sanitation Visit Report</h1>
                         <p className="text-muted-foreground">
-                            {clientData?.businessName} - {visitData ? format(new Date(visitData.scheduledDate), 'PP') : ''}
+                            {clientData?.businessName} - {visitData?.scheduledDate ? format(new Date(visitData.scheduledDate), 'PP') : ''}
                         </p>
                     </div>
                 </header>
@@ -321,24 +335,67 @@ export default function SanitationReportPage() {
                         <CardDescription>Please provide digital signatures to confirm the completion and accuracy of this report.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {visitData?.officerSignature ? (
-                            <div className="space-y-2">
-                                <Label>Quality Officer's Signature</Label>
-                                <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo</Button>
-                            </div>
-                        ) : (
-                                <SignaturePad onSave={(dataUrl) => handleSaveSignature('officer', dataUrl)} label="Quality Officer's Signature" />
-                        )}
+                         <div className="space-y-4">
+                            <Label className="font-semibold">Quality Officer</Label>
+                            {visitData?.officerSignature ? (
+                                <div className="space-y-2">
+                                    <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                    <div className="border rounded-md p-3 bg-muted text-sm space-y-2">
+                                        <p><span className="font-medium">Name:</span> {visitData.assignedTo}</p>
+                                        <p><span className="font-medium">Date:</span> {visitData.officerSignatureDate ? format(new Date(visitData.officerSignatureDate), 'PP') : ''}</p>
+                                    </div>
+                                    <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo Signature</Button>
+                                </div>
+                            ) : (
+                                <SignaturePad onSave={(dataUrl) => handleSaveSignature('officer', dataUrl)} label="" />
+                            )}
+                        </div>
+                        <div className="space-y-4">
+                             <Label className="font-semibold">Client Representative</Label>
                             {visitData?.clientSignature ? (
-                            <div className="space-y-2">
-                                <Label>Client Representative's Signature</Label>
-                                <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                <Button size="sm" variant="outline" onClick={() => handleSaveSignature('client', '')}>Redo</Button>
-                            </div>
-                        ) : (
-                                <SignaturePad onSave={(dataUrl) => handleSaveSignature('client', dataUrl)} label="Client Representative's Signature" />
-                        )}
+                                <div className="space-y-2">
+                                    <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                     <div className="border rounded-md p-3 bg-muted text-sm space-y-2">
+                                        <p><span className="font-medium">Name:</span> {visitData.clientRepName}</p>
+                                        <p><span className="font-medium">Date:</span> {visitData.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), 'PP') : ''}</p>
+                                    </div>
+                                    <Button size="sm" variant="outline" onClick={() => handleSaveSignature('client', '')}>Redo Signature</Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                     <SignaturePad onSave={(dataUrl) => handleSaveSignature('client', dataUrl)} label="" />
+                                     <div>
+                                        <Label htmlFor="clientRepName">Representative Name</Label>
+                                        <Input id="clientRepName" value={visitData?.clientRepName || ''} onChange={(e) => handleFieldChange('clientRepName', e.target.value)} />
+                                     </div>
+                                     <div>
+                                        <Label htmlFor="clientRepDate">Date</Label>
+                                         <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full justify-start text-left font-normal",
+                                                        !visitData?.clientSignatureDate && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {visitData?.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), "PPP") : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={visitData?.clientSignatureDate ? new Date(visitData.clientSignatureDate) : undefined}
+                                                    onSelect={(date) => handleFieldChange('clientSignatureDate', date?.toISOString())}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                     </div>
+                                </div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
                 
@@ -352,3 +409,5 @@ export default function SanitationReportPage() {
         </main>
     );
 }
+
+    

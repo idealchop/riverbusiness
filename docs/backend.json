@@ -28,9 +28,50 @@
         "contractStatus": { "type": "string", "description": "Status of the user's contract." },
         "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." },
         "pendingPlan": { "type": "object", "description": "Details of a pending plan change." },
-        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." }
+        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." },
+        "lastChatMessage": { "type": "string", "description": "The last message sent in the chat." },
+        "lastChatTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last chat message." },
+        "hasUnreadAdminMessages": { "type": "boolean", "description": "True if the user has unread messages from an admin." },
+        "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." },
+        "supportDisplayName": { "type": "string", "description": "Public display name for the support agent in chat." },
+        "supportDescription": { "type": "string", "description": "Public description for the support agent (e.g., 'Customer Support')." },
+        "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
+    },
+    "UnclaimedProfile": {
+      "title": "UnclaimedProfile",
+      "type": "object",
+      "description": "Represents a pre-configured user profile created by an admin, waiting to be claimed by a new user. The document ID is the clientId.",
+      "properties": {
+        "clientId": { "type": "string", "description": "Manually assigned client identifier. This is the primary key." },
+        "name": { "type": "string", "description": "User's full name." },
+        "businessEmail": { "type": "string", "format": "email", "description": "User's business contact email address." },
+        "businessName": { "type": "string", "description": "User's business name." },
+        "address": { "type": "string", "description": "User's address." },
+        "contactNumber": { "type": "string", "description": "User's phone number." },
+        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters." },
+        "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
+        "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
+        "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
+        "plan": { "type": "object", "description": "User's subscription plan details." },
+        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
+      },
+      "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt"]
+    },
+    "ChatMessage": {
+        "title": "ChatMessage",
+        "type": "object",
+        "description": "Represents a single message in a chat conversation.",
+        "properties": {
+            "id": { "type": "string" },
+            "text": { "type": "string", "description": "The text content of the message. Optional if there is an attachment." },
+            "role": { "type": "string", "enum": ["user", "admin"] },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "attachmentUrl": { "type": "string", "format": "uri", "description": "URL to an uploaded attachment." },
+            "attachmentType": { "type": "string", "description": "MIME type of the attachment (e.g., 'image/png')." }
+        },
+        "required": ["id", "role", "timestamp"]
     },
     "WaterStation": {
       "title": "WaterStation",
@@ -99,7 +140,21 @@
             "checked": { "type": "boolean", "description": "Whether the item has been checked off." },
             "remarks": { "type": "string", "description": "Optional remarks for the checklist item." }
         },
-        "required": ["item", "checked", "remarks"]
+        "required": ["item", "checked"]
+    },
+    "DispenserReport": {
+      "title": "DispenserReport",
+      "type": "object",
+      "description": "Represents the full sanitation report for a single dispenser.",
+      "properties": {
+        "dispenserId": { "type": "string", "description": "Unique ID for this dispenser report instance." },
+        "dispenserName": { "type": "string", "description": "The admin-assigned name for the dispenser (e.g., 'Lobby Unit')." },
+        "checklist": {
+            "type": "array",
+            "items": { "$ref": "#/entities/SanitationChecklistItem" }
+        }
+      },
+      "required": ["dispenserId", "dispenserName", "checklist"]
     },
     "SanitationVisit": {
       "title": "SanitationVisit",
@@ -111,16 +166,31 @@
         "scheduledDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
         "assignedTo": { "type": "string" },
-        "reportUrl": { "type": "string", "format": "uri", "description": "URL to the sanitation report attachment." },
-        "checklist": {
+        "reportUrl": { "type": "string", "format": "uri", "description": "URL to a potential summary sanitation report attachment." },
+        "shareableLink": { "type": "string", "format": "uri", "description": "A public, shareable link to the report." },
+        "officerSignature": { "type": "string", "format": "uri", "description": "Data URI of the officer's signature." },
+        "clientSignature": { "type": "string", "format": "uri", "description": "Data URI of the client's signature." },
+        "clientRepName": { "type": "string", "description": "Name of the client representative who signed." },
+        "officerSignatureDate": { "type": "string", "format": "date-time", "description": "Date the officer signed." },
+        "clientSignatureDate": { "type": "string", "format": "date-time", "description": "Date the client signed." },
+        "dispenserReports": {
             "type": "array",
-            "description": "An array of checklist items for the sanitation visit.",
-            "items": {
-                "$ref": "#/entities/SanitationChecklistItem"
-            }
+            "description": "An array of reports, one for each dispenser inspected during the visit.",
+            "items": { "$ref": "#/entities/DispenserReport" }
         }
       },
       "required": ["id", "userId", "scheduledDate", "status"]
+    },
+    "PublicSanitationLink": {
+        "title": "PublicSanitationLink",
+        "type": "object",
+        "description": "Maps a unique, unguessable ID to a sanitation visit for public access.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "visitId": { "type": "string" }
+        },
+        "required": ["userId", "visitId"]
     },
     "Schedule": {
       "title": "Schedule",
@@ -221,6 +291,10 @@
       "schema": { "$ref": "#/entities/RefillRequest" },
       "description": "Subcollection for user's one-time refill requests."
     },
+    "/users/{userId}/chatMessages/{messageId}": {
+        "schema": { "$ref": "#/entities/ChatMessage" },
+        "description": "Subcollection for a user's live chat messages."
+    },
     "/waterStations/{stationId}": {
       "schema": { "$ref": "#/entities/WaterStation" },
       "description": "Top-level collection for all water stations."
@@ -232,6 +306,16 @@
     "/schedules/currentSchedule": {
       "schema": { "$ref": "#/entities/Schedule" },
       "description": "A single document to hold the current global delivery schedule."
+    },
+    "/unclaimedProfiles/{clientId}": {
+      "schema": { "$ref": "#/entities/UnclaimedProfile" },
+      "description": "Stores pre-configured profiles created by an admin, waiting to be claimed. The document ID is the clientId."
+    },
+    "/publicSanitationLinks/{linkId}": {
+      "schema": { "$ref": "#/entities/PublicSanitationLink" },
+      "description": "Stores mappings for public sanitation report links."
     }
   }
 }
+
+    
