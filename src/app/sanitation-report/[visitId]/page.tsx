@@ -162,11 +162,13 @@ export default function SanitationReportPage() {
     
     const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
         if (!visitData) return;
+        const newVisitData = { ...visitData };
         if (type === 'officer') {
-            setVisitData({ ...visitData, officerSignature: dataUrl });
+            newVisitData.officerSignature = dataUrl;
         } else {
-            setVisitData({ ...visitData, clientSignature: dataUrl });
+            newVisitData.clientSignature = dataUrl;
         }
+        setVisitData(newVisitData);
         toast({ title: "Signature Captured!", description: "The signature has been added to the report." });
     };
     
@@ -267,7 +269,7 @@ export default function SanitationReportPage() {
                                             onChange={(e) => handleChecklistChange(index, 'remarks', e.target.value)}
                                          />
                                     )}
-                                    {item.checked && <CheckCircle className="h-5 w-5 text-green-500" />}
+                                    {item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block" />}
                                 </div>
                             ))}
                         </div>
@@ -284,7 +286,7 @@ export default function SanitationReportPage() {
                             <div className="space-y-2">
                                 <Label>Quality Officer's Signature</Label>
                                 <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                <Button size="sm" variant="outline" onClick={() => setVisitData({...visitData, officerSignature: undefined})}>Redo</Button>
+                                <Button size="sm" variant="outline" onClick={() => setVisitData(prev => prev ? {...prev, officerSignature: undefined} : null)}>Redo</Button>
                             </div>
                         ) : (
                              <SignaturePad onSave={(dataUrl) => handleSaveSignature('officer', dataUrl)} label="Quality Officer's Signature" />
@@ -293,7 +295,7 @@ export default function SanitationReportPage() {
                             <div className="space-y-2">
                                 <Label>Client Representative's Signature</Label>
                                 <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
-                                <Button size="sm" variant="outline" onClick={() => setVisitData({...visitData, clientSignature: undefined})}>Redo</Button>
+                                <Button size="sm" variant="outline" onClick={() => setVisitData(prev => prev ? {...prev, clientSignature: undefined} : null)}>Redo</Button>
                             </div>
                         ) : (
                              <SignaturePad onSave={(dataUrl) => handleSaveSignature('client', dataUrl)} label="Client Representative's Signature" />
