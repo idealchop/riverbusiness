@@ -537,7 +537,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         gallonCost = user.customPlanDetails?.gallonPaymentType === 'Monthly' ? gallonPrice : 0;
         dispenserCost = user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? dispenserPrice : 0;
 
-        if (!user.plan?.isConsumptionBased) {
+        if (!user.plan?.isConsumptionBased && !user.plan?.isPrepaid) {
             planCost = user.plan?.price || 0;
         }
 
@@ -785,6 +785,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <p className="text-lg font-bold text-foreground">
                                 P{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
                             </p>
+                        ) : user.plan?.isPrepaid ? (
+                            <p className="text-lg font-bold text-foreground">
+                                Prepaid Balance Plan
+                            </p>
                         ) : (
                             <p className="text-lg font-bold text-foreground">
                                 P{user.plan?.price.toLocaleString()}/month
@@ -804,6 +808,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                     <span className="text-xs block pl-4 text-primary"> - Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}.</span>
                                   }
                                 </li>
+                              </ul>
+                            </div>
+                          ) : user.plan?.isPrepaid ? (
+                             <div className="sm:col-span-2">
+                              <h4 className="font-semibold mb-2">Plan Details</h4>
+                              <ul className="space-y-1 text-muted-foreground">
+                                <li><strong>Billing:</strong> Top-up your liter balance as needed.</li>
+                                <li><strong>Consumption:</strong> Deliveries deduct from your balance.</li>
                               </ul>
                             </div>
                           ) : (
