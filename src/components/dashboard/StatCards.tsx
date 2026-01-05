@@ -209,9 +209,6 @@ export function StatCards({
                 <div className="flex justify-between">
                   <span>Consumed this period:</span> <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Rate:</span> <span>₱{user?.plan?.price || 3}/Liter</span>
-                </div>
               </div>
             </CardContent>
             <CardFooter className="pt-0">
