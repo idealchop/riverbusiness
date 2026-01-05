@@ -513,7 +513,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return null;
   };
   
-  const breakdownDetails = useMemo(() => {
+const breakdownDetails = useMemo(() => {
     const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
     if (!user || !state.invoiceForBreakdown || !deliveries) {
         return emptyDetails;
@@ -521,7 +521,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
     const invoiceDate = toSafeDate(state.invoiceForBreakdown.date);
     if (!invoiceDate) return emptyDetails;
-
+    
     const userCreationDate = toSafeDate(user.createdAt);
     const isFirstInvoice = userCreationDate 
         ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate) 
@@ -538,7 +538,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     let gallonCost = 0;
     let dispenserCost = 0;
 
-    // Determine billing period for consumption calculation
     const cycleStart = startOfMonth(invoiceDate);
     const cycleEnd = endOfMonth(invoiceDate);
     const deliveriesInPeriod = deliveries.filter(d => {
@@ -547,7 +546,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     });
     consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
     
-    // Calculate costs
     if (user.plan?.isConsumptionBased) {
         consumptionCost = consumedLiters * (user.plan.price || 0);
     } else {
@@ -572,6 +570,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         isFirstInvoice,
     };
 }, [user, state.invoiceForBreakdown, currentMonthInvoice, deliveries]);
+
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
