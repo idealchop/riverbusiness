@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -523,8 +524,9 @@ const breakdownDetails = useMemo(() => {
     if (!invoiceDate) return emptyDetails;
     
     const userCreationDate = toSafeDate(user.createdAt);
+    // An invoice is the "first invoice" if its month and year match the user's creation month and year.
     const isFirstInvoice = userCreationDate 
-        ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate) 
+        ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate)
         : false;
     
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
@@ -552,13 +554,14 @@ const breakdownDetails = useMemo(() => {
         planCost = user.plan?.price || 0;
     }
 
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
+    
+    // Only add one-time fees if it's the user's first invoice period
     if (isFirstInvoice) {
         if (user.customPlanDetails?.gallonPaymentType === 'One-Time') gallonCost += gallonPrice;
         if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') dispenserCost += dispenserPrice;
     }
-    
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
 
     return {
         planCost,
@@ -645,6 +648,15 @@ const breakdownDetails = useMemo(() => {
   
   const displayPhoto = user.photoURL;
   const userFirstName = user.name.split(' ')[0];
+  
+  const totalBreakdownAmount = useMemo(() => {
+      return (
+        breakdownDetails.planCost +
+        breakdownDetails.consumptionCost +
+        breakdownDetails.gallonCost +
+        breakdownDetails.dispenserCost
+      );
+  }, [breakdownDetails]);
 
   return (
     <AlertDialog>
@@ -1185,7 +1197,7 @@ const breakdownDetails = useMemo(() => {
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total Amount</span>
-                  <span>P{state.invoiceForBreakdown?.amount.toFixed(2)}</span>
+                  <span>P{totalBreakdownAmount.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -1520,3 +1532,5 @@ const breakdownDetails = useMemo(() => {
     </AlertDialog>
   );
 }
+
+    
