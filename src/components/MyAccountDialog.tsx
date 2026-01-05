@@ -520,33 +520,49 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
 
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
-
-    let monthlyEquipmentCost = 0;
-
+    const isOneTimeFeeInvoice = state.invoiceForBreakdown.description.includes('One-Time');
+    
+    let totalMonthlyEquipmentCost = 0;
+    let totalOneTimeEquipmentCost = 0;
+    
+    const gallonPrice = user.customPlanDetails?.gallonPrice || 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+      totalMonthlyEquipmentCost += gallonPrice;
+    } else if (user.customPlanDetails?.gallonPaymentType === 'One-Time') {
+      totalOneTimeEquipmentCost += gallonPrice;
     }
+
+    const dispenserPrice = user.customPlanDetails?.dispenserPrice || 0;
     if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+      totalMonthlyEquipmentCost += dispenserPrice;
+    } else if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') {
+      totalOneTimeEquipmentCost += dispenserPrice;
     }
 
     let planCost = 0;
     let consumptionCost = 0;
-    
-    // For fixed plans, the plan cost is the main component.
-    if (!user.plan?.isConsumptionBased) {
-        planCost = user.plan?.price || 0;
-    }
+    let gallonCost = 0;
+    let dispenserCost = 0;
 
-    // For any plan, the consumption cost is the total amount minus the base plan cost and any monthly equipment fees.
-    // This ensures that for consumption plans, the cost is derived correctly, and for fixed plans, any overage might be shown here (if applicable in future).
-    consumptionCost = state.invoiceForBreakdown.amount - planCost - monthlyEquipmentCost;
+    if (isOneTimeFeeInvoice) {
+        gallonCost = user.customPlanDetails?.gallonPaymentType === 'One-Time' ? gallonPrice : 0;
+        dispenserCost = user.customPlanDetails?.dispenserPaymentType === 'One-Time' ? dispenserPrice : 0;
+    } else {
+        gallonCost = user.customPlanDetails?.gallonPaymentType === 'Monthly' ? gallonPrice : 0;
+        dispenserCost = user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? dispenserPrice : 0;
+
+        if (!user.plan?.isConsumptionBased) {
+            planCost = user.plan?.price || 0;
+        }
+
+        consumptionCost = state.invoiceForBreakdown.amount - planCost - totalMonthlyEquipmentCost;
+    }
 
 
     return { 
         planCost, 
-        gallonCost: user.customPlanDetails?.gallonPaymentType === 'Monthly' ? (user.customPlanDetails?.gallonPrice || 0) : 0, 
-        dispenserCost: user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? (user.customPlanDetails?.dispenserPrice || 0) : 0, 
+        gallonCost, 
+        dispenserCost, 
         consumptionCost, 
         isCurrent 
     };
@@ -1483,4 +1499,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   );
 }
 
-    
