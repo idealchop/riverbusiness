@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -515,29 +514,16 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
   
   const breakdownDetails = useMemo(() => {
+    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
     if (!user || !state.invoiceForBreakdown) {
-      return { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
+      return emptyDetails;
     }
 
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
     const isOneTimeFeeInvoice = state.invoiceForBreakdown.description.includes('One-Time');
     
-    let totalMonthlyEquipmentCost = 0;
-    let totalOneTimeEquipmentCost = 0;
-    
     const gallonPrice = user.customPlanDetails?.gallonPrice || 0;
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-      totalMonthlyEquipmentCost += gallonPrice;
-    } else if (user.customPlanDetails?.gallonPaymentType === 'One-Time') {
-      totalOneTimeEquipmentCost += gallonPrice;
-    }
-
     const dispenserPrice = user.customPlanDetails?.dispenserPrice || 0;
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-      totalMonthlyEquipmentCost += dispenserPrice;
-    } else if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') {
-      totalOneTimeEquipmentCost += dispenserPrice;
-    }
 
     let planCost = 0;
     let consumptionCost = 0;
@@ -555,15 +541,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             planCost = user.plan?.price || 0;
         }
 
+        const totalMonthlyEquipmentCost = gallonCost + dispenserCost;
         consumptionCost = state.invoiceForBreakdown.amount - planCost - totalMonthlyEquipmentCost;
     }
-
 
     return { 
         planCost, 
         gallonCost, 
         dispenserCost, 
-        consumptionCost, 
+        consumptionCost: Math.max(0, consumptionCost), // Ensure consumption cost isn't negative
         isCurrent 
     };
   }, [user, state.invoiceForBreakdown, currentMonthInvoice]);
@@ -1499,3 +1485,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   );
 }
 
+    
