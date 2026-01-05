@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -520,26 +521,35 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
 
-    let gallonCost = 0;
-    let dispenserCost = 0;
-    
+    let monthlyEquipmentCost = 0;
+
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-        gallonCost = (user.customPlanDetails?.gallonPrice || 0);
+        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
     }
     if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-        dispenserCost = (user.customPlanDetails?.dispenserPrice || 0);
+        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
     }
-    
+
     let planCost = 0;
     let consumptionCost = 0;
-
-    if (user.plan?.isConsumptionBased) {
-        consumptionCost = state.invoiceForBreakdown.amount - gallonCost - dispenserCost;
-    } else {
-        planCost = (user.plan?.price || 0);
+    
+    // For fixed plans, the plan cost is the main component.
+    if (!user.plan?.isConsumptionBased) {
+        planCost = user.plan?.price || 0;
     }
 
-    return { planCost, gallonCost, dispenserCost, consumptionCost, isCurrent };
+    // For any plan, the consumption cost is the total amount minus the base plan cost and any monthly equipment fees.
+    // This ensures that for consumption plans, the cost is derived correctly, and for fixed plans, any overage might be shown here (if applicable in future).
+    consumptionCost = state.invoiceForBreakdown.amount - planCost - monthlyEquipmentCost;
+
+
+    return { 
+        planCost, 
+        gallonCost: user.customPlanDetails?.gallonPaymentType === 'Monthly' ? (user.customPlanDetails?.gallonPrice || 0) : 0, 
+        dispenserCost: user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? (user.customPlanDetails?.dispenserPrice || 0) : 0, 
+        consumptionCost, 
+        isCurrent 
+    };
   }, [user, state.invoiceForBreakdown, currentMonthInvoice]);
 
   const handleViewInvoice = (invoice: Payment) => {
@@ -1472,3 +1482,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
+    
