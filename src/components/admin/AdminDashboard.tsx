@@ -119,7 +119,6 @@ const newUserSchema = z.object({
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
   initialLiters: z.coerce.number().optional(), // For Prepaid Plan
   topUpBalanceCredits: z.coerce.number().optional(), // For Parent Account initial balance
-  customPlanDetails: planDetailsSchema,
   accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
   parentId: z.string().optional(),
 });
@@ -214,6 +213,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
     const [isTopUpDialogOpen, setIsTopUpDialogOpen] = React.useState(false);
     const [topUpAmount, setTopUpAmount] = React.useState<number>(0);
+    const [isDebitDialogOpen, setIsDebitDialogOpen] = React.useState(false);
+    const [debitAmount, setDebitAmount] = React.useState<number>(0);
+    const [debitReason, setDebitReason] = React.useState('');
     
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -515,20 +517,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             initialLiters: 0,
             topUpBalanceCredits: 0,
             accountType: 'Single',
-            customPlanDetails: {
-                litersPerMonth: 0,
-                bonusLiters: 0,
-                gallonQuantity: 0,
-                gallonPrice: 0,
-                gallonPaymentType: 'Monthly',
-                dispenserQuantity: 0,
-                dispenserPrice: 0,
-                dispenserPaymentType: 'Monthly',
-                deliveryFrequency: 'Weekly',
-                deliveryDay: 'Monday',
-                deliveryTime: '09:00',
-                autoRefillEnabled: true,
-            }
         }
     });
     
@@ -1288,18 +1276,15 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
             
-            const { customPlanDetails, plan, initialLiters, topUpBalanceCredits, ...rest } = values;
+            const { plan, initialLiters, topUpBalanceCredits, ...rest } = values;
 
             let totalLiters = 0;
             if (plan.isPrepaid) {
                 totalLiters = initialLiters || 0;
-            } else if (!plan.isConsumptionBased) {
-                totalLiters = (customPlanDetails.litersPerMonth || 0) + (customPlanDetails.bonusLiters || 0);
             }
 
             const profileData: any = {
                 ...rest, 
-                customPlanDetails, 
                 plan: {
                     name: plan.name,
                     price: plan.price,
@@ -1377,16 +1362,54 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             await createNotification(selectedUser.id, {
                 type: 'top-up',
                 title: 'Balance Topped Up',
-                description: `Your account has been credited with PHP ${topUpAmount.toLocaleString()}.`,
+                description: `Your account has been credited with ${selectedUser.accountType === 'Parent' ? 'PHP' : ''} ${topUpAmount.toLocaleString()}.`,
                 data: { amount: topUpAmount }
             });
 
-            toast({ title: 'Top-Up Successful', description: `PHP ${topUpAmount} added to ${selectedUser.businessName}'s balance.` });
+            toast({ title: 'Top-Up Successful', description: `${topUpAmount.toLocaleString()} ${selectedUser.accountType === 'Parent' ? 'PHP' : 'Liters'} added to ${selectedUser.businessName}'s balance.` });
             setIsTopUpDialogOpen(false);
             setTopUpAmount(0);
         } catch (error) {
             console.error("Top-up failed:", error);
             toast({ variant: 'destructive', title: 'Top-Up Failed', description: 'An error occurred while adding credits.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    const handleDebit = async () => {
+        if (!firestore || !selectedUser || debitAmount <= 0 || !debitReason) return;
+        setIsSubmitting(true);
+        try {
+            const userRef = doc(firestore, 'users', selectedUser.id);
+            const incrementField = 'topUpBalanceCredits';
+            
+            await updateDoc(userRef, {
+                [incrementField]: increment(-debitAmount)
+            });
+
+            const transactionData: Omit<Transaction, 'id'> = {
+                date: serverTimestamp(),
+                type: 'Debit',
+                amountCredits: debitAmount,
+                description: debitReason
+            };
+            await addDoc(collection(userRef, 'transactions'), transactionData);
+
+            await createNotification(selectedUser.id, {
+                type: 'general',
+                title: 'Balance Adjustment',
+                description: `PHP ${debitAmount.toLocaleString()} was debited from your account. Reason: ${debitReason}.`,
+                data: { amount: debitAmount, reason: debitReason }
+            });
+
+            toast({ title: 'Debit Successful', description: `PHP ${debitAmount} was debited from ${selectedUser.businessName}'s balance.` });
+            setIsDebitDialogOpen(false);
+            setDebitAmount(0);
+            setDebitReason('');
+        } catch (error) {
+            console.error("Debit failed:", error);
+            toast({ variant: 'destructive', title: 'Debit Failed', description: 'An error occurred while debiting credits.' });
         } finally {
             setIsSubmitting(false);
         }
@@ -1466,10 +1489,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <p className="text-3xl font-bold mb-2">
                                           ₱{(selectedUser.topUpBalanceCredits ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </p>
-                                        <Button size="sm" onClick={() => setIsTopUpDialogOpen(true)}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Top-Up Credits
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button size="sm" onClick={() => setIsTopUpDialogOpen(true)}>
+                                                <PlusCircle className="mr-2 h-4 w-4" />
+                                                Top-Up Credits
+                                            </Button>
+                                             <Button size="sm" variant="destructive" onClick={() => setIsDebitDialogOpen(true)}>
+                                                <MinusCircle className="mr-2 h-4 w-4" />
+                                                Debit/Adjust
+                                            </Button>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             ) : selectedUser.plan?.isPrepaid ? (
@@ -1540,7 +1569,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge></TableCell>
                                                                 <TableCell>{tx.description}</TableCell>
                                                                 <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                                                    {tx.type === 'Credit' ? '+' : '-'}₱{(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                                                    {tx.type === 'Credit' ? '+' : '-'}₱{tx.amountCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))
@@ -2130,8 +2159,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             selectedInvoice?.status === 'Paid' && 'bg-green-100 text-green-800',
                             selectedInvoice?.status === 'Pending Review' && 'bg-blue-100 text-blue-800'
                         )}>
-                            {selectedInvoice?.status}
-                        </Badge>
+                            {selectedInvoice?.status}</Badge>
                     </div>
                     
                     <div className="space-y-2">
@@ -2487,17 +2515,42 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <Dialog open={isTopUpDialogOpen} onOpenChange={setIsTopUpDialogOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Top-Up Credits</DialogTitle>
-                    <DialogDescription>Add credits to {selectedUser?.businessName}'s balance.</DialogDescription>
+                    <DialogTitle>Top-Up Balance</DialogTitle>
+                    <DialogDescription>Add {selectedUser?.accountType === 'Parent' ? 'credits' : 'liters'} to {selectedUser?.businessName}'s balance.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
-                    <Label htmlFor="top-up-amount">Amount to Add (PHP)</Label>
+                    <Label htmlFor="top-up-amount">Amount to Add ({selectedUser?.accountType === 'Parent' ? 'PHP' : 'Liters'})</Label>
                     <Input id="top-up-amount" type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value))} placeholder="e.g., 10000" />
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsTopUpDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
                     <Button onClick={handleTopUp} disabled={topUpAmount <= 0 || isSubmitting}>
                         {isSubmitting ? 'Topping up...' : 'Confirm Top-Up'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isDebitDialogOpen} onOpenChange={setIsDebitDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Debit/Adjust Balance</DialogTitle>
+                    <DialogDescription>Manually subtract credits from {selectedUser?.businessName}'s balance.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="debit-amount">Amount to Debit (PHP)</Label>
+                        <Input id="debit-amount" type="number" value={debitAmount} onChange={(e) => setDebitAmount(Number(e.target.value))} placeholder="e.g., 500" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="debit-reason">Reason for Debit</Label>
+                        <Input id="debit-reason" value={debitReason} onChange={(e) => setDebitReason(e.target.value)} placeholder="e.g., Monthly service fee" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDebitDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
+                    <Button onClick={handleDebit} disabled={debitAmount <= 0 || !debitReason || isSubmitting} variant="destructive">
+                        {isSubmitting ? 'Debiting...' : 'Confirm Debit'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -3114,7 +3167,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                          <FormField control={newUserForm.control} name="topUpBalanceCredits" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel>Initial Top-Up Credits (PHP)</FormLabel>
-                                                <FormControl><Input type="number" placeholder="e.g. 10000" {...field} /></FormControl>
+                                                <FormControl><Input type="number" placeholder="e.g. 10000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                                 <FormDescription>Set the starting credit balance for this parent account.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
@@ -3194,88 +3247,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <FormField control={newUserForm.control} name="initialLiters" render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Initial Liters Balance</FormLabel>
-                                                        <FormControl><Input type="number" placeholder="e.g., 10000" {...field} /></FormControl>
+                                                        <FormControl><Input type="number" placeholder="e.g., 10000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                                         <FormDescription>This will be the starting prepaid balance for the user.</FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}/>
                                             )}
-                                            {!selectedPlan.isConsumptionBased && !selectedPlan.isPrepaid ? (
-                                                <div className="space-y-4 p-4 border rounded-lg">
-                                                    <h4 className="font-medium">Subscription</h4>
-                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                         <FormField
-                                                            control={newUserForm.control}
-                                                            name="plan.price"
-                                                            render={({ field }) => (
-                                                                <FormItem>
-                                                                    <FormLabel>Amount per Month</FormLabel>
-                                                                    <FormControl>
-                                                                        <Input
-                                                                            type="number"
-                                                                            placeholder="e.g., 2500"
-                                                                            value={field.value}
-                                                                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
-                                                                        />
-                                                                    </FormControl>
-                                                                    <FormMessage />
-                                                                </FormItem>
-                                                            )}
-                                                        />
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (
-                                                            <FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                                        )}/>
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (
-                                                            <FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                                        )}/>
-                                                    </div>
-                                                </div>
-                                                ) : !selectedPlan.isPrepaid && (
-                                                <div className="p-4 border rounded-lg bg-muted/50">
-                                                    <h4 className="font-medium">Billing</h4>
-                                                    <p className="text-sm text-muted-foreground">This is a consumption-based plan. The client will be billed at <span className="font-bold text-foreground">P{selectedPlan.price}/liter</span> at the end of each month.</p>
-                                                </div>
-                                            )}
                                              <div className="space-y-4 p-4 border rounded-lg">
-                                                <h4 className="font-medium">Equipment & Schedule</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (
-                                                        <FormItem><FormLabel>Gallon Quantity</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                                    )}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (
-                                                        <FormItem><FormLabel>Gallon Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                                    )}/>
-                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (
-                                                        <FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                                            <SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent>
-                                                        </Select><FormMessage/></FormItem>
-                                                    )}/>
-                                                </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (
-                                                        <FormItem><FormLabel>Dispenser Qty</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                                    )}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (
-                                                        <FormItem><FormLabel>Dispenser Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>
-                                                    )}/>
-                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserPaymentType" render={({ field }) => (
-                                                        <FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                                            <SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent>
-                                                        </Select><FormMessage/></FormItem>
-                                                    )}/>
-                                                </div>
+                                                <h4 className="font-medium">Delivery Schedule</h4>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.deliveryFrequency" render={({ field }) => (
-                                                        <FormItem><FormLabel>Delivery Frequency</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
+                                                        <FormItem><FormLabel>Frequency</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
                                                     )}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.deliveryDay" render={({ field }) => (
-                                                        <FormItem><FormLabel>Delivery Day</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
+                                                        <FormItem><FormLabel>Day</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>
                                                     )}/>
                                                 </div>
                                                 <FormField control={newUserForm.control} name="customPlanDetails.deliveryTime" render={({ field }) => (
-                                                    <FormItem><FormLabel>Delivery Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage/></FormItem>
+                                                    <FormItem><FormLabel>Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage/></FormItem>
                                                 )}/>
                                              </div>
                                         </div>
