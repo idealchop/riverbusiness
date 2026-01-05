@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy, RefreshCw } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy, RefreshCw, Droplets } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport, Transaction } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -118,6 +118,8 @@ const newUserSchema = z.object({
   clientType: z.string().min(1, { message: 'Plan type is required' }),
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
   customPlanDetails: planDetailsSchema,
+  accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
+  parentId: z.string().optional(),
 });
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
@@ -150,6 +152,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'users'), where('role', '==', 'User')) : null, [firestore, isAdmin]);
     const { data: appUsers, isLoading: usersLoading } = useCollection<AppUser>(usersQuery);
+
+    const parentUsers = useMemo(() => appUsers?.filter(u => u.accountType === 'Parent'), [appUsers]);
 
     const unclaimedProfilesQuery = useMemoFirebase(() => (firestore && isAdmin) ? collection(firestore, 'unclaimedProfiles') : null, [firestore, isAdmin]);
     const { data: unclaimedProfiles, isLoading: unclaimedProfilesLoading } = useCollection<any>(unclaimedProfilesQuery);
@@ -206,6 +210,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
     const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
+    const [isTopUpDialogOpen, setIsTopUpDialogOpen] = React.useState(false);
+    const [topUpAmount, setTopUpAmount] = React.useState<number>(0);
     
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -240,6 +246,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: allPayments, isLoading: allPaymentsLoading } = useCollection<Payment & { parentId: string }>(allPaymentsQuery, {
         idField: 'parentId'
     });
+
+    const branchUsersQuery = useMemoFirebase(() => (firestore && selectedUser?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', selectedUser.id)) : null, [firestore, selectedUser]);
+    const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
+
+    const parentTransactionsQuery = useMemoFirebase(() => (firestore && selectedUser?.accountType === 'Parent') ? query(collection(firestore, 'users', selectedUser.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, selectedUser]);
+    const { data: parentTransactions } = useCollection<Transaction>(parentTransactionsQuery);
 
     const pendingPaymentsByUser = React.useMemo(() => {
         if (!allPayments) return {};
@@ -487,6 +499,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             contactNumber: '',
             clientType: '',
             plan: null,
+            accountType: 'Single',
             customPlanDetails: {
                 litersPerMonth: 0,
                 bonusLiters: 0,
@@ -662,6 +675,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
             const deliveryData: any = {
                 id: values.trackingNumber,
+                userId: userForHistory.id,
                 date: values.date.toISOString(),
                 volumeContainers: values.volumeContainers,
                 status: values.status,
@@ -672,14 +686,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
             await setDoc(deliveryRef, deliveryData);
 
-            await createNotification(userForHistory.id, {
-                type: 'delivery',
-                title: 'Delivery Scheduled',
-                description: `A delivery of ${values.volumeContainers} containers has been scheduled.`,
-                data: { deliveryId: values.trackingNumber }
-            });
-            
-            if (values.status === 'Delivered') {
+            if (values.status === 'Delivered' && userForHistory.accountType !== 'Branch') {
                 const litersToDeduct = containerToLiter(values.volumeContainers);
                 const userRef = doc(firestore, 'users', userForHistory.id);
                 await updateDoc(userRef, { totalConsumptionLiters: increment(-litersToDeduct) });
@@ -715,9 +722,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             adminNotes: values.adminNotes || '',
         };
     
-        const oldLiters = (deliveryToEdit.status === 'Delivered') ? containerToLiter(deliveryToEdit.volumeContainers) : 0;
-        const newLiters = (values.status === 'Delivered') ? containerToLiter(values.volumeContainers) : 0;
-        const adjustment = oldLiters - newLiters; 
+        if (userForHistory.accountType !== 'Branch') {
+          const oldLiters = (deliveryToEdit.status === 'Delivered') ? containerToLiter(deliveryToEdit.volumeContainers) : 0;
+          const newLiters = (values.status === 'Delivered') ? containerToLiter(values.volumeContainers) : 0;
+          const adjustment = oldLiters - newLiters; 
+      
+          if (adjustment !== 0) {
+              const userRef = doc(firestore, 'users', userForHistory.id);
+              await updateDoc(userRef, { totalConsumptionLiters: increment(adjustment) });
+          }
+        }
     
         await updateDoc(deliveryRef, updatedData);
 
@@ -730,11 +744,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             });
         }
     
-        if (adjustment !== 0) {
-            const userRef = doc(firestore, 'users', userForHistory.id);
-            await updateDoc(userRef, { totalConsumptionLiters: increment(adjustment) });
-        }
-    
         toast({ title: "Delivery Updated", description: `Delivery ${deliveryToEdit.id} has been successfully updated.` });
         setIsEditDeliveryOpen(false);
         setDeliveryToEdit(null);
@@ -745,7 +754,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToDelete.id);
     
-        if (deliveryToDelete.status === 'Delivered') {
+        if (deliveryToDelete.status === 'Delivered' && userForHistory.accountType !== 'Branch') {
             const litersToRestore = containerToLiter(deliveryToDelete.volumeContainers);
             const userRef = doc(firestore, 'users', userForHistory.id);
             await updateDoc(userRef, { totalConsumptionLiters: increment(litersToRestore) });
@@ -1204,7 +1213,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setComplianceRefresher(c => c + 1);
     };
     
-    // Helper function to safely convert a Firestore timestamp or string to a Date object
     const toSafeDate = (timestamp: any): Date | null => {
         if (!timestamp) return null;
         if (timestamp instanceof Timestamp) {
@@ -1235,6 +1243,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const selectedClientType = newUserForm.watch('clientType');
+    const selectedAccountType = newUserForm.watch('accountType');
 
     const planOptions = React.useMemo(() => {
         if (!selectedClientType) return [];
@@ -1322,7 +1331,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
              if (name === 'plan' && value.plan) {
                 const planPrice = value.plan.price || 0;
-                // Check if the current price in the form is different before setting
                 if (newUserForm.getValues('plan.price') !== planPrice) {
                     newUserForm.setValue('plan.price', planPrice);
                 }
@@ -1330,6 +1338,42 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
         return () => subscription.unsubscribe();
     }, [newUserForm]);
+
+    const handleTopUp = async () => {
+        if (!firestore || !selectedUser || topUpAmount <= 0) return;
+        setIsSubmitting(true);
+        try {
+            const userRef = doc(firestore, 'users', selectedUser.id);
+            await updateDoc(userRef, {
+                topUpBalanceLiters: increment(topUpAmount)
+            });
+
+            const transactionData: Omit<Transaction, 'id'> = {
+                date: serverTimestamp(),
+                type: 'Credit',
+                amountLiters: topUpAmount,
+                description: 'Admin Top-Up'
+            };
+            await addDoc(collection(userRef, 'transactions'), transactionData);
+            
+            await createNotification(selectedUser.id, {
+                type: 'top-up',
+                title: 'Balance Topped Up',
+                description: `Your account has been credited with ${topUpAmount.toLocaleString()} liters.`,
+                data: { amount: topUpAmount }
+            });
+
+            toast({ title: 'Top-Up Successful', description: `${topUpAmount} liters added to ${selectedUser.businessName}'s balance.` });
+            setIsTopUpDialogOpen(false);
+            setTopUpAmount(0);
+        } catch (error) {
+            console.error("Top-up failed:", error);
+            toast({ variant: 'destructive', title: 'Top-Up Failed', description: 'An error occurred while adding credits.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
@@ -1347,9 +1391,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </DialogHeader>
                 <ScrollArea className="pr-6 -mr-6 flex-1">
                 {selectedUser && (
-                    <div className="grid md:grid-cols-2 gap-8 py-6">
-                        {/* Left Column: User Profile & Details */}
-                        <div className="space-y-6">
+                    <Tabs defaultValue="overview">
+                        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+                            <TabsTrigger value="overview">Overview</TabsTrigger>
+                            <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
+                            <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                            {selectedUser.accountType === 'Parent' ? (
+                                <TabsTrigger value="branches">Branches</TabsTrigger>
+                            ) : (
+                                <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                            )}
+                        </TabsList>
+
+                        <TabsContent value="overview" className="py-6 space-y-6">
                             <div className="flex items-start gap-4">
                                 <Avatar className="h-20 w-20">
                                     <AvatarImage src={selectedUser.photoURL || undefined} alt={selectedUser.name} />
@@ -1362,145 +1416,167 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </div>
                             </div>
                             
-                            <Card>
+                            <div className="grid md:grid-cols-2 gap-6">
+                               <Card>
                                 <CardHeader className="pb-4">
                                     <CardTitle className="text-base">User Profile</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2 text-sm pt-0">
                                     <div className="grid grid-cols-[120px_1fr] gap-x-4">
                                         <div className="text-muted-foreground">Client ID:</div><div className="font-medium">{selectedUser.clientId}</div>
+                                        <div className="text-muted-foreground">Account Type:</div><div className="font-medium">{selectedUser.accountType || 'Single'}</div>
                                         <div className="text-muted-foreground">Plan:</div><div className="font-medium">{selectedUser.plan?.name || 'N/A'}</div>
-                                        <div className="text-muted-foreground">Role:</div><div className="font-medium">{selectedUser.role}</div>
                                         <div className="text-muted-foreground">Assigned Station:</div><div className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</div>
-                                        <div className="text-muted-foreground">Last Login:</div><div className="font-medium">{selectedUser.lastLogin ? format(new Date(selectedUser.lastLogin), 'PPp') : 'N/A'}</div>
+                                    </div>
+                                    <div className="flex gap-2 pt-2">
+                                        <Button onClick={() => setIsAssignStationOpen(true)} disabled={!isAdmin} variant="outline" size="sm">
+                                            <Building className="mr-2 h-4 w-4" /> Assign Station
+                                        </Button>
+                                        <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
+                                            <Upload className="mr-2 h-4 w-4" /> Contract
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
+                            
+                             {selectedUser.accountType === 'Parent' ? (
+                                <Card>
+                                    <CardHeader className="pb-4">
+                                        <CardTitle className="text-base">Top-Up Balance</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pt-0">
+                                        <p className="text-3xl font-bold mb-2">{(selectedUser.topUpBalanceLiters || 0).toLocaleString()} <span className="text-lg font-normal text-muted-foreground">Liters</span></p>
+                                        <Button size="sm" onClick={() => setIsTopUpDialogOpen(true)}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Top-Up Credits
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ) : selectedUser.accountType !== 'Branch' && (
+                                <Card>
+                                    <CardHeader className="pb-4">
+                                        <CardTitle className="text-base">Consumption Details</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2 text-sm pt-0">
+                                        {selectedUser.plan?.isConsumptionBased ? (
+                                            <>
+                                                <div className="flex justify-between items-center font-semibold text-base border-t pt-2 mt-2">
+                                                    <span>Est. Cost This Month:</span>
+                                                    <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground">Consumed this Month:</span>
+                                                    <span className="font-medium text-red-600">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between items-center font-semibold text-lg border-t pt-2 mt-2"><span>Current Balance:</span><span>{consumptionDetails.currentBalance.toLocaleString()} L</span></div>
+                                                <div className="flex justify-between items-center"><span>Total for Month:</span><span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span></div>
+                                                <div className="flex justify-between items-center"><span>Consumed:</span><span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span></div>
+                                            </>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                                )}
+                            </div>
 
-                             <Card>
-                                 <CardHeader>
-                                    <CardTitle className="text-base">Actions</CardTitle>
-                                 </CardHeader>
-                                 <CardContent className="grid grid-cols-2 gap-2">
-                                    <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline" size="sm">
-                                        <History className="mr-2 h-4 w-4" /> Deliveries
-                                    </Button>
-                                    <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline" size="sm">
-                                        <FileHeart className="mr-2 h-4 w-4" /> Sanitation
-                                    </Button>
-                                    <Button onClick={() => setIsAssignStationOpen(true)} disabled={!isAdmin} variant="outline" size="sm">
-                                        <Building className="mr-2 h-4 w-4" /> Assign Station
-                                    </Button>
-                                    <Button variant="outline" onClick={() => { setUserForContract(selectedUser); setIsUploadContractOpen(true); }} disabled={!isAdmin} size="sm">
-                                        <Upload className="mr-2 h-4 w-4" /> Contract
-                                    </Button>
-                                 </CardContent>
-                             </Card>
-                        </div>
-
-                        {/* Right Column: Consumption & Plan */}
-                        <div className="space-y-6">
-                            {selectedUserPlanImage && (
-                                <div className="relative w-full h-32 rounded-lg overflow-hidden border">
-                                    <Image
-                                        src={selectedUserPlanImage.imageUrl}
-                                        alt={selectedUser.clientType || ''}
-                                        fill
-                                        className="object-cover"
-                                        data-ai-hint={selectedUserPlanImage.imageHint}
-                                    />
-                                </div>
+                             {selectedUser.accountType === 'Parent' && (
+                                 <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Parent Account Transaction History</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ScrollArea className="h-48">
+                                             <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead>Type</TableHead>
+                                                        <TableHead>Description</TableHead>
+                                                        <TableHead className="text-right">Amount</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {parentTransactions && parentTransactions.length > 0 ? (
+                                                        parentTransactions.map(tx => (
+                                                            <TableRow key={tx.id}>
+                                                                <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
+                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge></TableCell>
+                                                                <TableCell>{tx.description}</TableCell>
+                                                                <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
+                                                                    {tx.type === 'Credit' ? '+' : '-'}{tx.amountLiters.toLocaleString()} L
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))
+                                                    ) : (
+                                                        <TableRow><TableCell colSpan={4} className="text-center">No transactions yet.</TableCell></TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
                             )}
 
+                        </TabsContent>
+
+                        <TabsContent value="deliveries" className="py-6">
+                            {/* This content will be populated by the delivery history dialog trigger */}
+                             <p className="text-sm text-muted-foreground">Click the button below to view and manage all deliveries for this user.</p>
+                             <Button onClick={() => { setUserForHistory(selectedUser); setIsDeliveryHistoryOpen(true); }} variant="outline" className="mt-4">
+                                <History className="mr-2 h-4 w-4" /> View Delivery History
+                            </Button>
+                        </TabsContent>
+
+                        <TabsContent value="sanitation" className="py-6">
+                            <p className="text-sm text-muted-foreground">Click the button below to view and manage sanitation visits for this user.</p>
+                             <Button onClick={() => setIsSanitationHistoryOpen(true)} variant="outline" className="mt-4">
+                                <FileHeart className="mr-2 h-4 w-4" /> View Sanitation History
+                            </Button>
+                        </TabsContent>
+
+                         <TabsContent value="invoices" className="py-6">
+                             <p className="text-sm text-muted-foreground">Click the button below to view and manage invoices for this user.</p>
+                            <Button onClick={() => { setUserForInvoices(selectedUser); setIsUserInvoicesOpen(true); }} variant="outline" className="mt-4">
+                                <Receipt className="mr-2 h-4 w-4" /> View Invoices
+                            </Button>
+                        </TabsContent>
+                        
+                        <TabsContent value="branches" className="py-6">
                             <Card>
-                                <CardHeader className="pb-4">
-                                    <CardTitle className="text-base">Consumption Details</CardTitle>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Linked Branch Accounts</CardTitle>
+                                    <CardDescription>Accounts that consume from this parent's top-up balance.</CardDescription>
                                 </CardHeader>
-                                {selectedUser.plan?.isConsumptionBased ? (
-                                    <CardContent className="space-y-2 text-sm pt-0">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Billing Model:</span>
-                                            <span className="font-medium">Pay based on consumption</span>
-                                        </div>
-                                         <div className="flex justify-between items-center font-semibold text-lg border-t pt-2 mt-2">
-                                            <span>Est. Cost This Month:</span>
-                                            <span>₱{consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <Separator/>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Consumed this Month:</span>
-                                            <span className="font-medium text-red-600">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Rate:</span>
-                                            <span className="font-medium">₱{selectedUser.plan.price}/Liter</span>
-                                        </div>
-                                        <Separator />
-                                        <div className='pt-2'>
-                                            <h4 className='font-medium text-sm mb-2'>Monthly History</h4>
-                                            <ScrollArea className="h-24">
-                                                <div className='space-y-1 pr-4'>
-                                                    {monthlyConsumptionHistory.length > 0 ? (
-                                                        monthlyConsumptionHistory.map(item => (
-                                                            <div key={item.month} className='flex justify-between items-center text-xs p-1 rounded-sm hover:bg-muted'>
-                                                                <span className='text-muted-foreground'>{item.month}</span>
-                                                                <div className='text-right'>
-                                                                    <span className='font-medium block'>{item.liters.toLocaleString()} L</span>
-                                                                    <span className='text-muted-foreground'>~ ₱{item.cost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                                                                </div>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className='text-xs text-muted-foreground text-center pt-4'>No historical data yet.</p>
-                                                    )}
-                                                </div>
-                                            </ScrollArea>
-                                        </div>
-                                    </CardContent>
-                                ) : (
-                                    <CardContent className="space-y-2 text-sm pt-0">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Auto Refill:</span>
-                                            {selectedUser.customPlanDetails?.autoRefillEnabled ?? true ? (
-                                                <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                                <CardContent>
+                                     <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Client ID</TableHead>
+                                                <TableHead>Business Name</TableHead>
+                                                <TableHead>Contact</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {branchUsers && branchUsers.length > 0 ? (
+                                                branchUsers.map(branch => (
+                                                    <TableRow key={branch.id}>
+                                                        <TableCell>{branch.clientId}</TableCell>
+                                                        <TableCell>{branch.businessName}</TableCell>
+                                                        <TableCell>{branch.name}</TableCell>
+                                                    </TableRow>
+                                                ))
                                             ) : (
-                                                <Badge variant="destructive">Disabled</Badge>
+                                                <TableRow><TableCell colSpan={3} className="text-center">No branch accounts linked.</TableCell></TableRow>
                                             )}
-                                        </div>
-                                        <Separator/>
-                                        <div className="flex justify-between items-center"><span>Plan Liters:</span><span className="font-medium">{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
-                                        <div className="flex justify-between items-center"><span>Bonus Liters:</span><span className="font-medium">{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
-                                        <div className="flex justify-between items-center"><span>Rollover:</span><span className="font-medium">{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
-                                        <div className="flex justify-between items-center font-semibold border-t pt-2 mt-2"><span>Total for Month:</span><span>{consumptionDetails.totalLitersForMonth.toLocaleString()} L</span></div>
-                                        <Separator/>
-                                        <div className="flex justify-between items-center"><span>Consumed:</span><span className="font-medium text-red-600">-{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span></div>
-                                        <div className="flex justify-between items-center font-semibold text-lg border-t pt-2 mt-2"><span>Current Balance:</span><span>{consumptionDetails.currentBalance.toLocaleString()} L</span></div>
-                                        <Separator />
-                                        <div className='pt-2'>
-                                            <h4 className='font-medium text-sm mb-2'>Monthly History</h4>
-                                            <ScrollArea className="h-24">
-                                                <div className='space-y-1 pr-4'>
-                                                    {monthlyConsumptionHistory.length > 0 ? (
-                                                        monthlyConsumptionHistory.map(item => (
-                                                            <div key={item.month} className='flex justify-between items-center text-xs p-1 rounded-sm hover:bg-muted'>
-                                                                <span className='text-muted-foreground'>{item.month}</span>
-                                                                <div className='text-right'>
-                                                                    <span className='font-medium block'>{item.liters.toLocaleString()} L</span>
-                                                                    <span className='text-muted-foreground'>₱{item.cost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                                                                </div>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className='text-xs text-muted-foreground text-center pt-4'>No historical data yet.</p>
-                                                    )}
-                                                </div>
-                                            </ScrollArea>
-                                        </div>
-                                    </CardContent>
-                                )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
                             </Card>
-                        </div>
-                    </div>
+                        </TabsContent>
+
+                    </Tabs>
                 )}
                 </ScrollArea>
                 <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
@@ -2183,7 +2259,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <TableRow>
                                                     <TableHead>Client ID</TableHead>
                                                     <TableHead>Business Name</TableHead>
-                                                    <TableHead>Auto Refill</TableHead>
+                                                    <TableHead>Account Type</TableHead>
                                                     <TableHead>Payment Status</TableHead>
                                                     <TableHead>Assigned Station</TableHead>
                                                 </TableRow>
@@ -2206,15 +2282,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                         <TableCell>
-                                                            <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setUserForSchedule(user); setIsScheduleDialogOpen(true); }}>
-                                                                {user.plan?.isConsumptionBased && !autoRefillEnabled ? (
-                                                                    <Badge variant="outline">On-Demand</Badge>
-                                                                ) : autoRefillEnabled ? (
-                                                                    <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
-                                                                ) : (
-                                                                    <Badge variant="destructive">Disabled</Badge>
-                                                                )}
-                                                            </div>
+                                                            {user.accountType && user.accountType !== 'Single' && (
+                                                                <Badge variant={user.accountType === 'Parent' ? 'default' : 'secondary'}>{user.accountType}</Badge>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell>
                                                             {userPendingPayments.length > 0 ? (
@@ -2298,6 +2368,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <TableHead>Client ID</TableHead>
                                                 <TableHead>Business Name</TableHead>
                                                 <TableHead>Plan</TableHead>
+                                                <TableHead>Account Type</TableHead>
                                                 <TableHead>Status</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -2309,6 +2380,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell>{profile.businessName}</TableCell>
                                                         <TableCell>{profile.plan?.name}</TableCell>
                                                         <TableCell>
+                                                            {profile.accountType && profile.accountType !== 'Single' && (
+                                                                <Badge variant={profile.accountType === 'Parent' ? 'default' : 'secondary'}>{profile.accountType}</Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                                                                 Pending Claim
                                                             </Badge>
@@ -2317,7 +2393,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 ))
                                             ) : (
                                                 <TableRow>
-                                                    <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
                                                         No unclaimed profiles.
                                                     </TableCell>
                                                 </TableRow>
@@ -2372,6 +2448,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </TabsContent>
             </Tabs>
         </div>
+
+        <Dialog open={isTopUpDialogOpen} onOpenChange={setIsTopUpDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Top-Up Water Credits</DialogTitle>
+                    <DialogDescription>Add liters to {selectedUser?.businessName}'s balance.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-2">
+                    <Label htmlFor="top-up-amount">Liters to Add</Label>
+                    <Input id="top-up-amount" type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value))} placeholder="e.g., 10000" />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsTopUpDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
+                    <Button onClick={handleTopUp} disabled={topUpAmount <= 0 || isSubmitting}>
+                        {isSubmitting ? 'Topping up...' : 'Confirm Top-Up'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
 
         <AlertDialog open={!!stationToDelete} onOpenChange={(open) => !open && setStationToDelete(null)}>
@@ -2929,7 +3024,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                            {formStep === 0 && (
                                 <div className="space-y-6">
-                                    <h3 className="font-semibold text-lg">Step 1: Business Details</h3>
+                                    <h3 className="font-semibold text-lg">Step 1: Business & Account Type</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                       <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
                                           <FormItem><FormLabel>Client ID</FormLabel><FormControl><Input placeholder="e.g. C-12345" {...field} /></FormControl><FormMessage /></FormItem>
@@ -2949,6 +3044,37 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                        <FormField control={newUserForm.control} name="businessEmail" render={({ field }) => (
                                           <FormItem className="md:col-span-2"><FormLabel>Business Email (Optional)</FormLabel><FormControl><Input type="email" placeholder="contact@business.com" {...field} /></FormControl><FormMessage /></FormItem>
                                       )}/>
+                                      <Separator className="md:col-span-2"/>
+                                      <FormField control={newUserForm.control} name="accountType" render={({ field }) => (
+                                        <FormItem className="md:col-span-2">
+                                            <FormLabel>Account Type</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Single">Single Account</SelectItem>
+                                                    <SelectItem value="Parent">Parent Account</SelectItem>
+                                                    <SelectItem value="Branch">Branch Account</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                      )}/>
+                                      {selectedAccountType === 'Branch' && (
+                                         <FormField control={newUserForm.control} name="parentId" render={({ field }) => (
+                                            <FormItem className="md:col-span-2">
+                                                <FormLabel>Link to Parent Account</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a Parent Account..."/></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {parentUsers?.map(p => (
+                                                            <SelectItem key={p.id} value={p.id}>{p.businessName} ({p.clientId})</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                      )}
                                     </div>
                                 </div>
                             )}
@@ -3108,7 +3234,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             
                             {formStep === 0 ?
                                 <Button type="button" onClick={async () => {
-                                     const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail']);
+                                     const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail', 'accountType']);
                                      if (isValid) setFormStep(1);
                                 }}>Next</Button>
                                 :
@@ -3122,3 +3248,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
