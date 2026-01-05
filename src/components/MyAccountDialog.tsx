@@ -26,9 +26,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport } from '@/lib/types';
+import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -191,6 +191,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
+  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? collection(firestore, 'users', user.id, 'transactions') : null, [firestore, user]);
+  const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
   const INVOICES_PER_PAGE = 5;
@@ -262,7 +265,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         date: new Date().toISOString(),
         description: description,
         amount: estimatedCost,
-        status: 'Upcoming',
+        status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
     };
 }, [user, deliveries]);
 
@@ -599,6 +602,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return allInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
   }, [allInvoices, invoiceCurrentPage]);
 
+  const defaultTab = useMemo(() => {
+    if (user?.accountType === 'Parent') return 'transactions';
+    if (user?.accountType === 'Branch') return 'invoices';
+    return 'accounts';
+  }, [user]);
+
 
   if (!user) {
     return <>{children}</>;
@@ -618,11 +627,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] w-full">
             <div className="pr-6">
-              <Tabs defaultValue="accounts">
+              <Tabs defaultValue={defaultTab}>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="accounts"><UserIcon className="mr-2 h-4 w-4" />Accounts</TabsTrigger>
+                  {user.accountType === 'Parent' ? (
+                    <TabsTrigger value="transactions"><ArrowRightLeft className="mr-2 h-4 w-4" />Transactions</TabsTrigger>
+                  ) : (
+                    <TabsTrigger value="invoices"><Receipt className="mr-2 h-4 w-4" />Invoices</TabsTrigger>
+                  )}
                   <TabsTrigger value="plan"><FileText className="mr-2 h-4 w-4" />Plan</TabsTrigger>
-                  <TabsTrigger value="invoices"><Receipt className="mr-2 h-4 w-4" />Invoices</TabsTrigger>
                 </TabsList>
                 <TabsContent value="accounts" className="py-4">
                   <Card>
@@ -877,10 +890,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     </Card>
                 </TabsContent>
                  <TabsContent value="invoices" className="py-4 space-y-4">
-                    <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
-                        <Info className="h-5 w-5 shrink-0" />
-                        <p>Note: December and January billing will be handled separately for your plan.</p>
-                    </div>
+                    {user.accountType === 'Branch' && (
+                        <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
+                            <Info className="h-5 w-5 shrink-0" />
+                            <p>Your invoices are covered by your parent account. This history is for your records.</p>
+                        </div>
+                    )}
                     {/* Desktop Table View */}
                     <div className="hidden md:block">
                         <Table>
@@ -911,6 +926,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                             <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
                                             <TableCell>
                                                 <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                    invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
                                                     isCurrentEst ? 'bg-blue-100 text-blue-800' :
                                                     invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                                     invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
@@ -927,7 +943,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                             </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {isCurrentEst ? (
+                                                {invoice.status === 'Covered by Parent Account' ? (
+                                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                                ) : isCurrentEst ? (
                                                     isPayday ? (
                                                         <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                                     ) : (
@@ -985,6 +1003,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                                             </div>
                                             <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
                                                 isCurrentEst ? 'bg-blue-100 text-blue-800' :
                                                 invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                                 invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
@@ -994,7 +1013,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                 {invoice.status}
                                             </span>
                                         </div>
-                                        {isCurrentEst ? (
+                                        {invoice.status === 'Covered by Parent Account' ? (
+                                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                        ) : isCurrentEst ? (
                                             isPayday ? (
                                                 <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                             ) : (
@@ -1034,6 +1055,40 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         </Button>
                     </div>
                 </TabsContent>
+                 <TabsContent value="transactions" className="py-4 space-y-4">
+                     <Table>
+                         <TableHeader>
+                             <TableRow>
+                                 <TableHead>Date</TableHead>
+                                 <TableHead>Type</TableHead>
+                                 <TableHead>Description</TableHead>
+                                 <TableHead className="text-right">Amount (Liters)</TableHead>
+                             </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                            {!transactions ? (
+                                <TableRow><TableCell colSpan={4} className="text-center py-10">Loading transactions...</TableCell></TableRow>
+                            ) : transactions.length === 0 ? (
+                                <TableRow><TableCell colSpan={4} className="text-center py-10">No transactions yet.</TableCell></TableRow>
+                            ) : (
+                                transactions.map(tx => (
+                                    <TableRow key={tx.id}>
+                                        <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
+                                                {tx.type}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{tx.description}</TableCell>
+                                        <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
+                                            {tx.type === 'Credit' ? '+' : '-'}{tx.amountLiters.toLocaleString()} L
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                         </TableBody>
+                     </Table>
+                 </TabsContent>
               </Tabs>
             </div>
           </ScrollArea>

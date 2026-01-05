@@ -53,6 +53,7 @@ const ICONS: { [key: string]: React.ElementType } = {
   sanitation: FileHeart,
   payment: Receipt,
   general: Info,
+  'top-up': Droplets,
 };
 
 function DashboardLayoutSkeleton() {
@@ -581,7 +582,7 @@ export default function DashboardLayout({
           </main>
 
         {/* Mobile Bottom Navigation */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-20 bg-transparent z-20 flex justify-center px-4">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 h-20 bg-transparent z-20 flex justify-center px-2">
             <div className="relative bg-background border-t border-border rounded-t-2xl shadow-[0_-10px_20px_rgba(0,0,0,0.05)] w-full max-w-md">
                 <div className="absolute left-1/2 -translate-x-1/2 -top-[30px] w-[130px] h-[60px]">
                     <div className="w-full h-full bg-transparent rounded-full border-[20px] border-transparent border-t-background transform rotate-180"></div>
