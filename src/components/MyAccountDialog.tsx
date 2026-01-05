@@ -514,67 +514,64 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
   
   const breakdownDetails = useMemo(() => {
-    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false, isFirstInvoice: false };
-    if (!user || !state.invoiceForBreakdown) {
-      return emptyDetails;
+    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
+    if (!user || !state.invoiceForBreakdown || !deliveries) {
+        return emptyDetails;
     }
-  
+
     const invoiceDate = toSafeDate(state.invoiceForBreakdown.date);
+    if (!invoiceDate) return emptyDetails;
+
     const userCreationDate = toSafeDate(user.createdAt);
-  
-    const isFirstInvoice = userCreationDate && invoiceDate 
-      ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate)
-      : false;
-  
+    const isFirstInvoice = userCreationDate 
+        ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate) 
+        : false;
+    
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
-  
+
     const gallonPrice = user.customPlanDetails?.gallonPrice || 0;
     const dispenserPrice = user.customPlanDetails?.dispenserPrice || 0;
-  
+
     let planCost = 0;
     let consumptionCost = 0;
+    let consumedLiters = 0;
     let gallonCost = 0;
     let dispenserCost = 0;
-  
-    // Always include monthly costs
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-      gallonCost += gallonPrice;
+
+    // Determine billing period for consumption calculation
+    const cycleStart = startOfMonth(invoiceDate);
+    const cycleEnd = endOfMonth(invoiceDate);
+    const deliveriesInPeriod = deliveries.filter(d => {
+        const dDate = toSafeDate(d.date);
+        return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
+    });
+    consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+    
+    // Calculate costs
+    if (user.plan?.isConsumptionBased) {
+        consumptionCost = consumedLiters * (user.plan.price || 0);
+    } else {
+        planCost = user.plan?.price || 0;
     }
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-      dispenserCost += dispenserPrice;
-    }
-  
-    // Add one-time costs only for the first invoice
+
     if (isFirstInvoice) {
-      if (user.customPlanDetails?.gallonPaymentType === 'One-Time') {
-        gallonCost += gallonPrice;
-      }
-      if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') {
-        dispenserCost += dispenserPrice;
-      }
+        if (user.customPlanDetails?.gallonPaymentType === 'One-Time') gallonCost += gallonPrice;
+        if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') dispenserCost += dispenserPrice;
     }
-  
-    if (!user.plan?.isConsumptionBased && !user.plan?.isPrepaid) {
-      planCost = user.plan?.price || 0;
-    }
-  
-    const totalMonthlyEquipmentCost = (user.customPlanDetails?.gallonPaymentType === 'Monthly' ? gallonPrice : 0) + (user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? dispenserPrice : 0);
-    consumptionCost = state.invoiceForBreakdown.amount - planCost - totalMonthlyEquipmentCost;
-  
-    if (isFirstInvoice) {
-      consumptionCost -= (user.customPlanDetails?.gallonPaymentType === 'One-Time' ? gallonPrice : 0);
-      consumptionCost -= (user.customPlanDetails?.dispenserPaymentType === 'One-Time' ? dispenserPrice : 0);
-    }
-  
+    
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
+
     return {
-      planCost,
-      gallonCost,
-      dispenserCost,
-      consumptionCost: Math.max(0, consumptionCost),
-      isCurrent,
-      isFirstInvoice
+        planCost,
+        gallonCost,
+        dispenserCost,
+        consumptionCost,
+        consumedLiters,
+        isCurrent,
+        isFirstInvoice,
     };
-  }, [user, state.invoiceForBreakdown, currentMonthInvoice]);
+}, [user, state.invoiceForBreakdown, currentMonthInvoice, deliveries]);
 
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
@@ -1164,19 +1161,25 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                 )}
                  {breakdownDetails.consumptionCost > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Water Consumption</span>
+                    <span className="text-muted-foreground">Water Consumption ({breakdownDetails.consumedLiters.toLocaleString()} L)</span>
                     <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
                   </div>
                 )}
                 {user.customPlanDetails?.gallonQuantity > 0 &&
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Container Rental ({user.customPlanDetails?.gallonQuantity || 0} units)</span>
+                        <span className="text-muted-foreground">
+                            Container Rental ({user.customPlanDetails?.gallonQuantity || 0} units)
+                            <span className="text-xs ml-1">({user.customPlanDetails.gallonPaymentType})</span>
+                        </span>
                         <span className="font-medium">P{(breakdownDetails.gallonCost || 0).toFixed(2)}</span>
                     </div>
                 }
                 {user.customPlanDetails?.dispenserQuantity > 0 &&
                     <div className="flex justify-between">
-                        <span className="text-muted-foreground">Dispenser Rental ({user.customPlanDetails?.dispenserQuantity || 0} units)</span>
+                        <span className="text-muted-foreground">
+                            Dispenser Rental ({user.customPlanDetails?.dispenserQuantity || 0} units)
+                             <span className="text-xs ml-1">({user.customPlanDetails.dispenserPaymentType})</span>
+                        </span>
                         <span className="font-medium">P{(breakdownDetails.dispenserCost || 0).toFixed(2)}</span>
                     </div>
                 }
