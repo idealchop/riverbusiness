@@ -72,6 +72,8 @@ export type Permission =
   | 'manage_users' 
   | 'access_admin_panel';
 
+export type AccountType = 'Single' | 'Parent' | 'Branch';
+
 export interface AppUser {
     id: string; // This is the Firebase Auth UID
     clientId?: string; // This is the manually entered client ID
@@ -119,6 +121,10 @@ export interface AppUser {
     supportDisplayName?: string;
     supportDescription?: string;
     supportPhotoURL?: string;
+    // New fields for multi-branch feature
+    accountType?: AccountType;
+    parentId?: string;
+    topUpBalanceLiters?: number;
 }
 
 export interface LoginLog {
@@ -145,7 +151,7 @@ export interface Payment {
   date: string;
   description: string;
   amount: number;
-  status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review';
+  status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review' | 'Covered by Parent Account';
   proofOfPaymentUrl?: string;
   rejectionReason?: string;
 }
@@ -202,7 +208,7 @@ export interface RefillRequest {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'delivery' | 'compliance' | 'sanitation' | 'payment' | 'general';
+  type: 'delivery' | 'compliance' | 'sanitation' | 'payment' | 'general' | 'top-up';
   title: string;
   description: string;
   date: FieldValue | Timestamp;
@@ -219,6 +225,13 @@ export interface ChatMessage {
   attachmentType?: string;
 }
 
-    
-
+export interface Transaction {
+    id: string;
+    date: FieldValue | Timestamp;
+    type: 'Credit' | 'Debit';
+    amountLiters: number;
+    description: string;
+    branchId?: string;
+    branchName?: string;
+}
     

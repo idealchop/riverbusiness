@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 export interface Notification {
   id: string;
   userId: string;
-  type: 'delivery' | 'compliance' | 'sanitation' | 'payment' | 'general';
+  type: 'delivery' | 'compliance' | 'sanitation' | 'payment' | 'general' | 'top-up';
   title: string;
   description: string;
   date: FieldValue | Timestamp;

@@ -2,7 +2,7 @@
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
@@ -19,6 +19,8 @@ export * from './billing';
 initializeApp();
 const db = getFirestore();
 const storage = getStorage();
+
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 /**
  * Retrieves the admin user's UID.
@@ -41,7 +43,7 @@ async function getAdminId(): Promise<string | null> {
 /**
  * Creates a notification document in a user's notification subcollection.
  */
-async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
+export async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
   if (!userId) {
     logger.warn("User ID is missing, cannot create notification.");
     return;
@@ -64,6 +66,43 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
 
     const userId = event.params.userId;
     const delivery = event.data.data();
+
+    // Check if the user is a branch account
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (userData?.accountType === 'Branch' && userData.parentId) {
+        const parentRef = db.collection('users').doc(userData.parentId);
+        const parentDoc = await parentRef.get();
+        if (parentDoc.exists) {
+            const litersToDeduct = containerToLiter(delivery.volumeContainers);
+            
+            // 1. Debit the parent account's balance
+            await parentRef.update({
+                topUpBalanceLiters: FieldValue.increment(-litersToDeduct)
+            });
+
+            // 2. Create a transaction log on the parent account
+            const transactionData = {
+                date: delivery.date,
+                type: 'Debit',
+                amountLiters: litersToDeduct,
+                description: `Delivery to ${userData.businessName}`,
+                branchId: userId,
+                branchName: userData.businessName
+            };
+            await parentRef.collection('transactions').add(transactionData);
+
+             // 3. Notify the Parent account of the deduction
+            await createNotification(userData.parentId, {
+                type: 'delivery',
+                title: 'Branch Consumption',
+                description: `${litersToDeduct.toFixed(1)}L deducted for delivery to ${userData.businessName}.`,
+                data: { deliveryId: event.params.deliveryId, branchUserId: userId }
+            });
+        }
+    }
+
 
     const notification = {
         type: 'delivery',

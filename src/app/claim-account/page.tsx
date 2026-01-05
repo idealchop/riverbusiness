@@ -13,8 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, getDoc, writeBatch } from 'firebase/firestore';
-import type { AppUser } from '@/lib/types';
+import { doc, getDoc, getDocs, writeBatch, collection, query } from 'firebase/firestore';
+import type { AppUser, Payment } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle } from 'lucide-react';
 
@@ -56,31 +56,47 @@ export default function ClaimAccountPage() {
     try {
       const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', clientId);
       const userProfileRef = doc(firestore, 'users', authUser.uid);
+      
       const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
 
       if (!unclaimedProfileSnap.exists()) {
         toast({ variant: 'destructive', title: 'Claim Failed', description: 'The provided Client ID is invalid. Please check and try again.' });
         return;
       }
+      
+      const batch = writeBatch(firestore);
 
       const unclaimedData = unclaimedProfileSnap.data();
-      const newUserData = {
-        ...unclaimedData,
+      const newUserData: AppUser = {
+        ...(unclaimedData as AppUser),
         id: authUser.uid,
-        email: authUser.email,
+        email: authUser.email as string,
         onboardingComplete: true,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         accountStatus: 'Active',
       };
+      
+      // Move any initial invoices (e.g., one-time fees) from unclaimed to the user's profile
+      const initialPaymentsQuery = query(collection(unclaimedProfileRef, 'payments'));
+      const initialPaymentsSnap = await getDocs(initialPaymentsQuery);
+      
+      if (!initialPaymentsSnap.empty) {
+          initialPaymentsSnap.forEach(paymentDoc => {
+              const paymentData = paymentDoc.data() as Payment;
+              const newPaymentRef = doc(collection(userProfileRef, 'payments'), paymentDoc.id);
+              batch.set(newPaymentRef, paymentData);
+              batch.delete(paymentDoc.ref); // Delete from unclaimed
+          });
+      }
 
-      const batch = writeBatch(firestore);
       batch.set(userProfileRef, newUserData);
       batch.delete(unclaimedProfileRef);
+      
       await batch.commit();
 
       toast({ title: 'Profile Claimed!', description: "Please review your account details below." });
-      setClaimedProfile(newUserData as AppUser);
+      setClaimedProfile(newUserData);
 
     } catch (error) {
       console.error("Error claiming profile: ", error);

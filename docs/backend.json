@@ -14,7 +14,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters. Represents the user's current inventory." },
+        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters. Represents the user's current inventory for non-branch accounts." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
@@ -35,9 +35,27 @@
         "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." },
         "supportDisplayName": { "type": "string", "description": "Public display name for the support agent in chat." },
         "supportDescription": { "type": "string", "description": "Public description for the support agent (e.g., 'Customer Support')." },
-        "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." }
+        "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." },
+        "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"], "description": "The type of account, used for multi-branch functionality." },
+        "parentId": { "type": "string", "description": "If accountType is 'Branch', this is the ID of the parent account." },
+        "topUpBalanceLiters": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of water credits in liters." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
+    },
+    "Transaction": {
+        "title": "Transaction",
+        "type": "object",
+        "description": "Represents a credit or debit transaction for a Parent account's top-up balance.",
+        "properties": {
+            "id": { "type": "string" },
+            "date": { "type": "string", "format": "date-time" },
+            "type": { "type": "string", "enum": ["Credit", "Debit"] },
+            "amountLiters": { "type": "number" },
+            "description": { "type": "string" },
+            "branchId": { "type": "string", "description": "ID of the branch user if it's a debit from a delivery." },
+            "branchName": { "type": "string", "description": "Name of the branch if it's a debit from a delivery." }
+        },
+        "required": ["id", "date", "type", "amountLiters", "description"]
     },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
@@ -55,9 +73,11 @@
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
-        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." }
+        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
+        "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
+        "parentId": { "type": "string" }
       },
-      "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt"]
+      "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
     },
     "ChatMessage": {
         "title": "ChatMessage",
@@ -109,7 +129,7 @@
         "date": { "type": "string", "format": "date-time" },
         "description": { "type": "string" },
         "amount": { "type": "number" },
-        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review"] },
+        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review", "Covered by Parent Account"] },
         "proofOfPaymentUrl": { "type": "string", "format": "uri" },
         "rejectionReason": { "type": "string", "description": "Reason provided by admin for rejecting a payment." }
       },
@@ -250,7 +270,7 @@
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
-        "type": { "type": "string", "enum": ["delivery", "compliance", "sanitation", "payment", "general"] },
+        "type": { "type": "string", "enum": ["delivery", "compliance", "sanitation", "payment", "general", "top-up"] },
         "title": { "type": "string" },
         "description": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
@@ -275,6 +295,10 @@
     "/users/{userId}/payments/{paymentId}": {
       "schema": { "$ref": "#/entities/Payment" },
       "description": "Subcollection for a user's payment history."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+        "schema": { "$ref": "#/entities/Transaction" },
+        "description": "For Parent accounts, logs all top-ups and branch consumption."
     },
     "/users/{userId}/consumptionHistory/{historyId}": {
       "schema": { "$ref": "#/entities/ConsumptionHistory" },
