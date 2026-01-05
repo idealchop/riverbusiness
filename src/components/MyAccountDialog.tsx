@@ -199,6 +199,23 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
   const INVOICES_PER_PAGE = 5;
 
+  const toSafeDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toDate();
+    }
+    if (typeof timestamp === 'string') {
+      const date = new Date(timestamp);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+      return new Date(timestamp.seconds * 1000);
+    }
+    return null;
+  };
+
   const currentMonthInvoice: Payment | null = useMemo(() => {
     if (!user || !deliveries) return null;
 
@@ -236,8 +253,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
 
     const deliveriesThisCycle = deliveries.filter(d => {
-        const deliveryDate = new Date(d.date);
-        return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
+        const deliveryDate = toSafeDate(d.date);
+        return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
     });
     
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
@@ -270,6 +287,149 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     };
 }, [user, deliveries]);
 
+const breakdownDetails = useMemo(() => {
+    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
+    if (!user || !state.invoiceForBreakdown || !deliveries) {
+        return emptyDetails;
+    }
+
+    const invoiceDate = toSafeDate(state.invoiceForBreakdown.date);
+    if (!invoiceDate) return emptyDetails;
+    
+    const userCreationDate = toSafeDate(user.createdAt);
+
+    const isFirstInvoice = userCreationDate 
+        ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate)
+        : false;
+    
+    const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
+
+    const gallonPrice = user.customPlanDetails?.gallonPrice || 0;
+    const dispenserPrice = user.customPlanDetails?.dispenserPrice || 0;
+
+    let planCost = 0;
+    let consumptionCost = 0;
+    let consumedLiters = 0;
+    let gallonCost = 0;
+    let dispenserCost = 0;
+
+    const cycleStart = startOfMonth(invoiceDate);
+    const cycleEnd = endOfMonth(invoiceDate);
+    const deliveriesInPeriod = deliveries.filter(d => {
+        const dDate = toSafeDate(d.date);
+        return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
+    });
+    consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+    
+    if (user.plan?.isConsumptionBased) {
+        consumptionCost = consumedLiters * (user.plan.price || 0);
+    } else {
+        planCost = user.plan?.price || 0;
+    }
+
+    if (isFirstInvoice) {
+        if (user.customPlanDetails?.gallonPaymentType === 'One-Time') gallonCost += gallonPrice;
+        if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') dispenserCost += dispenserPrice;
+    }
+    
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
+
+    return {
+        planCost,
+        gallonCost,
+        dispenserCost,
+        consumptionCost,
+        consumedLiters,
+        isCurrent,
+        isFirstInvoice,
+    };
+}, [user, state.invoiceForBreakdown, currentMonthInvoice, deliveries]);
+
+const totalBreakdownAmount = useMemo(() => {
+  return (
+    breakdownDetails.planCost +
+    breakdownDetails.consumptionCost +
+    breakdownDetails.gallonCost +
+    breakdownDetails.dispenserCost
+  );
+}, [breakdownDetails]);
+
+const availableMonths = useMemo(() => {
+    const months: {value: string, label: string}[] = [];
+    const now = new Date();
+    for (let i=0; i < 6; i++) {
+        const monthDate = subMonths(now, i);
+        months.push({
+            value: format(monthDate, 'yyyy-MM'),
+            label: format(monthDate, 'MMMM yyyy')
+        });
+    }
+    return months;
+}, []);
+
+const isSoaReady = useMemo(() => {
+    if (!soaMonth) return false;
+    const today = endOfDay(new Date());
+    const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
+    return isAfter(today, endOfSelectedMonth);
+}, [soaMonth]);
+
+const soaNotReadyMessage = useMemo(() => {
+    if (isSoaReady || !soaMonth || !user) return null;
+        
+    const monthLabel = format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
+    const userName = user.name.split(' ')[0] || 'there';
+
+    return (
+        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+            <h4 className="font-semibold text-blue-800">Report Availability</h4>
+            <p className="text-sm text-blue-700 mt-1">
+                Hi {userName}, your SOA for {monthLabel} will be available for download at the end of the month.
+            </p>
+            <p className="text-xs text-blue-600 mt-2">
+                Stay hydrated and enjoy the convenience with River Business!
+            </p>
+        </div>
+    );
+}, [isSoaReady, soaMonth, user]);
+
+  const showCurrentMonthInvoice = useMemo(() => {
+    if (!currentMonthInvoice) return false;
+    return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
+  }, [currentMonthInvoice, paymentHistory]);
+
+  const allInvoices = useMemo(() => {
+    const invoices = [...paymentHistory];
+    if (showCurrentMonthInvoice && currentMonthInvoice) {
+      invoices.unshift(currentMonthInvoice);
+    }
+    return invoices
+      .filter((invoice): invoice is Payment => {
+        if (!invoice) return false;
+        const date = toSafeDate(invoice.date);
+        return date instanceof Date && !isNaN(date.getTime());
+      })
+      .sort((a, b) => {
+        const dateA = toSafeDate(a.date)!;
+        const dateB = toSafeDate(b.date)!;
+        return dateB.getTime() - dateA.getTime();
+      });
+  }, [paymentHistory, showCurrentMonthInvoice, currentMonthInvoice]);
+
+  const totalInvoicePages = Math.ceil(allInvoices.length / INVOICES_PER_PAGE);
+
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (invoiceCurrentPage - 1) * INVOICES_PER_PAGE;
+    return allInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
+  }, [allInvoices, invoiceCurrentPage]);
+
+  const defaultTab = useMemo(() => {
+    if (user?.accountType === 'Parent') return 'transactions';
+    if (user?.accountType === 'Branch') return 'invoices';
+    return 'accounts';
+  }, [user]);
+
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
   const isPayday = isToday(startOfMonth(new Date()));
@@ -279,7 +439,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       dispatch({ type: 'SET_FORM_DATA', payload: user });
     }
   }, [user]);
-  
+
+  useEffect(() => {
+    if(availableMonths.length > 0 && !soaMonth) {
+      setSoaMonth(availableMonths[0].value);
+    }
+  }, [availableMonths, soaMonth]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -395,7 +561,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     });
   };
 
-
   const handleDownloadMonthlySOA = () => {
     if (!user || !deliveries) {
       toast({ variant: 'destructive', title: 'Error', description: 'User data or deliveries not available.' });
@@ -451,130 +616,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     dispatch({type: 'SET_SOA_DIALOG', payload: false});
   };
 
-  const availableMonths = useMemo(() => {
-    const months: {value: string, label: string}[] = [];
-    const now = new Date();
-    for (let i=0; i < 6; i++) {
-        const monthDate = subMonths(now, i);
-        months.push({
-            value: format(monthDate, 'yyyy-MM'),
-            label: format(monthDate, 'MMMM yyyy')
-        });
-    }
-    return months;
-  }, []);
-  
-  
-  const isSoaReady = useMemo(() => {
-    if (!soaMonth) return false;
-    const today = endOfDay(new Date());
-    const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
-    return isAfter(today, endOfSelectedMonth);
-  }, [soaMonth]);
-  
-  const soaNotReadyMessage = useMemo(() => {
-    if (isSoaReady || !soaMonth || !user) return null;
-        
-    const monthLabel = format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
-    const userName = user.name.split(' ')[0] || 'there';
-
-    return (
-        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-            <h4 className="font-semibold text-blue-800">Report Availability</h4>
-            <p className="text-sm text-blue-700 mt-1">
-                Hi {userName}, your SOA for {monthLabel} will be available for download at the end of the month.
-            </p>
-            <p className="text-xs text-blue-600 mt-2">
-                Stay hydrated and enjoy the convenience with River Business!
-            </p>
-        </div>
-    );
-  }, [isSoaReady, soaMonth, user]);
-
-  useEffect(() => {
-    if(availableMonths.length > 0 && !soaMonth) {
-      setSoaMonth(availableMonths[0].value);
-    }
-  }, [availableMonths, soaMonth]);
-
-  const toSafeDate = (timestamp: any): Date | null => {
-    if (!timestamp) return null;
-    if (timestamp instanceof Timestamp) {
-      return timestamp.toDate();
-    }
-    if (typeof timestamp === 'string') {
-      const date = new Date(timestamp);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
-      return new Date(timestamp.seconds * 1000);
-    }
-    return null;
-  };
-  
-const breakdownDetails = useMemo(() => {
-    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
-    if (!user || !state.invoiceForBreakdown || !deliveries) {
-        return emptyDetails;
-    }
-
-    const invoiceDate = toSafeDate(state.invoiceForBreakdown.date);
-    if (!invoiceDate) return emptyDetails;
-    
-    const userCreationDate = toSafeDate(user.createdAt);
-    // An invoice is the "first invoice" if its month and year match the user's creation month and year.
-    const isFirstInvoice = userCreationDate 
-        ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate)
-        : false;
-    
-    const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
-
-    const gallonPrice = user.customPlanDetails?.gallonPrice || 0;
-    const dispenserPrice = user.customPlanDetails?.dispenserPrice || 0;
-
-    let planCost = 0;
-    let consumptionCost = 0;
-    let consumedLiters = 0;
-    let gallonCost = 0;
-    let dispenserCost = 0;
-
-    const cycleStart = startOfMonth(invoiceDate);
-    const cycleEnd = endOfMonth(invoiceDate);
-    const deliveriesInPeriod = deliveries.filter(d => {
-        const dDate = toSafeDate(d.date);
-        return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
-    });
-    consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
-    
-    if (user.plan?.isConsumptionBased) {
-        consumptionCost = consumedLiters * (user.plan.price || 0);
-    } else {
-        planCost = user.plan?.price || 0;
-    }
-
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
-    
-    // Only add one-time fees if it's the user's first invoice period
-    if (isFirstInvoice) {
-        if (user.customPlanDetails?.gallonPaymentType === 'One-Time') gallonCost += gallonPrice;
-        if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') dispenserCost += dispenserPrice;
-    }
-
-    return {
-        planCost,
-        gallonCost,
-        dispenserCost,
-        consumptionCost,
-        consumedLiters,
-        isCurrent,
-        isFirstInvoice,
-    };
-}, [user, state.invoiceForBreakdown, currentMonthInvoice, deliveries]);
-
-
   const handleViewInvoice = (invoice: Payment) => {
     dispatch({ type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: invoice });
     dispatch({ type: 'SET_INVOICE_DETAIL_DIALOG', payload: true });
@@ -605,43 +646,6 @@ const breakdownDetails = useMemo(() => {
     return safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date';
   };
   
-  const showCurrentMonthInvoice = useMemo(() => {
-    if (!currentMonthInvoice) return false;
-    return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
-  }, [currentMonthInvoice, paymentHistory]);
-
-  const allInvoices = useMemo(() => {
-    const invoices = [...paymentHistory];
-    if (showCurrentMonthInvoice && currentMonthInvoice) {
-      invoices.unshift(currentMonthInvoice);
-    }
-    return invoices
-      .filter((invoice): invoice is Payment => {
-        if (!invoice) return false;
-        const date = toSafeDate(invoice.date);
-        return date instanceof Date && !isNaN(date.getTime());
-      })
-      .sort((a, b) => {
-        const dateA = toSafeDate(a.date)!;
-        const dateB = toSafeDate(b.date)!;
-        return dateB.getTime() - dateA.getTime();
-      });
-  }, [paymentHistory, showCurrentMonthInvoice, currentMonthInvoice]);
-
-  const totalInvoicePages = Math.ceil(allInvoices.length / INVOICES_PER_PAGE);
-
-  const paginatedInvoices = useMemo(() => {
-    const startIndex = (invoiceCurrentPage - 1) * INVOICES_PER_PAGE;
-    return allInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
-  }, [allInvoices, invoiceCurrentPage]);
-
-  const defaultTab = useMemo(() => {
-    if (user?.accountType === 'Parent') return 'transactions';
-    if (user?.accountType === 'Branch') return 'invoices';
-    return 'accounts';
-  }, [user]);
-
-
   if (!user) {
     return <>{children}</>;
   }
@@ -649,15 +653,6 @@ const breakdownDetails = useMemo(() => {
   const displayPhoto = user.photoURL;
   const userFirstName = user.name.split(' ')[0];
   
-  const totalBreakdownAmount = useMemo(() => {
-      return (
-        breakdownDetails.planCost +
-        breakdownDetails.consumptionCost +
-        breakdownDetails.gallonCost +
-        breakdownDetails.dispenserCost
-      );
-  }, [breakdownDetails]);
-
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -1532,5 +1527,3 @@ const breakdownDetails = useMemo(() => {
     </AlertDialog>
   );
 }
-
-    
