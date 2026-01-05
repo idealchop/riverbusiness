@@ -26,7 +26,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport, Transaction } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport, Transaction, TopUpRequest } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -117,8 +117,7 @@ const newUserSchema = z.object({
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
   clientType: z.string().min(1, { message: 'Plan type is required' }),
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
-  initialLiters: z.coerce.number().optional(), // For Prepaid Plan
-  topUpBalanceCredits: z.coerce.number().optional(), // For Parent Account initial balance
+  initialTopUp: z.coerce.number().optional(), 
   accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
   parentId: z.string().optional(),
 });
@@ -250,6 +249,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { data: allPayments, isLoading: allPaymentsLoading } = useCollection<Payment & { parentId: string }>(allPaymentsQuery, {
         idField: 'parentId'
     });
+    
+    const userTopUpRequestsQuery = useMemoFirebase(() => firestore && selectedUser ? query(collection(firestore, 'users', selectedUser.id, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [firestore, selectedUser]);
+    const { data: topUpRequests } = useCollection<TopUpRequest>(userTopUpRequestsQuery);
 
     const branchUsersQuery = useMemoFirebase(() => (firestore && selectedUser?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', selectedUser.id)) : null, [firestore, selectedUser]);
     const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
@@ -514,8 +516,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             contactNumber: '',
             clientType: '',
             plan: null,
-            initialLiters: 0,
-            topUpBalanceCredits: 0,
+            initialTopUp: 0,
             accountType: 'Single',
         }
     });
@@ -1276,11 +1277,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
             
-            const { plan, initialLiters, topUpBalanceCredits, ...rest } = values;
+            const { plan, initialTopUp, ...rest } = values;
 
             let totalLiters = 0;
+            let topUpCredits = 0;
+            
             if (plan.isPrepaid) {
-                totalLiters = initialLiters || 0;
+                const rate = plan.price || 3; // Use plan price or default
+                totalLiters = rate > 0 ? (initialTopUp || 0) / rate : 0;
+            }
+
+            if (values.accountType === 'Parent') {
+                topUpCredits = initialTopUp || 0;
             }
 
             const profileData: any = {
@@ -1293,13 +1301,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 },
                 role: 'User',
                 totalConsumptionLiters: totalLiters,
+                topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
             };
 
-            if (values.accountType === 'Parent') {
-                profileData.topUpBalanceCredits = topUpBalanceCredits || 0;
-            }
-            
             await setDoc(unclaimedProfileRef, profileData);
             
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
@@ -1342,14 +1347,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
         try {
             const userRef = doc(firestore, 'users', selectedUser.id);
-            const incrementField = selectedUser.accountType === 'Parent' ? 'topUpBalanceCredits' : 'totalConsumptionLiters';
-            const amountToIncrement = topUpAmount;
+            
+            // Logic for Parent vs Prepaid
+            const isParent = selectedUser.accountType === 'Parent';
+            const incrementField = isParent ? 'topUpBalanceCredits' : 'totalConsumptionLiters';
+            let amountToIncrement = topUpAmount;
+
+            if (!isParent && selectedUser.plan?.isPrepaid) {
+                const rate = selectedUser.plan.price || 3;
+                amountToIncrement = rate > 0 ? topUpAmount / rate : 0;
+            }
             
             await updateDoc(userRef, {
                 [incrementField]: increment(amountToIncrement)
             });
 
-            if (selectedUser.accountType === 'Parent') {
+            if (isParent) {
                 const transactionData: Omit<Transaction, 'id'> = {
                     date: serverTimestamp(),
                     type: 'Credit',
@@ -1362,11 +1375,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             await createNotification(selectedUser.id, {
                 type: 'top-up',
                 title: 'Balance Topped Up',
-                description: `Your account has been credited with ${selectedUser.accountType === 'Parent' ? 'PHP' : ''} ${topUpAmount.toLocaleString()}.`,
+                description: `Your account has been credited with ${isParent ? `₱${topUpAmount.toLocaleString()}` : `${amountToIncrement.toLocaleString()} Liters`}.`,
                 data: { amount: topUpAmount }
             });
 
-            toast({ title: 'Top-Up Successful', description: `${topUpAmount.toLocaleString()} ${selectedUser.accountType === 'Parent' ? 'PHP' : 'Liters'} added to ${selectedUser.businessName}'s balance.` });
+            toast({ title: 'Top-Up Successful', description: `${isParent ? `₱${topUpAmount.toLocaleString()}` : `${amountToIncrement.toLocaleString()} Liters`} added to ${selectedUser.businessName}'s balance.` });
             setIsTopUpDialogOpen(false);
             setTopUpAmount(0);
         } catch (error) {
@@ -1413,6 +1426,61 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleApproveTopUp = async (request: TopUpRequest) => {
+        if (!firestore || !selectedUser) return;
+        
+        try {
+            const userRef = doc(firestore, 'users', selectedUser.id);
+            const requestRef = doc(userRef, 'topUpRequests', request.id);
+
+            const isParent = selectedUser.accountType === 'Parent';
+            const incrementField = isParent ? 'topUpBalanceCredits' : 'totalConsumptionLiters';
+            let amountToIncrement = request.amount;
+
+            if (!isParent && selectedUser.plan?.isPrepaid) {
+                const rate = selectedUser.plan.price || 3;
+                amountToIncrement = rate > 0 ? request.amount / rate : 0;
+            }
+
+            await updateDoc(userRef, {
+                [incrementField]: increment(amountToIncrement)
+            });
+
+            if (isParent) {
+                 const transactionData: Omit<Transaction, 'id'> = {
+                    date: serverTimestamp(),
+                    type: 'Credit',
+                    amountCredits: request.amount,
+                    description: 'User Top-Up'
+                };
+                await addDoc(collection(userRef, 'transactions'), transactionData);
+            }
+            
+            await updateDoc(requestRef, { status: 'Approved' });
+
+             await createNotification(selectedUser.id, {
+                type: 'top-up',
+                title: 'Top-Up Approved',
+                description: `Your top-up of ${isParent ? `₱${request.amount.toLocaleString()}` : `${amountToIncrement.toLocaleString()}L`} has been approved.`,
+            });
+            toast({ title: 'Top-Up Approved' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Approval Failed' });
+        }
+    };
+    
+    const handleRejectTopUp = async (request: TopUpRequest, reason: string) => {
+        if (!firestore || !selectedUser) return;
+        const requestRef = doc(firestore, 'users', selectedUser.id, 'topUpRequests', request.id);
+        await updateDoc(requestRef, { status: 'Rejected', rejectionReason: reason });
+         await createNotification(selectedUser.id, {
+            type: 'top-up',
+            title: 'Top-Up Rejected',
+            description: `Your top-up request was rejected. Reason: ${reason}`,
+        });
+        toast({ title: 'Top-Up Rejected' });
     };
 
 
@@ -1545,6 +1613,43 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 )}
                             </div>
 
+                             {(selectedUser.accountType === 'Parent' || selectedUser.plan?.isPrepaid) && (
+                                 <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Pending Top-Up Requests</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {topUpRequests && topUpRequests.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {topUpRequests.filter(r => r.status === 'Pending Review').map(req => (
+                                                    <Card key={req.id}>
+                                                        <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                                            <div>
+                                                                <p className="font-semibold">₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    Requested {toSafeDate(req.requestedAt) ? formatDistanceToNow(toSafeDate(req.requestedAt)!, { addSuffix: true }) : 'N/A'}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Button variant="outline" size="sm" asChild>
+                                                                    <a href={req.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4" />View Proof</a>
+                                                                </Button>
+                                                                <Button size="sm" onClick={() => handleApproveTopUp(req)} variant="default">Approve</Button>
+                                                                <Button size="sm" onClick={() => {
+                                                                    const reason = prompt('Reason for rejection:');
+                                                                    if (reason) handleRejectTopUp(req, reason);
+                                                                }} variant="destructive">Reject</Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground text-center py-4">No pending top-up requests.</p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
                              {selectedUser.accountType === 'Parent' && (
                                  <Card>
                                     <CardHeader>
@@ -1566,10 +1671,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         parentTransactions.map(tx => (
                                                             <TableRow key={tx.id}>
                                                                 <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
-                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge></TableCell>
+                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</TableCell>
                                                                 <TableCell>{tx.description}</TableCell>
                                                                 <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                                                    {tx.type === 'Credit' ? '+' : '-'}₱{tx.amountCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                                                    {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
                                                                 </TableCell>
                                                             </TableRow>
                                                         ))
@@ -2516,7 +2621,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Top-Up Balance</DialogTitle>
-                    <DialogDescription>Add {selectedUser?.accountType === 'Parent' ? 'credits' : 'liters'} to {selectedUser?.businessName}'s balance.</DialogDescription>
+                    <DialogDescription>Add {selectedUser?.accountType === 'Parent' ? 'credits (PHP)' : 'liters'} to {selectedUser?.businessName}'s balance.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
                     <Label htmlFor="top-up-amount">Amount to Add ({selectedUser?.accountType === 'Parent' ? 'PHP' : 'Liters'})</Label>
@@ -3164,7 +3269,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         )}/>
                                       )}
                                       {selectedAccountType === 'Parent' && (
-                                         <FormField control={newUserForm.control} name="topUpBalanceCredits" render={({ field }) => (
+                                         <FormField control={newUserForm.control} name="initialTopUp" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel>Initial Top-Up Credits (PHP)</FormLabel>
                                                 <FormControl><Input type="number" placeholder="e.g. 10000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
@@ -3244,11 +3349,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
                                             {selectedPlan.isPrepaid && (
-                                                <FormField control={newUserForm.control} name="initialLiters" render={({ field }) => (
+                                                 <FormField control={newUserForm.control} name="initialTopUp" render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>Initial Liters Balance</FormLabel>
-                                                        <FormControl><Input type="number" placeholder="e.g., 10000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                        <FormDescription>This will be the starting prepaid balance for the user.</FormDescription>
+                                                        <FormLabel>Initial Top-Up (PHP)</FormLabel>
+                                                        <FormControl><Input type="number" placeholder="e.g., 5000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                                        <FormDescription>This amount will be converted to liters based on the plan's rate and will be the user's starting balance.</FormDescription>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}/>
@@ -3293,4 +3398,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-    
