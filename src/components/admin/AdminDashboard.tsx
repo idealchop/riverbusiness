@@ -118,6 +118,7 @@ const newUserSchema = z.object({
   clientType: z.string().min(1, { message: 'Plan type is required' }),
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
   initialLiters: z.coerce.number().optional(), // For Prepaid Plan
+  topUpBalanceLiters: z.coerce.number().optional(), // For Parent Account initial balance
   customPlanDetails: planDetailsSchema,
   accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
   parentId: z.string().optional(),
@@ -512,6 +513,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             clientType: '',
             plan: null,
             initialLiters: 0,
+            topUpBalanceLiters: 0,
             accountType: 'Single',
             customPlanDetails: {
                 litersPerMonth: 0,
@@ -1280,7 +1282,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
             
-            const { customPlanDetails, plan, initialLiters, ...rest } = values;
+            const { customPlanDetails, plan, initialLiters, topUpBalanceLiters, ...rest } = values;
 
             let totalLiters = 0;
             if (plan.isPrepaid) {
@@ -1289,7 +1291,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 totalLiters = (customPlanDetails.litersPerMonth || 0) + (customPlanDetails.bonusLiters || 0);
             }
 
-            const profileData = {
+            const profileData: any = {
                 ...rest, 
                 customPlanDetails, 
                 plan: {
@@ -1302,6 +1304,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 totalConsumptionLiters: totalLiters,
                 adminCreatedAt: serverTimestamp(),
             };
+
+            if (values.accountType === 'Parent') {
+                profileData.topUpBalanceLiters = topUpBalanceLiters || 0;
+            }
             
             await setDoc(unclaimedProfileRef, profileData);
             
@@ -1511,7 +1517,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         parentTransactions.map(tx => (
                                                             <TableRow key={tx.id}>
                                                                 <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
-                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge></TableCell>
+                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</TableCell>
                                                                 <TableCell>{tx.description}</TableCell>
                                                                 <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
                                                                     {tx.type === 'Credit' ? '+' : '-'}{tx.amountLiters.toLocaleString()} L
@@ -3083,6 +3089,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <FormMessage />
                                             </FormItem>
                                         )}/>
+                                      )}
+                                      {selectedAccountType === 'Parent' && (
+                                         <FormField control={newUserForm.control} name="topUpBalanceLiters" render={({ field }) => (
+                                            <FormItem className="md:col-span-2">
+                                                <FormLabel>Initial Top-Up Balance (Liters)</FormLabel>
+                                                <FormControl><Input type="number" placeholder="e.g. 50000" {...field} /></FormControl>
+                                                <FormDescription>Set the starting credit balance for this parent account.</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                         )}/>
                                       )}
                                     </div>
                                 </div>

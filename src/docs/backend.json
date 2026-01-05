@@ -75,7 +75,8 @@
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
-        "parentId": { "type": "string" }
+        "parentId": { "type": "string" },
+        "topUpBalanceLiters": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of water credits in liters." }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
     },
