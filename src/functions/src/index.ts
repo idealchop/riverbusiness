@@ -2,7 +2,7 @@
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
@@ -19,6 +19,8 @@ export * from './billing';
 initializeApp();
 const db = getFirestore();
 const storage = getStorage();
+
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 /**
  * Retrieves the admin user's UID.
@@ -55,6 +57,97 @@ export async function createNotification(userId: string, notificationData: Omit<
   await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
 }
 
+
+/**
+ * Cloud Function to create a notification when a delivery is first created.
+ */
+export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const delivery = event.data.data();
+    const litersToDeduct = containerToLiter(delivery.volumeContainers);
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    // Handle consumption for different account types
+    if (userData) {
+        if (userData.accountType === 'Branch' && userData.parentId) {
+            const parentRef = db.collection('users').doc(userData.parentId);
+            const parentDoc = await parentRef.get();
+            if (parentDoc.exists) {
+                // 1. Debit the parent account's balance
+                await parentRef.update({
+                    topUpBalanceLiters: increment(-litersToDeduct)
+                });
+
+                // 2. Create a transaction log on the parent account
+                const transactionData = {
+                    date: delivery.date,
+                    type: 'Debit',
+                    amountLiters: litersToDeduct,
+                    description: `Delivery to ${userData.businessName}`,
+                    branchId: userId,
+                    branchName: userData.businessName
+                };
+                await parentRef.collection('transactions').add(transactionData);
+
+                 // 3. Notify the Parent account of the deduction
+                await createNotification(userData.parentId, {
+                    type: 'delivery',
+                    title: 'Branch Consumption',
+                    description: `${litersToDeduct.toFixed(1)}L deducted for delivery to ${userData.businessName}.`,
+                    data: { deliveryId: event.params.deliveryId, branchUserId: userId }
+                });
+            }
+        } else if (userData.plan?.isPrepaid) {
+            // For Prepaid plans, deduct from their own balance
+            const userRef = db.collection('users').doc(userId);
+            await userRef.update({
+                totalConsumptionLiters: increment(-litersToDeduct)
+            });
+        }
+    }
+
+
+    const notification = {
+        type: 'delivery',
+        title: 'Delivery Scheduled',
+        description: `Delivery of ${delivery.volumeContainers} containers is scheduled.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
+
+/**
+ * Cloud Function to create a notification when a delivery is updated.
+ */
+export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Only notify if the status has changed.
+    if (before.status === after.status) {
+        return;
+    }
+    
+    const userId = event.params.userId;
+    const delivery = after;
+
+    const notification = {
+        type: 'delivery',
+        title: `Delivery ${delivery.status}`,
+        description: `Delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
+        data: { deliveryId: event.params.deliveryId }
+    };
+    
+    await createNotification(userId, notification);
+});
 
 /**
  * Cloud Function to create notifications when a payment status is updated by an admin.
@@ -112,6 +205,87 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     }
 });
 
+/**
+ * Cloud Function to send notifications for sanitation visit creations.
+ */
+export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const visit = event.data.data();
+
+    const scheduledDate = new Date(visit.scheduledDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const notification = {
+        type: 'sanitation',
+        title: 'Sanitation Visit Scheduled',
+        description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
+        data: { visitId: event.params.visitId }
+    };
+
+    await createNotification(userId, notification);
+});
+
+/**
+ * Cloud Function to send notifications for sanitation visit updates.
+ */
+export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    if (before.status === after.status) return; // No change, no notification
+
+    const scheduledDate = new Date(after.scheduledDate).toLocaleDateString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    const notification = {
+        type: 'sanitation',
+        title: `Sanitation Visit: ${after.status}`,
+        description: `Your sanitation visit for ${scheduledDate} is now ${after.status}.`,
+        data: { visitId: event.params.visitId }
+    };
+    
+    await createNotification(userId, notification);
+});
+
+/**
+ * Cloud Function to notify admin on user profile changes.
+ */
+export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+    const adminId = await getAdminId();
+    
+    if (!adminId || userId === adminId) return; // Don't notify admin about their own changes.
+
+    // Notify on plan change request
+    if (!before.pendingPlan && after.pendingPlan) {
+        await createNotification(adminId, {
+            type: 'general',
+            title: 'Plan Change Request',
+            description: `${after.businessName} has requested to change their plan to ${after.pendingPlan.name}.`,
+            data: { userId: userId }
+        });
+    }
+
+    // You can add more checks here for other fields like auto-refill, account info, etc.
+    if (before.customPlanDetails?.autoRefillEnabled !== after.customPlanDetails?.autoRefillEnabled) {
+         await createNotification(adminId, {
+            type: 'general',
+            title: 'Auto-Refill Changed',
+            description: `${after.businessName} has ${after.customPlanDetails.autoRefillEnabled ? 'enabled' : 'disabled'} auto-refill.`,
+            data: { userId: userId }
+        });
+    }
+});
+
 
 /**
  * Generic Cloud Function for file uploads.
@@ -146,7 +320,47 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         logger.log(`Updated profile photo for user: ${userId}`);
         return;
     }
+
+    if (filePath.startsWith("userContracts/")) {
+        const parts = filePath.split("/");
+        const userId = parts[1];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).update({
+            currentContractUrl: url,
+            contractUploadedDate: FieldValue.serverTimestamp(),
+            contractStatus: "Active",
+        });
+        logger.log(`Updated contract for user: ${userId}`);
+        return;
+    }
     
+    // Handle admin-uploaded proofs
+    if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
+        const parts = filePath.split('/');
+        const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
+        const deliveryId = path.basename(filePath).split('-')[0];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
+            proofOfDeliveryUrl: url,
+        });
+        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
+        return;
+    }
+    
+    // Handle admin-uploaded sanitation reports
+    if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
+        const parts = filePath.split('/');
+        const userId = parts[3]; // admin_uploads/{adminId}/sanitation_for/{userId}/{filename}
+        const visitId = path.basename(filePath).split('-')[0];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
+            reportUrl: url,
+        });
+        logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
+        return;
+    }
+
+
     if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const parts = filePath.split("/");
         const userId = parts[1];

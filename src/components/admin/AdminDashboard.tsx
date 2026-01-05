@@ -117,6 +117,7 @@ const newUserSchema = z.object({
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
   clientType: z.string().min(1, { message: 'Plan type is required' }),
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
+  initialLiters: z.coerce.number().optional(), // For Prepaid Plan
   customPlanDetails: planDetailsSchema,
   accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
   parentId: z.string().optional(),
@@ -340,6 +341,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         };
     
         if (!selectedUser || !selectedUser.plan || !userDeliveriesData) {
+            if (selectedUser?.plan?.isPrepaid) {
+                return { ...emptyState, currentBalance: selectedUser.totalConsumptionLiters || 0 };
+            }
             return { ...emptyState, currentBalance: selectedUser?.totalConsumptionLiters || 0 };
         }
     
@@ -360,6 +364,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 consumedLitersThisMonth,
                 estimatedCost: consumedLitersThisMonth * (selectedUser.plan.price || 3),
             };
+        }
+
+        if (selectedUser.plan.isPrepaid) {
+            return {
+                 ...emptyState,
+                consumedLitersThisMonth,
+                currentBalance: selectedUser.totalConsumptionLiters,
+            }
         }
 
         if (!selectedUser.createdAt) return emptyState;
@@ -499,6 +511,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             contactNumber: '',
             clientType: '',
             plan: null,
+            initialLiters: 0,
             accountType: 'Single',
             customPlanDetails: {
                 litersPerMonth: 0,
@@ -1267,7 +1280,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
             
-            const { customPlanDetails, plan, ...rest } = values;
+            const { customPlanDetails, plan, initialLiters, ...rest } = values;
+
+            let totalLiters = 0;
+            if (plan.isPrepaid) {
+                totalLiters = initialLiters || 0;
+            } else if (!plan.isConsumptionBased) {
+                totalLiters = (customPlanDetails.litersPerMonth || 0) + (customPlanDetails.bonusLiters || 0);
+            }
 
             const profileData = {
                 ...rest, 
@@ -1276,9 +1296,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     name: plan.name,
                     price: plan.price,
                     isConsumptionBased: plan.isConsumptionBased || false,
+                    isPrepaid: plan.isPrepaid || false,
                 },
                 role: 'User',
-                totalConsumptionLiters: plan.isConsumptionBased ? 0 : (customPlanDetails.litersPerMonth || 0) + (customPlanDetails.bonusLiters || 0),
+                totalConsumptionLiters: totalLiters,
                 adminCreatedAt: serverTimestamp(),
             };
             
@@ -1344,17 +1365,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setIsSubmitting(true);
         try {
             const userRef = doc(firestore, 'users', selectedUser.id);
+            const incrementField = selectedUser.accountType === 'Parent' ? 'topUpBalanceLiters' : 'totalConsumptionLiters';
+            
             await updateDoc(userRef, {
-                topUpBalanceLiters: increment(topUpAmount)
+                [incrementField]: increment(topUpAmount)
             });
 
-            const transactionData: Omit<Transaction, 'id'> = {
-                date: serverTimestamp(),
-                type: 'Credit',
-                amountLiters: topUpAmount,
-                description: 'Admin Top-Up'
-            };
-            await addDoc(collection(userRef, 'transactions'), transactionData);
+            if (selectedUser.accountType === 'Parent') {
+                const transactionData: Omit<Transaction, 'id'> = {
+                    date: serverTimestamp(),
+                    type: 'Credit',
+                    amountLiters: topUpAmount,
+                    description: 'Admin Top-Up'
+                };
+                await addDoc(collection(userRef, 'transactions'), transactionData);
+            }
             
             await createNotification(selectedUser.id, {
                 type: 'top-up',
@@ -1439,13 +1464,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </CardContent>
                             </Card>
                             
-                             {selectedUser.accountType === 'Parent' ? (
+                             {selectedUser.accountType === 'Parent' || selectedUser.plan?.isPrepaid ? (
                                 <Card>
                                     <CardHeader className="pb-4">
-                                        <CardTitle className="text-base">Top-Up Balance</CardTitle>
+                                        <CardTitle className="text-base">
+                                            {selectedUser.accountType === 'Parent' ? 'Parent Top-Up Balance' : 'Prepaid Balance'}
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="pt-0">
-                                        <p className="text-3xl font-bold mb-2">{(selectedUser.topUpBalanceLiters || 0).toLocaleString()} <span className="text-lg font-normal text-muted-foreground">Liters</span></p>
+                                        <p className="text-3xl font-bold mb-2">
+                                          {(selectedUser.accountType === 'Parent' ? selectedUser.topUpBalanceLiters : selectedUser.totalConsumptionLiters)?.toLocaleString()} <span className="text-lg font-normal text-muted-foreground">Liters</span>
+                                        </p>
                                         <Button size="sm" onClick={() => setIsTopUpDialogOpen(true)}>
                                             <PlusCircle className="mr-2 h-4 w-4" />
                                             Top-Up Credits
@@ -3133,7 +3162,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         </FormControl>
                                                         <SelectContent>
                                                             {planOptions.map(plan => (
-                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && !plan.isConsumptionBased && `(P${plan.price}/mo)`} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
+                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && !plan.isConsumptionBased && !plan.isPrepaid && `(P${plan.price}/mo)`} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -3145,7 +3174,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
-                                            {!selectedPlan.isConsumptionBased ? (
+                                            {selectedPlan.isPrepaid && (
+                                                <FormField control={newUserForm.control} name="initialLiters" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Initial Liters Balance</FormLabel>
+                                                        <FormControl><Input type="number" placeholder="e.g., 10000" {...field} /></FormControl>
+                                                        <FormDescription>This will be the starting prepaid balance for the user.</FormDescription>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}/>
+                                            )}
+                                            {!selectedPlan.isConsumptionBased && !selectedPlan.isPrepaid ? (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Subscription</h4>
                                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -3175,7 +3214,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         )}/>
                                                     </div>
                                                 </div>
-                                                ) : (
+                                                ) : !selectedPlan.isPrepaid && (
                                                 <div className="p-4 border rounded-lg bg-muted/50">
                                                     <h4 className="font-medium">Billing</h4>
                                                     <p className="text-sm text-muted-foreground">This is a consumption-based plan. The client will be billed at <span className="font-bold text-foreground">P{selectedPlan.price}/liter</span> at the end of each month.</p>
@@ -3248,4 +3287,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-

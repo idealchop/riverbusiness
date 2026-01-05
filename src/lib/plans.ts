@@ -82,6 +82,19 @@ export const enterprisePlans = [
             { label: 'Deliveries', value: 'Automated or On-demand' },
             { label: 'Billing', value: 'Pay based on consumption' },
         ]
+    },
+    {
+        name: 'Prepaid Flow Plan',
+        price: 0,
+        description: 'Pre-purchase water credits and consume at your own pace.',
+        recommended: false,
+        isPrepaid: true, // Flag for the new plan type
+        imageId: 'plan-enterprise-flowing',
+        details: [
+            { label: 'Pricing', value: 'Top-up Liters' },
+            { label: 'Deliveries', value: 'On-demand' },
+            { label: 'Billing', value: 'Deducted from balance' },
+        ]
     }
 ];
 
