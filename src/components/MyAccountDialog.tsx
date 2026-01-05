@@ -35,7 +35,7 @@ import { enterprisePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
-import { Progress } from '@/components/ui/progress';
+import { Progress } from './ui/progress';
 import { Skeleton } from './ui/skeleton';
 
 
@@ -514,43 +514,65 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
   
   const breakdownDetails = useMemo(() => {
-    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false };
+    const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, isCurrent: false, isFirstInvoice: false };
     if (!user || !state.invoiceForBreakdown) {
       return emptyDetails;
     }
-
+  
+    const invoiceDate = toSafeDate(state.invoiceForBreakdown.date);
+    const userCreationDate = toSafeDate(user.createdAt);
+  
+    const isFirstInvoice = userCreationDate && invoiceDate 
+      ? getYear(invoiceDate) === getYear(userCreationDate) && getMonth(invoiceDate) === getMonth(userCreationDate)
+      : false;
+  
     const isCurrent = currentMonthInvoice ? state.invoiceForBreakdown.id === currentMonthInvoice.id : false;
-    const isOneTimeFeeInvoice = state.invoiceForBreakdown.description.includes('One-Time');
-    
+  
     const gallonPrice = user.customPlanDetails?.gallonPrice || 0;
     const dispenserPrice = user.customPlanDetails?.dispenserPrice || 0;
-
+  
     let planCost = 0;
     let consumptionCost = 0;
     let gallonCost = 0;
     let dispenserCost = 0;
-
-    if (isOneTimeFeeInvoice) {
-        gallonCost = user.customPlanDetails?.gallonPaymentType === 'One-Time' ? gallonPrice : 0;
-        dispenserCost = user.customPlanDetails?.dispenserPaymentType === 'One-Time' ? dispenserPrice : 0;
-    } else {
-        gallonCost = user.customPlanDetails?.gallonPaymentType === 'Monthly' ? gallonPrice : 0;
-        dispenserCost = user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? dispenserPrice : 0;
-
-        if (!user.plan?.isConsumptionBased && !user.plan?.isPrepaid) {
-            planCost = user.plan?.price || 0;
-        }
-
-        const totalMonthlyEquipmentCost = gallonCost + dispenserCost;
-        consumptionCost = state.invoiceForBreakdown.amount - planCost - totalMonthlyEquipmentCost;
+  
+    // Always include monthly costs
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+      gallonCost += gallonPrice;
     }
-
-    return { 
-        planCost, 
-        gallonCost, 
-        dispenserCost, 
-        consumptionCost: Math.max(0, consumptionCost), // Ensure consumption cost isn't negative
-        isCurrent 
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+      dispenserCost += dispenserPrice;
+    }
+  
+    // Add one-time costs only for the first invoice
+    if (isFirstInvoice) {
+      if (user.customPlanDetails?.gallonPaymentType === 'One-Time') {
+        gallonCost += gallonPrice;
+      }
+      if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') {
+        dispenserCost += dispenserPrice;
+      }
+    }
+  
+    if (!user.plan?.isConsumptionBased && !user.plan?.isPrepaid) {
+      planCost = user.plan?.price || 0;
+    }
+  
+    const totalMonthlyEquipmentCost = (user.customPlanDetails?.gallonPaymentType === 'Monthly' ? gallonPrice : 0) + (user.customPlanDetails?.dispenserPaymentType === 'Monthly' ? dispenserPrice : 0);
+    consumptionCost = state.invoiceForBreakdown.amount - planCost - totalMonthlyEquipmentCost;
+  
+    if (isFirstInvoice) {
+      consumptionCost -= (user.customPlanDetails?.gallonPaymentType === 'One-Time' ? gallonPrice : 0);
+      consumptionCost -= (user.customPlanDetails?.dispenserPaymentType === 'One-Time' ? dispenserPrice : 0);
+    }
+  
+    return {
+      planCost,
+      gallonCost,
+      dispenserCost,
+      consumptionCost: Math.max(0, consumptionCost),
+      isCurrent,
+      isFirstInvoice
     };
   }, [user, state.invoiceForBreakdown, currentMonthInvoice]);
 
@@ -1496,5 +1518,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
-
-    
