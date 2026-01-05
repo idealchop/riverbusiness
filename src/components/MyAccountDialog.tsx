@@ -664,7 +664,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         const filePath = `topup_proofs/${user.id}/${Date.now()}-${topUpProof.name}`;
         const proofUrl = await uploadFileWithProgress(storage, auth, filePath, topUpProof, {}, setUploadProgress);
 
-        const requestData: Omit<TopUpRequest, 'id'> = {
+        const requestData: Omit<TopUpRequest, 'id' | 'rejectionReason'> = {
             userId: user.id,
             amount: Number(topUpAmount),
             status: 'Pending Review',
@@ -692,6 +692,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
   };
   
+  const literEquivalent = useMemo(() => {
+    const rate = 3; // Standard P3/liter rate for estimation
+    if (typeof topUpAmount === 'number' && topUpAmount > 0) {
+      return (topUpAmount / rate).toFixed(0);
+    }
+    return '0';
+  }, [topUpAmount]);
+
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -1580,6 +1588,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
               <div className="space-y-2">
                 <Label htmlFor="top-up-amount">Amount (PHP)</Label>
                 <Input id="top-up-amount" type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value) || '')} placeholder="Enter amount to top-up" disabled={isSubmittingTopUp}/>
+                 {topUpAmount > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Approximately {literEquivalent} liters (based on P3/liter rate)
+                  </p>
+                )}
               </div>
                <div className="space-y-2">
                 <p className="text-sm font-medium">Payment Method</p>
