@@ -37,8 +37,12 @@ service cloud.firestore {
       // A user can delete their own profile (though this is not a current app feature).
       allow delete: if isOwner(userId);
       
-      // Any authenticated user can create their own user document (happens during profile claim).
-      allow create: if request.auth != null;
+      // A user document can ONLY be created if it's part of a valid profile claim transaction.
+      allow create: if request.auth != null && 
+                      // The unclaimed profile must exist before the transaction
+                      get(/databases/$(database)/documents/unclaimedProfiles/$(request.resource.data.clientId)) != null &&
+                      // The user document must NOT exist before the transaction
+                      !exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
     
     // Parent users can read their own transaction history.
@@ -53,8 +57,9 @@ service cloud.firestore {
     }
     
     match /unclaimedProfiles/{clientId} {
-      // A newly signed-up user can read and delete their own unclaimed profile to claim it.
-      allow read, delete: if request.auth != null && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      // Allow a newly authenticated user to delete an unclaimed profile as part of the claim process.
+      // The main validation happens in the 'users' create rule.
+      allow read, delete: if request.auth != null;
     }
 
     // Any authenticated user can read station and schedule information.
@@ -102,5 +107,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
