@@ -1,4 +1,5 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -207,6 +208,34 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
         await createNotification(adminId, adminNotification);
     }
 });
+
+
+/**
+ * Cloud Function to handle user-submitted top-up requests.
+ */
+export const ontopuprequestcreate = onDocumentCreated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const requestId = event.params.requestId;
+    const requestData = event.data.data();
+
+    const adminId = await getAdminId();
+    if (!adminId) return;
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (userData) {
+        await createNotification(adminId, {
+            type: 'top-up',
+            title: 'Top-Up Request',
+            description: `${userData.businessName} requested a top-up of ₱${requestData.amount.toLocaleString()}.`,
+            data: { userId, requestId }
+        });
+    }
+});
+
 
 /**
  * Cloud Function to send notifications for sanitation visit creations.
@@ -430,5 +459,3 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    

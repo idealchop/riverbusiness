@@ -57,6 +57,21 @@
         },
         "required": ["id", "date", "type", "amountCredits", "description"]
     },
+     "TopUpRequest": {
+        "title": "TopUpRequest",
+        "type": "object",
+        "description": "Represents a user's request to top-up their balance, pending admin approval.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "amount": { "type": "number" },
+            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected"] },
+            "requestedAt": { "type": "string", "format": "date-time" },
+            "proofOfPaymentUrl": { "type": "string", "format": "uri" },
+            "rejectionReason": { "type": "string" }
+        },
+        "required": ["id", "userId", "amount", "status", "requestedAt", "proofOfPaymentUrl"]
+    },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
       "type": "object",
@@ -297,6 +312,10 @@
       "schema": { "$ref": "#/entities/Payment" },
       "description": "Subcollection for a user's payment history."
     },
+     "/users/{userId}/topUpRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/TopUpRequest" },
+      "description": "Subcollection for a Parent account's top-up requests."
+    },
     "/users/{userId}/transactions/{transactionId}": {
         "schema": { "$ref": "#/entities/Transaction" },
         "description": "For Parent accounts, logs all top-ups and branch consumption."
@@ -343,5 +362,3 @@
     }
   }
 }
-
-    

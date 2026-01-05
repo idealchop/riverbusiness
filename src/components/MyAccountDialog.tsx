@@ -25,11 +25,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction } from '@/lib/types';
+import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -48,6 +48,7 @@ type State = {
   isSoaDialogOpen: boolean;
   isInvoiceDetailOpen: boolean;
   isBreakdownDialogOpen: boolean;
+  isTopUpDialogOpen: boolean;
   selectedNewPlan: any | null;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
@@ -70,6 +71,7 @@ type Action =
   | { type: 'SET_SOA_DIALOG'; payload: boolean }
   | { type: 'SET_INVOICE_DETAIL_DIALOG'; payload: boolean }
   | { type: 'SET_BREAKDOWN_DIALOG'; payload: boolean }
+  | { type: 'SET_TOPUP_DIALOG'; payload: boolean }
   | { type: 'SET_SELECTED_INVOICE_FOR_DETAIL', payload: Payment | null }
   | { type: 'SET_INVOICE_FOR_BREAKDOWN', payload: Payment | null }
   | { type: 'SET_SELECTED_NEW_PLAN'; payload: any | null }
@@ -88,6 +90,7 @@ const initialState: State = {
   isSoaDialogOpen: false,
   isInvoiceDetailOpen: false,
   isBreakdownDialogOpen: false,
+  isTopUpDialogOpen: false,
   selectedNewPlan: null,
   profilePhotoFile: null,
   profilePhotoPreview: null,
@@ -110,6 +113,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_SOA_DIALOG': return { ...state, isSoaDialogOpen: action.payload };
     case 'SET_INVOICE_DETAIL_DIALOG': return { ...state, isInvoiceDetailOpen: action.payload };
     case 'SET_BREAKDOWN_DIALOG': return { ...state, isBreakdownDialogOpen: action.payload };
+    case 'SET_TOPUP_DIALOG': return { ...state, isTopUpDialogOpen: action.payload };
     case 'SET_SELECTED_INVOICE_FOR_DETAIL': return { ...state, selectedInvoiceForDetail: action.payload };
     case 'SET_INVOICE_FOR_BREAKDOWN': return { ...state, invoiceForBreakdown: action.payload };
     case 'SET_SELECTED_NEW_PLAN': return { ...state, selectedNewPlan: action.payload };
@@ -178,6 +182,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [soaMonth, setSoaMonth] = useState<string>('');
+  const [topUpAmount, setTopUpAmount] = useState<number | ''>('');
+  const [topUpProof, setTopUpProof] = useState<File | null>(null);
+  const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false);
+
   const { toast } = useToast();
   const firestore = useFirestore();
   const storage = useStorage();
@@ -192,12 +200,23 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
-  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
+  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? collection(firestore, 'users', user.id, 'transactions') : null, [firestore, user]);
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
   const INVOICES_PER_PAGE = 5;
+
+  // Move all hooks before the early return
+  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
+  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
+  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+
+  const paymentOptions: PaymentOption[] = [
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
+      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
+      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+  ];
 
   const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -431,6 +450,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
   }, [availableMonths, soaMonth]);
 
+  if (!user) {
+    return <>{children}</>;
+  }
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -630,12 +653,44 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date';
   };
   
-  const userFirstName = user?.name.split(' ')[0];
-  const displayPhoto = user?.photoURL;
-  
-  if (!user) {
-    return <>{children}</>;
-  }
+  const userFirstName = user.name.split(' ')[0];
+  const displayPhoto = user.photoURL;
+
+  const handleTopUpSubmit = async () => {
+    if (!topUpProof || !topUpAmount || !user || !storage || !auth || !firestore) return;
+    
+    setIsSubmittingTopUp(true);
+    try {
+        const filePath = `topup_proofs/${user.id}/${Date.now()}-${topUpProof.name}`;
+        const proofUrl = await uploadFileWithProgress(storage, auth, filePath, topUpProof, {}, setUploadProgress);
+
+        const requestData: Omit<TopUpRequest, 'id'> = {
+            userId: user.id,
+            amount: Number(topUpAmount),
+            status: 'Pending Review',
+            requestedAt: serverTimestamp(),
+            proofOfPaymentUrl: proofUrl,
+        };
+
+        const requestsCollection = collection(firestore, 'users', user.id, 'topUpRequests');
+        await addDoc(requestsCollection, requestData);
+
+        toast({
+            title: 'Top-Up Request Submitted',
+            description: "Your request is now pending review by our admin team.",
+        });
+
+        dispatch({type: 'SET_TOPUP_DIALOG', payload: false});
+        setTopUpAmount('');
+        setTopUpProof(null);
+
+    } catch (error) {
+        console.error('Top-up submission failed:', error);
+        toast({ variant: 'destructive', title: 'Submission Failed' });
+    } finally {
+        setIsSubmittingTopUp(false);
+    }
+  };
   
   return (
     <AlertDialog>
@@ -872,7 +927,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                   </Card>
                    <Card>
                       <CardContent className="p-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {user.currentContractUrl ? (
                               <Button variant="outline" asChild>
                                   <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
@@ -892,10 +947,16 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
                           </Button>
-                          <Button variant="default" onClick={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
-                              <Download className="mr-2 h-4 w-4" />
-                              Download SOA
-                          </Button>
+                          {user.accountType === 'Parent' ? (
+                            <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
+                              <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
+                            </Button>
+                          ) : (
+                            <Button variant="default" onClick={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Download SOA
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                   </Card>
@@ -1507,9 +1568,57 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+       {/* Top-Up Dialog */}
+      <Dialog open={state.isTopUpDialogOpen} onOpenChange={(isOpen) => dispatch({ type: 'SET_TOPUP_DIALOG', payload: isOpen })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><DollarSign className="h-5 w-5" />Top-Up Your Balance</DialogTitle>
+            <DialogDescription>Add credits to your Parent Account to cover your branch deliveries.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="top-up-amount">Amount (PHP)</Label>
+                <Input id="top-up-amount" type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value) || '')} placeholder="Enter amount to top-up" disabled={isSubmittingTopUp}/>
+              </div>
+               <div className="space-y-2">
+                <p className="text-sm font-medium">Payment Method</p>
+                <p className="text-xs text-muted-foreground">You may send your payment through any of our accredited payment channels below.</p>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                    {paymentOptions.map(option => (
+                        <Card key={option.name}>
+                            <CardHeader className="p-3">
+                                <CardTitle className="text-sm">{option.name}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-3 pt-0 text-xs">
+                                {option.details ? (
+                                    <>
+                                        <p className="font-semibold">{option.details.accountName}</p>
+                                        <p>{option.details.accountNumber}</p>
+                                    </>
+                                ) : (
+                                    <p>Scan QR in payment app.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="top-up-proof">Upload Proof of Payment</Label>
+                <Input id="top-up-proof" type="file" onChange={(e) => setTopUpProof(e.target.files?.[0] || null)} disabled={isSubmittingTopUp}/>
+                 {isSubmittingTopUp && <Progress value={uploadProgress} className="h-1" />}
+              </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: false})} disabled={isSubmittingTopUp}>Cancel</Button>
+            <Button onClick={handleTopUpSubmit} disabled={!topUpAmount || !topUpProof || isSubmittingTopUp}>
+              {isSubmittingTopUp ? "Submitting..." : "Submit for Review"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </AlertDialog>
   );
 }
-
-    

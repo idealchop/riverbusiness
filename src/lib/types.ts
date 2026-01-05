@@ -234,6 +234,16 @@ export interface Transaction {
     branchId?: string;
     branchName?: string;
 }
+
+export interface TopUpRequest {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'Pending Review' | 'Approved' | 'Rejected';
+  requestedAt: FieldValue | Timestamp;
+  proofOfPaymentUrl: string;
+  rejectionReason?: string;
+}
     
 
     
