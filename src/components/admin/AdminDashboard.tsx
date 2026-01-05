@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -1348,21 +1349,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         try {
             const userRef = doc(firestore, 'users', selectedUser.id);
             
-            // Logic for Parent vs Prepaid
             const isParent = selectedUser.accountType === 'Parent';
-            const incrementField = isParent ? 'topUpBalanceCredits' : 'totalConsumptionLiters';
-            let amountToIncrement = topUpAmount;
-
-            if (!isParent && selectedUser.plan?.isPrepaid) {
-                const rate = selectedUser.plan.price || 3;
-                amountToIncrement = rate > 0 ? topUpAmount / rate : 0;
-            }
             
-            await updateDoc(userRef, {
-                [incrementField]: increment(amountToIncrement)
-            });
-
             if (isParent) {
+                 await updateDoc(userRef, {
+                    topUpBalanceCredits: increment(topUpAmount)
+                });
                 const transactionData: Omit<Transaction, 'id'> = {
                     date: serverTimestamp(),
                     type: 'Credit',
@@ -1370,16 +1362,22 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     description: 'Admin Top-Up'
                 };
                 await addDoc(collection(userRef, 'transactions'), transactionData);
+            } else if (selectedUser.plan?.isPrepaid) {
+                const rate = selectedUser.plan.price || 3;
+                const litersToAdd = rate > 0 ? topUpAmount / rate : 0;
+                 await updateDoc(userRef, {
+                    totalConsumptionLiters: increment(litersToAdd)
+                });
             }
             
             await createNotification(selectedUser.id, {
                 type: 'top-up',
                 title: 'Balance Topped Up',
-                description: `Your account has been credited with ${isParent ? `₱${topUpAmount.toLocaleString()}` : `${amountToIncrement.toLocaleString()} Liters`}.`,
+                description: `Your account has been credited with ${isParent ? `₱${topUpAmount.toLocaleString()}` : `${(topUpAmount / (selectedUser.plan.price || 3)).toLocaleString()} Liters`}.`,
                 data: { amount: topUpAmount }
             });
 
-            toast({ title: 'Top-Up Successful', description: `${isParent ? `₱${topUpAmount.toLocaleString()}` : `${amountToIncrement.toLocaleString()} Liters`} added to ${selectedUser.businessName}'s balance.` });
+            toast({ title: 'Top-Up Successful', description: `${isParent ? `₱${topUpAmount.toLocaleString()}` : `${(topUpAmount / (selectedUser.plan.price || 3)).toLocaleString()} Liters`} added to ${selectedUser.businessName}'s balance.` });
             setIsTopUpDialogOpen(false);
             setTopUpAmount(0);
         } catch (error) {
@@ -1436,26 +1434,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const requestRef = doc(userRef, 'topUpRequests', request.id);
 
             const isParent = selectedUser.accountType === 'Parent';
-            const incrementField = isParent ? 'topUpBalanceCredits' : 'totalConsumptionLiters';
-            let amountToIncrement = request.amount;
-
-            if (!isParent && selectedUser.plan?.isPrepaid) {
-                const rate = selectedUser.plan.price || 3;
-                amountToIncrement = rate > 0 ? request.amount / rate : 0;
-            }
-
-            await updateDoc(userRef, {
-                [incrementField]: increment(amountToIncrement)
-            });
-
+            
             if (isParent) {
-                 const transactionData: Omit<Transaction, 'id'> = {
+                 await updateDoc(userRef, {
+                    topUpBalanceCredits: increment(request.amount)
+                });
+                const transactionData: Omit<Transaction, 'id'> = {
                     date: serverTimestamp(),
                     type: 'Credit',
                     amountCredits: request.amount,
                     description: 'User Top-Up'
                 };
                 await addDoc(collection(userRef, 'transactions'), transactionData);
+            } else if (selectedUser.plan?.isPrepaid) {
+                 const rate = selectedUser.plan.price || 3;
+                 const litersToAdd = rate > 0 ? request.amount / rate : 0;
+                 await updateDoc(userRef, {
+                    totalConsumptionLiters: increment(litersToAdd)
+                });
             }
             
             await updateDoc(requestRef, { status: 'Approved' });
@@ -1463,7 +1459,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
              await createNotification(selectedUser.id, {
                 type: 'top-up',
                 title: 'Top-Up Approved',
-                description: `Your top-up of ${isParent ? `₱${request.amount.toLocaleString()}` : `${amountToIncrement.toLocaleString()}L`} has been approved.`,
+                description: `Your top-up of ${isParent ? `₱${request.amount.toLocaleString()}` : `${(request.amount / (selectedUser.plan.price || 3)).toLocaleString()}L`} has been approved.`,
             });
             toast({ title: 'Top-Up Approved' });
         } catch (error) {
@@ -1671,7 +1667,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         parentTransactions.map(tx => (
                                                             <TableRow key={tx.id}>
                                                                 <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
-                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</TableCell>
+                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge></TableCell>
                                                                 <TableCell>{tx.description}</TableCell>
                                                                 <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
                                                                     {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
