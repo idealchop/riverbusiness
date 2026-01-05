@@ -14,9 +14,13 @@ The platform is built on a modern, serverless architecture using Next.js and Fir
 - **Account Management:** Update personal and business details, change passwords, and upload a profile photo.
 - **Support & Feedback:** Contact support, submit feedback, and request to switch water providers.
 - **Compliance & Quality:** View water quality compliance reports and sanitation visit schedules for their assigned station.
+- **Multi-Branch Functionality:**
+    - **Parent Accounts:** Manage a central, top-up balance of water credits for all linked branches. View a detailed transaction history of all top-ups and branch consumption deductions. Oversee all associated branch accounts from a single dashboard.
+    - **Branch Accounts:** Enjoy the full standard dashboard experience for managing their own deliveries and consumption, with a billing history that is view-only and clearly marked as "Covered by Parent Account".
 
 ### Admin Panel (`/admin`)
-- **User Management:** View, search, and manage all client accounts.
+- **User Management:** View, search, and manage all client accounts, with clear indicators for 'Parent' and 'Branch' account types.
+- **Multi-Branch Management:** Create and link 'Parent' and 'Branch' accounts. Top-up water credits (liters) to a Parent account's central balance. View linked branches and transaction histories for any Parent account.
 - **Detailed User View:** Access a comprehensive profile for each user, including their plan, consumption details, and assigned station.
 - **Administrative Actions:** Assign water stations to users, adjust water balances (add/deduct liters), and attach contracts.
 - **Delivery Oversight:** Create, edit, and delete delivery records for any user. Upload proof of delivery on behalf of the team.
