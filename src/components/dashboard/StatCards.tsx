@@ -97,7 +97,7 @@ export function StatCards({
             ...emptyState,
             consumedLitersThisMonth: consumedLitersThisCycle,
             currentBalance: 0, // Not applicable for Flow plan or Branch
-            estimatedCost: consumptionCost + equipmentCostForPeriod,
+            estimatedCost: consumptionCost, // Only show consumption cost here
         };
     }
     
@@ -217,7 +217,7 @@ export function StatCards({
               <p className="text-2xl md:text-3xl font-bold mb-2">
                 {isBranchAccount
                     ? `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
-                    : isPrepaidPlan
+                    : isPrepaidPlan 
                     ? `${(user?.totalConsumptionLiters || 0).toLocaleString()} L`
                     : `₱${consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 }
@@ -228,7 +228,7 @@ export function StatCards({
                     ? <span>Total usage this period</span>
                     : isPrepaidPlan 
                     ? <span>Consumed this period:</span>
-                    : <span>Consumed this period:</span>
+                    : <span>Water consumption cost:</span>
                   }
                   <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
                 </div>
@@ -240,7 +240,7 @@ export function StatCards({
                 ) : isPrepaidPlan ? (
                      <p className="text-xs text-muted-foreground">This is your prepaid water credit balance.</p>
                 ) : (
-                    <p className="text-xs text-muted-foreground">Billed at the end of the month based on consumption.</p>
+                    <p className="text-xs text-muted-foreground">Equipment rental fees will be added to your final bill.</p>
                 )}
             </CardFooter>
           </Card>
@@ -386,3 +386,5 @@ export function StatCards({
     </>
   );
 }
+
+    
