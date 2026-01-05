@@ -80,7 +80,15 @@ export function StatCards({
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
     const currentBalance = user.totalConsumptionLiters;
-    const monthlyEquipmentCost = (user.customPlanDetails?.gallonPrice || 0) + (user.customPlanDetails?.dispenserPrice || 0);
+    
+    let monthlyEquipmentCost = 0;
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
+      monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+    }
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
+      monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+    }
+
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     if (user.plan.isConsumptionBased || user.accountType === 'Branch') {
@@ -176,6 +184,7 @@ export function StatCards({
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
   const isBranchAccount = user?.accountType === 'Branch';
+  const isPrepaidPlan = user?.plan?.name === 'Prepaid Flow Plan';
   
   const startingBalance = useMemo(() => {
     if (isFlowPlan || isBranchAccount) return 0;
@@ -194,18 +203,22 @@ export function StatCards({
   return (
     <>
     <div className="grid grid-cols-2 gap-6 lg:grid-cols-3">
-      {isFlowPlan || isBranchAccount ? (
+      {isFlowPlan || isBranchAccount || isPrepaidPlan ? (
         <>
           <Card className="flex flex-col lg:col-span-2 col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                {isBranchAccount ? `Consumed this Month (${user?.businessName})` : `Current Plan: ${user?.plan?.name}`}
+                {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
+                  : isPrepaidPlan ? `Remaining Balance` 
+                  : `Current Plan: ${user?.plan?.name}`}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
               <p className="text-2xl md:text-3xl font-bold mb-2">
                 {isBranchAccount
                     ? `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
+                    : isPrepaidPlan
+                    ? `${(user?.totalConsumptionLiters || 0).toLocaleString()} L`
                     : `₱${consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 }
               </p>
@@ -213,6 +226,8 @@ export function StatCards({
                 <div className="flex justify-between">
                   {isBranchAccount
                     ? <span>Total usage this period</span>
+                    : isPrepaidPlan 
+                    ? <span>Consumed this period:</span>
                     : <span>Consumed this period:</span>
                   }
                   <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
@@ -222,6 +237,8 @@ export function StatCards({
             <CardFooter className="pt-0">
                 {isBranchAccount ? (
                      <p className="text-xs text-muted-foreground">Consumption is deducted from your parent account's balance.</p>
+                ) : isPrepaidPlan ? (
+                     <p className="text-xs text-muted-foreground">This is your prepaid water credit balance.</p>
                 ) : (
                     <p className="text-xs text-muted-foreground">Billed at the end of the month based on consumption.</p>
                 )}
@@ -369,5 +386,3 @@ export function StatCards({
     </>
   );
 }
-
-    
