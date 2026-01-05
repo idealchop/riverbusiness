@@ -692,13 +692,19 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
   };
   
+  const literConversionRate = useMemo(() => {
+    if (user?.plan?.isConsumptionBased && user.plan.price > 0) {
+        return user.plan.price;
+    }
+    return 3; // Default rate
+  }, [user]);
+
   const literEquivalent = useMemo(() => {
-    const rate = 3; // Standard P3/liter rate for estimation
     if (typeof topUpAmount === 'number' && topUpAmount > 0) {
-      return (topUpAmount / rate).toFixed(0);
+      return (topUpAmount / literConversionRate).toFixed(0);
     }
     return '0';
-  }, [topUpAmount]);
+  }, [topUpAmount, literConversionRate]);
 
   return (
     <AlertDialog>
@@ -1183,7 +1189,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                         </TableCell>
                                         <TableCell>{tx.description}</TableCell>
                                         <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                            {tx.type === 'Credit' ? '+' : '-'}₱{(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                            {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -1590,7 +1596,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                 <Input id="top-up-amount" type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value) || '')} placeholder="Enter amount to top-up" disabled={isSubmittingTopUp}/>
                  {topUpAmount > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Approximately {literEquivalent} liters (based on P3/liter rate)
+                    Approximately {literEquivalent} liters (based on a ₱{literConversionRate.toFixed(2)}/liter rate)
                   </p>
                 )}
               </div>
