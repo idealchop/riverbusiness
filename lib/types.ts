@@ -34,14 +34,27 @@ export interface SanitationChecklistItem {
     remarks: string;
 }
 
+export interface DispenserReport {
+    dispenserId: string;
+    dispenserName: string;
+    dispenserCode?: string;
+    checklist: SanitationChecklistItem[];
+}
+
 export interface SanitationVisit {
   id: string;
   userId: string;
   scheduledDate: string;
   status: 'Completed' | 'Scheduled' | 'Cancelled';
   assignedTo: string;
-  reportUrl?: string;
-  checklist?: SanitationChecklistItem[];
+  reportUrl?: string; // This might be a summary report URL now
+  dispenserReports?: DispenserReport[]; // Replaces single checklist
+  shareableLink?: string;
+  officerSignature?: string;
+  clientSignature?: string;
+  clientRepName?: string;
+  officerSignatureDate?: string;
+  clientSignatureDate?: string;
 }
 
 export interface WaterStation {
@@ -58,6 +71,8 @@ export type Permission =
   | 'view_quality_reports' 
   | 'manage_users' 
   | 'access_admin_panel';
+
+export type AccountType = 'Single' | 'Parent' | 'Branch';
 
 export interface AppUser {
     id: string; // This is the Firebase Auth UID
@@ -78,7 +93,20 @@ export interface AppUser {
     onboardingComplete?: boolean;
     plan?: any;
     clientType?: string | null;
-    customPlanDetails?: any;
+    customPlanDetails?: {
+        litersPerMonth?: number;
+        bonusLiters?: number;
+        gallonQuantity?: number;
+        gallonPrice?: number;
+        gallonPaymentType?: 'Monthly' | 'One-Time';
+        dispenserQuantity?: number;
+        dispenserPrice?: number;
+        dispenserPaymentType?: 'Monthly' | 'One-Time';
+        deliveryFrequency?: string;
+        deliveryDay?: string;
+        deliveryTime?: string;
+        autoRefillEnabled?: boolean;
+    };
     currentContractUrl?: string;
     photoURL?: string;
     contractStatus?: string;
@@ -86,6 +114,17 @@ export interface AppUser {
     lastDeliveryStatus?: 'Delivered' | 'In Transit' | 'Pending' | 'No Delivery';
     pendingPlan?: any;
     planChangeEffectiveDate?: any;
+    lastChatMessage?: string;
+    lastChatTimestamp?: FieldValue | Timestamp;
+    hasUnreadAdminMessages?: boolean;
+    hasUnreadUserMessages?: boolean;
+    supportDisplayName?: string;
+    supportDescription?: string;
+    supportPhotoURL?: string;
+    // New fields for multi-branch feature
+    accountType?: AccountType;
+    parentId?: string;
+    topUpBalanceLiters?: number;
 }
 
 export interface LoginLog {
@@ -112,7 +151,7 @@ export interface Payment {
   date: string;
   description: string;
   amount: number;
-  status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review';
+  status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review' | 'Covered by Parent Account';
   proofOfPaymentUrl?: string;
   rejectionReason?: string;
 }
@@ -169,11 +208,32 @@ export interface RefillRequest {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'delivery' | 'compliance' | 'sanitation' | 'payment' | 'general';
+  type: 'delivery' | 'compliance' | 'sanitation' | 'payment' | 'general' | 'top-up';
   title: string;
   description: string;
   date: FieldValue | Timestamp;
   isRead: boolean;
   data?: any;
 }
+    
+export interface ChatMessage {
+  id: string;
+  text?: string;
+  role: 'user' | 'admin';
+  timestamp: FieldValue | Timestamp;
+  attachmentUrl?: string;
+  attachmentType?: string;
+}
+
+export interface Transaction {
+    id: string;
+    date: FieldValue | Timestamp;
+    type: 'Credit' | 'Debit';
+    amountLiters: number;
+    description: string;
+    branchId?: string;
+    branchName?: string;
+}
+    
+
     
