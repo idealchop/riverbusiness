@@ -1517,7 +1517,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         parentTransactions.map(tx => (
                                                             <TableRow key={tx.id}>
                                                                 <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
-                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</TableCell>
+                                                                <TableCell><Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge></TableCell>
                                                                 <TableCell>{tx.description}</TableCell>
                                                                 <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
                                                                     {tx.type === 'Credit' ? '+' : '-'}{tx.amountLiters.toLocaleString()} L
@@ -3283,3 +3283,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
