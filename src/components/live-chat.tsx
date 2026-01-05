@@ -23,7 +23,7 @@ import { Progress } from './ui/progress';
 
 interface LiveChatProps {
     chatMessages: ChatMessage[];
-    onMessageSubmit: (content: string, attachmentUrl?: string, attachmentType?: string) => void;
+    onMessageSubmit: (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
     user: AppUser | null;
     agent: AppUser | null;
 }
@@ -85,6 +85,13 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
     let attachmentUrl: string | undefined = undefined;
     let attachmentType: string | undefined = undefined;
 
+    const role = user?.role === 'Admin' ? 'admin' : 'user';
+
+    const messagePayload: Omit<ChatMessage, 'id' | 'timestamp'> = {
+      text: input.trim(),
+      role: role,
+    };
+
     if (attachment && auth && storage) {
         setIsUploading(true);
         setUploadProgress(0);
@@ -92,6 +99,12 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
         try {
             attachmentUrl = await uploadFileWithProgress(storage, auth, filePath, attachment, {}, setUploadProgress);
             attachmentType = attachment.type;
+
+            if (attachmentUrl) {
+              messagePayload.attachmentUrl = attachmentUrl;
+              messagePayload.attachmentType = attachmentType;
+            }
+
         } catch(error) {
             console.error("Error uploading attachment:", error);
             toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your file.'});
@@ -103,7 +116,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
         }
     }
     
-    onMessageSubmit(input.trim(), attachmentUrl, attachmentType);
+    onMessageSubmit(messagePayload);
     setInput('');
     removeAttachment();
   };
@@ -118,8 +131,6 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
   }, [chatMessages]);
   
   const isImage = (type: string | undefined) => type?.startsWith('image/');
-  const isPDF = (type: string | undefined) => type === 'application/pdf';
-
 
   return (
     <Card className="flex flex-col h-full border-0 shadow-none">
@@ -128,7 +139,6 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
           <div className="space-y-4">
             {(chatMessages || []).map((m) => {
               const isUserMessage = m.role === 'user';
-              const sender = isUserMessage ? user : agent;
               const FallbackIcon = isUserMessage ? User : UserCog;
               const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date();
 
@@ -242,5 +252,3 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
     </Card>
   );
 }
-
-    

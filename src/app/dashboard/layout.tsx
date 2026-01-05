@@ -304,37 +304,19 @@ export default function DashboardLayout({
     setSelectedPaymentMethod(option);
   };
 
-  const handleMessageSubmit = async (messageContent: string, attachmentFile?: File) => {
-    if (!firestore || !authUser || !user || !storage || !auth) return;
+  const handleMessageSubmit = async (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    if (!firestore || !authUser) return;
 
-    let attachmentUrl = '';
-    let attachmentType = '';
-
-    if (attachmentFile) {
-        const filePath = `chats/${authUser.uid}/${Date.now()}-${attachmentFile.name}`;
-        try {
-            attachmentUrl = await uploadFileWithProgress(storage, auth, filePath, attachmentFile, {}, (p) => {});
-            attachmentType = attachmentFile.type;
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Attachment Failed', description: 'Could not upload your file.' });
-            return;
-        }
-    }
-    
     const messagesCollection = collection(firestore, 'users', authUser.uid, 'chatMessages');
-    
-    const userMessage: Omit<ChatMessage, 'id'> = {
-      text: messageContent || undefined,
-      role: 'user',
+    const finalPayload = {
+      ...messagePayload,
       timestamp: serverTimestamp(),
-      attachmentUrl: attachmentUrl || undefined,
-      attachmentType: attachmentType || undefined,
     };
 
     try {
-        await addDoc(messagesCollection, userMessage);
+        await addDoc(messagesCollection, finalPayload);
         await updateDoc(userDocRef, {
-            lastChatMessage: messageContent || 'Attachment',
+            lastChatMessage: messagePayload.text || 'Attachment',
             lastChatTimestamp: serverTimestamp(),
             hasUnreadUserMessages: true
         });
