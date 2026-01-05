@@ -393,7 +393,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
         const lastMonth = subMonths(now, 1);
         const lastCycleStart = startOfMonth(lastMonth);
-        const lastCycleEnd = endOfMonth(lastMonth);
         
         const monthlyPlanLiters = planDetails.litersPerMonth || 0;
         const bonusLiters = planDetails.bonusLiters || 0;
@@ -402,6 +401,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         let rolloverLiters = 0;
         
         if (createdAtDate < lastCycleStart) {
+            const lastCycleEnd = endOfMonth(lastMonth);
             const deliveriesLastCycle = userDeliveriesData.filter(d => {
                 const deliveryDate = new Date(d.date);
                 return isWithinInterval(deliveryDate, { start: lastCycleStart, end: lastCycleEnd });
@@ -1301,6 +1301,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (plan.isPrepaid) {
                 const rate = plan.price || 3;
                 totalLiters = rate > 0 ? (initialTopUp || 0) / rate : 0;
+                topUpCredits = initialTopUp || 0;
             }
 
             if (values.accountType === 'Parent') {
@@ -3346,7 +3347,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <FormField control={newUserForm.control} name="plan.price" render={({ field }) => (
                                                         <FormItem>
                                                             <FormLabel>Price per Liter (PHP)</FormLabel>
-                                                            <FormControl><Input type="number" placeholder="e.g. 2.5" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                                            <FormControl><Input type="number" placeholder="e.g., 2.5" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                                                             <FormMessage />
                                                         </FormItem>
                                                     )}/>
@@ -3361,7 +3362,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         </FormItem>
                                                     )}/>
                                                 </div>
-                                            ) : (
+                                            ) : selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Delivery Schedule</h4>
                                                     <div className="grid grid-cols-2 gap-4">

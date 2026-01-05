@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "AppUser": {
@@ -91,7 +92,7 @@
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
         "parentId": { "type": "string" },
-        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of monetary credits." }
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' or 'Prepaid Flow Plan' accounts, this is the initial central, shared balance of monetary credits." }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
     },
