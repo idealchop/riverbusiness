@@ -1305,26 +1305,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             await setDoc(unclaimedProfileRef, profileData);
             
-            let oneTimeFee = 0;
-            if (customPlanDetails.gallonPaymentType === 'One-Time') {
-                oneTimeFee += customPlanDetails.gallonPrice || 0;
-            }
-            if (customPlanDetails.dispenserPaymentType === 'One-Time') {
-                oneTimeFee += customPlanDetails.dispenserPrice || 0;
-            }
-            
-            if (oneTimeFee > 0) {
-                const initialInvoice: Omit<Payment, 'id'> = {
-                    date: new Date().toISOString(),
-                    description: "One-Time Equipment Rental Fees",
-                    amount: oneTimeFee,
-                    status: 'Upcoming'
-                };
-                const paymentsCollectionRef = collection(firestore, 'unclaimedProfiles', values.clientId, 'payments');
-                const newPaymentDoc = await addDoc(paymentsCollectionRef, {});
-                await updateDoc(newPaymentDoc, {...initialInvoice, id: newPaymentDoc.id});
-            }
-
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
             setIsCreateUserOpen(false);
             newUserForm.reset();

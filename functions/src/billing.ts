@@ -40,10 +40,14 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         const userRef = userDoc.ref;
         let user = userDoc.data();
         
+        // Skip admins
+        if (user.role === 'Admin') continue;
+
         let billingPeriod: string;
         let billingCycleStart: Date;
         let billingCycleEnd: Date;
         let monthsToBill = 1;
+        let isFirstInvoice = !user.lastBilledDate; // Check if this is the user's first invoice
 
         // Special Case: On Feb 1, 2026, handle combined/separate logic.
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
@@ -79,7 +83,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                 console.log(`Activating new plan for user ${userDoc.id}.`);
                 
                 // Always generate the invoice for the PREVIOUS period using the OLD plan
-                promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
+                promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice));
                 
                 // Then, update the user's plan
                 const planUpdatePromise = userRef.update({
@@ -104,7 +108,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         }
         
         // --- Generate Invoice for users without a plan change ---
-        promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill));
+        promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice));
     }
 
     await Promise.all(promises);
@@ -121,7 +125,8 @@ async function generateInvoiceForUser(
     billingPeriod: string,
     billingCycleStart: Date,
     billingCycleEnd: Date,
-    monthsToBill: number = 1
+    monthsToBill: number = 1,
+    isFirstInvoice: boolean
 ) {
     // Skip admins or users without a plan
     if (user.role === 'Admin' || !user.plan) {
@@ -164,15 +169,11 @@ async function generateInvoiceForUser(
     } else {
         // Fixed-plan billing
         const planCost = user.plan.price || 0;
-        // For standard invoice, monthsToBill is 1.
-        // For combined invoice, fixed-plan users are billed for Dec only, so monthsToBill is also 1.
-        // The equipmentCostForPeriod will also use monthsToBill=1 in that case, which is correct.
-        amount = planCost + (monthlyEquipmentCost * 1); // Explicitly use 1 for fixed plans always.
+        amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         if (monthlyAllocation > 0) {
-            // For rollover purposes, we still need to consider the full allocation over the period.
             const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
             const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
@@ -189,6 +190,23 @@ async function generateInvoiceForUser(
             }
         }
     }
+    
+    // Add one-time fees to the very first invoice
+    if (isFirstInvoice && user.customPlanDetails) {
+        let oneTimeFee = 0;
+        if (user.customPlanDetails.gallonPaymentType === 'One-Time') {
+            oneTimeFee += user.customPlanDetails.gallonPrice || 0;
+        }
+        if (user.customPlanDetails.dispenserPaymentType === 'One-Time') {
+            oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
+        }
+
+        if (oneTimeFee > 0) {
+            amount += oneTimeFee;
+            description += ` + One-Time Fees`;
+        }
+    }
+
 
     if (amount > 0) {
         const invoiceIdSuffix = billingPeriod.replace(/\s/g, '-');
@@ -213,6 +231,9 @@ async function generateInvoiceForUser(
         const notificationWithMeta = { ...invoiceNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
         batch.set(notificationsRef.doc(), notificationWithMeta);
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
+        
+        // Mark that the user has been billed
+        batch.update(userRef, { lastBilledDate: admin.firestore.FieldValue.serverTimestamp() });
     }
     
     return batch.commit();
