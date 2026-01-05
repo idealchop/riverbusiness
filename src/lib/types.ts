@@ -124,7 +124,7 @@ export interface AppUser {
     // New fields for multi-branch feature
     accountType?: AccountType;
     parentId?: string;
-    topUpBalanceLiters?: number;
+    topUpBalanceCredits?: number;
 }
 
 export interface LoginLog {
@@ -229,9 +229,13 @@ export interface Transaction {
     id: string;
     date: FieldValue | Timestamp;
     type: 'Credit' | 'Debit';
-    amountLiters: number;
+    amountCredits: number;
     description: string;
     branchId?: string;
     branchName?: string;
 }
+    
+
+    
+
     

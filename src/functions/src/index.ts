@@ -66,48 +66,51 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
 
     const userId = event.params.userId;
     const delivery = event.data.data();
-    const litersToDeduct = containerToLiter(delivery.volumeContainers);
 
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
     // Handle consumption for different account types
-    if (userData) {
-        if (userData.accountType === 'Branch' && userData.parentId) {
-            const parentRef = db.collection('users').doc(userData.parentId);
-            const parentDoc = await parentRef.get();
-            if (parentDoc.exists) {
-                // 1. Debit the parent account's balance
-                await parentRef.update({
-                    topUpBalanceLiters: increment(-litersToDeduct)
-                });
+    if (userData?.accountType === 'Branch' && userData.parentId) {
+        const parentRef = db.collection('users').doc(userData.parentId);
+        
+        // Calculate the cost of the delivery based on the branch's plan
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        const pricePerLiter = userData.plan?.price || 0;
+        const deliveryCost = litersDelivered * pricePerLiter;
+        
+        if (deliveryCost > 0) {
+            // 1. Debit the parent account's credit balance
+            await parentRef.update({
+                topUpBalanceCredits: increment(-deliveryCost)
+            });
 
-                // 2. Create a transaction log on the parent account
-                const transactionData = {
-                    date: delivery.date,
-                    type: 'Debit',
-                    amountLiters: litersToDeduct,
-                    description: `Delivery to ${userData.businessName}`,
-                    branchId: userId,
-                    branchName: userData.businessName
-                };
-                await parentRef.collection('transactions').add(transactionData);
+            // 2. Create a transaction log on the parent account
+            const transactionData = {
+                date: delivery.date,
+                type: 'Debit',
+                amountCredits: deliveryCost,
+                description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
+                branchId: userId,
+                branchName: userData.businessName
+            };
+            await parentRef.collection('transactions').add(transactionData);
 
-                 // 3. Notify the Parent account of the deduction
-                await createNotification(userData.parentId, {
-                    type: 'delivery',
-                    title: 'Branch Consumption',
-                    description: `${litersToDeduct.toFixed(1)}L deducted for delivery to ${userData.businessName}.`,
-                    data: { deliveryId: event.params.deliveryId, branchUserId: userId }
-                });
-            }
-        } else if (userData.plan?.isPrepaid) {
-            // For Prepaid plans, deduct from their own balance
-            const userRef = db.collection('users').doc(userId);
-            await userRef.update({
-                totalConsumptionLiters: increment(-litersToDeduct)
+             // 3. Notify the Parent account of the deduction
+            await createNotification(userData.parentId, {
+                type: 'delivery',
+                title: 'Branch Consumption',
+                description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
+                data: { deliveryId: event.params.deliveryId, branchUserId: userId }
             });
         }
+    } else if (userData?.plan?.isPrepaid) {
+        // For Prepaid plans, deduct from their own liter balance
+        const litersToDeduct = containerToLiter(delivery.volumeContainers);
+        const userRef = db.collection('users').doc(userId);
+        await userRef.update({
+            totalConsumptionLiters: increment(-litersToDeduct)
+        });
     }
 
 
@@ -427,3 +430,5 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    

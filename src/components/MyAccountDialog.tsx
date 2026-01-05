@@ -192,7 +192,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
-  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? collection(firestore, 'users', user.id, 'transactions') : null, [firestore, user]);
+  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -334,12 +334,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }, [user, state.invoiceForBreakdown, currentMonthInvoice, deliveries]);
 
     const totalBreakdownAmount = useMemo(() => {
-        return (
-            (breakdownDetails.planCost || 0) +
-            (breakdownDetails.consumptionCost || 0) +
-            (breakdownDetails.gallonCost || 0) +
-            (breakdownDetails.dispenserCost || 0)
-        );
+        return (breakdownDetails.planCost || 0) +
+               (breakdownDetails.consumptionCost || 0) +
+               (breakdownDetails.gallonCost || 0) +
+               (breakdownDetails.dispenserCost || 0);
     }, [breakdownDetails]);
 
   const availableMonths = useMemo(() => {
@@ -1097,7 +1095,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                  <TableHead>Date</TableHead>
                                  <TableHead>Type</TableHead>
                                  <TableHead>Description</TableHead>
-                                 <TableHead className="text-right">Amount (Liters)</TableHead>
+                                 <TableHead className="text-right">Amount</TableHead>
                              </TableRow>
                          </TableHeader>
                          <TableBody>
@@ -1116,7 +1114,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                         </TableCell>
                                         <TableCell>{tx.description}</TableCell>
                                         <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                            {tx.type === 'Credit' ? '+' : '-'}{tx.amountLiters.toLocaleString()} L
+                                            {tx.type === 'Credit' ? '+' : '-'}₱{(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -1513,3 +1511,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
+    

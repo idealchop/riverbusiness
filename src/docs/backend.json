@@ -38,7 +38,7 @@
         "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"], "description": "The type of account, used for multi-branch functionality." },
         "parentId": { "type": "string", "description": "If accountType is 'Branch', this is the ID of the parent account." },
-        "topUpBalanceLiters": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of water credits in liters." }
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of monetary credits (e.g., in PHP)." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
@@ -50,12 +50,12 @@
             "id": { "type": "string" },
             "date": { "type": "string", "format": "date-time" },
             "type": { "type": "string", "enum": ["Credit", "Debit"] },
-            "amountLiters": { "type": "number" },
+            "amountCredits": { "type": "number" },
             "description": { "type": "string" },
             "branchId": { "type": "string", "description": "ID of the branch user if it's a debit from a delivery." },
             "branchName": { "type": "string", "description": "Name of the branch if it's a debit from a delivery." }
         },
-        "required": ["id", "date", "type", "amountLiters", "description"]
+        "required": ["id", "date", "type", "amountCredits", "description"]
     },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
@@ -76,7 +76,7 @@
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
         "parentId": { "type": "string" },
-        "topUpBalanceLiters": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of water credits in liters." }
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of monetary credits." }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
     },
@@ -343,3 +343,5 @@
     }
   }
 }
+
+    
