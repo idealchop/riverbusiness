@@ -2465,9 +2465,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                         <TableCell>
-                                                            {user.accountType && user.accountType !== 'Single' && (
-                                                                <Badge variant={user.accountType === 'Parent' ? 'default' : 'secondary'}>{user.accountType}</Badge>
-                                                            )}
+                                                             <Badge variant={
+                                                                user.accountType === 'Parent' ? 'default' :
+                                                                user.accountType === 'Branch' ? 'secondary' :
+                                                                'outline'
+                                                            }>
+                                                                {user.accountType || 'Single'}
+                                                            </Badge>
                                                         </TableCell>
                                                         <TableCell>
                                                             {userPendingPayments.length > 0 ? (
@@ -3411,3 +3415,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
