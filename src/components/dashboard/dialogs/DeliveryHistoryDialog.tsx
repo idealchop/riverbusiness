@@ -91,8 +91,16 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl rounded-lg h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Delivery History for {user?.name}</DialogTitle>
-          <DialogDescription>A log of all past deliveries for this user.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" /> 
+            {isParent ? 'Branch Delivery History' : `Delivery History for ${user?.name}`}
+          </DialogTitle>
+          <DialogDescription>
+            {isParent 
+              ? "This is a consolidated log of all deliveries made to your linked branch accounts."
+              : "A log of all past deliveries for this user."
+            }
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-col sm:flex-row items-center gap-2 px-6 pt-4 flex-shrink-0">
@@ -128,7 +136,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {paginatedDeliveries.map(delivery => {
+                {paginatedDeliveries.length > 0 ? paginatedDeliveries.map(delivery => {
                     const statusInfo = getStatusInfo(delivery.status);
                     const liters = containerToLiter(delivery.volumeContainers || 0);
                     const containers = delivery.volumeContainers || 0;
@@ -150,10 +158,9 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                         </TableCell>
                     </TableRow>
                     );
-                })}
-                {(deliveries || []).length === 0 && (
+                }) : (
                     <TableRow>
-                    <TableCell colSpan={isParent ? 6 : 5} className="text-center">No delivery history found.</TableCell>
+                    <TableCell colSpan={isParent ? 6 : 5} className="text-center h-24">No delivery history found.</TableCell>
                     </TableRow>
                 )}
                 </TableBody>
@@ -161,7 +168,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
 
             {/* Mobile Card View */}
             <div className="space-y-4 md:hidden">
-                {paginatedDeliveries.map(delivery => {
+                {paginatedDeliveries.length > 0 ? paginatedDeliveries.map(delivery => {
                 const statusInfo = getStatusInfo(delivery.status);
                 const liters = containerToLiter(delivery.volumeContainers || 0);
                 const containers = delivery.volumeContainers || 0;
@@ -190,8 +197,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                     </CardContent>
                     </Card>
                 );
-                })}
-                {(deliveries || []).length === 0 && (
+                }) : (
                     <div className="text-center text-muted-foreground py-10">No delivery history found.</div>
                 )}
             </div>
