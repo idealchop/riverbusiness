@@ -1351,7 +1351,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
             
-            const { plan, initialTopUp, ...rest } = values;
+            const { plan, initialTopUp, parentId, ...rest } = values;
 
             let totalLiters = 0;
             let topUpCredits = 0;
@@ -1378,6 +1378,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
             };
+
+            if (parentId) {
+                profileData.parentId = parentId;
+            }
 
             batch.set(unclaimedProfileRef, profileData);
             
