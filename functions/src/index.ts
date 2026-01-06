@@ -1,8 +1,9 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
@@ -67,27 +68,30 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     const userId = event.params.userId;
     const delivery = event.data.data();
 
-    // Check if the user is a branch account
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
+    // Handle consumption for different account types
     if (userData?.accountType === 'Branch' && userData.parentId) {
         const parentRef = db.collection('users').doc(userData.parentId);
-        const parentDoc = await parentRef.get();
-        if (parentDoc.exists) {
-            const litersToDeduct = containerToLiter(delivery.volumeContainers);
-            
-            // 1. Debit the parent account's balance
+        
+        // Calculate the cost of the delivery based on the branch's plan
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        const pricePerLiter = userData.plan?.price || 0;
+        const deliveryCost = litersDelivered * pricePerLiter;
+        
+        if (deliveryCost > 0) {
+            // 1. Debit the parent account's credit balance
             await parentRef.update({
-                topUpBalanceLiters: FieldValue.increment(-litersToDeduct)
+                topUpBalanceCredits: increment(-deliveryCost)
             });
 
             // 2. Create a transaction log on the parent account
             const transactionData = {
                 date: delivery.date,
                 type: 'Debit',
-                amountLiters: litersToDeduct,
-                description: `Delivery to ${userData.businessName}`,
+                amountCredits: deliveryCost,
+                description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
                 branchId: userId,
                 branchName: userData.businessName
             };
@@ -97,10 +101,17 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             await createNotification(userData.parentId, {
                 type: 'delivery',
                 title: 'Branch Consumption',
-                description: `${litersToDeduct.toFixed(1)}L deducted for delivery to ${userData.businessName}.`,
+                description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
                 data: { deliveryId: event.params.deliveryId, branchUserId: userId }
             });
         }
+    } else if (userData?.plan?.isPrepaid) {
+        // For Prepaid plans, deduct from their own liter balance
+        const litersToDeduct = containerToLiter(delivery.volumeContainers);
+        const userRef = db.collection('users').doc(userId);
+        await userRef.update({
+            totalConsumptionLiters: increment(-litersToDeduct)
+        });
     }
 
 
@@ -197,6 +208,34 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
         await createNotification(adminId, adminNotification);
     }
 });
+
+
+/**
+ * Cloud Function to handle user-submitted top-up requests.
+ */
+export const ontopuprequestcreate = onDocumentCreated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const requestId = event.params.requestId;
+    const requestData = event.data.data();
+
+    const adminId = await getAdminId();
+    if (!adminId) return;
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (userData) {
+        await createNotification(adminId, {
+            type: 'top-up',
+            title: 'Top-Up Request',
+            description: `${userData.businessName} requested a top-up of ₱${requestData.amount.toLocaleString()}.`,
+            data: { userId, requestId }
+        });
+    }
+});
+
 
 /**
  * Cloud Function to send notifications for sanitation visit creations.

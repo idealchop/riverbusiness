@@ -1,5 +1,6 @@
 
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -124,7 +125,7 @@ export interface AppUser {
     // New fields for multi-branch feature
     accountType?: AccountType;
     parentId?: string;
-    topUpBalanceLiters?: number;
+    topUpBalanceCredits?: number;
 }
 
 export interface LoginLog {
@@ -229,11 +230,23 @@ export interface Transaction {
     id: string;
     date: FieldValue | Timestamp;
     type: 'Credit' | 'Debit';
-    amountLiters: number;
+    amountCredits: number;
     description: string;
     branchId?: string;
     branchName?: string;
 }
+
+export interface TopUpRequest {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'Pending Review' | 'Approved' | 'Rejected';
+  requestedAt: FieldValue | Timestamp;
+  proofOfPaymentUrl: string;
+  rejectionReason?: string;
+}
+    
+
     
 
     

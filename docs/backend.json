@@ -1,4 +1,5 @@
 
+
 {
   "entities": {
     "AppUser": {
@@ -14,7 +15,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Total water consumed in liters. Represents the user's current inventory for non-branch accounts." },
+        "totalConsumptionLiters": { "type": "number", "description": "For Prepaid plans, this is the remaining credit in liters. For fixed plans, this represents rollover." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
@@ -38,7 +39,7 @@
         "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"], "description": "The type of account, used for multi-branch functionality." },
         "parentId": { "type": "string", "description": "If accountType is 'Branch', this is the ID of the parent account." },
-        "topUpBalanceLiters": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of water credits in liters." }
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of monetary credits (e.g., in PHP)." }
       },
       "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
     },
@@ -50,12 +51,27 @@
             "id": { "type": "string" },
             "date": { "type": "string", "format": "date-time" },
             "type": { "type": "string", "enum": ["Credit", "Debit"] },
-            "amountLiters": { "type": "number" },
+            "amountCredits": { "type": "number" },
             "description": { "type": "string" },
             "branchId": { "type": "string", "description": "ID of the branch user if it's a debit from a delivery." },
             "branchName": { "type": "string", "description": "Name of the branch if it's a debit from a delivery." }
         },
-        "required": ["id", "date", "type", "amountLiters", "description"]
+        "required": ["id", "date", "type", "amountCredits", "description"]
+    },
+     "TopUpRequest": {
+        "title": "TopUpRequest",
+        "type": "object",
+        "description": "Represents a user's request to top-up their balance, pending admin approval.",
+        "properties": {
+            "id": { "type": "string" },
+            "userId": { "type": "string" },
+            "amount": { "type": "number" },
+            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected"] },
+            "requestedAt": { "type": "string", "format": "date-time" },
+            "proofOfPaymentUrl": { "type": "string", "format": "uri" },
+            "rejectionReason": { "type": "string" }
+        },
+        "required": ["id", "userId", "amount", "status", "requestedAt", "proofOfPaymentUrl"]
     },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
@@ -68,14 +84,15 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters." },
+        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for Prepaid or fixed plans." },
         "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
-        "parentId": { "type": "string" }
+        "parentId": { "type": "string" },
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' or 'Prepaid Flow Plan' accounts, this is the initial central, shared balance of monetary credits." }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
     },
@@ -296,6 +313,10 @@
       "schema": { "$ref": "#/entities/Payment" },
       "description": "Subcollection for a user's payment history."
     },
+     "/users/{userId}/topUpRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/TopUpRequest" },
+      "description": "Subcollection for a Parent account's top-up requests."
+    },
     "/users/{userId}/transactions/{transactionId}": {
         "schema": { "$ref": "#/entities/Transaction" },
         "description": "For Parent accounts, logs all top-ups and branch consumption."
@@ -343,4 +364,3 @@
   }
 }
 
-    
