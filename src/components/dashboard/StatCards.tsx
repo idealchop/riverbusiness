@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ArrowRight, History, Edit, Calendar as CalendarIcon, BellRing, Info } from 'lucide-react';
+import { ArrowRight, History, Edit, Calendar as CalendarIcon, BellRing, Info, Users } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -20,6 +20,7 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 interface StatCardsProps {
   user: AppUser | null;
   deliveries: Delivery[] | null;
+  totalBranchConsumptionLiters: number;
   onConsumptionHistoryClick: () => void;
   onSaveLitersClick: () => void;
   onUpdateScheduleClick: () => void;
@@ -29,6 +30,7 @@ interface StatCardsProps {
 export function StatCards({
   user,
   deliveries,
+  totalBranchConsumptionLiters,
   onConsumptionHistoryClick,
   onSaveLitersClick,
   onUpdateScheduleClick,
@@ -215,8 +217,7 @@ export function StatCards({
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
-                  : (isPrepaidPlan || isParentAccount) ? `Remaining Liters` 
-                  : `Current Plan: ${user?.plan?.name}`}
+                  : `Remaining Liters`}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
@@ -234,11 +235,18 @@ export function StatCards({
                 <div className="flex justify-between">
                   {isBranchAccount
                     ? <span>Total usage this period</span>
-                    : (isPrepaidPlan || isParentAccount)
+                    : (isPrepaidPlan)
                     ? <span>Consumed this period:</span>
+                    : isParentAccount 
+                    ? <span>From Credit Balance:</span>
                     : <span>Water consumption cost:</span>
                   }
-                  <span>{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</span>
+                  <span>
+                    {isParentAccount 
+                      ? `₱${(user?.topUpBalanceCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`
+                      : `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
+                    }
+                    </span>
                 </div>
               </div>
             </CardContent>
@@ -246,7 +254,7 @@ export function StatCards({
                 {isBranchAccount ? (
                      <p className="text-xs text-muted-foreground">Consumption is deducted from your parent account's balance.</p>
                 ) : (isPrepaidPlan || isParentAccount) ? (
-                     <p className="text-xs text-muted-foreground">This is your prepaid water credit balance.</p>
+                     <p className="text-xs text-muted-foreground">This is your account's water credit balance.</p>
                 ) : (
                     <p className="text-xs text-muted-foreground">Equipment rental fees will be added to your final bill.</p>
                 )}
@@ -394,5 +402,3 @@ export function StatCards({
     </>
   );
 }
-
-    
