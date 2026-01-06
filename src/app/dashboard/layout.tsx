@@ -100,7 +100,6 @@ export default function DashboardLayout({
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
-  // The admin UID is static and known. Hardcode it for a direct, efficient fetch.
   const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2';
   const adminDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', ADMIN_UID) : null, [firestore]);
   const { data: adminAgent } = useDoc<AppUser>(adminDocRef);
@@ -127,6 +126,37 @@ export default function DashboardLayout({
     return PlaceHolderImages.find(p => p.id === clientTypeDetails.imageId);
   }, [user]);
 
+  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
+  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
+  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+  const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
+
+  const paymentOptions: PaymentOption[] = useMemo(() => [
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
+      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
+      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+      { name: 'Credit Card', qr: cardQr }
+  ], [gcashQr, bankQr, paymayaQr, cardQr]);
+  
+  const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
+  const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
+
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = React.useState(false);
+  const [feedbackMessage, setFeedbackMessage] = React.useState('');
+  const [feedbackRating, setFeedbackRating] = React.useState(0);
+  const [hoverRating, setHoverRating] = React.useState(0);
+  const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = React.useState(false);
+  const [switchReason, setSwitchReason] = React.useState('');
+  const [switchUrgency, setSwitchUrgency] = React.useState('');
+  const [hasNewMessage, setHasNewMessage] = React.useState(false);
+  const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
+  const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
+
   useEffect(() => {
     if (isUserLoading) return;
 
@@ -145,63 +175,12 @@ export default function DashboardLayout({
         checkOnboarding();
     }
   }, [authUser, isUserLoading, router, firestore]);
-  
-  // Now, call all other hooks unconditionally
-  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
-  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
-  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
-  const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
-  const paymentOptions: PaymentOption[] = useMemo(() => [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
-      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
-      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
-      { name: 'Credit Card', qr: cardQr }
-  ], [gcashQr, bankQr, paymayaQr, cardQr]);
-  
-  const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
-  
   useEffect(() => {
     if (notifications) {
       setUnreadNotifications(notifications.filter(n => !n.isRead));
     }
   }, [notifications]);
-
-  // And finally, the conditional return
-  if (isUserLoading || isUserDocLoading || !isMounted || !auth || !authUser || !user) {
-    return <DashboardLayoutSkeleton />;
-  }
-
-  const handleNotificationOpenChange = (open: boolean) => {
-    if (!open && unreadNotifications.length > 0 && firestore && authUser) {
-        const batch = writeBatch(firestore);
-        unreadNotifications.forEach(notif => {
-            if (notif.id) { // Ensure the notification has an ID
-                const notifRef = doc(firestore, 'users', authUser.uid, 'notifications', notif.id);
-                batch.update(notifRef, { isRead: true });
-            }
-        });
-        batch.commit().catch(err => console.error("Failed to mark notifications as read:", err));
-    }
-  };
-  
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
-  const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
-
-  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = React.useState(false);
-  const [feedbackMessage, setFeedbackMessage] = React.useState('');
-  const [feedbackRating, setFeedbackRating] = React.useState(0);
-  const [hoverRating, setHoverRating] = React.useState(0);
-  const [isSwitchProviderDialogOpen, setIsSwitchProviderDialogOpen] = React.useState(false);
-  const [switchReason, setSwitchReason] = React.useState('');
-  const [switchUrgency, setSwitchUrgency] = React.useState('');
-  const [hasNewMessage, setHasNewMessage] = React.useState(false);
-  const [paymentProofFile, setPaymentProofFile] = React.useState<File | null>(null);
-  const [isVerificationDialogOpen, setIsVerificationDialogOpen] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
-  const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
 
   useEffect(() => {
     if (!userDocRef || !auth || !auth.currentUser) return;
@@ -234,6 +213,23 @@ export default function DashboardLayout({
     }
   }, [isPaymentDialogOpen]);
 
+  if (isUserLoading || isUserDocLoading || !isMounted || !auth || !authUser || !user) {
+    return <DashboardLayoutSkeleton />;
+  }
+
+  const handleNotificationOpenChange = (open: boolean) => {
+    if (!open && unreadNotifications.length > 0 && firestore && authUser) {
+        const batch = writeBatch(firestore);
+        unreadNotifications.forEach(notif => {
+            if (notif.id) { // Ensure the notification has an ID
+                const notifRef = doc(firestore, 'users', authUser.uid, 'notifications', notif.id);
+                batch.update(notifRef, { isRead: true });
+            }
+        });
+        batch.commit().catch(err => console.error("Failed to mark notifications as read:", err));
+    }
+  };
+  
   const handleLogout = () => {
     if (!auth) return;
     signOut(auth).then(() => {
@@ -251,7 +247,6 @@ export default function DashboardLayout({
     try {
         const paymentRef = doc(firestore, "users", authUser.uid, "payments", selectedInvoice.id);
 
-        // This ensures the status is set before the file upload triggers the backend function.
         await setDoc(paymentRef, {
             status: "Pending Review",
         }, { merge: true });
