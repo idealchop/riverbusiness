@@ -378,7 +378,7 @@ export default function DashboardPage() {
         
         <StatCards
             user={user}
-            deliveries={isParent ? null : deliveries} // Pass null for parents so it shows graceful empty states
+            deliveries={deliveries}
             totalBranchConsumptionLiters={totalBranchConsumptionLiters}
             onConsumptionHistoryClick={() => openDialog('consumptionHistory')}
             onSaveLitersClick={() => openDialog('saveLiters')}
