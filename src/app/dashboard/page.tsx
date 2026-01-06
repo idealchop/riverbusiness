@@ -439,9 +439,11 @@ export default function DashboardPage() {
         <DeliveryHistoryDialog
             isOpen={dialogState.deliveryHistory}
             onOpenChange={() => closeDialog('deliveryHistory')}
-            deliveries={deliveries}
+            deliveries={isParent ? branchDeliveries : deliveries}
             user={user}
             onViewProof={setSelectedProofUrl}
+            isParent={isParent}
+            branches={branchUsers}
         />
         <ConsumptionHistoryDialog
             isOpen={dialogState.consumptionHistory}

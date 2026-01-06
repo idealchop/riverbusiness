@@ -26,13 +26,23 @@ interface DeliveryHistoryDialogProps {
   deliveries: Delivery[] | null;
   user: AppUser | null;
   onViewProof: (url: string | null) => void;
+  isParent?: boolean;
+  branches?: AppUser[] | null;
 }
 
-export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, onViewProof }: DeliveryHistoryDialogProps) {
+export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, onViewProof, isParent = false, branches = [] }: DeliveryHistoryDialogProps) {
   const [deliveryDateRange, setDeliveryDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const ITEMS_PER_PAGE = 8;
+  
+  const branchMap = useMemo(() => {
+    if (!branches) return {};
+    return branches.reduce((map, branch) => {
+      map[branch.id] = branch.businessName;
+      return map;
+    }, {} as Record<string, string>);
+  }, [branches]);
 
   const filteredDeliveries = useMemo(() => (deliveries || []).filter(delivery => {
     if (!deliveryDateRange?.from) return true;
@@ -110,6 +120,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                 <TableHeader>
                 <TableRow>
                     <TableHead>Ref ID</TableHead>
+                    {isParent && <TableHead>Branch Name</TableHead>}
                     <TableHead>Date</TableHead>
                     <TableHead>Liters / Containers</TableHead>
                     <TableHead>Status</TableHead>
@@ -124,6 +135,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                     return (
                     <TableRow key={delivery.id}>
                         <TableCell>{delivery.id}</TableCell>
+                        {isParent && <TableCell>{branchMap[delivery.userId] || delivery.userId}</TableCell>}
                         <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
                         <TableCell>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L / {containers} containers</TableCell>
                         <TableCell>
@@ -141,7 +153,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                 })}
                 {(deliveries || []).length === 0 && (
                     <TableRow>
-                    <TableCell colSpan={5} className="text-center">No delivery history found.</TableCell>
+                    <TableCell colSpan={isParent ? 6 : 5} className="text-center">No delivery history found.</TableCell>
                     </TableRow>
                 )}
                 </TableBody>
@@ -160,6 +172,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                         <div>
                             <p className="font-semibold">{format(new Date(delivery.date), 'PP')}</p>
                             <p className="text-xs text-muted-foreground">ID: {delivery.id}</p>
+                            {isParent && <p className="text-xs text-muted-foreground">Branch: {branchMap[delivery.userId] || delivery.userId}</p>}
                         </div>
                         <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
                         </div>
