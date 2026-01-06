@@ -983,7 +983,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
                           </Button>
-                          {user.accountType === 'Parent' ? (
+                          {user.accountType === 'Parent' || user.plan?.isPrepaid ? (
                             <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
                               <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
                             </Button>
