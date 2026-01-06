@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -1256,7 +1255,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                 <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Total Branch Consumption</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-bold">{totalBranchConsumptionLiters.toLocaleString()} L</p>
+                                <p className="text-2xl font-bold">{(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -1783,3 +1782,5 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
+    
