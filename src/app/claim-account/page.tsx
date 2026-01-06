@@ -13,8 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, getDoc, getDocs, writeBatch, collection, query } from 'firebase/firestore';
-import type { AppUser, Payment } from '@/lib/types';
+import { doc, getDoc, writeBatch } from 'firebase/firestore';
+import type { AppUser } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle } from 'lucide-react';
 
@@ -77,22 +77,6 @@ export default function ClaimAccountPage() {
         accountStatus: 'Active',
       };
       
-      // Move any initial invoices (e.g., one-time fees) from unclaimed to the user's profile
-      if (newUserData.accountType !== 'Branch') {
-        const initialPaymentsQuery = query(collection(unclaimedProfileRef, 'payments'));
-        const initialPaymentsSnap = await getDocs(initialPaymentsQuery);
-      
-        if (!initialPaymentsSnap.empty) {
-            initialPaymentsSnap.forEach(paymentDoc => {
-                const paymentData = paymentDoc.data() as Payment;
-                const newPaymentRef = doc(firestore, 'users', authUser.uid, 'payments', paymentDoc.id);
-                batch.set(newPaymentRef, paymentData);
-                batch.delete(paymentDoc.ref); // Delete from unclaimed
-            });
-        }
-      }
-
-
       batch.set(userProfileRef, newUserData);
       batch.delete(unclaimedProfileRef);
       
