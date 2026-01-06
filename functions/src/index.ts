@@ -1,5 +1,4 @@
 
-
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
