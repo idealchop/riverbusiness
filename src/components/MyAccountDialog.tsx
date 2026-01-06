@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -39,6 +38,7 @@ import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
 import { Progress } from './ui/progress';
 import { Skeleton } from './ui/skeleton';
+import { Badge } from './ui/badge';
 
 
 // State Management with useReducer
