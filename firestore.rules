@@ -19,39 +19,8 @@ service cloud.firestore {
     }
     
     // --- BATCH WRITE VALIDATION for Branch Deliveries by Admin ---
-    function isValidBranchDeliveryBatch(userId) {
-      // Expecting a 3-part batch: delivery create, parent update, transaction create
-      if (request.writeBatch.size() != 3) {
-        return false;
-      }
-      
-      let deliveryCreate = request.writeBatch[0];
-      let parentUpdate = request.writeBatch[1];
-      let transactionCreate = request.writeBatch[2];
-      
-      // Ensure the operations are of the correct type
-      if (!(deliveryCreate.method == 'create' && parentUpdate.method == 'update' && transactionCreate.method == 'create')) {
-        return false;
-      }
-
-      let deliveryData = deliveryCreate.data;
-      let parentPath = /databases/$(database)/documents/users/$(deliveryData.parentId);
-      
-      // 1. Delivery document is being created for the correct user and has the parentId
-      let isDeliveryForUser = deliveryCreate.path == /databases/$(database)/documents/users/$(userId)/deliveries/$(deliveryData.id)
-                              && deliveryData.parentId != null;
-      // 2. Parent update is for the correct parent
-      let isParentUpdateCorrect = parentUpdate.path == parentPath;
-      // 3. Transaction create is for the correct parent subcollection
-      let transactionPath = parentPath + /transactions/$(transactionCreate.id);
-      let isTransactionCreateCorrect = transactionCreate.path.join('/') == transactionPath.join('/');
-
-      // 4. Validate the parent balance deduction
-      let cost = deliveryData.volumeContainers * 19.5 * get(/databases/$(database)/documents/users/$(userId)).data.plan.price;
-      let isBalanceDeductedCorrectly = parentUpdate.data.topUpBalanceCredits == get(parentPath).data.topUpBalanceCredits - cost;
-
-      return isDeliveryForUser && isParentUpdateCorrect && isTransactionCreateCorrect && isBalanceDeductedCorrectly;
-    }
+    // This function is no longer needed with the new architecture, as the ondeliverycreate function handles the parent-side updates.
+    // Kept for reference but will not be used in rules.
 
     match /users/{userId} {
       // Allow any user (authenticated or not) to read a specific user's document.
@@ -86,8 +55,6 @@ service cloud.firestore {
     // Parent users can read their own transaction history.
     match /users/{userId}/transactions/{transactionId} {
       allow read, list: if isOwner(userId);
-      // Admin creates are handled via the validated batch write
-      allow create: if isAdmin() && isValidBranchDeliveryBatch(userId);
     }
     
     // Users and Admins can manage messages within a user's chat subcollection.
@@ -119,11 +86,6 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
-    // A parent user can query the deliveries of their child accounts.
-    match /{path=**}/deliveries/{deliveryId} {
-      allow list: if isAdmin() || (request.auth != null && request.query.where[0][0] == "parentId" && request.query.where[0][2] == request.auth.uid);
-    }
-
     // Rules for public sanitation reports
     match /publicSanitationLinks/{linkId} {
       // Anyone can read the link mapping to get the path to the real document.
@@ -146,10 +108,7 @@ service cloud.firestore {
 
     // All other user subcollections are private to the owner.
      match /users/{userId}/{subcollection}/{docId} {
-       // This rule specifically handles the creation of a delivery by an admin for a branch user.
-       allow create: if (subcollection == 'deliveries' && isAdmin() && isValidBranchDeliveryBatch(userId))
-                      || isOwner(userId); // Or if the owner is creating a doc in their own subcollection
-      allow read, list, update, delete: if isOwner(userId);
+      allow read, list, write, update, delete: if isOwner(userId);
     }
   }
 }

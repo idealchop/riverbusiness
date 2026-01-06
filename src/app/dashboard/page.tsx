@@ -145,7 +145,7 @@ export default function DashboardPage() {
   const isParent = user?.accountType === 'Parent';
 
   // This query is now used for ALL user types. 
-  // For parents, it will fetch the copies of branch deliveries.
+  // For parents, it will fetch the copies of branch deliveries from their own subcollection.
   const deliveriesQuery = useMemoFirebase(
     () => (firestore && user ? collection(firestore, 'users', user.id, 'deliveries') : null),
     [firestore, user]
