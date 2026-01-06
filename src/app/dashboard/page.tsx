@@ -194,6 +194,11 @@ export default function DashboardPage() {
       return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
   }, [firestore, isParent, user?.id]);
   const { data: branchDeliveries, isLoading: branchDeliveriesLoading } = useCollection<Delivery>(branchDeliveriesQuery);
+  
+  const totalBranchConsumptionLiters = useMemo(() => {
+    if (!branchDeliveries) return 0;
+    return branchDeliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+  }, [branchDeliveries]);
   // --- END PARENT ACCOUNT LOGIC ---
 
 

@@ -171,6 +171,7 @@ interface MyAccountDialogProps {
   planImage: ImagePlaceholder | null;
   paymentHistory: Payment[];
   paymentsLoading: boolean;
+  totalBranchConsumptionLiters: number;
   onLogout: () => void;
   children: React.ReactNode;
   onPayNow: (invoice: Payment) => void;
@@ -178,7 +179,7 @@ interface MyAccountDialogProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, totalBranchConsumptionLiters, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -208,18 +209,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
   const isParent = user?.accountType === 'Parent';
-
-  const branchDeliveriesQuery = useMemoFirebase(() => {
-    if (!firestore || !isParent || !user?.id) return null;
-    return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
-  }, [firestore, isParent, user?.id]);
-  const { data: branchDeliveries } = useCollection<Delivery>(branchDeliveriesQuery);
-
-  const totalBranchConsumptionLiters = useMemo(() => {
-    if (!branchDeliveries) return 0;
-    return branchDeliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
-  }, [branchDeliveries]);
-
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
@@ -1262,7 +1251,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                 <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                             </CardContent>
                         </Card>
-                        <Card>
+                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Total Branch Consumption</CardTitle>
                             </CardHeader>
