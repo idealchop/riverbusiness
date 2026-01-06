@@ -11,6 +11,7 @@ export interface ConsumptionRecord {
 export interface Delivery {
   id: string;
   userId: string;
+  parentId?: string; // Add this
   date: string;
   volumeContainers: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
@@ -240,9 +241,9 @@ export interface TopUpRequest {
   id: string;
   userId: string;
   amount: number;
-  status: 'Pending Review' | 'Approved' | 'Rejected';
+  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
   requestedAt: FieldValue | Timestamp;
-  proofOfPaymentUrl: string;
+  proofOfPaymentUrl?: string;
   rejectionReason?: string;
 }
     

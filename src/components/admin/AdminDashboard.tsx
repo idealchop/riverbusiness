@@ -38,7 +38,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser, useDoc, useStorage } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc, collectionGroup, getDoc, getDocs, query, increment, addDoc, DocumentReference, arrayUnion, Timestamp, where, deleteField, setDoc, deleteDoc, orderBy, writeBatch } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signOut, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
@@ -1285,6 +1285,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!firestore) return;
         setIsSubmitting(true);
         try {
+            const batch = writeBatch(firestore);
             const unclaimedProfileRef = doc(firestore, 'unclaimedProfiles', values.clientId);
             const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
 
@@ -1302,7 +1303,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (plan.isPrepaid) {
                 const rate = plan.price || 3;
                 totalLiters = rate > 0 ? (initialTopUp || 0) / rate : 0;
-                topUpCredits = initialTopUp || 0;
             }
 
             if (values.accountType === 'Parent') {
@@ -1323,7 +1323,30 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 adminCreatedAt: serverTimestamp(),
             };
 
-            await setDoc(unclaimedProfileRef, profileData);
+            batch.set(unclaimedProfileRef, profileData);
+            
+            // If it's a prepaid plan with an initial top-up, create a corresponding "Approved" request
+            if (plan.isPrepaid && initialTopUp && initialTopUp > 0) {
+                const userForPrepaidRef = doc(firestore, 'users', 'temp_user_id'); // This is a placeholder
+                const topUpRequestRef = doc(collection(unclaimedProfileRef, 'topUpRequests'));
+                const topUpData: Omit<TopUpRequest, 'id' | 'userId'> = {
+                    amount: initialTopUp,
+                    status: 'Approved (Initial Balance)',
+                    requestedAt: serverTimestamp(),
+                };
+                // This is a bit of a workaround: we can't create a subcollection on a doc that doesn't exist yet,
+                // so we will have to handle this on the user claim side, or adjust the logic to create the user doc differently.
+                // For now, let's create the top-up request in a separate collection.
+                // A better approach is to create a transaction log for the unclaimed profile.
+                 const topUpRequestForUnclaimed: any = {
+                    ...topUpData,
+                    unclaimedClientId: values.clientId
+                };
+                const initialTopUpRef = doc(collection(firestore, 'initialTopUpRecords'));
+                batch.set(initialTopUpRef, topUpRequestForUnclaimed);
+            }
+            
+            await batch.commit();
             
             toast({ title: 'Client Profile Created', description: `${values.businessName}'s profile is ready to be claimed.` });
             setIsCreateUserOpen(false);
@@ -3288,12 +3311,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </FormItem>
                                         )}/>
                                       )}
-                                      {selectedAccountType === 'Parent' && (
+                                      {(selectedAccountType === 'Parent' || selectedPlan?.isPrepaid) && (
                                          <FormField control={newUserForm.control} name="initialTopUp" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel>Initial Top-Up Credits (PHP)</FormLabel>
                                                 <FormControl><Input type="number" placeholder="e.g. 10000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                <FormDescription>Set the starting credit balance for this parent account.</FormDescription>
+                                                {selectedPlan?.isPrepaid && (
+                                                    <FormDescription>
+                                                        This will give the user ~{((watchedTopUpAmount || 0) / (watchedPlanPrice || 3)).toFixed(0)} liters.
+                                                    </FormDescription>
+                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                          )}/>
@@ -3353,16 +3380,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <FormItem>
                                                             <FormLabel>Price per Liter (PHP)</FormLabel>
                                                             <FormControl><Input type="number" placeholder="e.g., 2.5" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}/>
-                                                    <FormField control={newUserForm.control} name="initialTopUp" render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Initial Top-Up (PHP)</FormLabel>
-                                                            <FormControl><Input type="number" placeholder="e.g., 5000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                            <FormDescription>
-                                                                {`This will give the user ~${(watchedTopUpAmount && watchedPlanPrice > 0) ? (watchedTopUpAmount / watchedPlanPrice).toFixed(0) : 0} liters.`}
-                                                            </FormDescription>
                                                             <FormMessage />
                                                         </FormItem>
                                                     )}/>

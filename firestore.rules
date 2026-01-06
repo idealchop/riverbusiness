@@ -88,7 +88,7 @@ service cloud.firestore {
 
     // A parent user can query the deliveries of their child accounts.
     match /{path=**}/deliveries/{deliveryId} {
-      allow list: if isAdmin() || (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid);
+      allow list: if isAdmin() || (request.auth != null && request.query.where[0][2] == request.auth.uid);
     }
 
     // Rules for public sanitation reports

@@ -66,12 +66,12 @@
             "id": { "type": "string" },
             "userId": { "type": "string" },
             "amount": { "type": "number" },
-            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected"] },
+            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected", "Approved (Initial Balance)"] },
             "requestedAt": { "type": "string", "format": "date-time" },
             "proofOfPaymentUrl": { "type": "string", "format": "uri" },
             "rejectionReason": { "type": "string" }
         },
-        "required": ["id", "userId", "amount", "status", "requestedAt", "proofOfPaymentUrl"]
+        "required": ["id", "userId", "amount", "status", "requestedAt"]
     },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
@@ -129,6 +129,7 @@
       "properties": {
         "id": { "type": "string", "description": "Unique identifier for the delivery, can be used as a tracking number." },
         "userId": { "type": "string", "description": "ID of the user receiving the delivery." },
+        "parentId": { "type": "string", "description": "ID of the parent account, if applicable." },
         "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
         "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers. This is used for deduction." },
         "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },

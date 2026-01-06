@@ -65,6 +65,7 @@ export async function createNotification(userId: string, notificationData: Omit<
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data) return;
 
+    const deliveryRef = event.data.ref;
     const userId = event.params.userId;
     const delivery = event.data.data();
 
@@ -73,6 +74,9 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
 
     // Handle consumption for different account types
     if (userData?.accountType === 'Branch' && userData.parentId) {
+        // Tag the delivery with the parentId for collectionGroup queries
+        await deliveryRef.update({ parentId: userData.parentId });
+        
         const parentRef = db.collection('users').doc(userData.parentId);
         
         // Calculate the cost of the delivery based on the branch's plan

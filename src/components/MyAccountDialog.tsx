@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
@@ -201,8 +201,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
-  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? collection(firestore, 'users', user.id, 'transactions') : null, [firestore, user]);
+  const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+
+  const topUpRequestsQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [firestore, user]);
+  const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
@@ -450,6 +453,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const defaultTab = useMemo(() => {
     if (user?.accountType === 'Parent') return 'transactions';
     if (user?.accountType === 'Branch') return 'invoices';
+    if (user?.plan?.isPrepaid) return 'top-ups';
     return 'accounts';
   }, [user]);
 
@@ -744,6 +748,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                   <TabsTrigger value="accounts"><UserIcon className="mr-2 h-4 w-4" />Accounts</TabsTrigger>
                   {user.accountType === 'Parent' ? (
                     <TabsTrigger value="transactions"><ArrowRightLeft className="mr-2 h-4 w-4" />Transactions</TabsTrigger>
+                  ) : user.plan?.isPrepaid ? (
+                    <TabsTrigger value="top-ups"><DollarSign className="mr-2 h-4 w-4" />Top-Ups</TabsTrigger>
                   ) : (
                     <TabsTrigger value="invoices"><Receipt className="mr-2 h-4 w-4" />Invoices</TabsTrigger>
                   )}
@@ -1018,6 +1024,53 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             </div>
                         </CardContent>
                     </Card>
+                    
+                    {user.plan?.isPrepaid && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">Top-Up History</CardTitle>
+                                <CardDescription>A log of all your top-up requests.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ScrollArea className="h-60">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead className="text-right">Amount (PHP)</TableHead>
+                                            <TableHead className="text-right">Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {topUpRequests && topUpRequests.length > 0 ? (
+                                            topUpRequests.map(req => (
+                                                <TableRow key={req.id}>
+                                                    <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
+                                                    <TableCell className="text-right">₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant={
+                                                          req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
+                                                          req.status === 'Pending Review' ? 'secondary' :
+                                                          'destructive'
+                                                        } className={cn(
+                                                            (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
+                                                        )}>
+                                                            {req.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="text-center">No top-up requests yet.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                    )}
                 </TabsContent>
                  <TabsContent value="invoices" className="py-4 space-y-4">
                     {user.accountType === 'Branch' && (
@@ -1218,6 +1271,52 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             )}
                          </TableBody>
                      </Table>
+                 </TabsContent>
+                 <TabsContent value="top-ups" className="py-4 space-y-4">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Top-Up History</CardTitle>
+                            <CardDescription>A log of all your top-up requests.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ScrollArea className="h-60">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead className="text-right">Amount (PHP)</TableHead>
+                                        <TableHead className="text-right">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {topUpRequests && topUpRequests.length > 0 ? (
+                                        topUpRequests.map(req => (
+                                            <TableRow key={req.id}>
+                                                <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
+                                                <TableCell className="text-right">₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Badge variant={
+                                                      req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
+                                                      req.status === 'Pending Review' ? 'secondary' :
+                                                      'destructive'
+                                                    } className={cn(
+                                                        (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
+                                                    )}>
+                                                        {req.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="text-center">No top-up requests yet.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
                  </TabsContent>
               </Tabs>
             </div>
