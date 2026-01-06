@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -149,7 +147,6 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { toast } = useToast();
     const auth = useAuth();
-    const storage = useStorage();
     const { user: authUser } = useUser();
     const firestore = useFirestore();
     const router = useRouter();
@@ -2538,7 +2535,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell className="whitespace-nowrap">{user.clientId}</TableCell>
                                                         <TableCell className="whitespace-nowrap">{user.businessName}</TableCell>
                                                         <TableCell>
-                                                             <Badge variant={
+                                                            <Badge variant={
                                                                 user.accountType === 'Parent' ? 'default' :
                                                                 user.accountType === 'Branch' ? 'secondary' :
                                                                 'outline'
@@ -3309,7 +3306,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                            {formStep === 0 && (
                                 <div className="space-y-6">
-                                    <h3 className="font-semibold text-lg">Step 1: Business & Account Type</h3>
+                                    <h3 className="font-semibold text-lg">Step 1: Business &amp; Account Type</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                       <FormField control={newUserForm.control} name="clientId" render={({ field }) => (
                                           <FormItem><FormLabel>Client ID</FormLabel><FormControl><Input placeholder="e.g. C-12345" {...field} /></FormControl><FormMessage /></FormItem>
