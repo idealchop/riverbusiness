@@ -58,7 +58,13 @@ service cloud.firestore {
       allow get: if true;
       
       // A user can update specific fields on their own profile.
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny([
+            'name', 'businessName', 'businessEmail', 'address', 'contactNumber', 'photoURL',
+            'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
+            'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
+            'accountStatus', 'lastLogin'
+        ]);
 
       // A user can delete their own profile (though this is not a current app feature).
       allow delete: if isOwner(userId);
@@ -74,7 +80,7 @@ service cloud.firestore {
       // 2. A parent user can read the documents of their branch users.
       allow list, read: if isOwner(userId) || 
                        (request.auth != null && resource.data.parentId == request.auth.uid) ||
-                       (request.auth != null && request.query.where.get('parentId') == request.auth.uid);
+                       (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid);
     }
     
     // Parent users can read their own transaction history.
@@ -115,7 +121,7 @@ service cloud.firestore {
 
     // A parent user can query the deliveries of their child accounts.
     match /{path=**}/deliveries/{deliveryId} {
-      allow list: if isAdmin() || (request.auth != null && request.query.get('parentId') == request.auth.uid);
+      allow list: if isAdmin() || (request.auth != null && request.query.where[0][0] == "parentId" && request.query.where[0][2] == request.auth.uid);
     }
 
     // Rules for public sanitation reports
