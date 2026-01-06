@@ -1,6 +1,5 @@
 
 
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -686,44 +685,122 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const path = `admin_uploads/${authUser.uid}/proofs_for/${userForHistory.id}/${values.trackingNumber}-${file.name}`;
                 proofUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
-                await createNotification(userForHistory.id, {
+                // Notification for proof upload can be handled by a backend trigger if needed
+            }
+            
+            const branchUser = userForHistory;
+            
+            if (branchUser.accountType === 'Branch' && branchUser.parentId) {
+                // This is a branch delivery, perform a batched write
+                const parentRef = doc(firestore, 'users', branchUser.parentId);
+                const parentSnap = await getDoc(parentRef);
+                if (!parentSnap.exists()) {
+                    throw new Error("Parent account not found.");
+                }
+                const parentData = parentSnap.data();
+
+                const litersDelivered = containerToLiter(values.volumeContainers);
+                const pricePerLiter = branchUser.plan?.price || 0;
+                const deliveryCost = litersDelivered * pricePerLiter;
+                
+                if (parentData.topUpBalanceCredits < deliveryCost) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Insufficient Balance',
+                        description: `Parent account has insufficient credits (Balance: ₱${parentData.topUpBalanceCredits.toFixed(2)})`
+                    });
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                const batch = writeBatch(firestore);
+                
+                // 1. Create the delivery doc with parentId
+                const deliveryRef = doc(firestore, 'users', branchUser.id, 'deliveries', values.trackingNumber);
+                const deliveryData = {
+                    id: values.trackingNumber,
+                    userId: branchUser.id,
+                    parentId: branchUser.parentId, // Tagging the delivery
+                    date: values.date.toISOString(),
+                    volumeContainers: values.volumeContainers,
+                    status: values.status,
+                    adminNotes: values.adminNotes,
+                    proofOfDeliveryUrl: proofUrl || null,
+                };
+                batch.set(deliveryRef, deliveryData);
+
+                // 2. Deduct from parent's balance
+                batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
+                
+                // 3. Create transaction log for parent
+                const transactionRef = doc(collection(parentRef, 'transactions'));
+                batch.set(transactionRef, {
+                    date: values.date.toISOString(),
+                    type: 'Debit',
+                    amountCredits: deliveryCost,
+                    description: `Delivery to ${branchUser.businessName} (${litersDelivered.toFixed(1)}L)`,
+                    branchId: branchUser.id,
+                    branchName: branchUser.businessName
+                });
+
+                await batch.commit();
+
+                // 4. Send notifications
+                await createNotification(branchUser.parentId, {
                     type: 'delivery',
-                    title: 'Proof of Delivery Uploaded',
-                    description: `A proof of delivery for order ${values.trackingNumber} has been uploaded.`,
+                    title: 'Branch Consumption',
+                    description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${branchUser.businessName}.`,
+                    data: { deliveryId: values.trackingNumber, branchUserId: branchUser.id }
+                });
+                await createNotification(branchUser.id, {
+                    type: 'delivery',
+                    title: 'Delivery Scheduled',
+                    description: `Delivery of ${values.volumeContainers} containers is scheduled.`,
+                    data: { deliveryId: values.trackingNumber }
+                });
+
+
+            } else {
+                 // This is a single user or prepaid user delivery
+                 const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
+                 const deliveryData = {
+                    id: values.trackingNumber,
+                    userId: userForHistory.id,
+                    date: values.date.toISOString(),
+                    volumeContainers: values.volumeContainers,
+                    status: values.status,
+                    adminNotes: values.adminNotes,
+                    proofOfDeliveryUrl: proofUrl || null,
+                 };
+                 await setDoc(deliveryRef, deliveryData);
+                 
+                 // For prepaid users, deduct from their balance
+                 if (userForHistory.plan?.isPrepaid) {
+                     const userRef = doc(firestore, 'users', userForHistory.id);
+                     await updateDoc(userRef, {
+                         totalConsumptionLiters: increment(-containerToLiter(values.volumeContainers))
+                     });
+                 }
+
+                 await createNotification(userForHistory.id, {
+                    type: 'delivery',
+                    title: 'Delivery Scheduled',
+                    description: `Delivery of ${values.volumeContainers} containers is scheduled.`,
                     data: { deliveryId: values.trackingNumber }
                 });
             }
-    
-            const deliveryData: any = {
-                id: values.trackingNumber,
-                userId: userForHistory.id,
-                date: values.date.toISOString(),
-                volumeContainers: values.volumeContainers,
-                status: values.status,
-                adminNotes: values.adminNotes,
-                proofOfDeliveryUrl: proofUrl || null,
-            };
-    
-            const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
-            await setDoc(deliveryRef, deliveryData);
 
-            if (values.status === 'Delivered' && userForHistory.accountType !== 'Branch' && !userForHistory.plan?.isPrepaid) {
-                // This deduction logic is now handled by ondeliverycreate for prepaid/parent, and not at all for fixed-plan (it's tracked differently).
-                // Leaving this empty to avoid double-deducting.
-            }
-    
             toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
-            
             deliveryForm.reset();
             setUploadProgress(0);
             setIsCreateDeliveryOpen(false);
-    
-        } catch (error) {
+
+        } catch (error: any) {
             console.error("Delivery creation failed: ", error);
             toast({
                 variant: 'destructive',
                 title: 'Creation Failed',
-                description: 'Could not create delivery record. Please try again.',
+                description: error.message || 'Could not create delivery record. Please try again.',
             });
         } finally {
             setIsSubmitting(false);
@@ -741,11 +818,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             status: values.status,
             adminNotes: values.adminNotes || '',
         };
-    
-        // This is complex. The trigger on `ondeliverycreate` handles the initial deduction.
-        // We need to adjust if the delivery was already 'Delivered' and is now being changed.
-        // The simplest approach is to let the backend handle complex balance adjustments if needed,
-        // or just update the info here. For now, we only update the delivery doc.
     
         await updateDoc(deliveryRef, updatedData);
 
@@ -768,19 +840,28 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
         const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToDelete.id);
         
-        // If we delete a delivered record, we need to credit back the user.
         if (deliveryToDelete.status === 'Delivered') {
             const userRef = doc(firestore, 'users', userForHistory.id);
             const userDoc = await getDoc(userRef);
             const userData = userDoc.data();
             if (userData) {
                 if(userData.accountType === 'Branch' && userData.parentId) {
-                    // Credit Parent account
                     const parentRef = doc(firestore, 'users', userData.parentId);
-                    const costToCredit = containerToLiter(deliveryToDelete.volumeContainers) * (userData.plan.price || 0);
-                    await updateDoc(parentRef, { topUpBalanceCredits: increment(costToCredit) });
+                    const costToCredit = containerToLiter(deliveryToDelete.volumeContainers) * (userData.plan?.price || 0);
+                    if (costToCredit > 0) {
+                        const batch = writeBatch(firestore);
+                        batch.update(parentRef, { topUpBalanceCredits: increment(costToCredit) });
+                        const transactionRef = doc(collection(parentRef, 'transactions'));
+                        batch.set(transactionRef, {
+                            date: serverTimestamp(),
+                            type: 'Credit',
+                            amountCredits: costToCredit,
+                            description: `Reversal for deleted delivery ${deliveryToDelete.id} for ${userData.businessName}`,
+                            branchId: userData.id,
+                        });
+                        await batch.commit();
+                    }
                 } else if (userData.plan?.isPrepaid) {
-                    // Credit user's own liter balance
                     const litersToCredit = containerToLiter(deliveryToDelete.volumeContainers);
                     await updateDoc(userRef, { totalConsumptionLiters: increment(litersToCredit) });
                 }
@@ -1325,25 +1406,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
             batch.set(unclaimedProfileRef, profileData);
             
-            // If it's a prepaid plan with an initial top-up, create a corresponding "Approved" request
-            if (plan.isPrepaid && initialTopUp && initialTopUp > 0) {
-                const userForPrepaidRef = doc(firestore, 'users', 'temp_user_id'); // This is a placeholder
+            if ((plan.isPrepaid || values.accountType === 'Parent') && initialTopUp && initialTopUp > 0) {
                 const topUpRequestRef = doc(collection(unclaimedProfileRef, 'topUpRequests'));
-                const topUpData: Omit<TopUpRequest, 'id' | 'userId'> = {
+                const topUpData: Omit<TopUpRequest, 'id' | 'userId' | 'proofOfPaymentUrl'> = {
                     amount: initialTopUp,
                     status: 'Approved (Initial Balance)',
                     requestedAt: serverTimestamp(),
                 };
-                // This is a bit of a workaround: we can't create a subcollection on a doc that doesn't exist yet,
-                // so we will have to handle this on the user claim side, or adjust the logic to create the user doc differently.
-                // For now, let's create the top-up request in a separate collection.
-                // A better approach is to create a transaction log for the unclaimed profile.
-                 const topUpRequestForUnclaimed: any = {
-                    ...topUpData,
-                    unclaimedClientId: values.clientId
-                };
-                const initialTopUpRef = doc(collection(firestore, 'initialTopUpRecords'));
-                batch.set(initialTopUpRef, topUpRequestForUnclaimed);
+                batch.set(topUpRequestRef, topUpData);
             }
             
             await batch.commit();
@@ -2673,7 +2743,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsTopUpDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
                     <Button onClick={handleTopUp} disabled={topUpAmount <= 0 || isSubmitting}>
-                        {isSubmitting ? 'Topping up...' : 'Confirm Top-Up'}
+                        {isSubmitting ? "Topping up..." : "Confirm Top-Up"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

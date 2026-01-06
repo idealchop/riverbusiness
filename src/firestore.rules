@@ -17,18 +17,38 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if isAdmin();
     }
+    
+    // --- BATCH WRITE VALIDATION for Branch Deliveries by Admin ---
+    function isValidBranchDeliveryBatch(userId) {
+      let deliveryCreate = request.writeBatch[0];
+      let parentUpdate = request.writeBatch[1];
+      let transactionCreate = request.writeBatch[2];
+
+      let deliveryData = deliveryCreate.data;
+      let parentPath = /databases/$(database)/documents/users/$(deliveryData.parentId);
+      
+      // 1. Delivery document is being created for the correct user
+      let isDeliveryForUser = deliveryCreate.path == /databases/$(database)/documents/users/$(userId)/deliveries/$(deliveryData.id);
+      // 2. Parent update is for the correct parent
+      let isParentUpdateCorrect = parentUpdate.path == parentPath;
+      // 3. Transaction create is for the correct parent subcollection
+      let isTransactionCreateCorrect = transactionCreate.path == parentPath + /transactions/$(transactionCreate.id);
+
+      // 4. Validate the parent balance deduction
+      let cost = deliveryData.volumeContainers * 19.5 * get(/databases/$(database)/documents/users/$(userId)).data.plan.price;
+      let isBalanceDeductedCorrectly = parentUpdate.data.topUpBalanceCredits == get(/databases/$(database)/documents/users/$(deliveryData.parentId)).data.topUpBalanceCredits - cost;
+
+      return isDeliveryForUser && isParentUpdateCorrect && isTransactionCreateCorrect && isBalanceDeductedCorrectly;
+    }
 
     match /users/{userId} {
       // Allow any user (authenticated or not) to read a specific user's document.
-      // This is needed for the public sanitation report page to get the business name,
-      // and for the user to fetch the Admin's profile for the chat.
       allow get: if true;
-      allow list, read: if isOwner(userId);
       
       // A user can update specific fields on their own profile.
       allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys()
         .hasAny([
-            'name', 'businessEmail', 'address', 'contactNumber', 'photoURL',
+            'name', 'businessName', 'businessEmail', 'address', 'contactNumber', 'photoURL',
             'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
             'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
             'accountStatus', 'lastLogin'
@@ -37,8 +57,25 @@ service cloud.firestore {
       // A user can delete their own profile (though this is not a current app feature).
       allow delete: if isOwner(userId);
       
-      // Any authenticated user can create their own user document (happens during profile claim).
-      allow create: if request.auth != null;
+      // A user document can ONLY be created if it's part of a valid profile claim transaction.
+      allow create: if request.auth != null && 
+                      // The unclaimed profile must exist before the transaction
+                      get(/databases/$(database)/documents/unclaimedProfiles/$(request.resource.data.clientId)) != null &&
+                      // The user document must NOT exist before the transaction
+                      !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+
+      // 1. A user can read their own document.
+      // 2. A parent user can read the documents of their branch users.
+      allow list, read: if isOwner(userId) || 
+                       (request.auth != null && resource.data.parentId == request.auth.uid) ||
+                       (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid);
+    }
+    
+    // Parent users can read their own transaction history.
+    match /users/{userId}/transactions/{transactionId} {
+      allow read, list: if isOwner(userId);
+      // Admin writes are handled through batched delivery creation.
+      allow create: if isAdmin() && isValidBranchDeliveryBatch(userId);
     }
     
     // Users and Admins can manage messages within a user's chat subcollection.
@@ -46,14 +83,9 @@ service cloud.firestore {
         allow read, write: if isOwner(userId) || isAdmin();
     }
     
-    // Default rule for most user subcollections, but handled more specifically below.
-    // match /users/{userId}/{subcollection}/{docId} {
-    //   allow read, list, write, delete: if isOwner(userId);
-    // }
-    
     match /unclaimedProfiles/{clientId} {
-      // A newly signed-up user can read and delete their own unclaimed profile to claim it.
-      allow read, delete: if request.auth != null && !exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      // Allow a newly authenticated user to delete an unclaimed profile as part of the claim process.
+      allow read, delete: if request.auth != null;
     }
 
     // Any authenticated user can read station and schedule information.
@@ -75,6 +107,11 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
+    // A parent user can query the deliveries of their child accounts.
+    match /{path=**}/deliveries/{deliveryId} {
+      allow list: if isAdmin() || (request.auth != null && request.query.where[0][2] == request.auth.uid);
+    }
+
     // Rules for public sanitation reports
     match /publicSanitationLinks/{linkId} {
       // Anyone can read the link mapping to get the path to the real document.
@@ -92,12 +129,14 @@ service cloud.firestore {
       allow read: if true;
       // Allow public update for specific fields related to the report submission.
       allow update: if request.auth == null && request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature']);
+        .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature', 'clientRepName', 'officerSignatureDate', 'clientSignatureDate']);
     }
 
     // All other user subcollections are private to the owner.
      match /users/{userId}/{subcollection}/{docId} {
-      allow read, list, write, delete: if isOwner(userId);
+      // For delivery creation, allow admin writes if it's a valid branch delivery batch.
+      allow create: if (isOwner(userId)) || (isAdmin() && isValidBranchDeliveryBatch(userId));
+      allow read, list, update, delete: if isOwner(userId);
     }
   }
 }
