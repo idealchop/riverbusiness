@@ -58,18 +58,24 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
 
     if (isParent) {
       const branchConsumption: { [key: string]: { name: string; value: number } } = {};
+      const branchIdToName = (branches || []).reduce((acc, branch) => {
+        acc[branch.id] = branch.businessName;
+        return acc;
+      }, {} as Record<string, string>);
 
-      (branches || []).forEach(branch => {
-        branchConsumption[branch.id] = { name: branch.businessName, value: 0 };
+      // Initialize all branches with 0 consumption
+      Object.keys(branchIdToName).forEach(branchId => {
+        branchConsumption[branchId] = { name: branchIdToName[branchId], value: 0 };
       });
 
       filteredDeliveries.forEach(delivery => {
+        // delivery.userId is the ID of the branch that received the delivery
         if (delivery.userId && branchConsumption[delivery.userId]) {
           branchConsumption[delivery.userId].value += containerToLiter(delivery.volumeContainers);
         }
       });
 
-      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name }));
+      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name.substring(0, 10) }));
 
     } else {
        if (analyticsFilter === 'weekly') {
@@ -171,7 +177,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                 borderRadius: 'var(--radius)',
               }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number, name, props) => [`${value.toLocaleString()} Liters`, isParent ? props.payload.displayName : 'Consumption']}
+              formatter={(value: number, name, props) => [`${value.toLocaleString()} Liters`, isParent ? props.payload.name : 'Consumption']}
             />
             <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
           </BarChart>
