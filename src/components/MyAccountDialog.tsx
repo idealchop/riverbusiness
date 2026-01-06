@@ -208,6 +208,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
   const isParent = user?.accountType === 'Parent';
+  
+  const branchUsersQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', user.id)) : null, [firestore, user]);
+  const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
@@ -733,6 +736,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
     return '0';
   }, [topUpAmount, literConversionRate]);
+  
+  const availableLiters = useMemo(() => {
+    const credits = user?.topUpBalanceCredits ?? 0;
+    if (credits <= 0 || literConversionRate <= 0) return 0;
+    return credits / literConversionRate;
+  }, [user?.topUpBalanceCredits, literConversionRate]);
 
   return (
     <AlertDialog>
@@ -1252,10 +1261,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         </Card>
                          <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Total Branch Consumption</CardTitle>
+                                <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-bold">{(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
+                                <p className="text-2xl font-bold">{(availableLiters || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                                <p className="text-xs text-muted-foreground">Consumed: {(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -1783,4 +1793,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   );
 }
 
-    
