@@ -42,6 +42,7 @@ import {
   Box,
   Settings,
   FileX,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,6 +85,7 @@ import {
   Timestamp,
   arrayUnion,
   addDoc,
+  collectionGroup,
 } from 'firebase/firestore';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -103,6 +105,10 @@ import { AttachmentViewerDialog } from '@/components/dashboard/dialogs/Attachmen
 import { RefillStatusDialog } from '@/components/dashboard/dialogs/RefillStatusDialog';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { WelcomeDialog } from '@/components/dashboard/WelcomeDialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -173,6 +179,22 @@ export default function DashboardPage() {
   const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
   const [isRefillRequesting, setIsRefillRequesting] = useState(false);
   const [isSubmitScheduledRefill, setIsSubmitScheduledRefill] = useState(false);
+
+  // --- START PARENT ACCOUNT LOGIC ---
+  const isParent = user?.accountType === 'Parent';
+
+  const branchUsersQuery = useMemoFirebase(() => {
+    if (!firestore || !isParent) return null;
+    return query(collection(firestore, 'users'), where('parentId', '==', user.id));
+  }, [firestore, isParent, user?.id]);
+  const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
+
+  const branchDeliveriesQuery = useMemoFirebase(() => {
+    if (!firestore || !isParent) return null;
+    return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
+  }, [firestore, isParent, user?.id]);
+  const { data: branchDeliveries, isLoading: branchDeliveriesLoading } = useCollection<Delivery>(branchDeliveriesQuery);
+  // --- END PARENT ACCOUNT LOGIC ---
 
 
   const openDialog = (dialog: keyof typeof dialogState) => {
@@ -349,21 +371,65 @@ export default function DashboardPage() {
           hasPendingRefill={hasPendingRefill}
         />
         
-        <StatCards
-            user={user}
-            deliveries={deliveries}
-            onConsumptionHistoryClick={() => openDialog('consumptionHistory')}
-            onSaveLitersClick={() => openDialog('saveLiters')}
-            onUpdateScheduleClick={() => openDialog('updateSchedule')}
-            onRequestRefillClick={() => openDialog('requestRefill')}
-        />
+        {!isParent && (
+          <StatCards
+              user={user}
+              deliveries={deliveries}
+              onConsumptionHistoryClick={() => openDialog('consumptionHistory')}
+              onSaveLitersClick={() => openDialog('saveLiters')}
+              onUpdateScheduleClick={() => openDialog('updateSchedule')}
+              onRequestRefillClick={() => openDialog('requestRefill')}
+          />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ConsumptionAnalytics
-            deliveries={deliveries}
+            deliveries={isParent ? branchDeliveries : deliveries}
             onHistoryClick={() => openDialog('deliveryHistory')}
+            isParent={isParent}
+            branches={branchUsers}
           />
-          <InfoCards />
+          {isParent ? (
+              <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-primary"/>
+                        Branch Accounts
+                    </CardTitle>
+                    <CardDescription>Accounts that consume from your balance.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-64">
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Business Name</TableHead>
+                                    <TableHead>Client ID</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {branchUsers && branchUsers.length > 0 ? (
+                                    branchUsers.map(branch => (
+                                        <TableRow key={branch.id}>
+                                            <TableCell>{branch.businessName}</TableCell>
+                                            <TableCell>{branch.clientId}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={2} className="text-center text-muted-foreground">
+                                            No branches linked.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                </CardContent>
+            </Card>
+          ) : (
+            <InfoCards />
+          )}
         </div>
 
         {/* --- DIALOGS --- */}
