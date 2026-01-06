@@ -184,8 +184,14 @@ export function StatCards({
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
   const isBranchAccount = user?.accountType === 'Branch';
-  const isPrepaidPlan = user?.plan?.name === 'Prepaid Flow Plan';
+  const isParentAccount = user?.accountType === 'Parent';
+  const isPrepaidPlan = user?.plan?.isPrepaid;
   
+  const parentRemainingLiters = useMemo(() => {
+      if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
+      return (user?.topUpBalanceCredits ?? 0) / user.plan.price;
+  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price]);
+
   const startingBalance = useMemo(() => {
     if (isFlowPlan || isBranchAccount) return 0;
     return consumptionDetails.totalLitersForMonth;
@@ -203,13 +209,13 @@ export function StatCards({
   return (
     <>
     <div className="grid grid-cols-2 gap-6 lg:grid-cols-3">
-      {isFlowPlan || isBranchAccount || isPrepaidPlan ? (
+      {isFlowPlan || isBranchAccount || isPrepaidPlan || isParentAccount ? (
         <>
           <Card className="flex flex-col lg:col-span-2 col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
-                  : isPrepaidPlan ? `Remaining Balance` 
+                  : (isPrepaidPlan || isParentAccount) ? `Remaining Liters` 
                   : `Current Plan: ${user?.plan?.name}`}
               </CardTitle>
             </CardHeader>
@@ -217,8 +223,10 @@ export function StatCards({
               <p className="text-2xl md:text-3xl font-bold mb-2">
                 {isBranchAccount
                     ? `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
-                    : isPrepaidPlan 
+                    : (isPrepaidPlan) 
                     ? `${(user?.totalConsumptionLiters || 0).toLocaleString()} L`
+                    : isParentAccount
+                    ? `${parentRemainingLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L`
                     : `₱${consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                 }
               </p>
@@ -226,7 +234,7 @@ export function StatCards({
                 <div className="flex justify-between">
                   {isBranchAccount
                     ? <span>Total usage this period</span>
-                    : isPrepaidPlan 
+                    : (isPrepaidPlan || isParentAccount)
                     ? <span>Consumed this period:</span>
                     : <span>Water consumption cost:</span>
                   }
@@ -237,7 +245,7 @@ export function StatCards({
             <CardFooter className="pt-0">
                 {isBranchAccount ? (
                      <p className="text-xs text-muted-foreground">Consumption is deducted from your parent account's balance.</p>
-                ) : isPrepaidPlan ? (
+                ) : (isPrepaidPlan || isParentAccount) ? (
                      <p className="text-xs text-muted-foreground">This is your prepaid water credit balance.</p>
                 ) : (
                     <p className="text-xs text-muted-foreground">Equipment rental fees will be added to your final bill.</p>
