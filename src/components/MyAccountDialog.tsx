@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
@@ -207,13 +207,18 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const topUpRequestsQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [firestore, user]);
   const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
-  const branchUsersQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', user.id)) : null, [firestore, user]);
-  const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
+  const isParent = user?.accountType === 'Parent';
 
-  const totalBranchLiters = useMemo(() => {
-      if (!branchUsers) return 0;
-      return branchUsers.reduce((total, branch) => total + (branch.totalConsumptionLiters || 0), 0);
-  }, [branchUsers]);
+  const branchDeliveriesQuery = useMemoFirebase(() => {
+    if (!firestore || !isParent || !user?.id) return null;
+    return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
+  }, [firestore, isParent, user?.id]);
+  const { data: branchDeliveries } = useCollection<Delivery>(branchDeliveriesQuery);
+
+  const totalBranchConsumptionLiters = useMemo(() => {
+    if (!branchDeliveries) return 0;
+    return branchDeliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+  }, [branchDeliveries]);
 
 
   const [isEditingDetails, setIsEditingDetails] = useState(false);
@@ -1259,10 +1264,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         </Card>
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Total Branch Liters</CardTitle>
+                                <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Total Branch Consumption</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-bold">{totalBranchLiters.toLocaleString()} L</p>
+                                <p className="text-2xl font-bold">{totalBranchConsumptionLiters.toLocaleString()} L</p>
                             </CardContent>
                         </Card>
                     </div>
