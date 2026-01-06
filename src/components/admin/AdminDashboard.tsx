@@ -685,39 +685,29 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (file) {
                 const path = `admin_uploads/${authUser.uid}/proofs_for/${userForHistory.id}/${values.trackingNumber}-${file.name}`;
                 proofUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
-                // Notification for proof upload can be handled by a backend trigger if needed
             }
             
             const branchUser = userForHistory;
             
+            // This is a branch delivery, perform a batched write
             if (branchUser.accountType === 'Branch' && branchUser.parentId) {
-                // This is a branch delivery, perform a batched write
                 const parentRef = doc(firestore, 'users', branchUser.parentId);
                 const parentSnap = await getDoc(parentRef);
-                if (!parentSnap.exists()) {
-                    throw new Error("Parent account not found.");
-                }
+                if (!parentSnap.exists()) throw new Error("Parent account not found.");
                 const parentData = parentSnap.data();
 
                 const litersDelivered = containerToLiter(values.volumeContainers);
                 const pricePerLiter = branchUser.plan?.price || 0;
                 const deliveryCost = litersDelivered * pricePerLiter;
                 
-                if (parentData.topUpBalanceCredits < deliveryCost) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Insufficient Balance',
-                        description: `Parent account has insufficient credits (Balance: ₱${parentData.topUpBalanceCredits.toFixed(2)})`
-                    });
-                    setIsSubmitting(false);
-                    return;
+                if ((parentData.topUpBalanceCredits || 0) < deliveryCost) {
+                    throw new Error(`Parent account has insufficient credits (Balance: ₱${(parentData.topUpBalanceCredits || 0).toFixed(2)})`);
                 }
 
                 const batch = writeBatch(firestore);
                 
-                // 1. Create the delivery doc with parentId
                 const deliveryRef = doc(firestore, 'users', branchUser.id, 'deliveries', values.trackingNumber);
-                const deliveryData = {
+                batch.set(deliveryRef, {
                     id: values.trackingNumber,
                     userId: branchUser.id,
                     parentId: branchUser.parentId, // Tagging the delivery
@@ -726,13 +716,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     status: values.status,
                     adminNotes: values.adminNotes,
                     proofOfDeliveryUrl: proofUrl || null,
-                };
-                batch.set(deliveryRef, deliveryData);
+                });
 
-                // 2. Deduct from parent's balance
                 batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
                 
-                // 3. Create transaction log for parent
                 const transactionRef = doc(collection(parentRef, 'transactions'));
                 batch.set(transactionRef, {
                     date: values.date.toISOString(),
@@ -745,25 +732,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                 await batch.commit();
 
-                // 4. Send notifications
+                // Send notifications AFTER the batch commit is successful
                 await createNotification(branchUser.parentId, {
                     type: 'delivery',
                     title: 'Branch Consumption',
                     description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${branchUser.businessName}.`,
                     data: { deliveryId: values.trackingNumber, branchUserId: branchUser.id }
                 });
-                await createNotification(branchUser.id, {
-                    type: 'delivery',
-                    title: 'Delivery Scheduled',
-                    description: `Delivery of ${values.volumeContainers} containers is scheduled.`,
-                    data: { deliveryId: values.trackingNumber }
-                });
-
-
             } else {
                  // This is a single user or prepaid user delivery
                  const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
-                 const deliveryData = {
+                 await setDoc(deliveryRef, {
                     id: values.trackingNumber,
                     userId: userForHistory.id,
                     date: values.date.toISOString(),
@@ -771,8 +750,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     status: values.status,
                     adminNotes: values.adminNotes,
                     proofOfDeliveryUrl: proofUrl || null,
-                 };
-                 await setDoc(deliveryRef, deliveryData);
+                 });
                  
                  // For prepaid users, deduct from their balance
                  if (userForHistory.plan?.isPrepaid) {
@@ -781,27 +759,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                          totalConsumptionLiters: increment(-containerToLiter(values.volumeContainers))
                      });
                  }
-
-                 await createNotification(userForHistory.id, {
-                    type: 'delivery',
-                    title: 'Delivery Scheduled',
-                    description: `Delivery of ${values.volumeContainers} containers is scheduled.`,
-                    data: { deliveryId: values.trackingNumber }
-                });
             }
 
-            toast({ title: "Delivery Record Created", description: `A manual delivery has been added for ${userForHistory.name}.` });
+            // Always notify the user receiving the delivery
+            await createNotification(userForHistory.id, {
+                type: 'delivery',
+                title: 'Delivery Scheduled',
+                description: `Delivery of ${values.volumeContainers} containers is scheduled.`,
+                data: { deliveryId: values.trackingNumber }
+            });
+
+            toast({ title: "Delivery Record Created" });
             deliveryForm.reset();
             setUploadProgress(0);
             setIsCreateDeliveryOpen(false);
 
         } catch (error: any) {
             console.error("Delivery creation failed: ", error);
-            toast({
-                variant: 'destructive',
-                title: 'Creation Failed',
-                description: error.message || 'Could not create delivery record. Please try again.',
-            });
+            toast({ variant: 'destructive', title: 'Creation Failed', description: error.message || 'Could not create delivery record.' });
         } finally {
             setIsSubmitting(false);
         }
