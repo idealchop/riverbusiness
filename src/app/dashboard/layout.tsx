@@ -112,12 +112,10 @@ export default function DashboardLayout({
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
-  // --- FIX START ---
   // The admin UID is static and known. Hardcode it for a direct, efficient fetch.
   const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2';
   const adminDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', ADMIN_UID) : null, [firestore]);
   const { data: adminAgent } = useDoc<AppUser>(adminDocRef);
-  // --- FIX END ---
   
   const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
   const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
@@ -202,7 +200,7 @@ export default function DashboardLayout({
   }, [authUser, isUserLoading, router, firestore, auth]);
 
   useEffect(() => {
-    if (!userDocRef || !auth) return;
+    if (!userDocRef || !auth || !auth.currentUser) return;
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'hidden') {
@@ -305,7 +303,7 @@ export default function DashboardLayout({
   };
 
   const handleMessageSubmit = async (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => {
-    if (!firestore || !authUser) return;
+    if (!firestore || !authUser || !userDocRef) return;
 
     const messagesCollection = collection(firestore, 'users', authUser.uid, 'chatMessages');
     const finalPayload = {
@@ -386,7 +384,7 @@ export default function DashboardLayout({
           </Link>
           <div className="flex-1" />
           <Dialog onOpenChange={(open) => {
-              if (!open && user?.hasUnreadAdminMessages) {
+              if (!open && user?.hasUnreadAdminMessages && userDocRef) {
                   updateDoc(userDocRef, { hasUnreadAdminMessages: false });
               }
               setHasNewMessage(false);
