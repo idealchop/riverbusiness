@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption } from '@/lib/types';
+import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -239,11 +239,27 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (!user || deliveriesLoading) return null;
 
     const now = new Date();
-    const cycleStart = startOfMonth(now);
-    const cycleEnd = endOfMonth(now);
-    
-    const description = `Bill for ${format(now, 'MMMM yyyy')}`;
-    const invoiceIdSuffix = format(now, 'yyyyMM');
+    const currentYear = getYear(now);
+    const currentMonth = getMonth(now);
+
+    let cycleStart: Date;
+    let cycleEnd: Date;
+    let monthsToBill = 1;
+    let description: string;
+    let invoiceIdSuffix: string;
+
+    if (currentYear === 2026 && currentMonth === 1 && user.plan?.isConsumptionBased) {
+        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+        cycleEnd = endOfMonth(new Date(2026, 0, 1)); // Jan 31, 2026
+        monthsToBill = 2;
+        description = 'Bill for December 2025 - January 2026';
+        invoiceIdSuffix = '202512-202601';
+    } else {
+        cycleStart = startOfMonth(now);
+        cycleEnd = endOfMonth(now);
+        description = `Bill for ${format(now, 'MMMM yyyy')}`;
+        invoiceIdSuffix = format(now, 'yyyyMM');
+    }
     
     const deliveriesThisCycle = (deliveries || []).filter(d => {
         const deliveryDate = toSafeDate(d.date);
@@ -254,11 +270,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
     let estimatedCost = 0;
     
-    // Check if this is the user's very first month
     const userCreationDate = toSafeDate(user.createdAt);
     const isFirstMonth = userCreationDate ? getYear(userCreationDate) === getYear(now) && getMonth(userCreationDate) === getMonth(now) : false;
 
-    // Add one-time fees if it's the first month
     if (isFirstMonth && user.customPlanDetails) {
         if (user.customPlanDetails.gallonPaymentType === 'One-Time') {
             estimatedCost += user.customPlanDetails.gallonPrice || 0;
@@ -268,19 +282,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         }
     }
 
-    // Add monthly equipment fees
+    let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-        estimatedCost += (user.customPlanDetails?.gallonPrice || 0);
+        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
     }
     if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-        estimatedCost += (user.customPlanDetails?.dispenserPrice || 0);
+        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
     }
     
-    if (user?.plan?.isConsumptionBased) {
+    const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+    estimatedCost += equipmentCostForPeriod;
+
+    if (user.plan?.isConsumptionBased) {
         const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
         estimatedCost += consumptionCost;
     } else {
-        const planCost = (user?.plan?.price || 0);
+        const planCost = (user.plan?.price || 0) * (user.plan?.isConsumptionBased ? 1 : monthsToBill);
         estimatedCost += planCost;
     }
     
@@ -292,6 +309,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
     };
 }, [user, deliveries, deliveriesLoading]);
+
 
     const breakdownDetails = useMemo(() => {
         const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
@@ -693,6 +711,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
   
   const literConversionRate = useMemo(() => {
+    if (user?.accountType === 'Parent' && user?.plan?.price > 0) {
+        return user.plan.price;
+    }
     if (user?.plan?.isConsumptionBased && user.plan.price > 0) {
         return user.plan.price;
     }
