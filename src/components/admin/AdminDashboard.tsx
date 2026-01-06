@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -1371,6 +1372,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     isPrepaid: plan.isPrepaid || false,
                 },
                 role: 'User',
+                accountStatus: 'Active',
                 totalConsumptionLiters: totalLiters,
                 topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
@@ -1379,7 +1381,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if (parentId) {
                 profileData.parentId = parentId;
             }
-
+            
             batch.set(unclaimedProfileRef, profileData);
             
             if ((plan.isPrepaid || values.accountType === 'Parent') && initialTopUp && initialTopUp > 0) {
@@ -2638,7 +2640,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <TableCell>{profile.plan?.name}</TableCell>
                                                         <TableCell>
                                                             {profile.accountType && profile.accountType !== 'Single' && (
-                                                                <Badge variant={profile.accountType === 'Parent' ? 'default' : 'secondary'}>{profile.accountType}</Badge>
+                                                                <Badge variant={profile.accountType === 'Parent' ? 'default' : 'secondary'}>{profile.accountType || 'Single'}</Badge>
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
