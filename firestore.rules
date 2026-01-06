@@ -27,7 +27,7 @@ service cloud.firestore {
       // A user can update specific fields on their own profile.
       allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys()
         .hasAny([
-            'name', 'businessEmail', 'address', 'contactNumber', 'photoURL',
+            'name', 'businessName', 'businessEmail', 'address', 'contactNumber', 'photoURL',
             'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
             'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
             'accountStatus', 'lastLogin'
