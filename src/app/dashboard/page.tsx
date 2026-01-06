@@ -184,14 +184,14 @@ export default function DashboardPage() {
   const isParent = user?.accountType === 'Parent';
 
   const branchUsersQuery = useMemoFirebase(() => {
-    if (!firestore || !isParent) return null;
+    if (!firestore || !isParent || !user?.id) return null;
     return query(collection(firestore, 'users'), where('parentId', '==', user.id));
   }, [firestore, isParent, user?.id]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
 
   const branchDeliveriesQuery = useMemoFirebase(() => {
-    if (!firestore || !isParent) return null;
-    return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
+      if (!firestore || !isParent || !user?.id) return null;
+      return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
   }, [firestore, isParent, user?.id]);
   const { data: branchDeliveries, isLoading: branchDeliveriesLoading } = useCollection<Delivery>(branchDeliveriesQuery);
   // --- END PARENT ACCOUNT LOGIC ---
@@ -371,16 +371,14 @@ export default function DashboardPage() {
           hasPendingRefill={hasPendingRefill}
         />
         
-        {!isParent && (
-          <StatCards
-              user={user}
-              deliveries={deliveries}
-              onConsumptionHistoryClick={() => openDialog('consumptionHistory')}
-              onSaveLitersClick={() => openDialog('saveLiters')}
-              onUpdateScheduleClick={() => openDialog('updateSchedule')}
-              onRequestRefillClick={() => openDialog('requestRefill')}
-          />
-        )}
+        <StatCards
+            user={user}
+            deliveries={isParent ? null : deliveries} // Pass null for parents so it shows graceful empty states
+            onConsumptionHistoryClick={() => openDialog('consumptionHistory')}
+            onSaveLitersClick={() => openDialog('saveLiters')}
+            onUpdateScheduleClick={() => openDialog('updateSchedule')}
+            onRequestRefillClick={() => openDialog('requestRefill')}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ConsumptionAnalytics
