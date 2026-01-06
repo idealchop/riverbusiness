@@ -97,6 +97,33 @@ export default function DashboardLayout({
   const auth = useAuth();
   const storage = useStorage();
 
+  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
+
+  useEffect(() => {
+    if (isUserLoading || !auth) return;
+
+    if (!authUser) {
+      router.push('/login');
+      return;
+    }
+    
+    if (firestore && authUser) {
+        const checkOnboarding = async () => {
+            const userDoc = await getDoc(doc(firestore, 'users', authUser.uid));
+            if (!userDoc.exists()) {
+                router.push('/claim-account');
+            }
+        }
+        checkOnboarding();
+    }
+  }, [authUser, isUserLoading, router, firestore, auth]);
+  
+  // Early return for loading states or unauthenticated users, BEFORE other hooks.
+  if (isUserLoading || isUserDocLoading || !isMounted || !auth || !authUser || !user) {
+    return <DashboardLayoutSkeleton />;
+  }
+
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
@@ -108,9 +135,6 @@ export default function DashboardLayout({
       { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
       { name: 'Credit Card', qr: cardQr }
   ];
-
-  const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   // The admin UID is static and known. Hardcode it for a direct, efficient fetch.
   const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2';
@@ -178,26 +202,6 @@ export default function DashboardLayout({
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
-
-    
-  React.useEffect(() => {
-    if (isUserLoading || !auth) return;
-
-    if (!authUser) {
-      router.push('/login');
-      return;
-    }
-    
-    const checkOnboarding = async () => {
-        if (!firestore) return;
-        const userDoc = await getDoc(doc(firestore, 'users', authUser.uid));
-        if (!userDoc.exists()) {
-            router.push('/claim-account');
-        }
-    }
-    checkOnboarding();
-
-  }, [authUser, isUserLoading, router, firestore, auth]);
 
   useEffect(() => {
     if (!userDocRef || !auth || !auth.currentUser) return;
@@ -365,10 +369,6 @@ export default function DashboardLayout({
 
   const handleComplianceClick = () => {
       window.dispatchEvent(new CustomEvent('open-compliance-dialog'));
-  }
-
-  if (isUserLoading || isUserDocLoading || !isMounted || !auth) {
-    return <DashboardLayoutSkeleton />;
   }
 
   const displayPhoto = user?.photoURL;
@@ -743,3 +743,5 @@ export default function DashboardLayout({
       </div>
   );
 }
+
+    
