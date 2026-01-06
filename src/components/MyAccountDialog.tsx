@@ -192,7 +192,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const auth = useAuth();
   
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
-  const { data: deliveries } = useCollection<Delivery>(deliveriesQuery);
+  const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
   const sanitationVisitsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'sanitationVisits') : null, [firestore, authUser]);
   const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
@@ -236,7 +236,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
   
   const currentMonthInvoice = useMemo(() => {
-    if (!user || !deliveries) return null;
+    if (!user || deliveriesLoading) return null;
 
     const now = new Date();
     const cycleStart = startOfMonth(now);
@@ -245,7 +245,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     const description = `Bill for ${format(now, 'MMMM yyyy')}`;
     const invoiceIdSuffix = format(now, 'yyyyMM');
     
-    const deliveriesThisCycle = deliveries.filter(d => {
+    const deliveriesThisCycle = (deliveries || []).filter(d => {
         const deliveryDate = toSafeDate(d.date);
         return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
     });
@@ -291,7 +291,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         amount: estimatedCost,
         status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
     };
-}, [user, deliveries]);
+}, [user, deliveries, deliveriesLoading]);
 
     const breakdownDetails = useMemo(() => {
         const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
