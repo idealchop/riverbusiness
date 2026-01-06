@@ -7,7 +7,7 @@ import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/f
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
-import type { Notification } from './types';
+import type { Notification, Delivery } from './types';
 
 
 // Import all exports from billing.ts
@@ -67,30 +67,42 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
 
     const deliveryRef = event.data.ref;
     const userId = event.params.userId;
-    const delivery = event.data.data();
+    const deliveryId = event.params.deliveryId;
+    const delivery = event.data.data() as Delivery;
 
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
     // Handle consumption for different account types
     if (userData?.accountType === 'Branch' && userData.parentId) {
-        // Tag the delivery with the parentId for collectionGroup queries
-        await deliveryRef.update({ parentId: userData.parentId });
-        
         const parentRef = db.collection('users').doc(userData.parentId);
-        
+        const parentDeliveryRef = parentRef.collection('deliveries').doc(deliveryId);
+
         // Calculate the cost of the delivery based on the branch's plan
         const litersDelivered = containerToLiter(delivery.volumeContainers);
         const pricePerLiter = userData.plan?.price || 0;
         const deliveryCost = litersDelivered * pricePerLiter;
         
-        if (deliveryCost > 0) {
-            // 1. Debit the parent account's credit balance
-            await parentRef.update({
-                topUpBalanceCredits: increment(-deliveryCost)
-            });
+        const batch = db.batch();
 
-            // 2. Create a transaction log on the parent account
+        // 1. Tag the original delivery with parentId for potential queries
+        batch.update(deliveryRef, { parentId: userData.parentId });
+        
+        // 2. Create a copy of the delivery record in the parent's subcollection
+        const deliveryCopyToParent: Delivery = {
+            ...delivery,
+            id: deliveryId,
+            userId: userId, // Keep original userId to know which branch it was for
+            parentId: userData.parentId
+        };
+        batch.set(parentDeliveryRef, deliveryCopyToParent);
+
+        if (deliveryCost > 0) {
+            // 3. Debit the parent account's credit balance
+            batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
+
+            // 4. Create a transaction log on the parent account
+            const transactionRef = db.collection('users').doc(userData.parentId).collection('transactions').doc();
             const transactionData = {
                 date: delivery.date,
                 type: 'Debit',
@@ -99,9 +111,13 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
                 branchId: userId,
                 branchName: userData.businessName
             };
-            await parentRef.collection('transactions').add(transactionData);
+            batch.set(transactionRef, transactionData);
+        }
 
-             // 3. Notify the Parent account of the deduction
+        await batch.commit();
+
+        // 5. Notify the Parent account of the deduction
+        if (deliveryCost > 0) {
             await createNotification(userData.parentId, {
                 type: 'delivery',
                 title: 'Branch Consumption',
@@ -109,6 +125,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
                 data: { deliveryId: event.params.deliveryId, branchUserId: userId }
             });
         }
+
     } else if (userData?.plan?.isPrepaid) {
         // For Prepaid plans, deduct from their own liter balance
         const litersToDeduct = containerToLiter(delivery.volumeContainers);
@@ -118,7 +135,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         });
     }
 
-
+    // Always notify the user receiving the delivery
     const notification = {
         type: 'delivery',
         title: 'Delivery Scheduled',
@@ -137,7 +154,7 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     if (!event.data) return;
 
     const before = event.data.before.data();
-    const after = event.data.after.data();
+    const after = event.data.after.data() as Delivery;
 
     // Only notify if the status has changed.
     if (before.status === after.status) {
@@ -145,12 +162,19 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     }
     
     const userId = event.params.userId;
-    const delivery = after;
+
+    // If it's a branch delivery, update the copy in the parent's collection as well
+    if (after.parentId) {
+        const parentDeliveryRef = db.collection('users').doc(after.parentId).collection('deliveries').doc(event.params.deliveryId);
+        await parentDeliveryRef.update({ status: after.status }).catch(err => {
+            logger.error(`Failed to update delivery copy for parent ${after.parentId}:`, err);
+        });
+    }
 
     const notification = {
         type: 'delivery',
-        title: `Delivery ${delivery.status}`,
-        description: `Delivery of ${delivery.volumeContainers} containers is now ${delivery.status}.`,
+        title: `Delivery ${after.status}`,
+        description: `Delivery of ${after.volumeContainers} containers is now ${after.status}.`,
         data: { deliveryId: event.params.deliveryId }
     };
     

@@ -142,6 +142,10 @@ export default function DashboardPage() {
   const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
   const [welcomeShown, setWelcomeShown] = useState(false);
 
+  const isParent = user?.accountType === 'Parent';
+
+  // This query is now used for ALL user types. 
+  // For parents, it will fetch the copies of branch deliveries.
   const deliveriesQuery = useMemoFirebase(
     () => (firestore && user ? collection(firestore, 'users', user.id, 'deliveries') : null),
     [firestore, user]
@@ -180,25 +184,18 @@ export default function DashboardPage() {
   const [isRefillRequesting, setIsRefillRequesting] = useState(false);
   const [isSubmitScheduledRefill, setIsSubmitScheduledRefill] = useState(false);
 
-  // --- START PARENT ACCOUNT LOGIC ---
-  const isParent = user?.accountType === 'Parent';
-
+  // --- START PARENT ACCOUNT LOGIC (DATA FOR DISPLAY PURPOSES) ---
   const branchUsersQuery = useMemoFirebase(() => {
     if (!firestore || !isParent || !user?.id) return null;
     return query(collection(firestore, 'users'), where('parentId', '==', user.id));
   }, [firestore, isParent, user?.id]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
-
-  const branchDeliveriesQuery = useMemoFirebase(() => {
-      if (!firestore || !isParent || !user?.id) return null;
-      return query(collectionGroup(firestore, 'deliveries'), where('parentId', '==', user.id));
-  }, [firestore, isParent, user?.id]);
-  const { data: branchDeliveries, isLoading: branchDeliveriesLoading } = useCollection<Delivery>(branchDeliveriesQuery);
   
   const totalBranchConsumptionLiters = useMemo(() => {
-    if (!branchDeliveries) return 0;
-    return branchDeliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
-  }, [branchDeliveries]);
+    // For parent accounts, their `deliveries` collection now holds the copies.
+    if (!isParent || !deliveries) return 0;
+    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+  }, [isParent, deliveries]);
   // --- END PARENT ACCOUNT LOGIC ---
 
 
@@ -388,59 +385,19 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ConsumptionAnalytics
-            deliveries={isParent ? branchDeliveries : deliveries}
+            deliveries={deliveries}
             onHistoryClick={() => openDialog('deliveryHistory')}
             isParent={isParent}
             branches={branchUsers}
           />
-          {isParent ? (
-              <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-primary"/>
-                        Branch Accounts
-                    </CardTitle>
-                    <CardDescription>Accounts that consume from your balance.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-64">
-                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Business Name</TableHead>
-                                    <TableHead>Client ID</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {branchUsers && branchUsers.length > 0 ? (
-                                    branchUsers.map(branch => (
-                                        <TableRow key={branch.id}>
-                                            <TableCell>{branch.businessName}</TableCell>
-                                            <TableCell>{branch.clientId}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={2} className="text-center text-muted-foreground">
-                                            No branches linked.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-          ) : (
-            <InfoCards />
-          )}
+          <InfoCards />
         </div>
 
         {/* --- DIALOGS --- */}
         <DeliveryHistoryDialog
             isOpen={dialogState.deliveryHistory}
             onOpenChange={() => closeDialog('deliveryHistory')}
-            deliveries={isParent ? branchDeliveries : deliveries}
+            deliveries={deliveries}
             user={user}
             onViewProof={setSelectedProofUrl}
             isParent={isParent}

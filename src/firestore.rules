@@ -119,10 +119,11 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
-    // A parent user can query the deliveries of their child accounts.
-    match /{path=**}/deliveries/{deliveryId} {
-      allow list: if isAdmin() || (request.auth != null && request.query.where.size() > 0 && request.query.where[0][2] == request.auth.uid);
-    }
+    // A parent user can query the deliveries of their child accounts via a collection group query
+    // THIS RULE IS NO LONGER NEEDED with the new architecture. It is replaced by the standard subcollection rule.
+    // match /{path=**}/deliveries/{deliveryId} {
+    //  allow list: if isAdmin() || (request.auth != null && request.query.where[0][0] == "parentId" && request.query.where[0][2] == request.auth.uid);
+    // }
 
     // Rules for public sanitation reports
     match /publicSanitationLinks/{linkId} {
