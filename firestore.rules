@@ -14,16 +14,13 @@ service cloud.firestore {
     }
 
     // Admins have global read/write access to all documents for management purposes.
+    // This rule is essential for Cloud Functions running with admin privileges.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
-    
-    // --- BATCH WRITE VALIDATION for Branch Deliveries by Admin ---
-    // This function is no longer needed with the new architecture, as the ondeliverycreate function handles the parent-side updates.
-    // Kept for reference but will not be used in rules.
 
     match /users/{userId} {
-      // Allow any user (authenticated or not) to read a specific user's document.
+      // Allow any user (authenticated or not) to read a specific user's document for public profile viewing.
       allow get: if true;
       
       // A user can update specific fields on their own profile.

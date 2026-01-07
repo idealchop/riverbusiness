@@ -64,7 +64,6 @@ export async function createNotification(userId: string, notificationData: Omit<
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data) return;
 
-    const deliveryRef = event.data.ref;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
@@ -83,11 +82,8 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         const deliveryCost = litersDelivered * pricePerLiter;
         
         const batch = db.batch();
-
-        // 1. Tag the original delivery with parentId for potential queries
-        batch.update(deliveryRef, { parentId: userData.parentId });
         
-        // 2. Create a copy of the delivery record in the parent's subcollection
+        // 1. Create a copy of the delivery record in the parent's subcollection
         const deliveryCopyToParent: Delivery = {
             ...delivery,
             id: deliveryId,
@@ -97,10 +93,10 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         batch.set(parentDeliveryRef, deliveryCopyToParent);
 
         if (deliveryCost > 0) {
-            // 3. Debit the parent account's credit balance
+            // 2. Debit the parent account's credit balance
             batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
 
-            // 4. Create a transaction log on the parent account
+            // 3. Create a transaction log on the parent account
             const transactionRef = db.collection('users').doc(userData.parentId).collection('transactions').doc();
             const transactionData = {
                 date: delivery.date,
@@ -115,7 +111,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
 
         await batch.commit();
 
-        // 5. Notify the Parent account of the deduction
+        // 4. Notify the Parent account of the deduction
         if (deliveryCost > 0) {
             await createNotification(userData.parentId, {
                 type: 'delivery',
@@ -483,5 +479,3 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    
