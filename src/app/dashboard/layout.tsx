@@ -434,6 +434,7 @@ export default function DashboardLayout({
                             onMessageSubmit={handleMessageSubmit}
                             user={user}
                             agent={adminAgent as AppUser}
+                            currentUserRole="user"
                          />
                     </div>
                     <div className="shrink-0 pt-4 mt-auto border-t">

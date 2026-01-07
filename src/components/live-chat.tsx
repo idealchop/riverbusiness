@@ -26,9 +26,10 @@ interface LiveChatProps {
     onMessageSubmit: (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
     user: AppUser | null; // This is the client
     agent: AppUser | null; // This is the admin agent
+    currentUserRole: 'user' | 'admin';
 }
 
-export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveChatProps) {
+export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUserRole }: LiveChatProps) {
   const [input, setInput] = useState('');
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
@@ -85,13 +86,9 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
     let attachmentUrl: string | undefined = undefined;
     let attachmentType: string | undefined = undefined;
     
-    // Determine role based on who is using the component.
-    // If an 'agent' prop is passed, we're in the admin view.
-    const role = agent ? 'admin' : 'user';
-
     const messagePayload: Omit<ChatMessage, 'id' | 'timestamp'> = {
       text: input.trim(),
-      role: role,
+      role: currentUserRole,
     };
 
     if (attachment && auth && storage && user) {
@@ -140,19 +137,20 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
         <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {(chatMessages || []).map((m) => {
-              const isAdminMessage = m.role === 'admin';
               const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date();
 
-              const displayName = isAdminMessage ? (agent?.supportDisplayName || 'Admin') : user?.name;
-              const displayDescription = isAdminMessage ? (agent?.supportDescription || "Customer Support") : user?.businessName;
-              const displayPhoto = isAdminMessage ? agent?.supportPhotoURL : user?.photoURL;
-              const FallbackIcon = isAdminMessage ? UserCog : User;
+              const isOwnMessage = m.role === currentUserRole;
+
+              const displayName = m.role === 'admin' ? (agent?.supportDisplayName || 'Admin') : user?.name;
+              const displayDescription = m.role === 'admin' ? (agent?.supportDescription || "Customer Support") : user?.businessName;
+              const displayPhoto = m.role === 'admin' ? agent?.supportPhotoURL : user?.photoURL;
+              const FallbackIcon = m.role === 'admin' ? UserCog : User;
 
               return (
-              <div key={m.id} className={cn("flex items-start gap-3 text-sm", !isAdminMessage ? 'justify-end' : 'justify-start')}>
-                 {isAdminMessage && (
+              <div key={m.id} className={cn("flex items-start gap-3 text-sm", isOwnMessage ? 'justify-end' : 'justify-start')}>
+                 {!isOwnMessage && (
                   <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
-                     <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'Agent'} />
+                     <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'Sender'} />
                     <AvatarFallback>
                       <FallbackIcon />
                     </AvatarFallback>
@@ -160,22 +158,22 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                 )}
                 <div className={cn(
                     "flex flex-col max-w-[80%]",
-                    !isAdminMessage ? 'items-end' : 'items-start'
+                    isOwnMessage ? 'items-end' : 'items-start'
                 )}>
-                    {!isAdminMessage ? (
+                    {isOwnMessage ? (
                       <div className="flex items-center gap-2 mb-1 justify-end">
-                        <span className="font-semibold text-xs">{displayName || 'User'}</span>
+                        <span className="font-semibold text-xs">{displayName || (currentUserRole === 'admin' ? 'You (Admin)' : 'You')}</span>
                         <span className="text-xs text-muted-foreground">{displayDescription}</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-xs">{displayName || 'Admin'}</span>
+                        <span className="font-semibold text-xs">{displayName || 'Sender'}</span>
                         <span className="text-xs text-muted-foreground">{displayDescription}</span>
                       </div>
                     )}
                   <div className={cn(
                       "p-3 rounded-lg break-words",
-                      !isAdminMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                      isOwnMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
                   )}>
                      {m.attachmentUrl && (
                         <div className="mb-2">
@@ -201,9 +199,9 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                         {formatDistanceToNow(messageDate, { addSuffix: true })}
                     </div>
                 </div>
-                {!isAdminMessage && (
+                {isOwnMessage && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'User'} />
+                    <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'Sender'} />
                     <AvatarFallback>
                       <FallbackIcon />
                     </AvatarFallback>

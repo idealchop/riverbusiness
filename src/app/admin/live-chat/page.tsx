@@ -49,7 +49,6 @@ export default function LiveChatPage() {
         const messagesCollection = collection(firestore, 'users', selectedChatUser.id, 'chatMessages');
         const finalPayload = {
           ...messagePayload,
-          role: 'admin', // Ensure role is always admin
           timestamp: serverTimestamp(),
         };
     
@@ -132,6 +131,7 @@ export default function LiveChatPage() {
                                     onMessageSubmit={handleAdminMessageSubmit}
                                     user={selectedChatUser}
                                     agent={adminUser}
+                                    currentUserRole="admin"
                                 />
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
