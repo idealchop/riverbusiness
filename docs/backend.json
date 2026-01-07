@@ -34,9 +34,15 @@
         "lastChatTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last chat message." },
         "hasUnreadAdminMessages": { "type": "boolean", "description": "True if the user has unread messages from an admin." },
         "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." },
-        "supportDisplayName": { "type": "string", "description": "Public display name for the support agent in chat." },
-        "supportDescription": { "type": "string", "description": "Public description for the support agent (e.g., 'Customer Support')." },
-        "supportPhotoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." },
+        "supportProfile": {
+          "type": "object",
+          "description": "Public-facing profile for support agents.",
+          "properties": {
+            "displayName": { "type": "string", "description": "Public display name for the support agent in chat." },
+            "description": { "type": "string", "description": "Public description for the support agent (e.g., 'Customer Support')." },
+            "photoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." }
+          }
+        },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"], "description": "The type of account, used for multi-branch functionality." },
         "parentId": { "type": "string", "description": "If accountType is 'Branch', this is the ID of the parent account." },
         "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of monetary credits (e.g., in PHP)." }

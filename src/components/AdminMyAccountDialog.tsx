@@ -34,7 +34,7 @@ type State = {
   isPhotoPreviewOpen: boolean;
   profilePhotoFile: File | null;
   profilePhotoPreview: string | null;
-  editableFormData: Partial<AppUser>;
+  editableFormData: Partial<AppUser['supportProfile']>;
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
@@ -48,8 +48,8 @@ type Action =
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_FILE'; payload: { file: File | null, preview: string | null } }
-  | { type: 'SET_FORM_DATA'; payload: Partial<AppUser> }
-  | { type: 'UPDATE_FORM_DATA'; payload: { name: string, value: string } }
+  | { type: 'SET_FORM_DATA'; payload: Partial<AppUser['supportProfile']> }
+  | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser['supportProfile'], value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
   | { type: 'TOGGLE_PASSWORD_VISIBILITY'; payload: 'current' | 'new' | 'confirm' }
   | { type: 'RESET_PASSWORD_FORM' }
@@ -113,8 +113,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   const router = useRouter();
 
   useEffect(() => {
-    if (adminUser) {
-      dispatch({ type: 'SET_FORM_DATA', payload: adminUser });
+    if (adminUser?.supportProfile) {
+      dispatch({ type: 'SET_FORM_DATA', payload: adminUser.supportProfile });
     }
   }, [adminUser]);
 
@@ -134,10 +134,12 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleSaveChanges = async () => {
-    if (!auth.currentUser || !firestore) return;
+    if (!auth?.currentUser || !firestore) return;
     const adminUserDocRef = doc(firestore, 'users', auth.currentUser.uid);
     try {
-      await updateDoc(adminUserDocRef, state.editableFormData);
+      await updateDoc(adminUserDocRef, {
+        supportProfile: state.editableFormData
+      });
       dispatch({ type: 'SET_EDIT_DETAILS', payload: false });
       toast({ title: "Changes Saved", description: "Your support profile has been updated." });
     } catch (error) {
@@ -147,7 +149,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handlePasswordChange = async () => {
-    if (!auth.currentUser?.email) return;
+    if (!auth?.currentUser?.email) return;
     if (state.newPassword !== state.confirmPassword) {
       toast({ variant: "destructive", title: "Error", description: "New passwords do not match." });
       return;
@@ -164,7 +166,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth.currentUser || !storage || !auth) return;
+    if (!state.profilePhotoFile || !auth?.currentUser || !storage || !auth) return;
 
     const filePath = `users/${auth.currentUser.uid}/support_profile/photo-${Date.now()}`;
     
@@ -172,7 +174,7 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
         uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress)
         .then(async (url) => {
             const adminUserDocRef = doc(firestore!, 'users', auth.currentUser!.uid);
-            await updateDoc(adminUserDocRef, { supportPhotoURL: url });
+            await updateDoc(adminUserDocRef, { 'supportProfile.photoURL': url });
             toast({ title: 'Upload Complete', description: 'Your support photo has been updated.' });
         })
         .catch((error) => {
@@ -186,12 +188,12 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoDelete = async () => {
-    if (!auth.currentUser || !adminUser?.supportPhotoURL || !firestore) return;
+    if (!auth?.currentUser || !adminUser?.supportProfile?.photoURL || !firestore) return;
     
     startTransition(async () => {
         const userDocRef = doc(firestore, 'users', auth.currentUser!.uid);
         try {
-            await updateDoc(userDocRef, { supportPhotoURL: null });
+            await updateDoc(userDocRef, { 'supportProfile.photoURL': null });
             toast({ title: 'Support Photo Removed' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Delete Failed', description: 'Could not remove photo.' });
@@ -201,7 +203,9 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
 
   if (!adminUser) return null;
 
-  const displayPhoto = adminUser.supportPhotoURL;
+  const displayPhoto = adminUser.supportProfile?.photoURL;
+  const displayName = adminUser.supportProfile?.displayName || 'Admin';
+  const displayDescription = adminUser.supportProfile?.description || 'Customer Support';
 
   return (
     <AlertDialog>
@@ -223,8 +227,8 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                             <DropdownMenuTrigger asChild>
                             <div className="relative group cursor-pointer">
                                 <Avatar className="h-20 w-20">
-                                <AvatarImage src={displayPhoto ?? undefined} alt={adminUser.supportDisplayName || ''} />
-                                <AvatarFallback className="text-3xl">{adminUser.supportDisplayName?.charAt(0) || 'A'}</AvatarFallback>
+                                <AvatarImage src={displayPhoto ?? undefined} alt={displayName} />
+                                <AvatarFallback className="text-3xl">{displayName?.charAt(0) || 'A'}</AvatarFallback>
                                 </Avatar>
                                 {(isPending || uploadProgress > 0) && (
                                     <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
@@ -258,18 +262,18 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
                         <Input id="admin-photo-upload" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
                         <div className="space-y-1 flex-1">
                             <div className="grid grid-cols-[100px_1fr] items-center gap-x-4">
-                                <Label htmlFor="supportDisplayName" className="text-right">Display Name</Label>
-                                <Input id="supportDisplayName" name="supportDisplayName" value={state.editableFormData.supportDisplayName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDisplayName', value: e.target.value}})} disabled={!state.isEditingDetails} />
+                                <Label htmlFor="displayName" className="text-right">Display Name</Label>
+                                <Input id="displayName" name="displayName" value={state.editableFormData.displayName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'displayName', value: e.target.value}})} disabled={!state.isEditingDetails} />
                             </div>
                              <div className="grid grid-cols-[100px_1fr] items-center gap-x-4 mt-2">
-                                <Label htmlFor="supportDescription" className="text-right">Description</Label>
-                                <Input id="supportDescription" name="supportDescription" value={state.editableFormData.supportDescription || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'supportDescription', value: e.target.value}})} disabled={!state.isEditingDetails}/>
+                                <Label htmlFor="description" className="text-right">Description</Label>
+                                <Input id="description" name="description" value={state.editableFormData.description || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'description', value: e.target.value}})} disabled={!state.isEditingDetails}/>
                             </div>
                         </div>
                     </div>
                      {state.isEditingDetails && (
                         <div className="flex justify-end gap-2 mt-4">
-                            <Button variant="secondary" onClick={() => {dispatch({type: 'SET_EDIT_DETAILS', payload: false}); dispatch({type: 'SET_FORM_DATA', payload: adminUser})}}>Cancel</Button>
+                            <Button variant="secondary" onClick={() => {dispatch({type: 'SET_EDIT_DETAILS', payload: false}); dispatch({type: 'SET_FORM_DATA', payload: adminUser.supportProfile || {}})}}>Cancel</Button>
                             <Button onClick={handleSaveChanges}>Save Changes</Button>
                         </div>
                     )}
@@ -367,5 +371,3 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     </AlertDialog>
   );
 }
-
-    

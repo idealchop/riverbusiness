@@ -120,9 +120,11 @@ export interface AppUser {
     lastChatTimestamp?: FieldValue | Timestamp;
     hasUnreadAdminMessages?: boolean;
     hasUnreadUserMessages?: boolean;
-    supportDisplayName?: string;
-    supportDescription?: string;
-    supportPhotoURL?: string;
+    supportProfile?: {
+        displayName?: string;
+        description?: string;
+        photoURL?: string;
+    };
     // New fields for multi-branch feature
     accountType?: AccountType;
     parentId?: string;
