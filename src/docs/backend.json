@@ -15,7 +15,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "For Prepaid plans, this is the remaining credit in liters. For fixed plans, this represents rollover." },
+        "totalConsumptionLiters": { "type": "number", "description": "For Prepaid plans, this is the remaining credit in liters. For fixed plans, this represents rollover. For Parent accounts, this field is not directly used; balance is derived from topUpBalanceCredits." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },

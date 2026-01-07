@@ -191,9 +191,8 @@ export function StatCards({
   
   const parentRemainingLiters = useMemo(() => {
       if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
-      const totalLitersFromCredits = (user?.topUpBalanceCredits ?? 0) / user.plan.price;
-      return totalLitersFromCredits - totalBranchConsumptionLiters;
-  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price, totalBranchConsumptionLiters]);
+      return (user?.topUpBalanceCredits ?? 0) / user.plan.price;
+  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price]);
 
   const startingBalance = useMemo(() => {
     if (isFlowPlan || isBranchAccount) return 0;
@@ -218,6 +217,7 @@ export function StatCards({
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
+                  : isParentAccount ? 'Remaining Liter Credits'
                   : `Remaining Liters`}
               </CardTitle>
             </CardHeader>
