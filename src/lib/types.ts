@@ -240,9 +240,9 @@ export interface TopUpRequest {
   id: string;
   userId: string;
   amount: number;
-  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
+  status: 'Pending Review' | 'Approved' | 'Rejected';
   requestedAt: FieldValue | Timestamp;
-  proofOfPaymentUrl?: string;
+  proofOfPaymentUrl: string;
   rejectionReason?: string;
 }
     

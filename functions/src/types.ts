@@ -13,4 +13,13 @@ export interface Notification {
   data?: any;
 }
 
-    
+export interface Delivery {
+  id: string;
+  userId: string;
+  parentId?: string;
+  date: string | Timestamp;
+  volumeContainers: number;
+  status: 'Delivered' | 'In Transit' | 'Pending';
+  proofOfDeliveryUrl?: string;
+  adminNotes?: string;
+}

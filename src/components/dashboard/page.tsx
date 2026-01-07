@@ -42,6 +42,7 @@ import {
   Box,
   Settings,
   FileX,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,6 +85,7 @@ import {
   Timestamp,
   arrayUnion,
   addDoc,
+  collectionGroup,
 } from 'firebase/firestore';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -103,6 +105,10 @@ import { AttachmentViewerDialog } from '@/components/dashboard/dialogs/Attachmen
 import { RefillStatusDialog } from '@/components/dashboard/dialogs/RefillStatusDialog';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { WelcomeDialog } from '@/components/dashboard/WelcomeDialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -136,6 +142,10 @@ export default function DashboardPage() {
   const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
   const [welcomeShown, setWelcomeShown] = useState(false);
 
+  const isParent = user?.accountType === 'Parent';
+
+  // This query is now used for ALL user types. 
+  // For parents, it will fetch the copies of branch deliveries from their own subcollection.
   const deliveriesQuery = useMemoFirebase(
     () => (firestore && user ? collection(firestore, 'users', user.id, 'deliveries') : null),
     [firestore, user]
@@ -173,6 +183,20 @@ export default function DashboardPage() {
   const hasPendingRefill = useMemo(() => !!activeRefillRequest, [activeRefillRequest]);
   const [isRefillRequesting, setIsRefillRequesting] = useState(false);
   const [isSubmitScheduledRefill, setIsSubmitScheduledRefill] = useState(false);
+
+  // --- START PARENT ACCOUNT LOGIC (DATA FOR DISPLAY PURPOSES) ---
+  const branchUsersQuery = useMemoFirebase(() => {
+    if (!firestore || !isParent || !user?.id) return null;
+    return query(collection(firestore, 'users'), where('parentId', '==', user.id));
+  }, [firestore, isParent, user?.id]);
+  const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
+  
+  const totalBranchConsumptionLiters = useMemo(() => {
+    // For parent accounts, their `deliveries` collection now holds the copies.
+    if (!isParent || !deliveries) return 0;
+    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+  }, [isParent, deliveries]);
+  // --- END PARENT ACCOUNT LOGIC ---
 
 
   const openDialog = (dialog: keyof typeof dialogState) => {
@@ -352,6 +376,7 @@ export default function DashboardPage() {
         <StatCards
             user={user}
             deliveries={deliveries}
+            totalBranchConsumptionLiters={totalBranchConsumptionLiters}
             onConsumptionHistoryClick={() => openDialog('consumptionHistory')}
             onSaveLitersClick={() => openDialog('saveLiters')}
             onUpdateScheduleClick={() => openDialog('updateSchedule')}
@@ -362,6 +387,8 @@ export default function DashboardPage() {
           <ConsumptionAnalytics
             deliveries={deliveries}
             onHistoryClick={() => openDialog('deliveryHistory')}
+            isParent={isParent}
+            branches={branchUsers}
           />
           <InfoCards />
         </div>
@@ -373,6 +400,8 @@ export default function DashboardPage() {
             deliveries={deliveries}
             user={user}
             onViewProof={setSelectedProofUrl}
+            isParent={isParent}
+            branches={branchUsers}
         />
         <ConsumptionHistoryDialog
             isOpen={dialogState.consumptionHistory}

@@ -150,12 +150,10 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
               <SelectItem value="2025">2025</SelectItem>
             </SelectContent>
           </Select>
-          {!isParent && (
-            <Button onClick={onHistoryClick} variant="outline" className="w-full sm:w-auto">
-              <History className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">History</span>
-            </Button>
-          )}
+          <Button onClick={onHistoryClick} variant="outline" className="w-full sm:w-auto">
+            <History className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">History</span>
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="h-80">
