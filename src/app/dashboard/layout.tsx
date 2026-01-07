@@ -56,6 +56,15 @@ const ICONS: { [key: string]: React.ElementType } = {
   'top-up': Droplets,
 };
 
+// Hardcoded admin support profile for the user-facing chat
+const adminAgent: Partial<AppUser> = {
+    id: '93prD8hfn8a1AnA53aYf3i0543r2', // A fixed, non-sensitive ID for the agent
+    supportDisplayName: 'River Support',
+    supportDescription: 'Customer Service',
+    supportPhotoURL: 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c'
+};
+
+
 function DashboardLayoutSkeleton() {
     return (
         <div className="flex flex-col h-full">
@@ -99,10 +108,6 @@ export default function DashboardLayout({
 
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
-  
-  const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2'; // Hardcoded Admin UID for fetching support profile
-  const adminDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', ADMIN_UID) : null, [firestore]);
-  const { data: adminAgent } = useDoc<AppUser>(adminDocRef);
   
   const stationDocRef = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null, [firestore, user]);
   const { data: waterStation } = useDoc<WaterStation>(stationDocRef);
@@ -428,7 +433,7 @@ export default function DashboardLayout({
                             chatMessages={chatMessages || []}
                             onMessageSubmit={handleMessageSubmit}
                             user={user}
-                            agent={adminAgent}
+                            agent={adminAgent as AppUser}
                          />
                     </div>
                     <div className="shrink-0 pt-4 mt-auto border-t">
@@ -758,5 +763,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    

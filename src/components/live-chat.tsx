@@ -143,9 +143,9 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
               const isAdminMessage = m.role === 'admin';
               const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date();
 
-              const displayName = isAdminMessage ? (agent?.supportProfile?.displayName || 'Admin') : user?.name;
-              const displayDescription = isAdminMessage ? (agent?.supportProfile?.description || "Customer Support") : user?.businessName;
-              const displayPhoto = isAdminMessage ? agent?.supportProfile?.photoURL : user?.photoURL;
+              const displayName = isAdminMessage ? (agent?.supportDisplayName || 'Admin') : user?.name;
+              const displayDescription = isAdminMessage ? (agent?.supportDescription || "Customer Support") : user?.businessName;
+              const displayPhoto = isAdminMessage ? agent?.supportPhotoURL : user?.photoURL;
               const FallbackIcon = isAdminMessage ? UserCog : User;
 
               return (

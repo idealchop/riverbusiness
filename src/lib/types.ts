@@ -1,6 +1,5 @@
 
 
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -120,11 +119,9 @@ export interface AppUser {
     lastChatTimestamp?: FieldValue | Timestamp;
     hasUnreadAdminMessages?: boolean;
     hasUnreadUserMessages?: boolean;
-    supportProfile?: {
-        displayName?: string;
-        description?: string;
-        photoURL?: string;
-    };
+    supportDisplayName?: string;
+    supportDescription?: string;
+    supportPhotoURL?: string;
     // New fields for multi-branch feature
     accountType?: AccountType;
     parentId?: string;
