@@ -98,6 +98,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
                 // 3. Create a transaction log on the parent account
                 const transactionRef = parentRef.collection('transactions').doc();
                 const transactionData = {
+                    id: transactionRef.id,
                     date: delivery.date,
                     type: 'Debit',
                     amountCredits: deliveryCost,
@@ -136,7 +137,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: 'Delivery Scheduled',
-        description: `Delivery of ${delivery.volumeContainers} containers is scheduled.`,
+        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
         data: { deliveryId: event.params.deliveryId }
     };
     
@@ -171,7 +172,7 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: `Delivery ${after.status}`,
-        description: `Delivery of ${after.volumeContainers} containers is now ${after.status}.`,
+        description: `Your delivery of ${after.volumeContainers} containers is now ${after.status}.`,
         data: { deliveryId: event.params.deliveryId }
     };
     

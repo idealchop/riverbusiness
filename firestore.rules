@@ -86,7 +86,7 @@ service cloud.firestore {
     // The generic isAdmin() rule at the top-level handles Cloud Function access.
     // This rule allows the document owner to perform any action on their own subcollections.
      match /users/{userId}/{subcollection}/{docId} {
-      allow read, write, create, update, delete: if isOwner(userId);
+      allow read, write, create, update, delete: if isOwner(userId) || isAdmin();
     }
   }
 }
