@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -223,7 +224,7 @@ export function StatCards({
                     <p className="text-xs text-muted-foreground">Derived from your ₱{(user?.topUpBalanceCredits ?? 0).toLocaleString()}.</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card onClick={onConsumptionHistoryClick} className="cursor-pointer hover:border-primary">
                  <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
                 </CardHeader>
@@ -231,6 +232,9 @@ export function StatCards({
                     <p className="text-2xl md:text-3xl font-bold mb-1">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
                     <p className="text-xs text-muted-foreground">For the current month</p>
                 </CardContent>
+                 <CardFooter>
+                    <p className="text-xs font-medium text-primary">Click to view history</p>
+                </CardFooter>
             </Card>
             <Card>
                 <CardHeader className="pb-2">
