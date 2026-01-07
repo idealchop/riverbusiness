@@ -8,12 +8,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ArrowRight, History, Edit, Calendar as CalendarIcon, BellRing, Info, Users } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { DocumentReference, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -65,10 +65,9 @@ export function StatCards({
     let cycleEnd: Date;
     let monthsToBill = 1;
 
-    // Special Case for combined Dec-Jan billing period (when viewing in January)
-    if (currentYear === 2026 && currentMonth === 0) { // January 2026
-        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-        cycleEnd = endOfMonth(now); // End of Jan 2026
+    if (currentYear === 2026 && currentMonth === 0) { 
+        cycleStart = new Date(2025, 11, 1); 
+        cycleEnd = endOfMonth(now); 
         monthsToBill = 2;
     } else {
         cycleStart = startOfMonth(now);
@@ -98,12 +97,11 @@ export function StatCards({
         return {
             ...emptyState,
             consumedLitersThisMonth: consumedLitersThisCycle,
-            currentBalance: 0, // Not applicable for Flow plan or Branch
-            estimatedCost: consumptionCost, // Only show consumption cost here
+            currentBalance: 0, 
+            estimatedCost: consumptionCost, 
         };
     }
     
-    // Logic for Fixed Plans
     const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
     if (!planDetails || !user.createdAt) {
         const startingBalanceForMonth = currentBalance + consumedLitersThisCycle;
@@ -130,7 +128,6 @@ export function StatCards({
         rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
     }
     
-    // For combined period, add two months of allocation
     const allocationForPeriod = totalMonthlyAllocation * monthsToBill;
     const totalLitersForMonth = allocationForPeriod + rolloverLiters;
     const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisCycle / totalLitersForMonth) * 100 : 0;
@@ -190,8 +187,10 @@ export function StatCards({
   const isPrepaidPlan = user?.plan?.isPrepaid;
   
   const parentRemainingLiters = useMemo(() => {
-      if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
-      return (user?.topUpBalanceCredits ?? 0) / user.plan.price;
+    if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
+    const credits = user?.topUpBalanceCredits ?? 0;
+    const pricePerLiter = user.plan.price;
+    return credits > 0 ? credits / pricePerLiter : 0;
   }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price]);
 
   const startingBalance = useMemo(() => {
@@ -201,10 +200,10 @@ export function StatCards({
 
   const remainingBalancePercentage = useMemo(() => {
       if (startingBalance <= 0) {
-          return 0; // Avoid division by zero
+          return 0; 
       }
       const percentage = (consumptionDetails.currentBalance / startingBalance) * 100;
-      return Math.max(0, Math.min(100, percentage)); // Clamp between 0 and 100
+      return Math.max(0, Math.min(100, percentage)); 
   }, [consumptionDetails.currentBalance, startingBalance]);
 
 
