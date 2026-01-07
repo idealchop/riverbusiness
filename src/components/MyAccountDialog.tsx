@@ -1181,14 +1181,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                             <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                         ) : isCurrentEst ? (
                                             isPayday ? (
-                                                <Button size="sm" className="w-full" onClick={()={() => onPayNow(invoice)}>Pay Now</Button>
+                                                <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                             ) : (
                                                 <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
                                             )
                                         ) : (invoice.status === 'Paid') ? (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={()={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                         ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={()={() => onPayNow(invoice)}>Pay Now</Button>
+                                            <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                         )}
                                     </CardContent>
                                 </Card>
@@ -1201,7 +1201,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={()={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
+                            onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
                             disabled={invoiceCurrentPage === 1}
                         >
                             Previous
@@ -1212,7 +1212,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={()={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
+                            onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
                             disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
                         >
                             Next
@@ -1272,7 +1272,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={()={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
+                                onClick={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={transactionCurrentPage === 1}
                             >
                                 Previous
@@ -1283,7 +1283,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={()={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
+                                onClick={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
                                 disabled={transactionCurrentPage === totalTransactionPages || totalTransactionPages === 0}
                             >
                                 Next
@@ -1326,7 +1326,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                     date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
                                                     description: `Top-Up Request`,
                                                     amount: req.amount,
-                                                    status: req.status,
+                                                    status: req.status as any, // Cast because statuses don't perfectly align
                                                     proofOfPaymentUrl: req.proofOfPaymentUrl,
                                                 };
                                                 return (
@@ -1335,11 +1335,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                         <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
                                                         <TableCell>
                                                             <Badge variant={
-                                                              req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
+                                                              req.status === 'Approved' ? 'default' :
                                                               req.status === 'Pending Review' ? 'secondary' :
                                                               'destructive'
                                                             } className={cn(
-                                                                (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
+                                                                req.status === 'Approved' && 'bg-green-100 text-green-800'
                                                             )}>
                                                                 {req.status}
                                                             </Badge>
@@ -1810,4 +1810,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
 
 
-    
