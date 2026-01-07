@@ -191,8 +191,9 @@ export function StatCards({
   
   const parentRemainingLiters = useMemo(() => {
       if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
-      return (user?.topUpBalanceCredits ?? 0) / user.plan.price;
-  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price]);
+      const totalLitersFromCredits = (user?.topUpBalanceCredits ?? 0) / user.plan.price;
+      return totalLitersFromCredits - totalBranchConsumptionLiters;
+  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price, totalBranchConsumptionLiters]);
 
   const startingBalance = useMemo(() => {
     if (isFlowPlan || isBranchAccount) return 0;
@@ -238,12 +239,12 @@ export function StatCards({
                     : (isPrepaidPlan)
                     ? <span>Consumed this period:</span>
                     : isParentAccount 
-                    ? <span>From Credit Balance:</span>
+                    ? <span>Total Consumed by Branches:</span>
                     : <span>Water consumption cost:</span>
                   }
                   <span>
                     {isParentAccount 
-                      ? `₱${(user?.topUpBalanceCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`
+                      ? `${(totalBranchConsumptionLiters ?? 0).toLocaleString()} L`
                       : `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
                     }
                     </span>
