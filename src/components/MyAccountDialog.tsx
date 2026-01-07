@@ -28,7 +28,7 @@ import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimes
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign, Droplets } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign, Droplets, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans } from '@/lib/plans';
@@ -760,11 +760,20 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
   }, [isParent, deliveries]);
 
+  const TABS_CONFIG = [
+    { value: 'accounts', label: 'Accounts', icon: UserIcon },
+    { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: user.accountType === 'Parent' },
+    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user.plan?.isPrepaid },
+    { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user.accountType !== 'Parent' && !user.plan?.isPrepaid },
+    { value: 'plan', label: 'Plan', icon: FileText },
+    { value: 'branches', label: 'Branches', icon: UserCheck, condition: user.accountType === 'Parent' },
+  ];
+
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-        <DialogContent className="sm:max-w-2xl rounded-lg">
+        <DialogContent className="sm:max-w-3xl rounded-lg">
           <DialogHeader>
             <DialogTitle>My Account</DialogTitle>
             <DialogDescription>Manage your plan, account details, and invoices.</DialogDescription>
@@ -772,16 +781,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           <ScrollArea className="max-h-[70vh] w-full">
             <div className="pr-6">
               <Tabs defaultValue={defaultTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="accounts"><UserIcon className="mr-2 h-4 w-4" />Accounts</TabsTrigger>
-                  {user.accountType === 'Parent' ? (
-                    <TabsTrigger value="transactions"><ArrowRightLeft className="mr-2 h-4 w-4" />Transactions</TabsTrigger>
-                  ) : user.plan?.isPrepaid ? (
-                    <TabsTrigger value="top-ups"><DollarSign className="mr-2 h-4 w-4" />Top-Ups</TabsTrigger>
-                  ) : (
-                    <TabsTrigger value="invoices"><Receipt className="mr-2 h-4 w-4" />Invoices</TabsTrigger>
-                  )}
-                  <TabsTrigger value="plan"><FileText className="mr-2 h-4 w-4" />Plan</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                    {TABS_CONFIG.map(tab => {
+                        if (tab.condition === false) return null;
+                        const Icon = tab.icon;
+                        return (
+                            <TabsTrigger key={tab.value} value={tab.value}><Icon className="mr-2 h-4 w-4" />{tab.label}</TabsTrigger>
+                        )
+                    })}
                 </TabsList>
                 <TabsContent value="accounts" className="py-4">
                   <Card>
@@ -1363,6 +1370,40 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         </Card>
                     )}
                  </TabsContent>
+                 <TabsContent value="branches" className="py-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Linked Branch Accounts</CardTitle>
+                            <CardDescription>These accounts consume from your central credit balance.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Client ID</TableHead>
+                                        <TableHead>Business Name</TableHead>
+                                        <TableHead>Contact Person</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {branchUsers && branchUsers.length > 0 ? (
+                                        branchUsers.map(branch => (
+                                            <TableRow key={branch.id}>
+                                                <TableCell>{branch.clientId}</TableCell>
+                                                <TableCell>{branch.businessName}</TableCell>
+                                                <TableCell>{branch.name}</TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="text-center">No branches linked to this parent account.</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
               </Tabs>
             </div>
           </ScrollArea>
@@ -1807,6 +1848,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
 
 
 

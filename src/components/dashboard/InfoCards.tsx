@@ -35,7 +35,7 @@ interface InfoCardsProps {
 export function InfoCards() {
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:col-span-1">
       <Dialog>
         <DialogTrigger asChild>
           <Card className="cursor-pointer hover:border-primary">

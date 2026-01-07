@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, UserCheck, BarChart3 } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -209,8 +209,38 @@ export function StatCards({
 
   return (
     <>
-    <div className="grid grid-cols-2 gap-6 lg:grid-cols-3">
-      {isFlowPlan || isBranchAccount || isPrepaidPlan || isParentAccount ? (
+    <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
+      {isParentAccount ? (
+        <>
+            <Card className="col-span-2 lg:col-span-2">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4"/>Remaining Liter Credits</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-2xl md:text-4xl font-bold mb-1">{parentRemainingLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                    <p className="text-xs text-muted-foreground">Derived from your ₱{(user?.topUpBalanceCredits ?? 0).toLocaleString()} monetary balance.</p>
+                </CardContent>
+            </Card>
+            <Card>
+                 <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-2xl md:text-3xl font-bold mb-1">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
+                    <p className="text-xs text-muted-foreground">For the current month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><UserCheck className="h-4 w-4"/>Linked Branches</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-2xl md:text-3xl font-bold mb-1">{user?.customPlanDetails?.branchCount || 0}</p>
+                    <Button variant="link" className="p-0 h-auto text-xs" onClick={() => window.dispatchEvent(new CustomEvent('open-my-account'))}>View & Manage</Button>
+                </CardContent>
+            </Card>
+        </>
+      ) : isFlowPlan || isBranchAccount || isPrepaidPlan ? (
         <>
           <Card className="flex flex-col lg:col-span-2 col-span-2">
             <CardHeader className="pb-2">
@@ -260,7 +290,7 @@ export function StatCards({
                 )}
             </CardFooter>
           </Card>
-          <Card className="col-span-2 lg:col-span-1">
+          <Card className="col-span-2 lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
@@ -336,7 +366,7 @@ export function StatCards({
             </CardFooter>
           </Card>
 
-          <Card className="col-span-2 lg:col-span-1">
+          <Card className="col-span-2 lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
@@ -402,5 +432,3 @@ export function StatCards({
     </>
   );
 }
-
-    
