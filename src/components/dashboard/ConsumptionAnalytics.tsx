@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Delivery, AppUser } from '@/lib/types';
 import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { History, Users } from 'lucide-react';
@@ -75,7 +75,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         }
       });
 
-      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name.substring(0, 10) }));
+      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name.substring(0, 20) }));
 
     } else {
        if (analyticsFilter === 'weekly') {
@@ -129,7 +129,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
   const cardDescription = isParent ? 'Monitor water usage across all your branches.' : 'A look at your water usage over time.';
 
   return (
-    <Card>
+    <Card className="lg:col-span-2">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
           <CardTitle className="flex items-center gap-2">
@@ -158,27 +158,42 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
       </CardHeader>
       <CardContent className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <XAxis 
-              dataKey="displayName" 
-              stroke="hsl(var(--muted-foreground))" 
-              fontSize={12} 
-              tickLine={false} 
-              axisLine={false} 
-            />
-            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-            <Tooltip
-              cursor={{ fill: 'hsla(var(--accent))' }}
-              contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: 'var(--radius)',
-              }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number, name, props) => [`${value.toLocaleString()} Liters`, isParent ? props.payload.name : 'Consumption']}
-            />
-            <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
-          </BarChart>
+            {isParent ? (
+                <BarChart layout="vertical" data={consumptionChartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="displayName" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} width={100} />
+                    <Tooltip
+                        cursor={{ fill: 'hsla(var(--accent))' }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number) => [`${value.toLocaleString()} Liters`, 'Consumption']}
+                    />
+                    <Bar dataKey="value" layout="vertical" radius={[0, 8, 8, 0]} fill="hsl(var(--primary))" />
+                </BarChart>
+            ) : (
+                <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis 
+                    dataKey="displayName" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                    <Tooltip
+                    cursor={{ fill: 'hsla(var(--accent))' }}
+                    contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 'var(--radius)',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number, name, props) => [`${value.toLocaleString()} Liters`, 'Consumption']}
+                    />
+                    <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
+                </BarChart>
+            )}
         </ResponsiveContainer>
       </CardContent>
     </Card>
