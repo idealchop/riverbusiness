@@ -192,7 +192,6 @@ export default function DashboardPage() {
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
   
   const totalBranchConsumptionLiters = useMemo(() => {
-    // For parent accounts, their `deliveries` collection now holds the copies.
     if (!isParent || !deliveries) return 0;
     return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
   }, [isParent, deliveries]);
@@ -411,6 +410,9 @@ export default function DashboardPage() {
             isOpen={dialogState.consumptionHistory}
             onOpenChange={() => closeDialog('consumptionHistory')}
             deliveries={deliveries}
+            user={user}
+            branches={branchUsers}
+            isParent={isParent}
         />
         <ProofViewerDialog
             isOpen={!!selectedProofUrl}
