@@ -1286,41 +1286,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             </CardContent>
                         </Card>
                     </div>
-                     <div className="hidden md:block">
-                         <Table>
-                             <TableHeader>
-                                 <TableRow>
-                                     <TableHead>Date</TableHead>
-                                     <TableHead>Type</TableHead>
-                                     <TableHead>Description</TableHead>
-                                     <TableHead className="text-right">Amount</TableHead>
-                                 </TableRow>
-                             </TableHeader>
-                             <TableBody>
-                                {!transactions ? (
-                                    <TableRow><TableCell colSpan={4} className="text-center py-10">Loading transactions...</TableCell></TableRow>
-                                ) : paginatedTransactions.length === 0 ? (
-                                    <TableRow><TableCell colSpan={4} className="text-center py-10">No transactions yet.</TableCell></TableRow>
-                                ) : (
-                                    paginatedTransactions.map(tx => (
-                                        <TableRow key={tx.id}>
-                                            <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
-                                                    {tx.type === 'Debit' ? 'Deducted' : tx.type}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>{tx.description}</TableCell>
-                                            <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                                {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                             </TableBody>
-                         </Table>
-                     </div>
-                      <div className="space-y-4 md:hidden">
+                    <div className="space-y-4">
                         {!transactions ? (
                           <p className="text-center py-10 text-muted-foreground">Loading...</p>
                         ) : paginatedTransactions.length === 0 ? (
@@ -1371,50 +1337,76 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                       )}
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Top-Up History</CardTitle>
-                            <CardDescription>A log of all your top-up requests.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-60">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-right">Amount (PHP)</TableHead>
-                                        <TableHead className="text-right">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {topUpRequests && topUpRequests.length > 0 ? (
-                                        topUpRequests.map(req => (
-                                            <TableRow key={req.id}>
-                                                <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
-                                                <TableCell className="text-right">₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Badge variant={
-                                                      req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
-                                                      req.status === 'Pending Review' ? 'secondary' :
-                                                      'destructive'
-                                                    } className={cn(
-                                                        (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
-                                                    )}>
-                                                        {req.status}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
+                    {user.accountType === 'Branch' ? (
+                        <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
+                            <Info className="h-5 w-5 shrink-0" />
+                            <p>Your invoices are covered by your parent account. This history is for your records.</p>
+                        </div>
+                    ) : (
+                        <Card>
+                          <CardHeader className="flex flex-row items-center justify-between">
+                               <div>
+                                 <CardTitle>Top-Up / Payment History</CardTitle>
+                                 <CardDescription>A log of your top-up payments.</CardDescription>
+                               </div>
+                               <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
+                                  <Plus className="mr-2 h-4 w-4" /> Top-Up
+                               </Button>
+                           </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={3} className="text-center">No top-up requests yet.</TableCell>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Amount (PHP)</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {topUpRequests && topUpRequests.length > 0 ? (
+                                            topUpRequests.map(req => {
+                                                const asPayment: Payment = {
+                                                    id: req.id,
+                                                    date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
+                                                    description: `Top-Up Request`,
+                                                    amount: req.amount,
+                                                    status: req.status,
+                                                    proofOfPaymentUrl: req.proofOfPaymentUrl,
+                                                };
+                                                return (
+                                                    <TableRow key={req.id}>
+                                                        <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
+                                                        <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={
+                                                              req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
+                                                              req.status === 'Pending Review' ? 'secondary' :
+                                                              'destructive'
+                                                            } className={cn(
+                                                                (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
+                                                            )}>
+                                                                {req.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                         <TableCell className="text-right">
+                                                            <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)}>
+                                                                View Receipt
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            })
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center">No top-up requests yet.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
                  </TabsContent>
               </Tabs>
             </div>
@@ -1863,4 +1855,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
 
 
-    
