@@ -209,10 +209,10 @@ export function StatCards({
 
   return (
     <>
-    <div className="grid grid-cols-2 gap-6 lg:grid-cols-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {isParentAccount ? (
         <>
-            <Card className="col-span-2 lg:col-span-3">
+            <Card>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4"/>Remaining Liter Credits</CardTitle>
                 </CardHeader>
@@ -221,7 +221,7 @@ export function StatCards({
                     <p className="text-xs text-muted-foreground">Derived from your ₱{(user?.topUpBalanceCredits ?? 0).toLocaleString()} monetary balance.</p>
                 </CardContent>
             </Card>
-            <Card className="col-span-2 lg:col-span-2">
+            <Card>
                  <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
                 </CardHeader>
@@ -242,7 +242,7 @@ export function StatCards({
         </>
       ) : isFlowPlan || isBranchAccount || isPrepaidPlan ? (
         <>
-          <Card className="flex flex-col lg:col-span-3 col-span-2">
+          <Card className="flex flex-col lg:col-span-7 col-span-1 md:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
@@ -290,7 +290,7 @@ export function StatCards({
                 )}
             </CardFooter>
           </Card>
-          <Card className="col-span-2 lg:col-span-3">
+          <Card className="col-span-1 md:col-span-2 lg:col-span-3">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
@@ -334,7 +334,7 @@ export function StatCards({
         </>
       ) : (
         <>
-          <Card className="flex flex-col col-span-2 lg:col-span-2">
+          <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 Remaining Balance
@@ -353,7 +353,7 @@ export function StatCards({
             </CardFooter>
           </Card>
 
-          <Card className="flex flex-col col-span-2 lg:col-span-2">
+          <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Consumed this Month</CardTitle>
             </CardHeader>
@@ -366,7 +366,7 @@ export function StatCards({
             </CardFooter>
           </Card>
 
-          <Card className="col-span-2 lg:col-span-2">
+          <Card className="col-span-1 md:col-span-2 lg:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
