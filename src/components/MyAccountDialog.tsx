@@ -170,7 +170,6 @@ interface MyAccountDialogProps {
   planImage: ImagePlaceholder | null;
   paymentHistory: Payment[];
   paymentsLoading: boolean;
-  totalBranchConsumptionLiters: number;
   onLogout: () => void;
   children: React.ReactNode;
   onPayNow: (invoice: Payment) => void;
@@ -178,7 +177,7 @@ interface MyAccountDialogProps {
   onOpenChange: (isOpen: boolean) => void;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, totalBranchConsumptionLiters, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -215,6 +214,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
   const INVOICES_PER_PAGE = 5;
+
+  const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
+  const TRANSACTIONS_PER_PAGE = 5;
 
   // Move all hooks before the early return
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
@@ -454,6 +456,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     const startIndex = (invoiceCurrentPage - 1) * INVOICES_PER_PAGE;
     return allInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
   }, [allInvoices, invoiceCurrentPage]);
+
+  const totalTransactionPages = Math.ceil((transactions?.length || 0) / TRANSACTIONS_PER_PAGE);
+  const paginatedTransactions = useMemo(() => {
+    if (!transactions) return [];
+    const startIndex = (transactionCurrentPage - 1) * TRANSACTIONS_PER_PAGE;
+    return transactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE);
+  }, [transactions, transactionCurrentPage]);
+
 
   const defaultTab = useMemo(() => {
     if (user?.accountType === 'Parent') return 'transactions';
@@ -738,10 +748,17 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   }, [topUpAmount, literConversionRate]);
   
   const availableLiters = useMemo(() => {
+    if (!isParent) return 0;
     const credits = user?.topUpBalanceCredits ?? 0;
-    if (credits <= 0 || literConversionRate <= 0) return 0;
-    return credits / literConversionRate;
-  }, [user?.topUpBalanceCredits, literConversionRate]);
+    const totalConsumption = (branchUsers || []).reduce((acc, branch) => acc + branch.totalConsumptionLiters, 0);
+    
+    return totalConsumption;
+  }, [isParent, user?.topUpBalanceCredits, branchUsers]);
+  
+  const totalBranchConsumptionLiters = useMemo(() => {
+    if (!isParent || !deliveries) return 0;
+    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+  }, [isParent, deliveries]);
 
   return (
     <AlertDialog>
@@ -1264,43 +1281,92 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                 <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-2xl font-bold">{(availableLiters || 0).toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                                <p className="text-2xl font-bold">{availableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
                                 <p className="text-xs text-muted-foreground">Consumed: {(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
                             </CardContent>
                         </Card>
                     </div>
-                     <Table>
-                         <TableHeader>
-                             <TableRow>
-                                 <TableHead>Date</TableHead>
-                                 <TableHead>Type</TableHead>
-                                 <TableHead>Description</TableHead>
-                                 <TableHead className="text-right">Amount</TableHead>
-                             </TableRow>
-                         </TableHeader>
-                         <TableBody>
-                            {!transactions ? (
-                                <TableRow><TableCell colSpan={4} className="text-center py-10">Loading transactions...</TableCell></TableRow>
-                            ) : transactions.length === 0 ? (
-                                <TableRow><TableCell colSpan={4} className="text-center py-10">No transactions yet.</TableCell></TableRow>
-                            ) : (
-                                transactions.map(tx => (
-                                    <TableRow key={tx.id}>
-                                        <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
-                                                {tx.type}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{tx.description}</TableCell>
-                                        <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                            {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                         </TableBody>
-                     </Table>
+                     <div className="hidden md:block">
+                         <Table>
+                             <TableHeader>
+                                 <TableRow>
+                                     <TableHead>Date</TableHead>
+                                     <TableHead>Type</TableHead>
+                                     <TableHead>Description</TableHead>
+                                     <TableHead className="text-right">Amount</TableHead>
+                                 </TableRow>
+                             </TableHeader>
+                             <TableBody>
+                                {!transactions ? (
+                                    <TableRow><TableCell colSpan={4} className="text-center py-10">Loading transactions...</TableCell></TableRow>
+                                ) : paginatedTransactions.length === 0 ? (
+                                    <TableRow><TableCell colSpan={4} className="text-center py-10">No transactions yet.</TableCell></TableRow>
+                                ) : (
+                                    paginatedTransactions.map(tx => (
+                                        <TableRow key={tx.id}>
+                                            <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
+                                                    {tx.type}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{tx.description}</TableCell>
+                                            <TableCell className={cn("text-right font-medium", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
+                                                {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                             </TableBody>
+                         </Table>
+                     </div>
+                      <div className="space-y-4 md:hidden">
+                        {!transactions ? (
+                          <p className="text-center py-10 text-muted-foreground">Loading...</p>
+                        ) : paginatedTransactions.length === 0 ? (
+                          <p className="text-center py-10 text-muted-foreground">No transactions yet.</p>
+                        ) : (
+                          paginatedTransactions.map(tx => (
+                            <Card key={tx.id}>
+                              <CardContent className="p-4 space-y-2">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="font-semibold text-sm">{tx.description}</p>
+                                    <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
+                                  </div>
+                                  <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge>
+                                </div>
+                                <p className={cn("text-lg font-bold text-right", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
+                                  {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                      {(transactions?.length || 0) > 0 && (
+                        <div className="flex items-center justify-end space-x-2 pt-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={transactionCurrentPage === 1}
+                            >
+                                Previous
+                            </Button>
+                            <span className="text-sm text-muted-foreground">
+                                Page {transactionCurrentPage} of {totalTransactionPages > 0 ? totalTransactionPages : 1}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
+                                disabled={transactionCurrentPage === totalTransactionPages || totalTransactionPages === 0}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                      )}
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">
                      <Card>
@@ -1509,7 +1575,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>This will permanently remove your profile photo.</AlertDialogDescription>
+          <AlertDialogDescription>This will permanently remove your profile photo.</AlertDialogHeader>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -1793,3 +1859,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   );
 }
 
+    
