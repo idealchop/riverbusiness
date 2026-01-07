@@ -1307,7 +1307,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                             <TableCell>{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</TableCell>
                                             <TableCell>
                                                 <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn(tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
-                                                    {tx.type}
+                                                    {tx.type === 'Debit' ? 'Deducted' : tx.type}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>{tx.description}</TableCell>
@@ -1575,7 +1575,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>This will permanently remove your profile photo.</AlertDialogHeader>
+          <AlertDialogDescription>This will permanently remove your profile photo.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -1859,4 +1859,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   );
 }
 
-    
