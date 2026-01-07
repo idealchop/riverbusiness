@@ -129,7 +129,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
   const cardDescription = isParent ? 'Monitor water usage across all your branches.' : 'A look at your water usage over time.';
 
   return (
-    <Card className="lg:col-span-3">
+    <Card>
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
           <CardTitle className="flex items-center gap-2">
