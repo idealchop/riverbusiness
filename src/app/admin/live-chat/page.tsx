@@ -49,6 +49,7 @@ export default function LiveChatPage() {
         const messagesCollection = collection(firestore, 'users', selectedChatUser.id, 'chatMessages');
         const finalPayload = {
           ...messagePayload,
+          role: 'admin', // Ensure role is always admin
           timestamp: serverTimestamp(),
         };
     
@@ -58,7 +59,9 @@ export default function LiveChatPage() {
             await updateDoc(userRef, {
                 lastChatMessage: messagePayload.text || 'Attachment',
                 lastChatTimestamp: serverTimestamp(),
-                hasUnreadAdminMessages: true
+                hasUnreadAdminMessages: true,
+                // Admin has read the messages now
+                hasUnreadUserMessages: false,
             });
         } catch(error) {
             console.error("Error sending admin chat message:", error);

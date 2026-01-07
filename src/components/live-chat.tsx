@@ -24,8 +24,8 @@ import { Progress } from './ui/progress';
 interface LiveChatProps {
     chatMessages: ChatMessage[];
     onMessageSubmit: (messagePayload: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
-    user: AppUser | null;
-    agent: AppUser | null;
+    user: AppUser | null; // This is the client
+    agent: AppUser | null; // This is the admin agent
 }
 
 export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveChatProps) {
@@ -84,18 +84,20 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
 
     let attachmentUrl: string | undefined = undefined;
     let attachmentType: string | undefined = undefined;
-
-    const role = user?.role === 'Admin' ? 'admin' : 'user';
+    
+    // Determine role based on who is using the component.
+    // If an 'agent' prop is passed, we're in the admin view.
+    const role = agent ? 'admin' : 'user';
 
     const messagePayload: Omit<ChatMessage, 'id' | 'timestamp'> = {
       text: input.trim(),
       role: role,
     };
 
-    if (attachment && auth && storage) {
+    if (attachment && auth && storage && user) {
         setIsUploading(true);
         setUploadProgress(0);
-        const filePath = `chats/${user?.id || 'unknown'}/${Date.now()}-${attachment.name}`;
+        const filePath = `chats/${user.id}/${Date.now()}-${attachment.name}`;
         try {
             attachmentUrl = await uploadFileWithProgress(storage, auth, filePath, attachment, {}, setUploadProgress);
             attachmentType = attachment.type;
@@ -138,17 +140,17 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
         <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {(chatMessages || []).map((m) => {
-              const isUserMessage = m.role === 'user';
-              const FallbackIcon = isUserMessage ? User : UserCog;
+              const isAdminMessage = m.role === 'admin';
               const messageDate = m.timestamp instanceof Timestamp ? m.timestamp.toDate() : new Date();
 
-              const displayName = !isUserMessage ? (agent?.supportDisplayName || agent?.name) : user?.name;
-              const displayDescription = !isUserMessage ? (agent?.supportDescription || "Customer Support") : user?.businessName;
-              const displayPhoto = !isUserMessage ? agent?.supportPhotoURL : user?.photoURL;
+              const displayName = isAdminMessage ? (agent?.supportDisplayName || 'Admin') : user?.name;
+              const displayDescription = isAdminMessage ? (agent?.supportDescription || "Customer Support") : user?.businessName;
+              const displayPhoto = isAdminMessage ? agent?.supportPhotoURL : user?.photoURL;
+              const FallbackIcon = isAdminMessage ? UserCog : User;
 
               return (
-              <div key={m.id} className={cn("flex items-start gap-3 text-sm", isUserMessage ? 'justify-end' : 'justify-start')}>
-                 {!isUserMessage && (
+              <div key={m.id} className={cn("flex items-start gap-3 text-sm", !isAdminMessage ? 'justify-end' : 'justify-start')}>
+                 {isAdminMessage && (
                   <Avatar className="h-8 w-8 bg-primary text-primary-foreground">
                      <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'Agent'} />
                     <AvatarFallback>
@@ -158,9 +160,9 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                 )}
                 <div className={cn(
                     "flex flex-col max-w-[80%]",
-                    isUserMessage ? 'items-end' : 'items-start'
+                    !isAdminMessage ? 'items-end' : 'items-start'
                 )}>
-                    {isUserMessage ? (
+                    {!isAdminMessage ? (
                       <div className="flex items-center gap-2 mb-1 justify-end">
                         <span className="font-semibold text-xs">{displayName || 'User'}</span>
                         <span className="text-xs text-muted-foreground">{displayDescription}</span>
@@ -173,7 +175,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                     )}
                   <div className={cn(
                       "p-3 rounded-lg break-words",
-                      isUserMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
+                      !isAdminMessage ? 'bg-secondary text-secondary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'
                   )}>
                      {m.attachmentUrl && (
                         <div className="mb-2">
@@ -199,7 +201,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent }: LiveCha
                         {formatDistanceToNow(messageDate, { addSuffix: true })}
                     </div>
                 </div>
-                {isUserMessage && (
+                {!isAdminMessage && (
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={displayPhoto ?? undefined} alt={displayName || 'User'} />
                     <AvatarFallback>
