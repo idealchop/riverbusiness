@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -466,12 +467,20 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   }, [transactions, transactionCurrentPage]);
 
 
+  const TABS_CONFIG = useMemo(() => [
+    { value: 'accounts', label: 'Accounts', icon: UserIcon, condition: true },
+    { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: user?.accountType === 'Parent' },
+    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user?.plan?.isPrepaid },
+    { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user?.accountType !== 'Parent' && !user?.plan?.isPrepaid },
+    { value: 'plan', label: 'Plan', icon: FileText, condition: true },
+    { value: 'branches', label: 'Branches', icon: UserCheck, condition: user?.accountType === 'Parent' },
+  ].filter(tab => tab.condition), [user]);
+
   const defaultTab = useMemo(() => {
-    if (user?.accountType === 'Parent') return 'transactions';
-    if (user?.accountType === 'Branch') return 'invoices';
-    if (user?.plan?.isPrepaid) return 'top-ups';
-    return 'accounts';
-  }, [user]);
+    const defaultOrder = ['transactions', 'top-ups', 'invoices', 'accounts'];
+    return TABS_CONFIG.find(tab => defaultOrder.includes(tab.value))?.value || 'accounts';
+  }, [TABS_CONFIG]);
+
 
   useEffect(() => {
     if(isOpen) {
@@ -767,14 +776,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
   }, [isParent, deliveries]);
 
-  const TABS_CONFIG = [
-    { value: 'accounts', label: 'Accounts', icon: UserIcon },
-    { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: user.accountType === 'Parent' },
-    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user.plan?.isPrepaid },
-    { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user.accountType !== 'Parent' && !user.plan?.isPrepaid },
-    { value: 'plan', label: 'Plan', icon: FileText },
-    { value: 'branches', label: 'Branches', icon: UserCheck, condition: user.accountType === 'Parent' },
-  ];
+  const tabsGridClass = useMemo(() => {
+    const numTabs = TABS_CONFIG.length;
+    if (numTabs <= 4) return `grid-cols-${numTabs}`;
+    return 'grid-cols-2 sm:grid-cols-4';
+  }, [TABS_CONFIG]);
+
 
   return (
     <AlertDialog>
@@ -788,9 +795,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           <ScrollArea className="max-h-[70vh] w-full">
             <div className="pr-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={defaultTab}>
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsList className={cn("grid w-full h-auto", tabsGridClass)}>
                     {TABS_CONFIG.map(tab => {
-                        if (tab.condition === false) return null;
                         const Icon = tab.icon;
                         return (
                             <TabsTrigger key={tab.value} value={tab.value}><Icon className="mr-2 h-4 w-4" />{tab.label}</TabsTrigger>
@@ -1855,8 +1861,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
-
-
-
-
-
