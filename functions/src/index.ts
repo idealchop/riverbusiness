@@ -64,7 +64,6 @@ export async function createNotification(userId: string, notificationData: Omit<
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data) return;
 
-    const deliveryRef = event.data.ref;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
@@ -75,54 +74,53 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     // Handle consumption for different account types
     if (userData?.accountType === 'Branch' && userData.parentId) {
         const parentRef = db.collection('users').doc(userData.parentId);
-        const parentDeliveryRef = parentRef.collection('deliveries').doc(deliveryId);
-
+        
         // Calculate the cost of the delivery based on the branch's plan
         const litersDelivered = containerToLiter(delivery.volumeContainers);
         const pricePerLiter = userData.plan?.price || 0;
         const deliveryCost = litersDelivered * pricePerLiter;
         
-        const batch = db.batch();
-
-        // 1. Tag the original delivery with parentId for potential queries
-        batch.update(deliveryRef, { parentId: userData.parentId });
-        
-        // 2. Create a copy of the delivery record in the parent's subcollection
-        const deliveryCopyToParent: Delivery = {
-            ...delivery,
-            id: deliveryId,
-            userId: userId, // Keep original userId to know which branch it was for
-            parentId: userData.parentId
-        };
-        batch.set(parentDeliveryRef, deliveryCopyToParent);
-
-        if (deliveryCost > 0) {
-            // 3. Debit the parent account's credit balance
-            batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
-
-            // 4. Create a transaction log on the parent account
-            const transactionRef = db.collection('users').doc(userData.parentId).collection('transactions').doc();
-            const transactionData = {
-                date: delivery.date,
-                type: 'Debit',
-                amountCredits: deliveryCost,
-                description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
-                branchId: userId,
-                branchName: userData.businessName
+        try {
+            // 1. Create a copy of the delivery record in the parent's subcollection
+            const parentDeliveryRef = parentRef.collection('deliveries').doc(deliveryId);
+            const deliveryCopyToParent: Delivery = {
+                ...delivery,
+                id: deliveryId,
+                userId: userId, // Keep original userId to know which branch it was for
+                parentId: userData.parentId
             };
-            batch.set(transactionRef, transactionData);
-        }
+            await parentDeliveryRef.set(deliveryCopyToParent);
 
-        await batch.commit();
+            if (deliveryCost > 0) {
+                // 2. Debit the parent account's credit balance
+                await parentRef.update({ topUpBalanceCredits: increment(-deliveryCost) });
 
-        // 5. Notify the Parent account of the deduction
-        if (deliveryCost > 0) {
-            await createNotification(userData.parentId, {
-                type: 'delivery',
-                title: 'Branch Consumption',
-                description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
-                data: { deliveryId: event.params.deliveryId, branchUserId: userId }
-            });
+                // 3. Create a transaction log on the parent account
+                const transactionRef = parentRef.collection('transactions').doc();
+                const transactionData = {
+                    date: delivery.date,
+                    type: 'Debit',
+                    amountCredits: deliveryCost,
+                    description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
+                    branchId: userId,
+                    branchName: userData.businessName
+                };
+                await transactionRef.set(transactionData);
+            }
+
+            // 4. Notify the Parent account of the deduction
+            if (deliveryCost > 0) {
+                await createNotification(userData.parentId, {
+                    type: 'delivery',
+                    title: 'Branch Consumption',
+                    description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
+                    data: { deliveryId: event.params.deliveryId, branchUserId: userId }
+                });
+            }
+        } catch (error) {
+            logger.error(`Error processing branch delivery for parent ${userData.parentId}:`, error);
+            // Optional: Add error handling, like sending a notification to the admin
+            return;
         }
 
     } else if (userData?.plan?.isPrepaid) {
@@ -486,5 +484,3 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    
