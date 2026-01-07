@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -99,7 +100,7 @@ export default function DashboardLayout({
   const userDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
   
-  const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2';
+  const ADMIN_UID = '93prD8hfn8a1AnA53aYf3i0543r2'; // Hardcoded Admin UID
   const adminDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', ADMIN_UID) : null, [firestore]);
   const { data: adminAgent } = useDoc<AppUser>(adminDocRef);
   
