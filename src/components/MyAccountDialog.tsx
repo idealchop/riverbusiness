@@ -1022,7 +1022,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
                             </Button>
                           ) : (
-                            <Button variant="default" onClick={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
+                            <Button variant="default" onClick={()={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download SOA
                             </Button>
@@ -1052,53 +1052,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             </div>
                         </CardContent>
                     </Card>
-                    
-                    {user.plan?.isPrepaid && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">Top-Up History</CardTitle>
-                                <CardDescription>A log of all your top-up requests.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ScrollArea className="h-60">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead className="text-right">Amount (PHP)</TableHead>
-                                            <TableHead className="text-right">Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {topUpRequests && topUpRequests.length > 0 ? (
-                                            topUpRequests.map(req => (
-                                                <TableRow key={req.id}>
-                                                    <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
-                                                    <TableCell className="text-right">₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <Badge variant={
-                                                          req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
-                                                          req.status === 'Pending Review' ? 'secondary' :
-                                                          'destructive'
-                                                        } className={cn(
-                                                            (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
-                                                        )}>
-                                                            {req.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={3} className="text-center">No top-up requests yet.</TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                                </ScrollArea>
-                            </CardContent>
-                        </Card>
-                    )}
                 </TabsContent>
                  <TabsContent value="invoices" className="py-4 space-y-4">
                     {user.accountType === 'Branch' && (
@@ -1228,14 +1181,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                             <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                         ) : isCurrentEst ? (
                                             isPayday ? (
-                                                <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                                <Button size="sm" className="w-full" onClick={()={() => onPayNow(invoice)}>Pay Now</Button>
                                             ) : (
                                                 <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
                                             )
                                         ) : (invoice.status === 'Paid') ? (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                            <Button size="sm" variant="outline" className="w-full" onClick={()={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                         ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                            <Button size="sm" variant="outline" className="w-full" onClick={()={() => onPayNow(invoice)}>Pay Now</Button>
                                         )}
                                     </CardContent>
                                 </Card>
@@ -1248,7 +1201,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
+                            onClick={()={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
                             disabled={invoiceCurrentPage === 1}
                         >
                             Previous
@@ -1259,7 +1212,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
+                            onClick={()={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
                             disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
                         >
                             Next
@@ -1292,24 +1245,26 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         ) : paginatedTransactions.length === 0 ? (
                           <p className="text-center py-10 text-muted-foreground">No transactions yet.</p>
                         ) : (
-                          paginatedTransactions.map(tx => (
-                            <Card key={tx.id}>
-                              <CardContent className="p-4 space-y-2">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-semibold text-sm">{tx.description}</p>
-                                    <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
+                          <div className="space-y-3">
+                            {paginatedTransactions.map(tx => (
+                              <Card key={tx.id}>
+                                <CardContent className="p-4 space-y-2">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-semibold text-sm">{tx.description}</p>
+                                      <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
+                                    </div>
+                                    <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' ? 'bg-green-100 text-green-800' : '')}>
+                                      {tx.type === 'Debit' ? 'Deducted' : tx.type}
+                                    </Badge>
                                   </div>
-                                  <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
-                                    {tx.type === 'Debit' ? 'Deducted' : tx.type}
-                                  </Badge>
-                                </div>
-                                <p className={cn("text-lg font-bold text-right", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                  {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          ))
+                                  <p className={cn("text-lg font-bold text-right", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
+                                    {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
                         )}
                       </div>
                       {(transactions?.length || 0) > 0 && (
@@ -1317,7 +1272,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
+                                onClick={()={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={transactionCurrentPage === 1}
                             >
                                 Previous
@@ -1328,7 +1283,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
+                                onClick={()={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
                                 disabled={transactionCurrentPage === totalTransactionPages || totalTransactionPages === 0}
                             >
                                 Next
@@ -1390,7 +1345,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                             </Badge>
                                                         </TableCell>
                                                          <TableCell className="text-right">
-                                                            <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)}>
+                                                            <Button size="sm" variant="outline" onClick={()={() => handleViewInvoice(asPayment)}>
                                                                 View Receipt
                                                             </Button>
                                                         </TableCell>
@@ -1703,7 +1658,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         </Card>
                         {flowPlan && !user.plan?.isConsumptionBased && (
                             <Card 
-                                onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
+                                onClick={()={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
                                 className={cn(
                                     "cursor-pointer hover:border-primary flex flex-col",
                                     state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
@@ -1854,4 +1809,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 }
 
 
-
+    
