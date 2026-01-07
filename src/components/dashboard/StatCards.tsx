@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -242,13 +241,13 @@ export function StatCards({
                 </CardHeader>
                 <CardContent>
                     <p className="text-2xl md:text-3xl font-bold mb-1">{user?.customPlanDetails?.branchCount || 0}</p>
-                    <Button variant="link" className="p-0 h-auto text-xs" onClick={handleManageBranches}>View &amp; Manage</Button>
+                    <Button variant="link" className="p-0 h-auto text-xs" onClick={handleManageBranches}>View & Manage</Button>
                 </CardContent>
             </Card>
         </>
       ) : isFlowPlan || isBranchAccount || isPrepaidPlan ? (
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 col-span-1 md:col-span-2 lg:col-span-3">
-          <Card className="flex flex-col lg:col-span-7 col-span-1 md:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 col-span-1 md:col-span-2 lg:col-span-3">
+          <Card className="flex flex-col lg:col-span-2 col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
@@ -296,7 +295,7 @@ export function StatCards({
                 )}
             </CardFooter>
           </Card>
-          <Card className="col-span-1 md:col-span-2 lg:col-span-3">
+          <Card className="col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
             </CardHeader>
