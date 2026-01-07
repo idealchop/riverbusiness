@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -175,9 +174,10 @@ interface MyAccountDialogProps {
   onPayNow: (invoice: Payment) => void;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  initialTab?: string;
 }
 
-export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange }: MyAccountDialogProps) {
+export function MyAccountDialog({ user, authUser, planImage, paymentHistory, paymentsLoading, onLogout, children, onPayNow, isOpen, onOpenChange, initialTab }: MyAccountDialogProps) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -185,6 +185,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [topUpAmount, setTopUpAmount] = useState<number | ''>('');
   const [topUpProof, setTopUpProof] = useState<File | null>(null);
   const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false);
+  const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
 
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -471,6 +472,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (user?.plan?.isPrepaid) return 'top-ups';
     return 'accounts';
   }, [user]);
+
+  useEffect(() => {
+    if(isOpen) {
+        setActiveTab(initialTab || defaultTab);
+    }
+  }, [isOpen, initialTab, defaultTab]);
 
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
@@ -780,7 +787,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] w-full">
             <div className="pr-6">
-              <Tabs defaultValue={defaultTab}>
+              <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={defaultTab}>
                 <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
                     {TABS_CONFIG.map(tab => {
                         if (tab.condition === false) return null;
@@ -1848,6 +1855,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
 
 
 

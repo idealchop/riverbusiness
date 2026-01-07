@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -156,6 +155,25 @@ export default function DashboardLayout({
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
+  const [initialAccountDialogTab, setInitialAccountDialogTab] = React.useState<string | undefined>(undefined);
+
+
+  useEffect(() => {
+    const handleOpenMyAccount = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        if (customEvent.detail?.tab) {
+            setInitialAccountDialogTab(customEvent.detail.tab);
+        } else {
+            setInitialAccountDialogTab(undefined);
+        }
+        setIsAccountDialogOpen(true);
+    };
+
+    window.addEventListener('open-my-account', handleOpenMyAccount);
+    return () => {
+        window.removeEventListener('open-my-account', handleOpenMyAccount);
+    };
+  }, []);
 
   useEffect(() => {
     if (isUserLoading) return;
@@ -531,6 +549,7 @@ export default function DashboardLayout({
             onPayNow={handlePayNow}
             isOpen={isAccountDialogOpen}
             onOpenChange={setIsAccountDialogOpen}
+            initialTab={initialAccountDialogTab}
           >
             <div className="items-center gap-3 cursor-pointer hidden sm:flex">
               <div className="flex items-center gap-2">

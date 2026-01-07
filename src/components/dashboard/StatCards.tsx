@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -206,6 +205,9 @@ export function StatCards({
       return Math.max(0, Math.min(100, percentage)); 
   }, [consumptionDetails.currentBalance, startingBalance]);
 
+  const handleManageBranches = () => {
+    window.dispatchEvent(new CustomEvent('open-my-account', { detail: { tab: 'branches' }}));
+  };
 
   return (
     <>
@@ -218,7 +220,7 @@ export function StatCards({
                 </CardHeader>
                 <CardContent>
                     <p className="text-2xl md:text-4xl font-bold mb-1">{parentRemainingLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
-                    <p className="text-xs text-muted-foreground">Derived from your ₱{(user?.topUpBalanceCredits ?? 0).toLocaleString()} monetary balance.</p>
+                    <p className="text-xs text-muted-foreground">Derived from your ₱{(user?.topUpBalanceCredits ?? 0).toLocaleString()}.</p>
                 </CardContent>
             </Card>
             <Card>
@@ -236,12 +238,12 @@ export function StatCards({
                 </CardHeader>
                 <CardContent>
                     <p className="text-2xl md:text-3xl font-bold mb-1">{user?.customPlanDetails?.branchCount || 0}</p>
-                    <Button variant="link" className="p-0 h-auto text-xs" onClick={() => window.dispatchEvent(new CustomEvent('open-my-account'))}>View & Manage</Button>
+                    <Button variant="link" className="p-0 h-auto text-xs" onClick={handleManageBranches}>View &amp; Manage</Button>
                 </CardContent>
             </Card>
         </>
       ) : isFlowPlan || isBranchAccount || isPrepaidPlan ? (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 col-span-1 md:col-span-2 lg:col-span-3">
           <Card className="flex flex-col lg:col-span-7 col-span-1 md:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
@@ -331,7 +333,7 @@ export function StatCards({
               </div>
             </CardContent>
           </Card>
-        </>
+        </div>
       ) : (
         <>
           <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
