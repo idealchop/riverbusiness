@@ -1,5 +1,6 @@
 
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -245,6 +246,8 @@ export interface TopUpRequest {
   proofOfPaymentUrl: string;
   rejectionReason?: string;
 }
+    
+
     
 
     

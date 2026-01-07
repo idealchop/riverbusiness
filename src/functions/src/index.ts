@@ -1,5 +1,4 @@
 
-
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -136,14 +135,12 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     }
 
     // Always notify the user receiving the delivery
-    const notification = {
+    await createNotification(userId, {
         type: 'delivery',
         title: 'Delivery Scheduled',
-        description: `Delivery of ${delivery.volumeContainers} containers is scheduled.`,
+        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
         data: { deliveryId: event.params.deliveryId }
-    };
-    
-    await createNotification(userId, notification);
+    });
 });
 
 
@@ -174,13 +171,12 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     const notification = {
         type: 'delivery',
         title: `Delivery ${after.status}`,
-        description: `Delivery of ${after.volumeContainers} containers is now ${after.status}.`,
+        description: `Your delivery of ${after.volumeContainers} containers is now ${after.status}.`,
         data: { deliveryId: event.params.deliveryId }
     };
     
     await createNotification(userId, notification);
 });
-
 /**
  * Cloud Function to create notifications when a payment status is updated by an admin.
  */
@@ -487,3 +483,5 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    

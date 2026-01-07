@@ -66,12 +66,12 @@
             "id": { "type": "string" },
             "userId": { "type": "string" },
             "amount": { "type": "number" },
-            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected", "Approved (Initial Balance)"] },
+            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected"] },
             "requestedAt": { "type": "string", "format": "date-time" },
             "proofOfPaymentUrl": { "type": "string", "format": "uri" },
             "rejectionReason": { "type": "string" }
         },
-        "required": ["id", "userId", "amount", "status", "requestedAt"]
+        "required": ["id", "userId", "amount", "status", "requestedAt", "proofOfPaymentUrl"]
     },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
@@ -365,3 +365,4 @@
   }
 }
 
+    

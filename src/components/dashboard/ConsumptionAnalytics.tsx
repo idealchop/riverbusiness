@@ -184,3 +184,5 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
     </Card>
   );
 }
+
+    

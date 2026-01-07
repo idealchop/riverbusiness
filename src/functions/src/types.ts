@@ -1,4 +1,3 @@
-
 // This file can be used to define types that are shared between your client and functions.
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -24,3 +23,5 @@ export interface Delivery {
   proofOfDeliveryUrl?: string;
   adminNotes?: string;
 }
+
+    
