@@ -1334,7 +1334,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                     <p className="font-semibold text-sm">{tx.description}</p>
                                     <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
                                   </div>
-                                  <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' && 'bg-green-100 text-green-800')}>{tx.type}</Badge>
+                                  <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' && 'bg-green-100 text-green-800')}>
+                                    {tx.type === 'Debit' ? 'Deducted' : tx.type}
+                                  </Badge>
                                 </div>
                                 <p className={cn("text-lg font-bold text-right", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
                                   {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
@@ -1859,3 +1861,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   );
 }
 
+
+
+    
