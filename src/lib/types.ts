@@ -11,7 +11,7 @@ export interface ConsumptionRecord {
 export interface Delivery {
   id: string;
   userId: string;
-  parentId?: string; // Add this
+  parentId?: string;
   date: string;
   volumeContainers: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
