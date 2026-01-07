@@ -383,13 +383,15 @@ export default function DashboardPage() {
             onRequestRefillClick={() => openDialog('requestRefill')}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ConsumptionAnalytics
-            deliveries={deliveries}
-            onHistoryClick={() => openDialog('deliveryHistory')}
-            isParent={isParent}
-            branches={branchUsers}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <ConsumptionAnalytics
+              deliveries={deliveries}
+              onHistoryClick={() => openDialog('deliveryHistory')}
+              isParent={isParent}
+              branches={branchUsers}
+            />
+          </div>
           <InfoCards />
         </div>
 
