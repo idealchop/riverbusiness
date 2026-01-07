@@ -1022,7 +1022,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
                             </Button>
                           ) : (
-                            <Button variant="default" onClick={()={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
+                            <Button variant="default" onClick={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download SOA
                             </Button>
@@ -1301,8 +1301,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <Card>
                           <CardHeader className="flex flex-row items-center justify-between">
                                <div>
-                                 <CardTitle>Top-Up / Payment History</CardTitle>
-                                 <CardDescription>A log of your top-up payments.</CardDescription>
+                                 <CardTitle>Top-Up History</CardTitle>
+                                 <CardDescription>A log of all your top-up requests.</CardDescription>
                                </div>
                                <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
                                   <Plus className="mr-2 h-4 w-4" /> Top-Up
@@ -1345,7 +1345,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                             </Badge>
                                                         </TableCell>
                                                          <TableCell className="text-right">
-                                                            <Button size="sm" variant="outline" onClick={()={() => handleViewInvoice(asPayment)}>
+                                                            <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)}>
                                                                 View Receipt
                                                             </Button>
                                                         </TableCell>
@@ -1658,7 +1658,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         </Card>
                         {flowPlan && !user.plan?.isConsumptionBased && (
                             <Card 
-                                onClick={()={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
+                                onClick={() => dispatch({type: 'SET_SELECTED_NEW_PLAN', payload: flowPlan})}
                                 className={cn(
                                     "cursor-pointer hover:border-primary flex flex-col",
                                     state.selectedNewPlan?.name === flowPlan.name && "border-primary border-2"
@@ -1807,6 +1807,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
 
 
     
