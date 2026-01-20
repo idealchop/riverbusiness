@@ -782,30 +782,62 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const handleUpdateDelivery = async (values: DeliveryFormValues) => {
         if (!deliveryToEdit || !userForHistory || !firestore) return;
-    
-        const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToEdit.id);
-        
-        const updatedData = {
-            date: values.date.toISOString(),
-            volumeContainers: values.volumeContainers,
-            status: values.status,
-            adminNotes: values.adminNotes || '',
-        };
-    
-        await updateDoc(deliveryRef, updatedData);
 
-        if (deliveryToEdit.status !== values.status) {
-            await createNotification(userForHistory.id, {
-                type: 'delivery',
-                title: `Delivery ${values.status}`,
-                description: `Your delivery of ${values.volumeContainers} containers is now ${values.status}.`,
-                data: { deliveryId: deliveryToEdit.id }
-            });
-        }
+        const hasIdChanged = values.trackingNumber !== deliveryToEdit.id;
+
+        try {
+            if (hasIdChanged) {
+                const batch = writeBatch(firestore);
+
+                const oldDeliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToEdit.id);
+                const newDeliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', values.trackingNumber);
+                
+                // Ensure all fields from the original document are carried over, then update with form values
+                const newDeliveryData = {
+                    ...deliveryToEdit,
+                    id: values.trackingNumber,
+                    date: values.date.toISOString(),
+                    volumeContainers: values.volumeContainers,
+                    status: values.status,
+                    adminNotes: values.adminNotes || '',
+                };
+                
+                batch.set(newDeliveryRef, newDeliveryData);
+                batch.delete(oldDeliveryRef);
+
+                await batch.commit();
+
+            } else {
+                // ID is the same, just update the existing document
+                const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryToEdit.id);
+                const updatedData = {
+                    date: values.date.toISOString(),
+                    volumeContainers: values.volumeContainers,
+                    status: values.status,
+                    adminNotes: values.adminNotes || '',
+                };
+                await updateDoc(deliveryRef, updatedData);
+            }
+
+            // Handle notification for status change
+            if (deliveryToEdit.status !== values.status) {
+                await createNotification(userForHistory.id, {
+                    type: 'delivery',
+                    title: `Delivery ${values.status}`,
+                    description: `Your delivery of ${values.volumeContainers} containers is now ${values.status}.`,
+                    data: { deliveryId: values.trackingNumber } // Use the new ID
+                });
+            }
     
-        toast({ title: "Delivery Updated", description: `Delivery ${deliveryToEdit.id} has been successfully updated.` });
-        setIsEditDeliveryOpen(false);
-        setDeliveryToEdit(null);
+            toast({ title: "Delivery Updated", description: `Delivery ${values.trackingNumber} has been successfully updated.` });
+
+        } catch (error) {
+            console.error("Failed to update delivery:", error);
+            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update delivery record.' });
+        } finally {
+            setIsEditDeliveryOpen(false);
+            setDeliveryToEdit(null);
+        }
     };
 
     const handleDeleteDelivery = async () => {
@@ -2212,10 +2244,23 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Edit Delivery</DialogTitle>
-                    <DialogDescription>Update the details for delivery ID: {deliveryToEdit?.id}</DialogDescription>
+                    <DialogDescription>Update the details for the selected delivery.</DialogDescription>
                 </DialogHeader>
                 <Form {...editDeliveryForm}>
                     <form onSubmit={editDeliveryForm.handleSubmit(handleUpdateDelivery)} className="space-y-4 py-4">
+                        <FormField
+                            control={editDeliveryForm.control}
+                            name="trackingNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Tracking Number</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., DEL-00123" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                          <FormField
                             control={editDeliveryForm.control}
                             name="date"
