@@ -1,8 +1,19 @@
-[
+{[
   {
-    "origin": ["*"],
-    "method": ["GET", "PUT", "POST", "DELETE"],
-    "responseHeader": ["Content-Type", "x-goog-resumable"],
+    "origin": [
+      "http://localhost:9002",
+      "https://6000-firebase-studio-1764066226705.cluster-y3k7ko3fang56qzieg3trwgyfg.cloudworkstations.dev"
+    ],
+    "method": [
+      "GET",
+      "PUT",
+      "POST",
+      "DELETE"
+    ],
+    "responseHeader": [
+      "Content-Type",
+      "x-goog-resumable"
+    ],
     "maxAgeSeconds": 3600
   }
 ]
