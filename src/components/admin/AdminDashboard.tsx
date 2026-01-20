@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -178,7 +178,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [stationToDelete, setStationToDelete] = React.useState<WaterStation | null>(null);
     const [selectedProofUrl, setSelectedProofUrl] = React.useState<string | null>(null);
     const [deliveryToUpdate, setDeliveryToUpdate] = React.useState<Delivery | null>(null);
-    const [deliveryProofFile, setDeliveryProofFile] = React.useState<File | null>(null);
     const [deliveryDateRange, setDeliveryDateRange] = React.useState<DateRange | undefined>()
     const [isStationProfileOpen, setIsStationProfileOpen] = React.useState(false);
     const [isAssignStationOpen, setIsAssignStationOpen] = React.useState(false);
@@ -222,9 +221,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
-    const [uploadedProofUrl, setUploadedProofUrl] = useState<string | null>(null);
     const [uploadedAgreementUrl, setUploadedAgreementUrl] = useState<string | null>(null);
     const [sharingVisitId, setSharingVisitId] = useState<string | null>(null);
+
+    // New states for delivery proof upload
+    const [deliveryForProof, setDeliveryForProof] = useState<Delivery | null>(null);
+    const [uploadingProofFor, setUploadingProofFor] = useState<string | null>(null);
+    const fileInputForDeliveryProofRef = useRef<HTMLInputElement>(null);
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
@@ -675,14 +678,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !auth || !authUser || !storage) return;
+        if (!userForHistory || !firestore || !auth || !authUser) return;
         setIsSubmitting(true);
     
         try {
             const file = values.proofFile?.[0];
             let proofUrl = '';
     
-            if (file) {
+            if (file && storage) {
                 const path = `admin_uploads/${authUser.uid}/proofs_for/${userForHistory.id}/${values.trackingNumber}-${file.name}`;
                 proofUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
             }
@@ -885,6 +888,44 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setDeliveryToDelete(null);
     };
 
+    const handleProofFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+
+        if (!file || !deliveryForProof || !userForHistory || !storage || !auth || !authUser || !firestore) {
+            if(event.target) event.target.value = ""; // Clear file input
+            setDeliveryForProof(null); // Clear context
+            return;
+        }
+
+        setUploadingProofFor(deliveryForProof.id);
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const path = `admin_uploads/${authUser.uid}/proofs_for/${userForHistory.id}/${deliveryForProof.id}-${file.name}`;
+
+        try {
+            const proofUrl = await uploadFileWithProgress(storage, auth, path, file, {}, setUploadProgress);
+            
+            const deliveryRef = doc(firestore, 'users', userForHistory.id, 'deliveries', deliveryForProof.id);
+            await updateDoc(deliveryRef, {
+                proofOfDeliveryUrl: proofUrl,
+            });
+            
+            toast({ title: "Proof Uploaded", description: `Proof of delivery for ${deliveryForProof.id} has been added.` });
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Upload Failed', description: error.message || 'Could not upload proof.' });
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+            setDeliveryForProof(null);
+            setUploadingProofFor(null);
+            if (event.target) {
+                event.target.value = "";
+            }
+        }
+    };
+
     React.useEffect(() => {
         if(selectedUser && firestore) {
             const deliveriesForUser = collection(firestore, 'users', selectedUser.id, 'deliveries');
@@ -992,23 +1033,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [selectedUser]);
     
     const handleCreateStation = async (values: NewStationFormValues) => {
-        if (!firestore || !auth || !storage) return;
+        if (!firestore) return;
         setIsSubmitting(true);
-        let stationId = '';
         try {
             const newStationData = {
                 name: values.name,
                 location: values.location,
                 partnershipAgreementUrl: uploadedAgreementUrl
             };
-            const newStationRef = await addDoc(collection(firestore, 'waterStations'), newStationData);
-            stationId = newStationRef.id;
-
+            await addDoc(collection(firestore, 'waterStations'), newStationData);
+    
             toast({ title: "Station Created", description: `Station "${values.name}" has been created.` });
             setIsStationProfileOpen(false);
             stationForm.reset();
             setUploadedAgreementUrl(null);
-
+    
         } catch (error) {
             console.error(error);
             toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the new station.' });
@@ -1611,6 +1650,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
+        <input
+            type="file"
+            ref={fileInputForDeliveryProofRef}
+            onChange={handleProofFileChange}
+            className="hidden"
+            accept="image/*,application/pdf"
+        />
         <Dialog open={isUserDetailOpen} onOpenChange={setIsUserDetailOpen}>
             <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
                 <DialogHeader>
@@ -2012,7 +2058,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             {paginatedDeliveries.length > 0 ? (
                                 paginatedDeliveries.map(delivery => {
                                     const liters = delivery.volumeContainers * 19.5;
-                                    const isUploadingProof = uploadProgress > 0 && uploadProgress < 100;
+                                    const isThisDeliveryUploading = uploadingProofFor === delivery.id;
                                     return (
                                     <TableRow key={delivery.id}>
                                         <TableCell>{delivery.id}</TableCell>
@@ -2034,14 +2080,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         Edit Delivery
                                                     </DropdownMenuItem>
                                                     {delivery.proofOfDeliveryUrl ? (
-                                                         <DropdownMenuItem onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>
+                                                        <DropdownMenuItem onClick={() => setSelectedProofUrl(delivery.proofOfDeliveryUrl || null)}>
                                                             <Eye className="mr-2 h-4 w-4" />
                                                             View Proof
                                                         </DropdownMenuItem>
-                                                    ) : (
+                                                    ) : isThisDeliveryUploading ? (
                                                         <DropdownMenuItem disabled>
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <span className="text-xs">Uploading...</span>
+                                                                <Progress value={uploadProgress} className="w-16 h-1.5" />
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <DropdownMenuItem onClick={() => {
+                                                            setDeliveryForProof(delivery);
+                                                            fileInputForDeliveryProofRef.current?.click();
+                                                        }} disabled={isUploading}>
                                                             <Upload className="mr-2 h-4 w-4" />
-                                                            No Proof
+                                                            Upload Proof
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuSeparator />
@@ -3019,7 +3075,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                         </DialogClose>
                         {!stationToUpdate && (
-                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isSubmitting || stationForm.formState.isSubmitting || isUploading}>{isSubmitting ? "Creating..." : "Create Station"}</Button>
+                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isSubmitting || stationForm.formState.isSubmitting || isUploading || !stationForm.formState.isValid}>{isSubmitting ? "Creating..." : "Create Station"}</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -3549,4 +3605,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
