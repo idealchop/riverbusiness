@@ -195,6 +195,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isComplianceReportDialogOpen, setIsComplianceReportDialogOpen] = React.useState(false);
     const [complianceReportToEdit, setComplianceReportToEdit] = React.useState<ComplianceReport | null>(null);
     const [complianceReportToDelete, setComplianceReportToDelete] = React.useState<ComplianceReport | null>(null);
+    const [complianceAttachmentUrl, setComplianceAttachmentUrl] = React.useState<string | null>(null);
 
     const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
     const [complianceRefresher, setComplianceRefresher] = React.useState(0);
@@ -674,7 +675,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !auth || !authUser || !storage) return;
+        if (!userForHistory || !firestore || !auth || !authUser) return;
         setIsSubmitting(true);
     
         try {
@@ -2945,6 +2946,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => setComplianceAttachmentUrl(report.reportUrl!)} disabled={!report.reportUrl}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View Document
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}>
                                                             <Edit className="mr-2 h-4 w-4" />
                                                             Edit
@@ -3522,6 +3527,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </DialogFooter>
                     </form>
                 </Form>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={!!complianceAttachmentUrl} onOpenChange={(open) => !open && setComplianceAttachmentUrl(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Compliance Document</DialogTitle>
+                </DialogHeader>
+                {complianceAttachmentUrl && (
+                    <div className="py-4 flex justify-center">
+                        <Image src={complianceAttachmentUrl} alt="Compliance Document" width={400} height={600} className="rounded-md object-contain" />
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     </>
