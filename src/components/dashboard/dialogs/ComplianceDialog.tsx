@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -14,7 +13,8 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature } from 'lucide-react';
+import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature, History } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
 
 interface ComplianceDialogProps {
@@ -39,6 +39,7 @@ export function ComplianceDialog({
   onViewAttachment,
 }: ComplianceDialogProps) {
   const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
+  const [monthFilter, setMonthFilter] = useState<string>('all');
 
   const sanitationReportStats = useMemo(() => {
     if (!selectedSanitationVisit || !selectedSanitationVisit.dispenserReports) {
@@ -73,6 +74,31 @@ export function ComplianceDialog({
     return { passed: passedItems, total: totalItems, passRate, overallStatus, statusColor };
   }, [selectedSanitationVisit]);
 
+  const availableMonths = useMemo(() => {
+    if (!complianceReports) return [];
+    const months = new Set<string>();
+    complianceReports.forEach(report => {
+        if (report.date && typeof (report.date as any).toDate === 'function') {
+            months.add(format((report.date as any).toDate(), 'yyyy-MM'));
+        }
+    });
+    return Array.from(months).map(m => ({
+        value: m,
+        label: format(new Date(m + '-02'), 'MMMM yyyy'),
+    })).sort((a,b) => b.value.localeCompare(a.value));
+  }, [complianceReports]);
+
+  const filteredReports = useMemo(() => {
+    if (!complianceReports) return [];
+    if (monthFilter === 'all') return complianceReports;
+    return complianceReports.filter(report => {
+        if (report.date && typeof (report.date as any).toDate === 'function') {
+            return format((report.date as any).toDate(), 'yyyy-MM') === monthFilter;
+        }
+        return false;
+    });
+  }, [complianceReports, monthFilter]);
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -91,9 +117,25 @@ export function ComplianceDialog({
             
             <TabsContent value="compliance">
               <Card>
-                <CardHeader>
-                  <CardTitle>Water Quality Compliance</CardTitle>
-                  <CardDescription>View all historical compliance reports and their status for {waterStation?.name || 'your assigned station'}.</CardDescription>
+                <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                  <div>
+                    <CardTitle>Water Quality Compliance</CardTitle>
+                    <CardDescription>View all historical compliance reports and their status for {waterStation?.name || 'your assigned station'}.</CardDescription>
+                  </div>
+                  {availableMonths.length > 0 && (
+                    <Select value={monthFilter} onValueChange={setMonthFilter}>
+                      <SelectTrigger className="w-full md:w-[200px]">
+                         <History className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Filter by month..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Months</SelectItem>
+                        {availableMonths.map(month => (
+                          <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {/* Desktop Table */}
@@ -111,7 +153,7 @@ export function ComplianceDialog({
                         <TableRow>
                           <TableCell colSpan={4} className="text-center">Loading reports...</TableCell>
                         </TableRow>
-                      ) : complianceReports?.map((report) => (
+                      ) : filteredReports.map((report) => (
                         <TableRow key={report.id}>
                           <TableCell className="font-medium">{report.name}</TableCell>
                           <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
@@ -126,9 +168,9 @@ export function ComplianceDialog({
                           </TableCell>
                         </TableRow>
                       ))}
-                      {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
+                      {(!filteredReports || filteredReports.length === 0) && !complianceLoading && (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available.</TableCell>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available for the selected period.</TableCell>
                         </TableRow>
                       )}
                     </TableBody>
@@ -138,7 +180,7 @@ export function ComplianceDialog({
                    <div className="space-y-4 md:hidden">
                     {complianceLoading ? (
                       <p className="text-center text-muted-foreground py-4">Loading reports...</p>
-                    ) : complianceReports?.map(report => (
+                    ) : filteredReports.map(report => (
                       <Card key={report.id}>
                         <CardContent className="p-4 space-y-3">
                           <div className="flex justify-between items-start">
@@ -156,8 +198,8 @@ export function ComplianceDialog({
                         </CardContent>
                       </Card>
                     ))}
-                    {(!complianceReports || complianceReports.length === 0) && !complianceLoading && (
-                      <p className="text-center text-muted-foreground py-10">No compliance reports available.</p>
+                    {(!filteredReports || filteredReports.length === 0) && !complianceLoading && (
+                      <p className="text-center text-muted-foreground py-10">No compliance reports available for the selected period.</p>
                      )}
                    </div>
 
