@@ -504,6 +504,42 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
   }, [availableMonths, soaMonth]);
 
+  const literConversionRate = useMemo(() => {
+    if (user?.accountType === 'Parent' && user?.plan?.price > 0) {
+        return user.plan.price;
+    }
+    if (user?.plan?.isConsumptionBased && user.plan.price > 0) {
+        return user.plan.price;
+    }
+    return 3; // Default rate
+  }, [user]);
+
+  const literEquivalent = useMemo(() => {
+    if (typeof topUpAmount === 'number' && topUpAmount > 0) {
+      return (topUpAmount / literConversionRate).toFixed(0);
+    }
+    return '0';
+  }, [topUpAmount, literConversionRate]);
+  
+  const availableLiters = useMemo(() => {
+    if (!isParent) return 0;
+    const credits = user?.topUpBalanceCredits ?? 0;
+    const totalConsumption = (branchUsers || []).reduce((acc, branch) => acc + branch.totalConsumptionLiters, 0);
+    
+    return totalConsumption;
+  }, [isParent, user?.topUpBalanceCredits, branchUsers]);
+  
+  const totalBranchConsumptionLiters = useMemo(() => {
+    if (!isParent || !deliveries) return 0;
+    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+  }, [isParent, deliveries]);
+
+  const tabsGridClass = useMemo(() => {
+    const numTabs = TABS_CONFIG.length;
+    if (numTabs <= 4) return `grid-cols-${numTabs}`;
+    return 'grid-cols-2 sm:grid-cols-4';
+  }, [TABS_CONFIG]);
+
   if (!user) {
     return <>{children}</>;
   }
@@ -747,43 +783,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
   };
   
-  const literConversionRate = useMemo(() => {
-    if (user?.accountType === 'Parent' && user?.plan?.price > 0) {
-        return user.plan.price;
-    }
-    if (user?.plan?.isConsumptionBased && user.plan.price > 0) {
-        return user.plan.price;
-    }
-    return 3; // Default rate
-  }, [user]);
-
-  const literEquivalent = useMemo(() => {
-    if (typeof topUpAmount === 'number' && topUpAmount > 0) {
-      return (topUpAmount / literConversionRate).toFixed(0);
-    }
-    return '0';
-  }, [topUpAmount, literConversionRate]);
-  
-  const availableLiters = useMemo(() => {
-    if (!isParent) return 0;
-    const credits = user?.topUpBalanceCredits ?? 0;
-    const totalConsumption = (branchUsers || []).reduce((acc, branch) => acc + branch.totalConsumptionLiters, 0);
-    
-    return totalConsumption;
-  }, [isParent, user?.topUpBalanceCredits, branchUsers]);
-  
-  const totalBranchConsumptionLiters = useMemo(() => {
-    if (!isParent || !deliveries) return 0;
-    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
-  }, [isParent, deliveries]);
-
-  const tabsGridClass = useMemo(() => {
-    const numTabs = TABS_CONFIG.length;
-    if (numTabs <= 4) return `grid-cols-${numTabs}`;
-    return 'grid-cols-2 sm:grid-cols-4';
-  }, [TABS_CONFIG]);
-
-
   return (
     <AlertDialog>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
