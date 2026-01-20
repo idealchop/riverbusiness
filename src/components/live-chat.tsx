@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
@@ -133,7 +132,7 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUs
 
   return (
     <Card className="flex flex-col h-full border-0 shadow-none">
-      <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden pt-6">
+      <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden pt-6 min-h-0">
         <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {(chatMessages || []).map((m) => {
