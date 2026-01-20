@@ -2102,7 +2102,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>
@@ -3019,7 +3019,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <Button type="button" variant="outline" onClick={() => { setStationToUpdate(null); stationForm.reset();}}>Close</Button>
                         </DialogClose>
                         {!stationToUpdate && (
-                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isSubmitting || stationForm.formState.isSubmitting || isUploading || !uploadedAgreementUrl}>{isSubmitting ? "Creating..." : "Create Station"}</Button>
+                            <Button onClick={stationForm.handleSubmit(handleCreateStation)} disabled={isSubmitting || stationForm.formState.isSubmitting || isUploading}>{isSubmitting ? "Creating..." : "Create Station"}</Button>
                         )}
                     </div>
                 </DialogFooter>
