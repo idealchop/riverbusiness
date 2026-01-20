@@ -176,17 +176,22 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
   };
 
   const handleProfilePhotoUpload = async () => {
-    if (!state.profilePhotoFile || !auth?.currentUser || !storage || !auth) return;
+    if (!state.profilePhotoFile || !auth?.currentUser || !storage || !auth || !firestore) return;
 
     const filePath = `users/${auth.currentUser.uid}/support_profile/photo-${Date.now()}`;
     
     startTransition(() => {
         uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress)
+        .then((downloadURL) => {
+            const adminUserDocRef = doc(firestore, 'users', auth.currentUser!.uid);
+            return updateDoc(adminUserDocRef, { supportPhotoURL: downloadURL });
+        })
         .then(() => {
-            toast({ title: 'Upload Complete', description: 'Your support photo is being processed and will update shortly.' });
+            toast({ title: 'Support Photo Updated!', description: 'Your new photo has been saved.' });
         })
         .catch((error) => {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your support photo.' });
+            console.error("Support photo upload/update failed:", error);
+            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not upload your support photo.' });
         })
         .finally(() => {
             dispatch({ type: 'RESET_UPLOAD' });

@@ -470,7 +470,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const TABS_CONFIG = useMemo(() => [
     { value: 'accounts', label: 'Accounts', icon: UserIcon, condition: true },
     { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: user?.accountType === 'Parent' },
-    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user?.plan?.isPrepaid },
+    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user?.plan?.isPrepaid && user?.accountType !== 'Branch' },
     { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user?.accountType !== 'Parent' && !user?.plan?.isPrepaid },
     { value: 'plan', label: 'Plan', icon: FileText, condition: true },
     { value: 'branches', label: 'Branches', icon: UserCheck, condition: user?.accountType === 'Parent' },
