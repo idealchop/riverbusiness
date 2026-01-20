@@ -370,6 +370,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
+    // More specific regex matching to avoid ambiguity
     const profilePhotoMatch = filePath.match(/^users\/([^\/]+)\/profile\/(.+)$/);
     if (profilePhotoMatch) {
         const userId = profilePhotoMatch[1];
