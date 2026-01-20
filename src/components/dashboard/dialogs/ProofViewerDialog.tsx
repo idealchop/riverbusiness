@@ -12,14 +12,18 @@ interface ProofViewerDialogProps {
 export function ProofViewerDialog({ isOpen, onOpenChange, proofUrl }: ProofViewerDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Proof of Delivery</DialogTitle>
         </DialogHeader>
-        {proofUrl && (
+        {proofUrl ? (
           <div className="py-4 flex justify-center">
-            <Image src={proofUrl} alt="Proof of delivery" width={400} height={600} className="rounded-md object-contain" />
+            <Image src={proofUrl} alt="Proof of delivery" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
           </div>
+        ) : (
+           <div className="py-10 text-center">
+             <p className="text-muted-foreground">No proof available.</p>
+           </div>
         )}
       </DialogContent>
     </Dialog>

@@ -13,13 +13,13 @@ interface AttachmentViewerDialogProps {
 export function AttachmentViewerDialog({ isOpen, onOpenChange, attachmentUrl }: AttachmentViewerDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Attachment Viewer</DialogTitle>
         </DialogHeader>
         {attachmentUrl && attachmentUrl !== 'pending' ? (
           <div className="py-4 flex justify-center">
-            <Image src={attachmentUrl} alt="Attachment" width={400} height={600} className="rounded-md object-contain" />
+            <Image src={attachmentUrl} alt="Attachment" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
           </div>
         ) : (
           <div className="py-10 flex flex-col items-center justify-center text-center gap-4">
