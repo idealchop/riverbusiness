@@ -675,7 +675,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !auth || !authUser) return;
+        if (!userForHistory || !firestore || !auth || !authUser || !storage) return;
         setIsSubmitting(true);
     
         try {
@@ -2102,7 +2102,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
 
         <Dialog open={isCreateDeliveryOpen} onOpenChange={(open) => { if (!open) { setUploadProgress(0); deliveryForm.reset(); } setIsCreateDeliveryOpen(open); }}>
             <DialogContent>
@@ -3132,38 +3132,42 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <p>Loading visits...</p>
                     ) : sanitationVisitsData && sanitationVisitsData.length > 0 ? (
                         <Table>
-                            <TableHeader>
+                           <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead>Scheduled Date</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Quality Officer</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead>Assigned To</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {sanitationVisitsData.map(visit => (
+                                {sanitationVisitsData.map((visit) => (
                                     <TableRow key={visit.id}>
                                         <TableCell>{format(new Date(visit.scheduledDate), 'PP')}</TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'}
-                                                className={cn('text-xs',
-                                                    visit.status === 'Completed' && 'bg-green-100 text-green-800',
-                                                    visit.status === 'Scheduled' && 'bg-blue-100 text-blue-800',
-                                                    visit.status === 'Cancelled' && 'bg-red-100 text-red-800'
-                                                )}
-                                            >{visit.status}</Badge>
-                                        </TableCell>
+                                        <TableCell>{visit.status}</TableCell>
                                         <TableCell>{visit.assignedTo}</TableCell>
-                                        <TableCell className="text-right space-x-2">
-                                            <Button variant="outline" size="sm" onClick={() => { setVisitToEdit(visit); setIsSanitationVisitDialogOpen(true); }}>View</Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleShareVisit(visit)} disabled={sharingVisitId === visit.id}>
-                                                {sharingVisitId === visit.id ? (
-                                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                  <Share2 className="h-4 w-4" />
-                                                )}
-                                            </Button>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                     {visit.reportUrl && (
+                                                        <DropdownMenuItem onClick={() => window.open(visit.reportUrl, '_blank')}>
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            View Report
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                     <DropdownMenuItem onClick={() => { setVisitToEdit(visit); setIsSanitationVisitDialogOpen(true); }}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit Visit
+                                                        </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => {setVisitToDelete(visit); }} className="text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete Visit
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -3545,3 +3549,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
