@@ -346,7 +346,7 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
 
 
 /**
- * Generic Cloud Function for file uploads.
+ * Generic Cloud Function for file uploads, now with a robust routing system.
  */
 export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) => {
   const fileBucket = event.data.bucket;
@@ -368,129 +368,133 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     });
     return downloadURL;
   };
-
-  try {
-    // More specific regex matching to avoid ambiguity
-    const profilePhotoMatch = filePath.match(/^users\/([^\/]+)\/profile\/(.+)$/);
-    if (profilePhotoMatch) {
-        const userId = profilePhotoMatch[1];
+  
+  const fileRouter = [
+    {
+      regex: /^users\/([^\/]+)\/profile\/(.+)$/,
+      handler: async (matches: RegExpMatchArray) => {
+        const [_, userId] = matches;
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).update({ photoURL: url });
         logger.log(`Updated profile photo for user: ${userId}`);
-        return;
-    }
-
-    const supportProfilePhotoMatch = filePath.match(/^users\/([^\/]+)\/support_profile\/(.+)$/);
-    if (supportProfilePhotoMatch) {
-        const userId = supportProfilePhotoMatch[1];
+      }
+    },
+    {
+      regex: /^users\/([^\/]+)\/support_profile\/(.+)$/,
+      handler: async (matches: RegExpMatchArray) => {
+        const [_, userId] = matches;
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).update({ supportPhotoURL: url });
         logger.log(`Updated support profile photo for admin user: ${userId}`);
-        return;
-    }
+      }
+    },
+    {
+      regex: /^users\/([^\/]+)\/payments\/(.+)$/,
+      handler: async (matches: RegExpMatchArray) => {
+          const [_, userId, fileName] = matches;
+          const paymentId = fileName.split('-')[0];
+          const url = await getPublicUrl();
+          const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
+          
+          await paymentRef.set({
+              proofOfPaymentUrl: url,
+              status: "Pending Review",
+          }, { merge: true });
 
-    if (filePath.startsWith("userContracts/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).update({
-            currentContractUrl: url,
-            contractUploadedDate: FieldValue.serverTimestamp(),
-            contractStatus: "Active",
-        });
-        logger.log(`Updated contract for user: ${userId}`);
-        return;
-    }
-    
-    // Handle admin-uploaded proofs
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
-        const deliveryId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
-            proofOfDeliveryUrl: url,
-        });
-        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
-        return;
-    }
-    
-    // Handle admin-uploaded sanitation reports
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/sanitation_for/{userId}/{filename}
-        const visitId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
-            reportUrl: url,
-        });
-        logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
-        return;
-    }
+          logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
+          
+          await createNotification(userId, {
+              type: 'payment',
+              title: 'Payment Under Review',
+              description: `Your payment proof for invoice ${paymentId} is under review.`,
+              data: { paymentId: paymentId }
+          });
 
-
-    if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const paymentId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
-        
-        await paymentRef.set({
-            proofOfPaymentUrl: url,
-            status: "Pending Review",
-        }, { merge: true });
-
-        logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
-        
-        await createNotification(userId, {
-            type: 'payment',
-            title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} is under review.`,
-            data: { paymentId: paymentId }
-        });
-
-        // Also notify the admin
-        const adminId = await getAdminId();
-        if (adminId) {
-            const userDoc = await db.collection('users').doc(userId).get();
-            const userData = userDoc.data();
-            if (userData) {
-                 await createNotification(adminId, {
-                    type: 'payment',
-                    title: 'Payment for Review',
-                    description: `${userData.businessName} (ID: ${userData.clientId}) submitted payment proof.`,
-                    data: { userId: userId, paymentId: paymentId }
-                });
-            }
+          const adminId = await getAdminId();
+          if (adminId) {
+              const userDoc = await db.collection('users').doc(userId).get();
+              const userData = userDoc.data();
+              if (userData) {
+                   await createNotification(adminId, {
+                      type: 'payment',
+                      title: 'Payment for Review',
+                      description: `${userData.businessName} (ID: ${userData.clientId}) submitted payment proof.`,
+                      data: { userId: userId, paymentId: paymentId }
+                  });
+              }
+          }
+      }
+    },
+    {
+      regex: /^userContracts\/([^\/]+)\/(.+)$/,
+      handler: async (matches: RegExpMatchArray) => {
+          const [_, userId] = matches;
+          const url = await getPublicUrl();
+          await db.collection("users").doc(userId).update({
+              currentContractUrl: url,
+              contractUploadedDate: FieldValue.serverTimestamp(),
+              contractStatus: "Active",
+          });
+          logger.log(`Updated contract for user: ${userId}`);
+      }
+    },
+    {
+      regex: /^admin_uploads\/([^\/]+)\/proofs_for\/([^\/]+)\/(.+)$/,
+      handler: async (matches: RegExpMatchArray) => {
+          const [_, adminId, userId, fileName] = matches;
+          const deliveryId = path.basename(fileName).split('-')[0];
+          const url = await getPublicUrl();
+          await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
+              proofOfDeliveryUrl: url,
+          });
+          logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin: ${adminId}`);
+      }
+    },
+    {
+        regex: /^admin_uploads\/([^\/]+)\/sanitation_for\/([^\/]+)\/(.+)$/,
+        handler: async (matches: RegExpMatchArray) => {
+            const [_, adminId, userId, fileName] = matches;
+            const visitId = path.basename(fileName).split('-')[0];
+            const url = await getPublicUrl();
+            await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
+                reportUrl: url,
+            });
+            logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin: ${adminId}.`);
         }
-        return;
-    }
-    
-    if (filePath.startsWith("stations/")) {
-        const parts = filePath.split("/");
-        const stationId = parts[1];
-        const docType = parts[2];
-        const url = await getPublicUrl();
-
-        if (docType === "agreement") {
+    },
+    {
+        regex: /^stations\/([^\/]+)\/agreement\/(.+)$/,
+        handler: async (matches: RegExpMatchArray) => {
+            const [_, stationId] = matches;
+            const url = await getPublicUrl();
             await db.collection("waterStations").doc(stationId).update({
                 partnershipAgreementUrl: url,
             });
             logger.log(`Updated partnership agreement for station: ${stationId}`);
-        } else if (docType === "compliance") {
-            const reportKey = path.basename(filePath).split('-')[0];
-            
+        }
+    },
+    {
+        regex: /^stations\/([^\/]+)\/compliance\/(.+)$/,
+        handler: async (matches: RegExpMatchArray) => {
+            const [_, stationId, fileName] = matches;
+            const reportKey = path.basename(fileName).split('-')[0];
+            const url = await getPublicUrl();
             const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportKey);
-
             await reportRef.update({ reportUrl: url });
             logger.log(`Updated compliance report URL for report '${reportKey}' for station: ${stationId}`);
         }
-        return;
     }
+  ];
 
+  try {
+    for (const route of fileRouter) {
+      const matches = filePath.match(route.regex);
+      if (matches) {
+        await route.handler(matches);
+        return; // Stop after first match
+      }
+    }
     logger.log(`File path ${filePath} did not match any handler.`);
-
   } catch (error) {
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }

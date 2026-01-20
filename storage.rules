@@ -12,7 +12,6 @@ service firebase.storage {
     // --- ADMIN-SPECIFIC WRITE RULES ---
 
     // Rule for admins uploading delivery proofs or sanitation reports on behalf of users.
-    // This matches the paths used in the AdminDashboard component.
     match /admin_uploads/{adminId}/{path=**} {
       allow write: if request.auth.uid == adminId && isAdmin();
     }
@@ -42,6 +41,11 @@ service firebase.storage {
     // Users can upload their own payment proofs.
     match /users/{userId}/payments/{fileName} {
        allow write: if request.auth.uid == userId;
+    }
+    
+    // Users can upload their own top-up proofs.
+    match /topup_proofs/{userId}/{fileName} {
+        allow write: if request.auth.uid == userId;
     }
 
     // Rule for both users and admins to upload chat attachments.
