@@ -10,7 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -192,7 +192,35 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const firestore = useFirestore();
   const storage = useStorage();
   const auth = useAuth();
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
+  const INVOICES_PER_PAGE = 5;
+
+  const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
+  const TRANSACTIONS_PER_PAGE = 5;
   
+  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
+  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
+  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
+  const isPayday = isToday(startOfMonth(new Date()));
+
+  const toSafeDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toDate();
+    }
+    if (typeof timestamp === 'string') {
+      const date = new Date(timestamp);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+      return new Date(timestamp.seconds * 1000);
+    }
+    return null;
+  };
+
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
   const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
@@ -213,41 +241,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const branchUsersQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', user.id)) : null, [firestore, user]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
 
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
-  const INVOICES_PER_PAGE = 5;
-
-  const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
-  const TRANSACTIONS_PER_PAGE = 5;
-
-  // Move all hooks before the early return
-  const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
-  const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
-  const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
-
   const paymentOptions: PaymentOption[] = [
       { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
       { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
       { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
   ];
 
-  const toSafeDate = (timestamp: any): Date | null => {
-    if (!timestamp) return null;
-    if (timestamp instanceof Timestamp) {
-      return timestamp.toDate();
-    }
-    if (typeof timestamp === 'string') {
-      const date = new Date(timestamp);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
-      return new Date(timestamp.seconds * 1000);
-    }
-    return null;
-  };
-  
   const currentMonthInvoice = useMemo(() => {
     if (!user || deliveriesLoading) return null;
 
@@ -490,7 +489,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
 
   const flowPlan = React.useMemo(() => enterprisePlans.find(p => p.name === 'Flow Plan (P3/L)'), []);
-  const isPayday = isToday(startOfMonth(new Date()));
 
   useEffect(() => {
     if (user) {
@@ -1390,7 +1388,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <CardDescription>These accounts consume from your central credit balance.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Table>
+                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Client ID</TableHead>
@@ -1408,9 +1406,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={3} className="text-center">No branches linked to this parent account.</TableCell>
-                                        </TableRow>
+                                        <TableRow><TableCell colSpan={3} className="text-center">No branches linked to this parent account.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
