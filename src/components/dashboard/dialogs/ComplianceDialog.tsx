@@ -42,6 +42,8 @@ export function ComplianceDialog({
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [complianceCurrentPage, setComplianceCurrentPage] = useState(1);
   const COMPLIANCE_ITEMS_PER_PAGE = 5;
+  const [sanitationCurrentPage, setSanitationCurrentPage] = useState(1);
+  const SANITATION_ITEMS_PER_PAGE = 5;
 
   const sanitationReportStats = useMemo(() => {
     if (!selectedSanitationVisit || !selectedSanitationVisit.dispenserReports) {
@@ -107,6 +109,14 @@ export function ComplianceDialog({
     const startIndex = (complianceCurrentPage - 1) * COMPLIANCE_ITEMS_PER_PAGE;
     return filteredReports.slice(startIndex, startIndex + COMPLIANCE_ITEMS_PER_PAGE);
   }, [filteredReports, complianceCurrentPage]);
+
+  const totalSanitationPages = Math.ceil((sanitationVisits?.length || 0) / SANITATION_ITEMS_PER_PAGE);
+
+  const paginatedSanitationVisits = useMemo(() => {
+    if (!sanitationVisits) return [];
+    const startIndex = (sanitationCurrentPage - 1) * SANITATION_ITEMS_PER_PAGE;
+    return sanitationVisits.slice(startIndex, startIndex + SANITATION_ITEMS_PER_PAGE);
+  }, [sanitationVisits, sanitationCurrentPage]);
 
 
   return (
@@ -212,8 +222,9 @@ export function ComplianceDialog({
                       <p className="text-center text-muted-foreground py-10">No compliance reports available for the selected period.</p>
                      )}
                    </div>
-                   {totalCompliancePages > 1 && (
-                     <div className="flex items-center justify-end space-x-2 pt-4">
+                </CardContent>
+                <CardFooter>
+                    <div className="flex items-center justify-end space-x-2 w-full">
                         <Button
                             variant="outline"
                             size="sm"
@@ -223,19 +234,18 @@ export function ComplianceDialog({
                             Previous
                         </Button>
                         <span className="text-sm text-muted-foreground">
-                            Page {complianceCurrentPage} of {totalCompliancePages}
+                            Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
                         </span>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
-                            disabled={complianceCurrentPage === totalCompliancePages}
+                            disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
                         >
                             Next
                         </Button>
                     </div>
-                  )}
-                </CardContent>
+                </CardFooter>
               </Card>
             </TabsContent>
             
@@ -261,7 +271,7 @@ export function ComplianceDialog({
                         <TableRow>
                           <TableCell colSpan={4} className="text-center">Loading visits...</TableCell>
                         </TableRow>
-                      ) : sanitationVisits?.map((visit) => (
+                      ) : paginatedSanitationVisits.map((visit) => (
                         <TableRow key={visit.id}>
                           <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                           <TableCell>
@@ -278,7 +288,7 @@ export function ComplianceDialog({
                           </TableCell>
                         </TableRow>
                       ))}
-                      {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
+                      {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
                         </TableRow>
@@ -290,7 +300,7 @@ export function ComplianceDialog({
                    <div className="space-y-4 md:hidden">
                     {sanitationLoading ? (
                       <p className="text-center text-muted-foreground py-4">Loading visits...</p>
-                    ) : sanitationVisits?.map(visit => (
+                    ) : paginatedSanitationVisits.map(visit => (
                       <Card key={visit.id}>
                         <CardContent className="p-4 space-y-3">
                             <div className="flex justify-between items-start">
@@ -308,12 +318,34 @@ export function ComplianceDialog({
                         </CardContent>
                       </Card>
                     ))}
-                     {(!sanitationVisits || sanitationVisits.length === 0) && !sanitationLoading && (
+                     {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
                         <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
                      )}
                    </div>
-
                 </CardContent>
+                 <CardFooter>
+                    <div className="flex items-center justify-end space-x-2 pt-4 w-full">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={sanitationCurrentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                            Page {sanitationCurrentPage} of {totalSanitationPages > 0 ? totalSanitationPages : 1}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))}
+                            disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                 </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
