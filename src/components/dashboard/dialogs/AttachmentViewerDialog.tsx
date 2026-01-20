@@ -1,6 +1,7 @@
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Hourglass } from 'lucide-react';
 import Image from 'next/image';
 
@@ -19,7 +20,9 @@ export function AttachmentViewerDialog({ isOpen, onOpenChange, attachmentUrl }: 
         </DialogHeader>
         {attachmentUrl && attachmentUrl !== 'pending' ? (
           <div className="py-4 flex justify-center">
-            <Image src={attachmentUrl} alt="Attachment" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
+            <div className="relative w-full aspect-[9/16] max-h-[70vh]">
+              <Image src={attachmentUrl} alt="Attachment" fill className="rounded-md object-contain" />
+            </div>
           </div>
         ) : (
           <div className="py-10 flex flex-col items-center justify-center text-center gap-4">
@@ -30,6 +33,11 @@ export function AttachmentViewerDialog({ isOpen, onOpenChange, attachmentUrl }: 
             </p>
           </div>
         )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
