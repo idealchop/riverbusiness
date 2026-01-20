@@ -123,233 +123,242 @@ export function ComplianceDialog({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-4xl h-full flex flex-col sm:h-auto sm:max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-4">
             <DialogTitle>Compliance & Sanitation</DialogTitle>
             <DialogDescription>
               View water quality reports from your assigned station and scheduled sanitation visits for your office.
             </DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="compliance" className="flex flex-col gap-4 pt-4">
-            <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto">
-              <TabsTrigger value="compliance">Water Quality Reports</TabsTrigger>
-              <TabsTrigger value="sanitation">Office Sanitation Visits</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="compliance">
-              <Card>
-                <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-                  <div>
-                    <CardTitle>Water Quality Compliance</CardTitle>
-                    <CardDescription>View all historical compliance reports and their status for {waterStation?.name || 'your assigned station'}.</CardDescription>
-                  </div>
-                  {availableMonths.length > 0 && (
-                    <Select value={monthFilter} onValueChange={setMonthFilter}>
-                      <SelectTrigger className="w-full md:w-[200px]">
-                         <History className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Filter by month..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Months</SelectItem>
-                        {availableMonths.map(month => (
-                          <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {/* Desktop Table */}
-                  <Table className="hidden md:table">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Report Name</TableHead>
-                        <TableHead>Month</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Attachment</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {complianceLoading ? (
+          
+          <ScrollArea className="px-6 flex-1">
+            <Tabs defaultValue="compliance" className="flex flex-col gap-4">
+              <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto sticky top-0 bg-background z-10">
+                <TabsTrigger value="compliance">Water Quality Reports</TabsTrigger>
+                <TabsTrigger value="sanitation">Office Sanitation Visits</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="compliance">
+                <Card>
+                  <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                    <div>
+                      <CardTitle>Water Quality Compliance</CardTitle>
+                      <CardDescription>View all historical compliance reports and their status for {waterStation?.name || 'your assigned station'}.</CardDescription>
+                    </div>
+                    {availableMonths.length > 0 && (
+                      <Select value={monthFilter} onValueChange={setMonthFilter}>
+                        <SelectTrigger className="w-full md:w-[200px]">
+                          <History className="mr-2 h-4 w-4" />
+                          <SelectValue placeholder="Filter by month..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Months</SelectItem>
+                          {availableMonths.map(month => (
+                            <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    {/* Desktop Table */}
+                    <Table className="hidden md:table">
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center">Loading reports...</TableCell>
+                          <TableHead>Report Name</TableHead>
+                          <TableHead>Month</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Attachment</TableHead>
                         </TableRow>
-                      ) : paginatedComplianceReports.map((report) => (
-                        <TableRow key={report.id}>
-                          <TableCell className="font-medium">{report.name}</TableCell>
-                          <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
-                          <TableCell>
-                            <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
+                      </TableHeader>
+                      <TableBody>
+                        {complianceLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center">Loading reports...</TableCell>
+                          </TableRow>
+                        ) : paginatedComplianceReports.map((report) => (
+                          <TableRow key={report.id}>
+                            <TableCell className="font-medium">{report.name}</TableCell>
+                            <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
+                            <TableCell>
+                              <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available for the selected period.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+
+                    {/* Mobile Cards */}
+                    <div className="space-y-4 md:hidden">
+                      {complianceLoading ? (
+                        <p className="text-center text-muted-foreground py-4">Loading reports...</p>
+                      ) : paginatedComplianceReports.map(report => (
+                        <Card key={report.id}>
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold">{report.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}
+                                </p>
+                              </div>
+                              <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
+                            </div>
+                            <Button variant="outline" size="sm" className="w-full" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                              <Eye className="mr-2 h-4 w-4" /> View Attachment
                             </Button>
-                          </TableCell>
-                        </TableRow>
+                          </CardContent>
+                        </Card>
                       ))}
                       {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available for the selected period.</TableCell>
-                        </TableRow>
+                        <p className="text-center text-muted-foreground py-10">No compliance reports available for the selected period.</p>
                       )}
-                    </TableBody>
-                  </Table>
-
-                  {/* Mobile Cards */}
-                   <div className="space-y-4 md:hidden">
-                    {complianceLoading ? (
-                      <p className="text-center text-muted-foreground py-4">Loading reports...</p>
-                    ) : paginatedComplianceReports.map(report => (
-                      <Card key={report.id}>
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold">{report.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}
-                              </p>
-                            </div>
-                            <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
-                          </div>
-                          <Button variant="outline" size="sm" className="w-full" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
-                            <Eye className="mr-2 h-4 w-4" /> View Attachment
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
-                      <p className="text-center text-muted-foreground py-10">No compliance reports available for the selected period.</p>
-                     )}
-                   </div>
-                </CardContent>
-                <CardFooter>
-                    <div className="flex items-center justify-end space-x-2 pt-4 w-full">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={complianceCurrentPage === 1}
-                        >
-                            Previous
-                        </Button>
-                        <span className="text-sm text-muted-foreground">
-                            Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
-                            disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
-                        >
-                            Next
-                        </Button>
                     </div>
-                </CardFooter>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="sanitation">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Office Sanitation Visits</CardTitle>
-                  <CardDescription>Records of scheduled sanitation and cleaning for your office dispensers.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   {/* Desktop Table */}
-                  <Table className="hidden md:table">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Scheduled Date</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Quality Officer</TableHead>
-                        <TableHead className="text-right">Report</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sanitationLoading ? (
+                  </CardContent>
+                  <CardFooter>
+                      <div className="flex items-center justify-end space-x-2 pt-4 w-full">
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
+                              disabled={complianceCurrentPage === 1}
+                          >
+                              Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                              Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
+                          </span>
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
+                              disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
+                          >
+                              Next
+                          </Button>
+                      </div>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="sanitation">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Office Sanitation Visits</CardTitle>
+                    <CardDescription>Records of scheduled sanitation and cleaning for your office dispensers.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Desktop Table */}
+                    <Table className="hidden md:table">
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center">Loading visits...</TableCell>
+                          <TableHead>Scheduled Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Quality Officer</TableHead>
+                          <TableHead className="text-right">Report</TableHead>
                         </TableRow>
-                      ) : paginatedSanitationVisits.map((visit) => (
-                        <TableRow key={visit.id}>
-                          <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
-                          <TableCell>
-                            <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'}>
-                              {visit.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{visit.assignedTo}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => { setSelectedSanitationVisit(visit); }}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Report
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sanitationLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center">Loading visits...</TableCell>
+                          </TableRow>
+                        ) : paginatedSanitationVisits.map((visit) => (
+                          <TableRow key={visit.id}>
+                            <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                            <TableCell>
+                              <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'}>
+                                {visit.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{visit.assignedTo}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={() => { setSelectedSanitationVisit(visit); }}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Report
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+
+                    {/* Mobile Cards */}
+                    <div className="space-y-4 md:hidden">
+                      {sanitationLoading ? (
+                        <p className="text-center text-muted-foreground py-4">Loading visits...</p>
+                      ) : paginatedSanitationVisits.map(visit => (
+                        <Card key={visit.id}>
+                          <CardContent className="p-4 space-y-3">
+                              <div className="flex justify-between items-start">
+                                  <div>
+                                      <p className="font-semibold">{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                      <p className="text-xs text-muted-foreground">Officer: {visit.assignedTo}</p>
+                                  </div>
+                                  <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
+                                      {visit.status}
+                                  </Badge>
+                              </div>
+                              <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectedSanitationVisit(visit); }}>
+                                  <FileText className="mr-2 h-4 w-4" /> View Report
+                              </Button>
+                          </CardContent>
+                        </Card>
                       ))}
                       {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
-                        </TableRow>
+                          <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
                       )}
-                    </TableBody>
-                  </Table>
-
-                   {/* Mobile Cards */}
-                   <div className="space-y-4 md:hidden">
-                    {sanitationLoading ? (
-                      <p className="text-center text-muted-foreground py-4">Loading visits...</p>
-                    ) : paginatedSanitationVisits.map(visit => (
-                      <Card key={visit.id}>
-                        <CardContent className="p-4 space-y-3">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="font-semibold">{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                                    <p className="text-xs text-muted-foreground">Officer: {visit.assignedTo}</p>
-                                </div>
-                                <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
-                                    {visit.status}
-                                </Badge>
-                            </div>
-                            <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectedSanitationVisit(visit); }}>
-                                <FileText className="mr-2 h-4 w-4" /> View Report
-                            </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                     {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
-                        <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
-                     )}
-                   </div>
-                </CardContent>
-                 <CardFooter>
-                    <div className="flex items-center justify-end space-x-2 pt-4 w-full">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={sanitationCurrentPage === 1}
-                        >
-                            Previous
-                        </Button>
-                        <span className="text-sm text-muted-foreground">
-                            Page {sanitationCurrentPage} of {totalSanitationPages > 0 ? totalSanitationPages : 1}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))}
-                            disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}
-                        >
-                            Next
-                        </Button>
                     </div>
-                 </CardFooter>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  </CardContent>
+                  <CardFooter>
+                      <div className="flex items-center justify-end space-x-2 pt-4 w-full">
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))}
+                              disabled={sanitationCurrentPage === 1}
+                          >
+                              Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                              Page {sanitationCurrentPage} of {totalSanitationPages > 0 ? totalSanitationPages : 1}
+                          </span>
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))}
+                              disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}
+                          >
+                              Next
+                          </Button>
+                      </div>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </ScrollArea>
+          
+          <DialogFooter className="p-6 pt-4 border-t">
+            <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       
@@ -397,7 +406,7 @@ export function ComplianceDialog({
                       </Card>
                   )}
                   
-                  <div className={cn("grid gap-4", selectedSanitationVisit?.dispenserReports?.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                  <div className={cn("grid gap-4", (selectedSanitationVisit?.dispenserReports?.length || 0) <= 1 ? "grid-cols-1" : "md:grid-cols-2")}>
                       {selectedSanitationVisit?.dispenserReports?.map(report => (
                           <Card key={report.dispenserId}>
                               <CardHeader>
