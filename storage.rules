@@ -34,6 +34,11 @@ service firebase.storage {
       allow write: if request.auth.uid == userId;
     }
 
+    // Admin can upload their support profile photo.
+    match /users/{userId}/support_profile/{fileName} {
+      allow write: if request.auth.uid == userId && isAdmin();
+    }
+
     // Users can upload their own payment proofs.
     match /users/{userId}/payments/{fileName} {
        allow write: if request.auth.uid == userId;

@@ -28,7 +28,8 @@ service cloud.firestore {
             'name', 'businessName', 'businessEmail', 'address', 'contactNumber', 'photoURL',
             'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
             'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
-            'accountStatus', 'lastLogin'
+            'accountStatus', 'lastLogin',
+            'supportDisplayName', 'supportDescription'
         ]);
 
       allow delete: if isOwner(userId);

@@ -121,6 +121,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         } catch (error) {
             logger.error(`Error processing branch delivery for parent ${userData.parentId}:`, error);
             // Optional: Add error handling, like sending a notification to the admin
+            return;
         }
 
     } else if (userData?.plan?.isPrepaid) {
@@ -132,7 +133,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         });
     }
 
-    // Always notify the user receiving the delivery (this now includes Branch users)
+    // Always notify the user receiving the delivery
     const notification = {
         type: 'delivery',
         title: 'Delivery Scheduled',
@@ -369,12 +370,21 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
-    if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
+    const profilePhotoMatch = filePath.match(/^users\/([^\/]+)\/profile\/(.+)$/);
+    if (profilePhotoMatch) {
+        const userId = profilePhotoMatch[1];
         const url = await getPublicUrl();
         await db.collection("users").doc(userId).update({ photoURL: url });
         logger.log(`Updated profile photo for user: ${userId}`);
+        return;
+    }
+
+    const supportProfilePhotoMatch = filePath.match(/^users\/([^\/]+)\/support_profile\/(.+)$/);
+    if (supportProfilePhotoMatch) {
+        const userId = supportProfilePhotoMatch[1];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).update({ supportPhotoURL: url });
+        logger.log(`Updated support profile photo for admin user: ${userId}`);
         return;
     }
 

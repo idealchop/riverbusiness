@@ -182,13 +182,11 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
     
     startTransition(() => {
         uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress)
-        .then(async (url) => {
-            const adminUserDocRef = doc(firestore!, 'users', auth.currentUser!.uid);
-            await updateDoc(adminUserDocRef, { 'supportPhotoURL': url });
-            toast({ title: 'Upload Complete', description: 'Your support photo has been updated.' });
+        .then(() => {
+            toast({ title: 'Upload Complete', description: 'Your support photo is being processed and will update shortly.' });
         })
         .catch((error) => {
-            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your profile photo.' });
+            toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your support photo.' });
         })
         .finally(() => {
             dispatch({ type: 'RESET_UPLOAD' });
