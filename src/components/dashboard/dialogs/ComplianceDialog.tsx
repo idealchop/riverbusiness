@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -224,7 +225,7 @@ export function ComplianceDialog({
                    </div>
                 </CardContent>
                 <CardFooter>
-                    <div className="flex items-center justify-end space-x-2 w-full">
+                    <div className="flex items-center justify-end space-x-2 pt-4 w-full">
                         <Button
                             variant="outline"
                             size="sm"
@@ -396,7 +397,7 @@ export function ComplianceDialog({
                       </Card>
                   )}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={cn("grid gap-4", selectedSanitationVisit?.dispenserReports?.length === 1 ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2")}>
                       {selectedSanitationVisit?.dispenserReports?.map(report => (
                           <Card key={report.dispenserId}>
                               <CardHeader>
