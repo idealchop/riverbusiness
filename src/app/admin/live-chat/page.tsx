@@ -73,7 +73,7 @@ export default function LiveChatPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 h-[calc(100vh-10rem)]">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Live Chat</h1>
                 <Button onClick={() => setIsAccountDialogOpen(true)}>
@@ -81,13 +81,13 @@ export default function LiveChatPage() {
                     Edit Support Profile
                 </Button>
             </div>
-             <Card>
+             <Card className="flex-1 flex flex-col">
                 <CardHeader>
                     <CardTitle>Client Conversations</CardTitle>
                     <CardDescription>Respond to user messages in real-time.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[60vh] border rounded-lg">
+                <CardContent className="flex-1 min-h-0">
+                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-full border rounded-lg">
                         <div className="border-r">
                             <ScrollArea className="h-full">
                                 <div className="p-2">
