@@ -180,23 +180,19 @@ export function AdminMyAccountDialog({ adminUser, isOpen, onOpenChange }: AdminM
 
     const filePath = `users/${auth.currentUser.uid}/support_profile/photo-${Date.now()}`;
     
-    startTransition(() => {
-        uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress)
-        .then((downloadURL) => {
-            const adminUserDocRef = doc(firestore, 'users', auth.currentUser!.uid);
-            return updateDoc(adminUserDocRef, { supportPhotoURL: downloadURL });
-        })
-        .then(() => {
-            toast({ title: 'Support Photo Updated!', description: 'Your new photo has been saved.' });
-        })
-        .catch((error) => {
-            console.error("Support photo upload/update failed:", error);
-            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not upload your support photo.' });
-        })
-        .finally(() => {
-            dispatch({ type: 'RESET_UPLOAD' });
-            setUploadProgress(0);
-        });
+    startTransition(async () => {
+      try {
+        const downloadURL = await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
+        const adminUserDocRef = doc(firestore, 'users', auth.currentUser!.uid);
+        await updateDoc(adminUserDocRef, { supportPhotoURL: downloadURL });
+        toast({ title: 'Support Photo Updated!', description: 'Your new photo has been saved.' });
+      } catch (error) {
+        console.error("Support photo upload/update failed:", error);
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not upload your support photo.' });
+      } finally {
+        dispatch({ type: 'RESET_UPLOAD' });
+        setUploadProgress(0);
+      }
     });
   };
 
