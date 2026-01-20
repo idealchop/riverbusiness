@@ -40,6 +40,8 @@ export function ComplianceDialog({
 }: ComplianceDialogProps) {
   const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
   const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [complianceCurrentPage, setComplianceCurrentPage] = useState(1);
+  const COMPLIANCE_ITEMS_PER_PAGE = 5;
 
   const sanitationReportStats = useMemo(() => {
     if (!selectedSanitationVisit || !selectedSanitationVisit.dispenserReports) {
@@ -99,6 +101,14 @@ export function ComplianceDialog({
     });
   }, [complianceReports, monthFilter]);
 
+  const totalCompliancePages = Math.ceil(filteredReports.length / COMPLIANCE_ITEMS_PER_PAGE);
+
+  const paginatedComplianceReports = useMemo(() => {
+    const startIndex = (complianceCurrentPage - 1) * COMPLIANCE_ITEMS_PER_PAGE;
+    return filteredReports.slice(startIndex, startIndex + COMPLIANCE_ITEMS_PER_PAGE);
+  }, [filteredReports, complianceCurrentPage]);
+
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -153,7 +163,7 @@ export function ComplianceDialog({
                         <TableRow>
                           <TableCell colSpan={4} className="text-center">Loading reports...</TableCell>
                         </TableRow>
-                      ) : filteredReports.map((report) => (
+                      ) : paginatedComplianceReports.map((report) => (
                         <TableRow key={report.id}>
                           <TableCell className="font-medium">{report.name}</TableCell>
                           <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
@@ -168,7 +178,7 @@ export function ComplianceDialog({
                           </TableCell>
                         </TableRow>
                       ))}
-                      {(!filteredReports || filteredReports.length === 0) && !complianceLoading && (
+                      {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available for the selected period.</TableCell>
                         </TableRow>
@@ -180,7 +190,7 @@ export function ComplianceDialog({
                    <div className="space-y-4 md:hidden">
                     {complianceLoading ? (
                       <p className="text-center text-muted-foreground py-4">Loading reports...</p>
-                    ) : filteredReports.map(report => (
+                    ) : paginatedComplianceReports.map(report => (
                       <Card key={report.id}>
                         <CardContent className="p-4 space-y-3">
                           <div className="flex justify-between items-start">
@@ -198,11 +208,33 @@ export function ComplianceDialog({
                         </CardContent>
                       </Card>
                     ))}
-                    {(!filteredReports || filteredReports.length === 0) && !complianceLoading && (
+                    {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
                       <p className="text-center text-muted-foreground py-10">No compliance reports available for the selected period.</p>
                      )}
                    </div>
-
+                   {totalCompliancePages > 1 && (
+                     <div className="flex items-center justify-end space-x-2 pt-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={complianceCurrentPage === 1}
+                        >
+                            Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                            Page {complianceCurrentPage} of {totalCompliancePages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
+                            disabled={complianceCurrentPage === totalCompliancePages}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
