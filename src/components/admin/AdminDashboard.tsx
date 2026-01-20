@@ -150,6 +150,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const auth = useAuth();
     const { user: authUser } = useUser();
     const firestore = useFirestore();
+    const storage = useStorage();
     const router = useRouter();
 
     const usersQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collection(firestore, 'users'), where('role', '==', 'User')) : null, [firestore, isAdmin]);
@@ -673,7 +674,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
     
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userForHistory || !firestore || !auth || !authUser) return;
+        if (!userForHistory || !firestore || !auth || !authUser || !storage) return;
         setIsSubmitting(true);
     
         try {
