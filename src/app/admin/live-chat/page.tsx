@@ -87,7 +87,7 @@ export default function LiveChatPage() {
                     <CardDescription>Respond to user messages in real-time.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-25rem)] border rounded-lg">
+                     <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] h-[60vh] border rounded-lg">
                         <div className="border-r">
                             <ScrollArea className="h-full">
                                 <div className="p-2">
