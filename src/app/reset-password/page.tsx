@@ -1,31 +1,204 @@
-
 'use client';
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Logo } from '@/components/icons';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAuth } from '@/firebase';
+import { verifyPasswordResetCode, confirmPasswordReset } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Logo } from '@/components/icons';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const passwordSchema = z.object({
+  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+
+function ResetPasswordComponent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const auth = useAuth();
+  const { toast } = useToast();
+
+  const [mode, setMode] = useState<'verify' | 'reset' | 'success' | 'error'>('verify');
+  const [oobCode, setOobCode] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+  });
+
+  useEffect(() => {
+    const code = searchParams.get('oobCode');
+    if (code && auth) {
+      setOobCode(code);
+      verifyPasswordResetCode(auth, code)
+        .then(() => {
+          setMode('reset');
+        })
+        .catch((error) => {
+          setMode('error');
+          if (error.code === 'auth/invalid-action-code') {
+            setErrorMessage('This password reset link is invalid or has expired. Please try requesting a new one.');
+          } else {
+            setErrorMessage('An unexpected error occurred. Please try again.');
+          }
+        });
+    } else if (!code) {
+      setMode('error');
+      setErrorMessage('No password reset code provided. Please use the link from your email.');
+    }
+  }, [searchParams, auth]);
+
+  const onSubmit = async (data: PasswordFormValues) => {
+    if (!oobCode || !auth) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Something went wrong. Please try again.' });
+      return;
+    }
+    try {
+      await confirmPasswordReset(auth, oobCode, data.password);
+      setMode('success');
+    } catch (error: any) {
+      setMode('error');
+      if (error.code === 'auth/invalid-action-code') {
+        setErrorMessage('This password reset link is invalid or has expired. Please try requesting a new one.');
+      } else {
+        setErrorMessage('Failed to reset password. Please try again.');
+      }
+    }
+  };
+
+  const renderContent = () => {
+    switch (mode) {
+      case 'verify':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <Skeleton className="h-16 w-16 mb-4 mx-auto rounded-full" />
+              <CardTitle><Skeleton className="h-8 w-48 mx-auto" /></CardTitle>
+              <CardDescription><Skeleton className="h-5 w-64 mx-auto" /></CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </>
+        );
+      case 'reset':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <Logo className="h-16 w-16 mb-4 mx-auto" />
+              <CardTitle>Reset Your Password</CardTitle>
+              <CardDescription>Enter a new password for your account.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+                <div className="relative grid gap-2">
+                  <Label htmlFor="password">New Password</Label>
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    {...register('password')}
+                    disabled={isSubmitting}
+                  />
+                  <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  {errors.password && <p className="text-sm text-destructive mt-1">{errors.password.message}</p>}
+                </div>
+                <div className="relative grid gap-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    {...register('confirmPassword')}
+                    disabled={isSubmitting}
+                  />
+                  <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => setShowConfirmPassword(!showConfirmPassword)} type="button">
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  {errors.confirmPassword && <p className="text-sm text-destructive mt-1">{errors.confirmPassword.message}</p>}
+                </div>
+                <Button type="submit" className="w-full mt-4" disabled={isSubmitting}>
+                  {isSubmitting ? 'Resetting...' : 'Reset Password'}
+                </Button>
+              </form>
+            </CardContent>
+          </>
+        );
+      case 'success':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
+              <CardTitle>Password Reset Successfully</CardTitle>
+              <CardDescription>You can now log in with your new password.</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button onClick={() => router.push('/login')} className="w-full">Back to Login</Button>
+            </CardFooter>
+          </>
+        );
+      case 'error':
+        return (
+          <>
+            <CardHeader className="text-center">
+              <AlertTriangle className="h-16 w-16 mx-auto text-destructive mb-4" />
+              <CardTitle>An Error Occurred</CardTitle>
+              <CardDescription>{errorMessage}</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button onClick={() => router.push('/login')} className="w-full">Back to Login</Button>
+            </CardFooter>
+          </>
+        );
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-md">
+      {renderContent()}
+    </Card>
+  );
+}
 
 export default function ResetPasswordPage() {
-    const router = useRouter();
-
-    return (
-        <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <Logo className="h-16 w-16 mb-4 mx-auto" />
-                    <CardTitle>Reset Your Password</CardTitle>
-                    <CardDescription>
-                        This page is under construction to fix a routing issue. Please try again shortly.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button className="w-full" onClick={() => router.push('/login')}>
-                        Back to Login
-                    </Button>
-                </CardContent>
-            </Card>
-        </main>
-    );
+  return (
+    <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
+      <Suspense fallback={
+          <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <Skeleton className="h-16 w-16 mb-4 mx-auto rounded-full" />
+                <CardTitle><Skeleton className="h-8 w-48 mx-auto" /></CardTitle>
+                <CardDescription><Skeleton className="h-5 w-64 mx-auto" /></CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+          </Card>
+      }>
+        <ResetPasswordComponent />
+      </Suspense>
+    </main>
+  );
 }

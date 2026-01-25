@@ -165,6 +165,7 @@ export default function LoginPage() {
         if (error.code === 'auth/invalid-email') {
             description = 'The email address is not valid.';
         } else if (error.code === 'auth/user-not-found') {
+            // To prevent email enumeration, show a generic message even if the user is not found.
             description = 'If an account exists for this email, a reset link has been sent.';
             toast({ title: 'Email Sent', description });
             setIsForgotPasswordOpen(false);
