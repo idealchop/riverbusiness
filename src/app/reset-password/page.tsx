@@ -27,6 +27,29 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+function ResetPasswordSkeleton() {
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <Skeleton className="h-16 w-16 mb-4 mx-auto rounded-full" />
+        <Skeleton className="h-8 w-48 mx-auto" />
+        <Skeleton className="h-5 w-64 mx-auto" />
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-10 w-full animate-shine" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-10 w-full animate-shine" />
+        </div>
+        <Skeleton className="h-10 w-full mt-4" />
+      </CardContent>
+    </Card>
+  );
+}
+
 function ResetPasswordComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -95,18 +118,7 @@ function ResetPasswordComponent() {
   };
 
   if (status === 'loading') {
-    return (
-        <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-                <Logo className="h-16 w-16 mb-4 mx-auto" />
-                <CardTitle>Verifying Link...</CardTitle>
-                <CardDescription>Please wait while we validate your password reset request.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Skeleton className="h-10 w-full" />
-            </CardContent>
-        </Card>
-    )
+    return <ResetPasswordSkeleton />;
   }
 
   if (status === 'success') {
@@ -186,23 +198,9 @@ function ResetPasswordComponent() {
 export default function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <Suspense fallback={
-          <Card className="w-full max-w-md">
-              <CardHeader className="text-center">
-                <Skeleton className="h-16 w-16 mb-4 mx-auto rounded-full" />
-                <CardTitle><Skeleton className="h-8 w-48 mx-auto" /></CardTitle>
-                <CardDescription><Skeleton className="h-5 w-64 mx-auto" /></CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </CardContent>
-          </Card>
-      }>
+      <Suspense fallback={<ResetPasswordSkeleton />}>
         <ResetPasswordComponent />
       </Suspense>
     </main>
   );
 }
-
-    
