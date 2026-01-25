@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isWeekend } from 'date-fns';
 
 interface RequestRefillDialogProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
     }
   };
 
+  const isDateWeekend = deliveryDate && isWeekend(deliveryDate);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -42,6 +45,11 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
               initialFocus
             />
           </div>
+          {isDateWeekend && (
+            <p className="text-sm text-center text-muted-foreground p-3 bg-muted rounded-lg">
+                Please note we don't have deliveries on weekends. Your request will be scheduled for the next business day (Monday).
+            </p>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="oneTimeContainers">Number of Containers</Label>
             <Input
