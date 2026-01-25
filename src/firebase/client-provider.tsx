@@ -4,7 +4,7 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, type Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
@@ -42,7 +42,17 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
         const firestore = getFirestore(firebaseApp);
         const storage = getStorage(firebaseApp);
       
-        setServices({ firebaseApp, auth, firestore, storage });
+        // Explicitly set session persistence to 'local'
+        setPersistence(auth, browserLocalPersistence)
+            .then(() => {
+                // This ensures the user stays logged in across browser sessions.
+                setServices({ firebaseApp, auth, firestore, storage });
+            })
+            .catch((error) => {
+                console.error("Firebase Auth persistence error:", error);
+                // Fallback to setting services anyway
+                setServices({ firebaseApp, auth, firestore, storage });
+            });
     }
   }, []); // Empty dependency array ensures this runs only once on mount
 
