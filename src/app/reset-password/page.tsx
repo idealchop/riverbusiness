@@ -1,12 +1,13 @@
+
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/firebase';
-import { confirmPasswordReset } from 'firebase/auth';
+import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,11 +33,40 @@ function ResetPasswordComponent() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  const [resetStatus, setResetStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'loading' | 'idle' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const oobCode = searchParams.get('oobCode');
+
+  useEffect(() => {
+    if (!auth) {
+        setStatus('error');
+        setErrorMessage('Authentication service is not available. Please try again later.');
+        return;
+    }
+
+    if (!oobCode) {
+      setStatus('error');
+      setErrorMessage('The password reset link is missing a required code. Please request a new link.');
+      return;
+    }
+
+    verifyPasswordResetCode(auth, oobCode)
+      .then(() => {
+        setStatus('idle');
+      })
+      .catch((error) => {
+        if (error.code === 'auth/invalid-action-code') {
+          setErrorMessage('This password reset link is invalid or has expired. Please request a new one.');
+        } else {
+          setErrorMessage('An unexpected error occurred while verifying the reset link.');
+        }
+        setStatus('error');
+      });
+  }, [auth, oobCode]);
 
   const {
     register,
@@ -47,28 +77,39 @@ function ResetPasswordComponent() {
   });
 
   const onSubmit = async (data: PasswordFormValues) => {
-    const oobCode = searchParams.get('oobCode');
-
-    if (!oobCode || !auth) {
-      setErrorMessage('The password reset link is invalid or has expired. Please request a new one.');
-      setResetStatus('error');
+    if (status !== 'idle' || !oobCode || !auth) {
       return;
     }
     
     try {
       await confirmPasswordReset(auth, oobCode, data.password);
-      setResetStatus('success');
+      setStatus('success');
     } catch (error: any) {
       if (error.code === 'auth/invalid-action-code') {
         setErrorMessage('This password reset link is invalid or has expired. Please request a new one.');
       } else {
         setErrorMessage('Failed to reset password. Please try again.');
       }
-      setResetStatus('error');
+      setStatus('error');
     }
   };
 
-  if (resetStatus === 'success') {
+  if (status === 'loading') {
+    return (
+        <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+                <Logo className="h-16 w-16 mb-4 mx-auto" />
+                <CardTitle>Verifying Link...</CardTitle>
+                <CardDescription>Please wait while we validate your password reset request.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="h-10 w-full" />
+            </CardContent>
+        </Card>
+    )
+  }
+
+  if (status === 'success') {
     return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
@@ -83,7 +124,7 @@ function ResetPasswordComponent() {
     );
   }
 
-  if (resetStatus === 'error') {
+  if (status === 'error') {
      return (
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
