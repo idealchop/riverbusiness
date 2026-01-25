@@ -161,19 +161,32 @@ export default function LoginPage() {
         setIsForgotPasswordOpen(false);
         setResetEmail('');
     } catch (error: any) {
+        console.error("Password Reset Error:", error);
+        let title = 'Request Failed';
         let description = 'An unexpected error occurred. Please try again.';
+
         if (error.code === 'auth/invalid-email') {
-            description = 'The email address is not valid.';
+            title = 'Invalid Email';
+            description = 'The email address you entered is not valid.';
         } else if (error.code === 'auth/user-not-found') {
-            // To prevent email enumeration, show a generic message even if the user is not found.
-            description = 'If an account exists for this email, a reset link has been sent.';
-            toast({ title: 'Email Sent', description });
+            // To prevent email enumeration, we show a generic success message.
+            title = 'Email Sent';
+            description = 'If an account exists for this email, a password reset link has been sent.';
+            toast({ title, description });
             setIsForgotPasswordOpen(false);
             setResetEmail('');
             setIsResetting(false);
             return;
+        } else if (error.message && (error.message.includes('auth/network-request-failed') || error.message.includes('auth/operation-not-allowed') || error.message.includes('is not authorized'))) {
+             title = 'Domain Not Authorized';
+             description = 'The app\'s domain is not authorized for password resets. This must be configured in your Firebase project settings.';
         }
-        toast({ variant: 'destructive', title: 'Request Failed', description });
+
+        toast({
+            variant: 'destructive',
+            title: title,
+            description: description,
+        });
     } finally {
         setIsResetting(false);
     }
