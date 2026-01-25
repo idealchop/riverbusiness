@@ -168,6 +168,9 @@ export default function LoginPage() {
             // To prevent email enumeration, we show a generic success message.
             title = 'Email Sent';
             description = 'If an account exists for this email, a password reset link has been sent.';
+        } else if (error.code === 'auth/too-many-requests') {
+            title = 'Too Many Requests';
+            description = 'Access has been temporarily disabled due to many requests. Please try again later.';
         } else if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('is not authorized'))) {
              title = 'Domain Not Authorized';
              description = 'This app\'s domain is not authorized for this action. Please add it in your Firebase project\'s authentication settings.';
