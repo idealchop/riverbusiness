@@ -1,10 +1,12 @@
 'use client';
 
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { RefillRequest, RefillRequestStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Send, Settings, Truck, CheckCircle, FileX } from 'lucide-react';
 import Image from 'next/image';
+import { Timestamp } from 'firebase/firestore';
 
 interface RefillStatusDialogProps {
   isOpen: boolean;
@@ -23,6 +25,16 @@ const statusConfig: Record<RefillRequestStatus, { label: string; icon: React.Ele
 const statusOrder: RefillRequestStatus[] = ['Requested', 'In Production', 'Out for Delivery', 'Completed'];
 
 export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }: RefillStatusDialogProps) {
+
+  const isWeekendRequest = React.useMemo(() => {
+    if (!activeRefillRequest?.requestedAt || !(activeRefillRequest.requestedAt instanceof Timestamp)) {
+        return false;
+    }
+    const requestedAtDate = activeRefillRequest.requestedAt.toDate();
+    const dayOfWeek = requestedAtDate.getDay(); // 0 for Sunday, 6 for Saturday
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  }, [activeRefillRequest]);
+  
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -70,8 +82,11 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
                   );
                 })}
               </ol>
-              <div className="mt-4 text-center text-sm text-muted-foreground">
-                {statusConfig[activeRefillRequest.status]?.message}
+              <div className="mt-4 text-center text-sm text-muted-foreground space-y-2">
+                <p>{statusConfig[activeRefillRequest.status]?.message}</p>
+                {activeRefillRequest.status === 'Requested' && isWeekendRequest && (
+                    <p className="text-primary font-medium">Please note: Requests made on weekends will be processed and scheduled for delivery on the next business day (Monday).</p>
+                )}
               </div>
             </div>
           </div>
