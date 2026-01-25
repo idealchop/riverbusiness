@@ -172,14 +172,9 @@ export default function LoginPage() {
             // To prevent email enumeration, we show a generic success message.
             title = 'Email Sent';
             description = 'If an account exists for this email, a password reset link has been sent.';
-            toast({ title, description });
-            setIsForgotPasswordOpen(false);
-            setResetEmail('');
-            setIsResetting(false);
-            return;
-        } else if (error.message && (error.message.includes('auth/network-request-failed') || error.message.includes('auth/operation-not-allowed') || error.message.includes('is not authorized'))) {
+        } else if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('is not authorized'))) {
              title = 'Domain Not Authorized';
-             description = 'The app\'s domain is not authorized for password resets. This must be configured in your Firebase project settings.';
+             description = 'This app\'s domain is not authorized for this action. Please add it in your Firebase project\'s authentication settings.';
         }
 
         toast({
