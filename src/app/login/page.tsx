@@ -154,7 +154,7 @@ export default function LoginPage() {
     setIsResetting(true);
     try {
         await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: 'Email Sent', description: 'If an account exists for this email, a password reset link has been sent.' });
+        toast({ title: 'Check Your Inbox!', description: 'A password reset link has been sent to your email address.' });
         setIsForgotPasswordOpen(false);
         setResetEmail('');
     } catch (error: any) {
@@ -164,8 +164,8 @@ export default function LoginPage() {
             // To prevent email enumeration, we show the same generic success message.
             // This is a security best practice.
             toast({ 
-                title: 'Email Sent', 
-                description: 'If an account exists for this email, a password reset link has been sent.' 
+                title: 'Check Your Inbox!', 
+                description: 'A password reset link has been sent to your email address.' 
             });
             setIsForgotPasswordOpen(false);
             setResetEmail('');
