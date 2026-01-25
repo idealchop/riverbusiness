@@ -154,34 +154,42 @@ export default function LoginPage() {
     setIsResetting(true);
     try {
         await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: 'Email Sent', description: 'Check your inbox for a password reset link.' });
+        toast({ title: 'Email Sent', description: 'If an account exists for this email, a password reset link has been sent.' });
         setIsForgotPasswordOpen(false);
         setResetEmail('');
     } catch (error: any) {
         console.error("Password Reset Error:", error);
-        let title = 'Request Failed';
-        let description = 'An unexpected error occurred. Please try again.';
 
-        if (error.code === 'auth/invalid-email') {
-            title = 'Invalid Email';
-            description = 'The email address you entered is not valid.';
-        } else if (error.code === 'auth/user-not-found') {
-            // To prevent email enumeration, we show a generic success message.
-            title = 'Email Sent';
-            description = 'If an account exists for this email, a password reset link has been sent.';
-        } else if (error.code === 'auth/too-many-requests') {
-            title = 'Too Many Requests';
-            description = 'Access has been temporarily disabled due to many requests. Please try again later.';
-        } else if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('is not authorized'))) {
-             title = 'Domain Not Authorized';
-             description = 'This app\'s domain is not authorized for this action. Please add it in your Firebase project\'s authentication settings.';
+        if (error.code === 'auth/user-not-found') {
+            // To prevent email enumeration, we show the same generic success message.
+            // This is a security best practice.
+            toast({ 
+                title: 'Email Sent', 
+                description: 'If an account exists for this email, a password reset link has been sent.' 
+            });
+            setIsForgotPasswordOpen(false);
+            setResetEmail('');
+        } else {
+            let title = 'Request Failed';
+            let description = 'An unexpected error occurred. Please try again.';
+
+            if (error.code === 'auth/invalid-email') {
+                title = 'Invalid Email';
+                description = 'The email address you entered is not valid.';
+            } else if (error.code === 'auth/too-many-requests') {
+                title = 'Too Many Requests';
+                description = 'Access has been temporarily disabled due to many requests. Please try again later.';
+            } else if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('is not authorized'))) {
+                 title = 'Domain Not Authorized';
+                 description = 'This app\'s domain is not authorized for this action. Please add it in your Firebase project\'s authentication settings.';
+            }
+    
+            toast({
+                variant: 'destructive',
+                title: title,
+                description: description,
+            });
         }
-
-        toast({
-            variant: 'destructive',
-            title: title,
-            description: description,
-        });
     } finally {
         setIsResetting(false);
     }
