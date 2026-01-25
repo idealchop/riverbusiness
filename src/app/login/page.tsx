@@ -26,6 +26,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -235,7 +236,7 @@ export default function LoginPage() {
                     </div>
                     {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
                   </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className={cn("w-full", isSubmitting && "animate-shine")} disabled={isSubmitting}>
                     {isSubmitting ? 'Signing In...' : 'Sign in'}
                   </Button>
                 </form>
