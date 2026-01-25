@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -14,10 +13,19 @@ import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -63,6 +71,9 @@ export default function LoginPage() {
   const auth = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   const {
     register,
@@ -134,6 +145,35 @@ export default function LoginPage() {
     }
   };
   
+  const handlePasswordReset = async () => {
+    if (!auth || !resetEmail) {
+        toast({ variant: 'destructive', title: 'Email required', description: 'Please enter your email address.' });
+        return;
+    }
+    setIsResetting(true);
+    try {
+        await sendPasswordResetEmail(auth, resetEmail);
+        toast({ title: 'Email Sent', description: 'Check your inbox for a password reset link.' });
+        setIsForgotPasswordOpen(false);
+        setResetEmail('');
+    } catch (error: any) {
+        let description = 'An unexpected error occurred. Please try again.';
+        if (error.code === 'auth/invalid-email') {
+            description = 'The email address is not valid.';
+        } else if (error.code === 'auth/user-not-found') {
+            description = 'If an account exists for this email, a reset link has been sent.';
+            toast({ title: 'Email Sent', description });
+            setIsForgotPasswordOpen(false);
+            setResetEmail('');
+            setIsResetting(false);
+            return;
+        }
+        toast({ variant: 'destructive', title: 'Request Failed', description });
+    } finally {
+        setIsResetting(false);
+    }
+  };
+
   // Do not render the form until the auth service is available
   if (!auth) {
       return (
@@ -169,7 +209,12 @@ export default function LoginPage() {
                     {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <div className="flex items-center">
+                        <Label htmlFor="password">Password</Label>
+                        <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="ml-auto inline-block text-sm underline">
+                            Forgot your password?
+                        </button>
+                    </div>
                     <div className="relative">
                       <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
                       <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
@@ -206,6 +251,39 @@ export default function LoginPage() {
             </div>
           </div>
       </Card>
+        <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+            <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Reset Password</DialogTitle>
+                <DialogDescription>
+                Enter your email address and we'll send you a link to reset your password.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    disabled={isResetting}
+                />
+                </div>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                <Button type="button" variant="secondary" disabled={isResetting}>
+                    Cancel
+                </Button>
+                </DialogClose>
+                <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail}>
+                {isResetting ? 'Sending...' : 'Send Reset Email'}
+                </Button>
+            </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </main>
   );
 }
