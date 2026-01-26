@@ -110,6 +110,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -352,6 +354,9 @@ export default function DashboardPage() {
     }
   };
 
+  const stationOKImage = PlaceHolderImages.find(p => p.id === 'station-operational');
+  const userFirstName = user?.name.split(' ')[0] || 'there';
+
   if (isAuthLoading || isUserDocLoading) {
     return <DashboardSkeleton />;
   }
@@ -461,18 +466,57 @@ export default function DashboardPage() {
             activeRefillRequest={activeRefillRequest}
         />
         <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        {waterStation?.status === 'Under Maintenance' ? (
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                        ) : (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                        )}
                         Partner Station Notice
                     </DialogTitle>
                     <DialogDescription>
-                        Important information regarding our partner water refilling stations.
+                        Updates regarding your assigned water refilling station.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <p>Content for the partner station notice will be added here.</p>
+                    {waterStation?.status === 'Under Maintenance' ? (
+                        <div className="space-y-4">
+                            {stationOKImage && (
+                                <div className="relative h-40 w-full overflow-hidden rounded-lg">
+                                     <Image src={stationOKImage.imageUrl} alt="Water station under maintenance" layout="fill" objectFit="cover" className="opacity-50 grayscale" data-ai-hint="water station" />
+                                </div>
+                            )}
+                            <h3 className="font-semibold">Station is Under Maintenance</h3>
+                            <p className="text-sm text-muted-foreground">
+                                We're currently performing essential maintenance at your assigned station,{' '}
+                                <span className="font-semibold">{waterStation.name}</span>, to ensure our high standards of quality.
+                            </p>
+                            {waterStation.statusMessage && (
+                                <div className="p-3 bg-muted rounded-md text-sm">
+                                    <p className="font-semibold">Admin Note:</p>
+                                    <p className="text-muted-foreground">{waterStation.statusMessage}</p>
+                                </div>
+                            )}
+                            <p className="text-sm text-primary font-medium">
+                                Please rest assured, this will not affect your service. All delivery requests will be handled today by a partner station to ensure no disruption. We appreciate your understanding.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 text-center">
+                            {stationOKImage && (
+                                <div className="relative h-40 w-full overflow-hidden rounded-lg">
+                                    <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="cover" data-ai-hint={stationOKImage.imageHint} />
+                                </div>
+                            )}
+                            <h3 className="font-semibold">All Systems Operational</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Hi {userFirstName}, your assigned station, <span className="font-semibold">{waterStation?.name || 'N/A'}</span>, is fully operational.
+                                All systems are running smoothly, ensuring your water is safe, clean, and delivered on time. Thank you for your trust in River Business!
+                            </p>
+                        </div>
+                    )}
                 </div>
                 <DialogFooter>
                     <DialogClose asChild>
@@ -486,3 +530,5 @@ export default function DashboardPage() {
     </TooltipProvider>
   );
 }
+
+    

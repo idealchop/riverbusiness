@@ -83,6 +83,12 @@
       "description": "A scenic, winding river from an aerial view.",
       "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2FSmartRefill_01.png?alt=media&token=b4bd2e32-6cb3-4f17-b0be-64018ba33a77",
       "imageHint": "river aerial"
+    },
+    {
+      "id": "station-operational",
+      "description": "A clean, modern water refilling station.",
+      "imageUrl": "https://images.unsplash.com/photo-1588630124973-e711585b7364?q=80&w=1080&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "water station"
     }
   ]
 }

@@ -1,5 +1,7 @@
 
 
+
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -63,6 +65,8 @@ export interface WaterStation {
   name: string;
   location: string;
   partnershipAgreementUrl?: string;
+  status: 'Operational' | 'Under Maintenance';
+  statusMessage?: string;
 }
 
 export type Permission = 
@@ -250,5 +254,6 @@ export interface TopUpRequest {
     
 
     
+
 
     

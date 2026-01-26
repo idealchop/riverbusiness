@@ -118,9 +118,11 @@
         "id": { "type": "string", "description": "Unique identifier for the station." },
         "name": { "type": "string", "description": "Name of the station." },
         "location": { "type": "string", "description": "Location of the station." },
-        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." }
+        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." },
+        "status": { "type": "string", "enum": ["Operational", "Under Maintenance"], "description": "Current operational status of the station." },
+        "statusMessage": { "type": "string", "description": "A detailed message about the current status, if not operational." }
       },
-      "required": ["id", "name", "location"]
+      "required": ["id", "name", "location", "status"]
     },
     "Delivery": {
       "title": "Delivery",
@@ -364,4 +366,7 @@
     }
   }
 }
+
+    
+
     

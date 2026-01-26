@@ -49,10 +49,13 @@ import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdminDashboardSkeleton } from './AdminDashboardSkeleton';
 import { LiveChat } from '../live-chat';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     location: z.string().min(1, 'Location is required'),
+    status: z.enum(['Operational', 'Under Maintenance']).default('Operational'),
+    statusMessage: z.string().optional(),
 });
 
 type NewStationFormValues = z.infer<typeof newStationSchema>;
@@ -500,7 +503,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
-        defaultValues: { name: '', location: '' },
+        defaultValues: { name: '', location: '', status: 'Operational', statusMessage: '' },
     });
 
     const deliveryForm = useForm<DeliveryFormValues>({
@@ -589,9 +592,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     React.useEffect(() => {
         if (isStationProfileOpen && stationToUpdate) {
-            stationForm.reset({ name: stationToUpdate.name, location: stationToUpdate.location });
+            stationForm.reset({ 
+                name: stationToUpdate.name, 
+                location: stationToUpdate.location,
+                status: stationToUpdate.status,
+                statusMessage: stationToUpdate.statusMessage || ''
+            });
         } else {
-            stationForm.reset({ name: '', location: '' });
+            stationForm.reset({ name: '', location: '', status: 'Operational', statusMessage: '' });
             setAgreementFile(null);
             setUploadedAgreementUrl(null);
         }
@@ -1039,7 +1047,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const newStationData = {
                 name: values.name,
                 location: values.location,
-                partnershipAgreementUrl: uploadedAgreementUrl
+                partnershipAgreementUrl: uploadedAgreementUrl,
+                status: values.status || 'Operational',
+                statusMessage: values.statusMessage || ''
             };
             await addDoc(collection(firestore, 'waterStations'), newStationData);
     
@@ -1702,7 +1712,28 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <div className="text-muted-foreground">Client ID:</div><div className="font-medium">{selectedUser.clientId}</div>
                                         <div className="text-muted-foreground">Account Type:</div><div className="font-medium">{selectedUser.accountType || 'Single'}</div>
                                         <div className="text-muted-foreground">Plan:</div><div className="font-medium">{selectedUser.plan?.name || 'N/A'}</div>
-                                        <div className="text-muted-foreground">Assigned Station:</div><div className="font-medium">{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</div>
+                                        <div className="text-muted-foreground flex items-center gap-1">Assigned Station:</div>
+                                        <div className="font-medium flex items-center gap-2">
+                                            <span>{waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId)?.name || 'Not Assigned'}</span>
+                                            {(() => {
+                                                const station = waterStations?.find(ws => ws.id === selectedUser.assignedWaterStationId);
+                                                if(station?.status === 'Under Maintenance') {
+                                                    return (
+                                                         <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger>
+                                                                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="max-w-xs">{station.statusMessage || 'This station is currently under maintenance.'}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    )
+                                                }
+                                                return null;
+                                            })()}
+                                        </div>
                                     </div>
                                     <div className="flex gap-2 pt-2">
                                         <Button onClick={() => setIsAssignStationOpen(true)} disabled={!isAdmin} variant="outline" size="sm">
@@ -2659,7 +2690,31 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 </div>
                                                             )}
                                                         </TableCell>
-                                                        <TableCell>{waterStations?.find(ws => ws.id === user.assignedWaterStationId)?.name || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                          {(() => {
+                                                            const station = waterStations?.find(ws => ws.id === user.assignedWaterStationId);
+                                                            if (station) {
+                                                              return (
+                                                                <div className="flex items-center gap-2">
+                                                                  <span>{station.name}</span>
+                                                                  {station.status === 'Under Maintenance' && (
+                                                                    <TooltipProvider>
+                                                                      <Tooltip>
+                                                                        <TooltipTrigger>
+                                                                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                          <p className="max-w-xs">{station.statusMessage || 'This station is currently under maintenance.'}</p>
+                                                                        </TooltipContent>
+                                                                      </Tooltip>
+                                                                    </TooltipProvider>
+                                                                  )}
+                                                                </div>
+                                                              );
+                                                            }
+                                                            return 'N/A';
+                                                          })()}
+                                                        </TableCell>
                                                     </TableRow>
                                                 )})}
                                                 {paginatedUsers.length === 0 && !usersLoading && (
@@ -2932,23 +2987,45 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <ScrollArea className="pr-6 -mr-6">
                     <div className="space-y-8 p-4">
                          <Form {...stationForm}>
-                            <form className="space-y-4">
+                            <form className="space-y-4" onSubmit={stationForm.handleSubmit(stationToUpdate ? handleSaveStation : handleCreateStation)}>
                                 <FormField control={stationForm.control} name="name" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Station Name</FormLabel>
-                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate || isSubmitting}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. Aqua Pure Downtown" {...field} disabled={!!stationToUpdate && !isAdmin} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
                                 <FormField control={stationForm.control} name="location" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Location</FormLabel>
-                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={isSubmitting}/></FormControl>
+                                        <FormControl><Input placeholder="e.g. 123 Business Rd, Metro City" {...field} disabled={!isAdmin} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
                                 {stationToUpdate && (
-                                     <Button onClick={stationForm.handleSubmit(handleSaveStation)} size="sm" disabled={isSubmitting}>Save Station Details</Button>
+                                    <>
+                                        <FormField control={stationForm.control} name="status" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Operational Status</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value} disabled={!isAdmin}>
+                                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="Operational">Operational</SelectItem>
+                                                        <SelectItem value="Under Maintenance">Under Maintenance</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )}/>
+                                        {stationForm.watch('status') === 'Under Maintenance' && (
+                                            <FormField control={stationForm.control} name="statusMessage" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Status Message</FormLabel>
+                                                    <FormControl><Textarea placeholder="e.g., The main filtration unit is undergoing scheduled maintenance until 5 PM today." {...field} disabled={!isAdmin} /></FormControl>
+                                                </FormItem>
+                                            )}/>
+                                        )}
+                                        <Button type="submit" size="sm" disabled={!isAdmin}>Save Station Details</Button>
+                                    </>
                                 )}
                             </form>
                         </Form>
@@ -3605,3 +3682,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
