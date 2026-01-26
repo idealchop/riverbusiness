@@ -31,7 +31,7 @@ import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMont
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign, Droplets, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
-import { enterprisePlans } from '@/lib/plans';
+import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
@@ -1071,7 +1071,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Month</TableHead>
+                                    <TableHead>Description</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Amount</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
@@ -1093,7 +1093,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                         const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                                         return (
                                         <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
-                                            <TableCell>{getInvoiceDisplayDate(invoice)}</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{invoice.description}</div>
+                                                <div className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</div>
+                                            </TableCell>
                                             <TableCell>
                                                 <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
                                                     invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
@@ -1168,7 +1171,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                     <CardContent className="p-4 space-y-2">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <p className="font-semibold">{getInvoiceDisplayDate(invoice)}</p>
+                                                <p className="font-semibold">{invoice.description}</p>
+                                                <p className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</p>
                                                 <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
                                                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                                             </div>
@@ -1787,7 +1791,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><DollarSign className="h-5 w-5" />Top-Up Your Balance</DialogTitle>
-            <DialogDescription>Add credits to your Parent Account to cover your branch deliveries.</DialogDescription>
+            <DialogDescription>Add credits to your account to cover your deliveries.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
               <div className="space-y-2">
