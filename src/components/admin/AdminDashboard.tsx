@@ -958,13 +958,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         return filteredUsers.slice(startIndex, endIndex);
     }, [filteredUsers, currentPage, itemsPerPage]);
 
-    const filteredDeliveries = React.useMemo(() => (userDeliveriesData || []).filter(delivery => {
-        if (!deliveryDateRange?.from) return true;
-        const fromDate = deliveryDateRange.from;
-        const toDate = deliveryDateRange.to || fromDate;
-        const deliveryDate = new Date(delivery.date);
-        return deliveryDate >= fromDate && deliveryDate <= toDate;
-    }), [userDeliveriesData, deliveryDateRange]);
+    const filteredDeliveries = React.useMemo(() => {
+        const sorted = (userDeliveriesData || []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return sorted.filter(delivery => {
+            if (!deliveryDateRange?.from) return true;
+            const fromDate = deliveryDateRange.from;
+            const toDate = deliveryDateRange.to || fromDate;
+            const deliveryDate = new Date(delivery.date);
+            return deliveryDate >= fromDate && deliveryDate <= toDate;
+        });
+    }, [userDeliveriesData, deliveryDateRange]);
 
     const [deliveryCurrentPage, setDeliveryCurrentPage] = React.useState(1);
     const DELIVERY_ITEMS_PER_PAGE = 8;

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -43,13 +44,16 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
     }, {} as Record<string, string>);
   }, [branches]);
 
-  const filteredDeliveries = useMemo(() => (deliveries || []).filter(delivery => {
-    if (!deliveryDateRange?.from) return true;
-    const fromDate = deliveryDateRange.from;
-    const toDate = deliveryDateRange.to || fromDate;
-    const deliveryDate = new Date(delivery.date);
-    return deliveryDate >= fromDate && deliveryDate <= toDate;
-  }), [deliveries, deliveryDateRange]);
+  const filteredDeliveries = useMemo(() => {
+    const sorted = (deliveries || []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return sorted.filter(delivery => {
+      if (!deliveryDateRange?.from) return true;
+      const fromDate = deliveryDateRange.from;
+      const toDate = deliveryDateRange.to || fromDate;
+      const deliveryDate = new Date(delivery.date);
+      return deliveryDate >= fromDate && deliveryDate <= toDate;
+    });
+  }, [deliveries, deliveryDateRange]);
 
   const totalPages = Math.ceil(filteredDeliveries.length / ITEMS_PER_PAGE);
 
