@@ -238,16 +238,27 @@ export default function DashboardLayout({
 
     setIsSubmittingProof(true);
     setUploadProgress(0);
-    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${paymentProofFile.name}`;
+    // Use a simpler file path; the important info will be in metadata.
+    const filePath = `users/${authUser.uid}/payments/${paymentProofFile.name}`;
+    const metadata = {
+        customMetadata: {
+            paymentId: selectedInvoice.id,
+            userId: authUser.uid,
+        }
+    };
 
     try {
         const paymentRef = doc(firestore, "users", authUser.uid, "payments", selectedInvoice.id);
-
+        
+        // This ensures the invoice document exists before the upload completes,
+        // which is crucial for the "current month estimate" invoice.
         await setDoc(paymentRef, {
+            ...selectedInvoice, // Carry over all details from the invoice object
             status: "Pending Review",
         }, { merge: true });
 
-        await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, {}, setUploadProgress);
+        // The Cloud Function will listen for this upload and add the download URL.
+        await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
         
         toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
         setIsPaymentDialogOpen(false);

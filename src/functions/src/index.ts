@@ -345,6 +345,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   const fileBucket = event.data.bucket;
   const filePath = event.data.name;
   const contentType = event.data.contentType;
+  const customMetadata = event.data.metadata?.customMetadata;
 
   if (!filePath || contentType?.startsWith('application/x-directory')) {
     logger.log(`Ignoring event for folder: ${filePath}`);
@@ -411,11 +412,15 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
+    // Handle user-uploaded payment proofs using metadata
+    if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
+        const { userId, paymentId } = customMetadata;
 
-    if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const paymentId = path.basename(filePath).split('-')[0];
+        if (!userId || !paymentId) {
+            logger.error(`Missing userId or paymentId in metadata for file: ${filePath}`);
+            return;
+        }
+
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
