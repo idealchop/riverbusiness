@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -238,7 +239,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const userDeliveriesQuery = useMemoFirebase(() => {
         const userToQuery = userForHistory || selectedUser || userForInvoices;
         if (!firestore || !userToQuery) return null;
-        return collection(firestore, 'users', userToQuery.id, 'deliveries');
+        return query(collection(firestore, 'users', userToQuery.id, 'deliveries'), orderBy('date', 'desc'));
     }, [firestore, selectedUser, userForHistory, userForInvoices]);
     const { data: userDeliveriesData } = useCollection<Delivery>(userDeliveriesQuery);
 
