@@ -577,7 +577,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 dispenserReports: visitToEdit.dispenserReports?.map(dr => ({ 
                     dispenserId: dr.dispenserId, 
                     dispenserName: dr.dispenserName,
-                    dispenserCode: dr.dispenserCode,
+                    dispenserCode: dr.dispenserCode || '',
                 })),
             });
         } else {
@@ -3751,3 +3751,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
