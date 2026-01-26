@@ -378,6 +378,7 @@ export default function DashboardPage() {
           onComplianceClick={() => openDialog('compliance')}
           hasPendingRefill={hasPendingRefill}
           onPartnerNoticeClick={() => openDialog('partnerNotice')}
+          stationStatus={waterStation?.status}
         />
         
         <StatCards

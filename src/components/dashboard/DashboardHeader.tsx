@@ -3,6 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { BellRing, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DashboardHeaderProps {
   greeting: string;
@@ -12,6 +13,7 @@ interface DashboardHeaderProps {
   onComplianceClick: () => void;
   hasPendingRefill: boolean;
   onPartnerNoticeClick: () => void;
+  stationStatus?: 'Operational' | 'Under Maintenance';
 }
 
 export function DashboardHeader({
@@ -22,7 +24,10 @@ export function DashboardHeader({
   onComplianceClick,
   hasPendingRefill,
   onPartnerNoticeClick,
+  stationStatus,
 }: DashboardHeaderProps) {
+  const isMaintenance = stationStatus === 'Under Maintenance';
+
   return (
     <div className="flex items-center justify-between gap-2">
       <div>
@@ -49,7 +54,14 @@ export function DashboardHeader({
           <ShieldCheck className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Compliance &amp; Sanitation</span>
         </Button>
-        <Button variant="outline" size="icon" onClick={onPartnerNoticeClick}>
+        <Button
+          variant={isMaintenance ? 'secondary' : 'default'}
+          size="icon"
+          onClick={onPartnerNoticeClick}
+          className={cn(
+            isMaintenance && 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900 animate-pulse'
+          )}
+        >
             <AlertTriangle className="h-4 w-4" />
             <span className="sr-only">Partner Station Notice</span>
         </Button>
