@@ -213,9 +213,9 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
             </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t p-6 pt-4 flex-col-reverse sm:flex-row sm:justify-between items-center w-full flex-shrink-0">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-            <div className="flex items-center justify-center space-x-2">
+        <DialogFooter className="border-t p-6 pt-4 flex flex-col sm:flex-row sm:justify-between items-center w-full flex-shrink-0 gap-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto order-2 sm:order-1">Close</Button>
+            <div className="flex items-center justify-center space-x-2 order-1 sm:order-2">
                 <Button
                     variant="outline"
                     size="sm"
@@ -224,7 +224,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                 >
                     Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
                     Page {currentPage} of {totalPages > 0 ? totalPages : 1}
                 </span>
                 <Button
@@ -241,5 +241,3 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
     </Dialog>
   );
 }
-
-    
