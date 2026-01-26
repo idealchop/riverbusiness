@@ -1320,7 +1320,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                           <CardHeader className="flex flex-row items-center justify-between">
                                <div>
                                  <CardTitle>Top-Up History</CardTitle>
-                                 <CardDescription>A log of all your top-up requests.</CardDescription>
+                                 <CardDescription>
+                                    {user.accountType === 'Parent' 
+                                        ? "A log of all credit top-ups for your parent account."
+                                        : "Your plan is prepaid. Top-up your balance to add water credits."
+                                    }
+                                 </CardDescription>
                                </div>
                                <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
                                   <Plus className="mr-2 h-4 w-4" /> Top-Up
