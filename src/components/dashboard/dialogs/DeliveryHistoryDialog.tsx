@@ -44,13 +44,28 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
     }, {} as Record<string, string>);
   }, [branches]);
 
+  const getSortableDate = (date: any): Date => {
+    if (!date) return new Date(0); // Return a very old date for null/undefined values
+    // Handles Firestore Timestamps
+    if (date.toDate && typeof date.toDate === 'function') {
+      return date.toDate();
+    }
+    // Handles ISO strings or other date string formats
+    return new Date(date);
+  };
+
   const filteredDeliveries = useMemo(() => {
-    const sorted = (deliveries || []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sorted = (deliveries || []).slice().sort((a, b) => {
+        const dateA = getSortableDate(a.date);
+        const dateB = getSortableDate(b.date);
+        return dateB.getTime() - dateA.getTime();
+    });
+    
     return sorted.filter(delivery => {
       if (!deliveryDateRange?.from) return true;
       const fromDate = deliveryDateRange.from;
       const toDate = deliveryDateRange.to || fromDate;
-      const deliveryDate = new Date(delivery.date);
+      const deliveryDate = getSortableDate(delivery.date);
       return deliveryDate >= fromDate && deliveryDate <= toDate;
     });
   }, [deliveries, deliveryDateRange]);
@@ -156,7 +171,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                     <TableRow key={delivery.id}>
                         <TableCell>{delivery.id}</TableCell>
                         {isParent && <TableCell>{branchMap[delivery.userId] || delivery.userId}</TableCell>}
-                        <TableCell>{format(new Date(delivery.date), 'PP')}</TableCell>
+                        <TableCell>{format(getSortableDate(delivery.date), 'PP')}</TableCell>
                         <TableCell>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L / {containers} containers</TableCell>
                         <TableCell>
                         <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
@@ -189,7 +204,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
                     <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
                         <div>
-                            <p className="font-semibold">{format(new Date(delivery.date), 'PP')}</p>
+                            <p className="font-semibold">{format(getSortableDate(delivery.date), 'PP')}</p>
                             <p className="text-xs text-muted-foreground">ID: {delivery.id}</p>
                             {isParent && <p className="text-xs text-muted-foreground">Branch: {branchMap[delivery.userId] || delivery.userId}</p>}
                         </div>
@@ -216,9 +231,9 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
             </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t p-6 pt-4 flex flex-col-reverse sm:flex-row sm:items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Close</Button>
-            <div className="flex items-center justify-center sm:ml-auto space-x-2">
+        <DialogFooter className="border-t p-6 pt-4 flex flex-col-reverse md:flex-row md:justify-between items-center w-full flex-shrink-0">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full md:w-auto">Close</Button>
+            <div className="flex items-center space-x-2">
                 <Button
                     variant="outline"
                     size="sm"
