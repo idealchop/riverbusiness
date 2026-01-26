@@ -189,6 +189,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [isEditDeliveryOpen, setIsEditDeliveryOpen] = React.useState(false);
     const [deliveryToEdit, setDeliveryToEdit] = React.useState<Delivery | null>(null);
     const [deliveryToDelete, setDeliveryToDelete] = React.useState<Delivery | null>(null);
+    const [invoiceToDelete, setInvoiceToDelete] = React.useState<Payment | null>(null);
     const [isUploadContractOpen, setIsUploadContractOpen] = React.useState(false);
     const [userForContract, setUserForContract] = React.useState<AppUser | null>(null);
     const [contractFile, setContractFile] = React.useState<File | null>(null);
@@ -890,6 +891,29 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
     
         setDeliveryToDelete(null);
+    };
+
+    const handleDeleteInvoice = async () => {
+        const userToUpdate = userForInvoices || selectedUser;
+        if (!invoiceToDelete || !userToUpdate || !firestore) return;
+    
+        const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', invoiceToDelete.id);
+    
+        try {
+            await deleteDoc(invoiceRef);
+            toast({
+                title: "Invoice Deleted",
+                description: `Invoice ${invoiceToDelete.id} has been removed.`,
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: "Deletion Failed",
+                description: `Could not delete invoice ${invoiceToDelete.id}.`,
+            });
+        } finally {
+            setInvoiceToDelete(null);
+        }
     };
 
     const handleProofFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2006,16 +2030,33 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </TableCell>
                                             <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem onClick={() => {setSelectedInvoice(invoice); setIsManageInvoiceOpen(true);}}>Review Payment</DropdownMenuItem>
-                                                        <DropdownMenuSeparator/>
-                                                        <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem className="text-destructive">Delete Invoice</DropdownMenuItem>
-                                                        </AlertDialogTrigger>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuItem onClick={() => {setSelectedInvoice(invoice); setIsManageInvoiceOpen(true);}}>Review Payment</DropdownMenuItem>
+                                                            <DropdownMenuSeparator/>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Delete Invoice
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action cannot be undone. This will permanently delete the invoice record for ID: <span className="font-semibold">{invoice.id}</span>.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => { setInvoiceToDelete(invoice); handleDeleteInvoice(); }}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     )})
@@ -2200,6 +2241,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setDeliveryToDelete(null)}>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeleteDelivery}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => !open && setInvoiceToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the invoice record for ID: <span className="font-semibold">{invoiceToDelete?.id}</span>.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setInvoiceToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteInvoice}>Delete</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -3683,7 +3739,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
+                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><FormControl><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
                                                 </div>
                                             </div>
                                         </div>
@@ -3724,3 +3780,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
