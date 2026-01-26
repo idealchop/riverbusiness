@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -30,6 +29,7 @@ export default function ClaimAccountPage() {
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [claimedProfile, setClaimedProfile] = useState<AppUser | null>(null);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
 
   const {
     register,
@@ -40,10 +40,30 @@ export default function ClaimAccountPage() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && !authUser) {
-      router.push('/login');
+    if (isUserLoading || !firestore) {
+        return; // Wait for firebase services and user auth state
     }
-  }, [authUser, isUserLoading, router]);
+    
+    if (!authUser) {
+        router.push('/login');
+        return;
+    }
+
+    const checkExistingProfile = async () => {
+        const userDocRef = doc(firestore, 'users', authUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            // This user already has a profile. They should not be on this page.
+            router.push('/dashboard');
+        } else {
+            // No profile exists, it's safe to show the claim form.
+            setIsCheckingProfile(false);
+        }
+    };
+    
+    checkExistingProfile();
+    
+  }, [authUser, isUserLoading, firestore, router]);
 
   const onSubmit = async (data: ClaimFormValues) => {
     if (!firestore || !authUser) {
@@ -91,7 +111,7 @@ export default function ClaimAccountPage() {
     }
   };
 
-  if (isUserLoading || !authUser) {
+  if (isUserLoading || isCheckingProfile) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <p>Loading...</p>
