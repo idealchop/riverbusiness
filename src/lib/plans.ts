@@ -1,4 +1,5 @@
 
+'use client';
 
 export const clientTypes = [
     { name: 'Family', price: 50, description: 'For families and personal home use', imageId: 'plan-family' },
@@ -97,5 +98,3 @@ export const enterprisePlans = [
         ]
     }
 ];
-
-    
