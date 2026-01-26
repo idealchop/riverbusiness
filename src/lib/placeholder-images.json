@@ -87,7 +87,7 @@
     {
       "id": "station-operational",
       "description": "A clean, modern water refilling station.",
-      "imageUrl": "https://images.unsplash.com/photo-1588630124973-e711585b7364?q=80&w=1080&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageUrl": "https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FApp%20Image%2FRiver_v1.png?alt=media&token=dee32636-aaaf-4a4f-8780-cc43f54f8d27",
       "imageHint": "water station"
     }
   ]
