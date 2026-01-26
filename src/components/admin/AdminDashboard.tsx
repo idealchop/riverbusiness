@@ -273,8 +273,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const pendingPaymentsByUser = React.useMemo(() => {
         if (!allPayments) return {};
         return allPayments.reduce((acc, payment) => {
-            if (payment.status === 'Pending Review') {
-                const userId = payment.parentId.split('/')[1];
+            if (payment.status === 'Pending Review' && payment.parentId) {
+                const userId = payment.parentId;
                 if (!acc[userId]) {
                     acc[userId] = [];
                 }
@@ -2159,8 +2159,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </TableBody>
                     </Table>
                 </ScrollArea>
-                 <DialogFooter className="pt-4 p-6 border-t flex-shrink-0 flex justify-between items-center">
-                    <Button variant="outline" onClick={() => setIsDeliveryHistoryOpen(false)}>Close</Button>
+                 <DialogFooter className="pt-4 p-6 border-t flex-shrink-0 md:justify-between flex-col-reverse md:flex-row gap-4 items-center">
+                    <Button variant="outline" onClick={() => setIsDeliveryHistoryOpen(false)} className="w-full md:w-auto">Close</Button>
                     <div className="flex items-center space-x-2">
                         <Button
                             variant="outline"
@@ -3721,3 +3721,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
+    
