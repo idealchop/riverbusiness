@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -12,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser, Notification as NotificationType } from '@/lib/types';
 import { doc, collection, query, writeBatch, Timestamp, where } from 'firebase/firestore';
 import { useMounted } from '@/hooks/use-mounted';
-import { Skeleton } from '@/components/ui/skeleton';
+import { FullScreenLoader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -23,31 +22,6 @@ const NOTIFICATION_ICONS: { [key: string]: React.ElementType } = {
   general: Info,
   default: Bell,
 };
-
-function AdminLayoutSkeleton() {
-    return (
-        <div className="flex flex-col h-screen">
-            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-                <div className="flex items-center gap-2 font-semibold text-lg">
-                    <div className="flex items-center">
-                        <span className="font-bold">River Business</span>
-                    </div>
-                </div>
-                <div className="flex-1" />
-                <div className="flex items-center gap-4">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                </div>
-            </header>
-            <main className="flex-1 overflow-auto p-4 sm:p-6">
-                <div className="container mx-auto">
-                    {/* Children will be rendered here */}
-                </div>
-            </main>
-        </div>
-    );
-}
-
 
 export default function AdminLayout({
   children,
@@ -109,13 +83,7 @@ export default function AdminLayout({
   };
 
   if (!isMounted || !auth || isUserLoading) {
-    return (
-      <AdminLayoutSkeleton>
-          <div className="container mx-auto">
-              {children}
-          </div>
-      </AdminLayoutSkeleton>
-    );
+    return <FullScreenLoader />;
   }
 
   return (

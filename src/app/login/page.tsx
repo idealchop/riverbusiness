@@ -16,7 +16,7 @@ import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import {
   Dialog,
   DialogContent,
@@ -34,38 +34,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-
-function LoginSkeleton() {
-    return (
-        <Card className="w-full max-w-5xl shadow-2xl overflow-hidden rounded-2xl">
-          <div className="grid lg:grid-cols-2">
-            <div className="flex flex-col items-center justify-center p-6 sm:p-12">
-              <div className="mx-auto grid w-full max-w-sm gap-6">
-                <div className="grid gap-2 text-center justify-center">
-                    <Skeleton className="h-20 w-20 mb-4 mx-auto rounded-full" />
-                    <Skeleton className="h-9 w-24 mx-auto" />
-                    <Skeleton className="h-5 w-64 mx-auto" />
-                </div>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                      <Skeleton className="h-5 w-12" />
-                      <Skeleton className="h-10 w-full" />
-                  </div>
-                  <div className="grid gap-2">
-                       <Skeleton className="h-5 w-16" />
-                       <Skeleton className="h-10 w-full" />
-                  </div>
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800">
-                <Skeleton className="w-full h-full min-h-[400px]" />
-            </div>
-          </div>
-      </Card>
-    );
-}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -199,7 +167,7 @@ export default function LoginPage() {
   if (!auth) {
       return (
         <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-            <LoginSkeleton />
+            <FullScreenLoader />
         </main>
       );
   }
@@ -244,8 +212,8 @@ export default function LoginPage() {
                     </div>
                     {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
                   </div>
-                  <Button type="submit" className={cn("w-full", isSubmitting && "animate-shine")} disabled={isSubmitting}>
-                    {isSubmitting ? 'Signing In...' : 'Sign in'}
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader /> : 'Sign in'}
                   </Button>
                 </form>
                 <div className="mt-4 text-center text-sm">
@@ -300,7 +268,7 @@ export default function LoginPage() {
                 </Button>
                 </DialogClose>
                 <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail}>
-                {isResetting ? 'Sending...' : 'Send Reset Email'}
+                {isResetting ? <Loader /> : 'Send Reset Email'}
                 </Button>
             </DialogFooter>
             </DialogContent>

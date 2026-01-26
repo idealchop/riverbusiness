@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, Suspense, useEffect } from 'react';
@@ -15,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Logo } from '@/components/icons';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { FullScreenLoader, Loader } from '@/components/ui/loader';
 
 const passwordSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
@@ -26,29 +25,6 @@ const passwordSchema = z.object({
 });
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
-
-function ResetPasswordSkeleton() {
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <Skeleton className="h-16 w-16 mb-4 mx-auto rounded-full" />
-        <Skeleton className="h-8 w-48 mx-auto" />
-        <Skeleton className="h-5 w-64 mx-auto" />
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-10 w-full animate-shine" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-10 w-full animate-shine" />
-        </div>
-        <Skeleton className="h-10 w-full mt-4" />
-      </CardContent>
-    </Card>
-  );
-}
 
 function ResetPasswordComponent() {
   const router = useRouter();
@@ -118,7 +94,7 @@ function ResetPasswordComponent() {
   };
 
   if (status === 'loading') {
-    return <ResetPasswordSkeleton />;
+    return <FullScreenLoader />;
   }
 
   if (status === 'success') {
@@ -187,7 +163,7 @@ function ResetPasswordComponent() {
             {errors.confirmPassword && <p className="text-sm text-destructive mt-1">{errors.confirmPassword.message}</p>}
           </div>
           <Button type="submit" className="w-full mt-4" disabled={isSubmitting}>
-            {isSubmitting ? 'Resetting...' : 'Reset Password'}
+            {isSubmitting ? <Loader /> : 'Reset Password'}
           </Button>
         </form>
       </CardContent>
@@ -198,7 +174,7 @@ function ResetPasswordComponent() {
 export default function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <Suspense fallback={<ResetPasswordSkeleton />}>
+      <Suspense fallback={<FullScreenLoader />}>
         <ResetPasswordComponent />
       </Suspense>
     </main>

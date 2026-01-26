@@ -1,10 +1,10 @@
-
 'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { FullScreenLoader } from '@/components/ui/loader';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -41,9 +41,5 @@ export default function OnboardingPage() {
   }, [authUser, isUserLoading, firestore, router]);
 
   // Render a loading state while checks are in progress
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <p>Redirecting...</p>
-    </div>
-  );
+  return <FullScreenLoader text="Redirecting..." />;
 }

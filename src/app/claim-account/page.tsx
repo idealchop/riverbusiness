@@ -16,6 +16,7 @@ import { doc, getDoc, writeBatch } from 'firebase/firestore';
 import type { AppUser } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle } from 'lucide-react';
+import { FullScreenLoader, Loader } from '@/components/ui/loader';
 
 const claimSchema = z.object({
   clientId: z.string().min(1, { message: 'Client ID is required.' }),
@@ -112,11 +113,7 @@ export default function ClaimAccountPage() {
   };
 
   if (isUserLoading || isCheckingProfile) {
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-background">
-        <p>Loading...</p>
-      </div>
-    );
+    return <FullScreenLoader />;
   }
 
   if (claimedProfile) {
@@ -196,7 +193,7 @@ export default function ClaimAccountPage() {
                 {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? 'Claiming...' : 'Claim Profile'}
+                {isSubmitting ? <Loader /> : 'Claim Profile'}
               </Button>
             </form>
           </CardContent>

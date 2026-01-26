@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -46,6 +45,7 @@ import { useMounted } from '@/hooks/use-mounted';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Progress } from '@/components/ui/progress';
+import { FullScreenLoader } from '@/components/ui/loader';
 
 const ICONS: { [key: string]: React.ElementType } = {
   delivery: Truck,
@@ -63,35 +63,6 @@ const adminAgent: Partial<AppUser> = {
     supportDescription: 'Customer Service',
     supportPhotoURL: 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c'
 };
-
-
-function DashboardLayoutSkeleton() {
-    return (
-        <div className="flex flex-col h-full">
-            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-                <div className="flex items-center gap-2 font-semibold text-lg">
-                    <div className="flex items-center">
-                        <span className="font-bold">River Business</span>
-                    </div>
-                </div>
-                <div className="flex-1" />
-                {/* Header skeleton */}
-            </header>
-            <main className="flex-1 overflow-auto p-4 sm:p-6">
-                <div className="container mx-auto">
-                    {/* Children will be rendered here */}
-                </div>
-            </main>
-            <footer className="p-4 text-center text-xs text-muted-foreground border-t">
-                v1.0.0 - Smart Refill is a trademark and product name of{' '}
-                <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    River Philippines
-                </a>.
-            </footer>
-        </div>
-    );
-}
-
 
 export default function DashboardLayout({
   children,
@@ -239,7 +210,7 @@ export default function DashboardLayout({
   }, [isPaymentDialogOpen]);
 
   if (isUserLoading || isUserDocLoading || !isMounted || !auth || !authUser || !user) {
-    return <DashboardLayoutSkeleton />;
+    return <FullScreenLoader />;
   }
 
   const handleNotificationOpenChange = (open: boolean) => {
