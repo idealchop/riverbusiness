@@ -3739,7 +3739,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><FormControl><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
+                                                    <FormField
+                                                        control={newUserForm.control}
+                                                        name="customPlanDetails.dispenserPaymentType"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Payment</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                    <FormControl>
+                                                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                    </FormControl>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="Monthly">Monthly</SelectItem>
+                                                                        <SelectItem value="One-Time">One-Time</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -3780,4 +3798,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
