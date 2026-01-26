@@ -3547,7 +3547,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </FormItem>
                                         )}/>
                                       )}
-                                      {(selectedAccountType === 'Parent' || selectedPlan?.isPrepaid) && (
+                                      {(selectedAccountType === 'Parent' || (selectedPlan?.isPrepaid && selectedAccountType !== 'Branch')) && (
                                          <FormField control={newUserForm.control} name="initialTopUp" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel>Initial Top-Up Credits (PHP)</FormLabel>
@@ -3682,5 +3682,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    
