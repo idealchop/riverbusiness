@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useStorage, useAuth } from '@/firebase';
-import { doc, collection, getDoc, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc, setDoc, orderBy } from 'firebase/firestore';
+import { doc, collection, updateDoc, writeBatch, Timestamp, query, serverTimestamp, where, addDoc, setDoc, orderBy } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -182,23 +182,24 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    if (isUserLoading) return;
+    // Wait until both authentication and user document loading are complete
+    if (isUserLoading || isUserDocLoading) {
+      return;
+    }
 
+    // If authentication is done and there's no authenticated user, redirect to login
     if (!authUser) {
       router.push('/login');
       return;
     }
-    
-    if (firestore && authUser) {
-        const checkOnboarding = async () => {
-            const userDocSnap = await getDoc(doc(firestore, 'users', authUser.uid));
-            if (!userDocSnap.exists()) {
-                router.push('/claim-account');
-            }
-        }
-        checkOnboarding();
+
+    // If the user is authenticated but their Firestore document doesn't exist,
+    // they need to claim their account.
+    if (authUser && !user) {
+      router.push('/claim-account');
     }
-  }, [authUser, isUserLoading, router, firestore]);
+  }, [authUser, user, isUserLoading, isUserDocLoading, router]);
+
 
   useEffect(() => {
     if (notifications) {
