@@ -356,9 +356,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         };
     
         if (!selectedUser || !selectedUser.plan || !userDeliveriesData) {
-            if (selectedUser?.plan?.isPrepaid) {
-                return { ...emptyState, currentBalance: selectedUser.totalConsumptionLiters || 0 };
-            }
             return { ...emptyState, currentBalance: selectedUser?.totalConsumptionLiters || 0 };
         }
     
@@ -379,14 +376,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 consumedLitersThisMonth,
                 estimatedCost: consumedLitersThisMonth * (selectedUser.plan.price || 3),
             };
-        }
-
-        if (selectedUser.plan.isPrepaid) {
-            return {
-                 ...emptyState,
-                consumedLitersThisMonth,
-                currentBalance: selectedUser.totalConsumptionLiters,
-            }
         }
 
         if (!selectedUser.createdAt) return emptyState;
@@ -762,14 +751,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     adminNotes: values.adminNotes,
                     proofOfDeliveryUrl: proofUrl || null,
                  });
-                 
-                 // For prepaid users, deduct from their balance
-                 if (userForHistory.plan?.isPrepaid) {
-                     const userRef = doc(firestore, 'users', userForHistory.id);
-                     await updateDoc(userRef, {
-                         totalConsumptionLiters: increment(-containerToLiter(values.volumeContainers))
-                     });
-                 }
             }
 
             // Always notify the user receiving the delivery
@@ -879,9 +860,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         });
                         await batch.commit();
                     }
-                } else if (userData.plan?.isPrepaid) {
-                    const litersToCredit = containerToLiter(deliveryToDelete.volumeContainers);
-                    await updateDoc(userRef, { totalConsumptionLiters: increment(litersToCredit) });
                 }
             }
         }
@@ -1434,13 +1412,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             const { plan, initialTopUp, parentId, ...rest } = values;
 
-            let totalLiters = 0;
             let topUpCredits = 0;
-            
-            if (plan.isPrepaid) {
-                const rate = plan.price || 3;
-                totalLiters = rate > 0 ? (initialTopUp || 0) / rate : 0;
-            }
 
             if (values.accountType === 'Parent') {
                 topUpCredits = initialTopUp || 0;
@@ -1452,11 +1424,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     name: plan.name,
                     price: plan.price,
                     isConsumptionBased: plan.isConsumptionBased || false,
-                    isPrepaid: plan.isPrepaid || false,
                 },
                 role: 'User',
                 accountStatus: 'Active',
-                totalConsumptionLiters: totalLiters,
+                totalConsumptionLiters: 0,
                 topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
             };
@@ -1467,7 +1438,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             
             batch.set(unclaimedProfileRef, profileData);
             
-            if ((plan.isPrepaid || values.accountType === 'Parent') && initialTopUp && initialTopUp > 0) {
+            if (values.accountType === 'Parent' && initialTopUp && initialTopUp > 0) {
                 const topUpRequestRef = doc(collection(unclaimedProfileRef, 'topUpRequests'));
                 const topUpData: Omit<TopUpRequest, 'id' | 'userId' | 'proofOfPaymentUrl'> = {
                     amount: initialTopUp,
@@ -1533,22 +1504,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     description: 'Admin Top-Up'
                 };
                 await addDoc(collection(userRef, 'transactions'), transactionData);
-            } else if (selectedUser.plan?.isPrepaid) {
-                const rate = selectedUser.plan.price || 3;
-                const litersToAdd = rate > 0 ? topUpAmount / rate : 0;
-                 await updateDoc(userRef, {
-                    totalConsumptionLiters: increment(litersToAdd)
+                 await createNotification(selectedUser.id, {
+                    type: 'top-up',
+                    title: 'Balance Topped Up',
+                    description: `Your account has been credited with ₱${topUpAmount.toLocaleString()}.`,
+                    data: { amount: topUpAmount }
                 });
+
+                toast({ title: 'Top-Up Successful', description: `₱${topUpAmount.toLocaleString()} added to ${selectedUser.businessName}'s balance.` });
             }
             
-            await createNotification(selectedUser.id, {
-                type: 'top-up',
-                title: 'Balance Topped Up',
-                description: `Your account has been credited with ${isParent ? `₱${topUpAmount.toLocaleString()}` : `${(topUpAmount / (selectedUser.plan.price || 3)).toLocaleString()} Liters`}.`,
-                data: { amount: topUpAmount }
-            });
-
-            toast({ title: 'Top-Up Successful', description: `${isParent ? `₱${topUpAmount.toLocaleString()}` : `${(topUpAmount / (selectedUser.plan.price || 3)).toLocaleString()} Liters`} added to ${selectedUser.businessName}'s balance.` });
             setIsTopUpDialogOpen(false);
             setTopUpAmount(0);
         } catch (error) {
@@ -1617,21 +1582,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     description: 'User Top-Up'
                 };
                 await addDoc(collection(userRef, 'transactions'), transactionData);
-            } else if (selectedUser.plan?.isPrepaid) {
-                 const rate = selectedUser.plan.price || 3;
-                 const litersToAdd = rate > 0 ? request.amount / rate : 0;
-                 await updateDoc(userRef, {
-                    totalConsumptionLiters: increment(litersToAdd)
+                 await createNotification(selectedUser.id, {
+                    type: 'top-up',
+                    title: 'Top-Up Approved',
+                    description: `Your top-up of ₱${request.amount.toLocaleString()} has been approved.`,
                 });
             }
             
             await updateDoc(requestRef, { status: 'Approved' });
-
-             await createNotification(selectedUser.id, {
-                type: 'top-up',
-                title: 'Top-Up Approved',
-                description: `Your top-up of ${isParent ? `₱${request.amount.toLocaleString()}` : `${(request.amount / (selectedUser.plan.price || 3)).toLocaleString()}L`} has been approved.`,
-            });
             toast({ title: 'Top-Up Approved' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Approval Failed' });
@@ -1649,10 +1607,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         });
         toast({ title: 'Top-Up Rejected' });
     };
-
-    const watchedTopUpAmount = newUserForm.watch('initialTopUp');
-    const watchedPlanPrice = newUserForm.watch('plan.price');
-
 
     if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
         return <AdminDashboardSkeleton />;
@@ -1767,22 +1721,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ) : selectedUser.plan?.isPrepaid ? (
-                                <Card>
-                                    <CardHeader className="pb-4">
-                                        <CardTitle className="text-base">Prepaid Balance</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <p className="text-3xl font-bold mb-2">
-                                          {(selectedUser.totalConsumptionLiters || 0).toLocaleString()} <span className="text-lg font-normal text-muted-foreground">Liters</span>
-                                        </p>
-                                        <Button size="sm" onClick={() => setIsTopUpDialogOpen(true)}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Top-Up Liters
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            ) : selectedUser.accountType !== 'Branch' && (
+                            ) : (
                                 <Card>
                                     <CardHeader className="pb-4">
                                         <CardTitle className="text-base">Consumption Details</CardTitle>
@@ -1811,7 +1750,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 )}
                             </div>
 
-                             {(selectedUser.accountType === 'Parent' || selectedUser.plan?.isPrepaid) && (
+                             {selectedUser.accountType === 'Parent' && (
                                  <Card>
                                     <CardHeader>
                                         <CardTitle className="text-base">Pending Top-Up Requests</CardTitle>
@@ -2870,10 +2809,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Top-Up Balance</DialogTitle>
-                    <DialogDescription>Add {selectedUser?.accountType === 'Parent' ? 'credits (PHP)' : 'liters'} to {selectedUser?.businessName}'s balance.</DialogDescription>
+                    <DialogDescription>Add credits (PHP) to {selectedUser?.businessName}'s balance.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-2">
-                    <Label htmlFor="top-up-amount">Amount to Add ({selectedUser?.accountType === 'Parent' ? 'PHP' : 'Liters'})</Label>
+                    <Label htmlFor="top-up-amount">Amount to Add (PHP)</Label>
                     <Input id="top-up-amount" type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(Number(e.target.value))} placeholder="e.g., 10000" />
                 </div>
                 <DialogFooter>
@@ -3547,16 +3486,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             </FormItem>
                                         )}/>
                                       )}
-                                      {(selectedAccountType === 'Parent' || (selectedPlan?.isPrepaid && selectedAccountType !== 'Branch')) && (
+                                      {selectedAccountType === 'Parent' && (
                                          <FormField control={newUserForm.control} name="initialTopUp" render={({ field }) => (
                                             <FormItem className="md:col-span-2">
                                                 <FormLabel>Initial Top-Up Credits (PHP)</FormLabel>
                                                 <FormControl><Input type="number" placeholder="e.g. 10000" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                {selectedPlan?.isPrepaid && (
-                                                    <FormDescription>
-                                                        This will give the user ~{((watchedTopUpAmount || 0) / (watchedPlanPrice || 3)).toFixed(0)} liters.
-                                                    </FormDescription>
-                                                )}
                                                 <FormMessage />
                                             </FormItem>
                                          )}/>
@@ -3598,7 +3532,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Select a plan..." /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             {planOptions.map(plan => (
-                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && !plan.isConsumptionBased && !plan.isPrepaid && `(P${plan.price}/mo)`} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
+                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && !plan.isConsumptionBased && `(P${plan.price}/mo)`} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -3609,18 +3543,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
-                                            {selectedPlan.isPrepaid ? (
-                                                <div className="space-y-4 p-4 border rounded-lg">
-                                                    <h4 className="font-medium">Prepaid Configuration</h4>
-                                                    <FormField control={newUserForm.control} name="plan.price" render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>Price per Liter (PHP)</FormLabel>
-                                                            <FormControl><Input type="number" placeholder="e.g., 2.5" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}/>
-                                                </div>
-                                            ) : selectedAccountType !== 'Branch' && (
+                                            {selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Delivery Schedule</h4>
                                                     <div className="grid grid-cols-2 gap-4">

@@ -1,4 +1,5 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -123,14 +124,6 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             // Optional: Add error handling, like sending a notification to the admin
             return;
         }
-
-    } else if (userData?.plan?.isPrepaid) {
-        // For Prepaid plans, deduct from their own liter balance
-        const litersToDeduct = containerToLiter(delivery.volumeContainers);
-        const userRef = db.collection('users').doc(userId);
-        await userRef.update({
-            totalConsumptionLiters: increment(-litersToDeduct)
-        });
     }
 
     // Always notify the user receiving the delivery
@@ -370,6 +363,15 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
+    if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
+        const parts = filePath.split("/");
+        const userId = parts[1];
+        const url = await getPublicUrl();
+        await db.collection("users").doc(userId).update({ photoURL: url });
+        logger.log(`Updated profile photo for user: ${userId}`);
+        return;
+    }
+
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
         const userId = parts[1];

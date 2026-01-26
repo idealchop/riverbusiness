@@ -469,16 +469,16 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const TABS_CONFIG = useMemo(() => [
     { value: 'accounts', label: 'Accounts', icon: UserIcon, condition: true },
     { value: 'transactions', label: 'Transactions', icon: ArrowRightLeft, condition: user?.accountType === 'Parent' },
-    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: (user?.plan?.isPrepaid || user?.accountType === 'Parent') && user?.accountType !== 'Branch' },
-    { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user?.accountType !== 'Parent' && !user?.plan?.isPrepaid },
+    { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user?.accountType === 'Parent' },
+    { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user?.accountType !== 'Parent' },
     { value: 'plan', label: 'Plan', icon: FileText, condition: true },
     { value: 'branches', label: 'Branches', icon: UserCheck, condition: user?.accountType === 'Parent' },
   ].filter(tab => tab.condition), [user]);
 
   const defaultTab = useMemo(() => {
-    const defaultOrder = ['transactions', 'top-ups', 'invoices', 'accounts'];
-    return TABS_CONFIG.find(tab => defaultOrder.includes(tab.value))?.value || 'accounts';
-  }, [TABS_CONFIG]);
+    if (user?.accountType === 'Parent') return 'transactions';
+    return 'invoices';
+  }, [user]);
 
 
   useEffect(() => {
@@ -937,10 +937,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <p className="text-lg font-bold text-foreground">
                                 P{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
                             </p>
-                        ) : user.plan?.isPrepaid ? (
-                            <p className="text-lg font-bold text-foreground">
-                                Prepaid Balance Plan
-                            </p>
                         ) : (
                             <p className="text-lg font-bold text-foreground">
                                 P{user.plan?.price.toLocaleString()}/month
@@ -960,14 +956,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                     <span className="text-xs block pl-4 text-primary"> - Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}.</span>
                                   }
                                 </li>
-                              </ul>
-                            </div>
-                          ) : user.plan?.isPrepaid ? (
-                             <div className="sm:col-span-2">
-                              <h4 className="font-semibold mb-2">Plan Details</h4>
-                              <ul className="space-y-1 text-muted-foreground">
-                                <li><strong>Billing:</strong> Top-up your liter balance as needed.</li>
-                                <li><strong>Consumption:</strong> Deliveries deduct from your balance.</li>
                               </ul>
                             </div>
                           ) : (
@@ -1035,7 +1023,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Repeat className="mr-2 h-4 w-4" />
                               Change Plan
                           </Button>
-                          {(user.accountType === 'Parent' || user.plan?.isPrepaid) && user.accountType !== 'Branch' ? (
+                          {user.accountType === 'Parent' ? (
                             <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
                               <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
                             </Button>
@@ -1310,81 +1298,71 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                       )}
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">
-                    {user.accountType === 'Branch' ? (
-                        <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
-                            <Info className="h-5 w-5 shrink-0" />
-                            <p>Your invoices are covered by your parent account. This history is for your records.</p>
-                        </div>
-                    ) : (
-                        <Card>
-                          <CardHeader className="flex flex-row items-center justify-between">
-                               <div>
-                                 <CardTitle>Top-Up History</CardTitle>
-                                 <CardDescription>
-                                    {user.accountType === 'Parent' 
-                                        ? "A log of all credit top-ups for your parent account."
-                                        : "Your plan is prepaid. Top-up your balance to add water credits."
-                                    }
-                                 </CardDescription>
-                               </div>
-                               <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
-                                  <Plus className="mr-2 h-4 w-4" /> Top-Up
-                               </Button>
-                           </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                           <div>
+                             <CardTitle>Top-Up History</CardTitle>
+                             <CardDescription>
+                                A log of all credit top-ups for your parent account.
+                             </CardDescription>
+                           </div>
+                           <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
+                              <Plus className="mr-2 h-4 w-4" /> Top-Up
+                           </Button>
+                       </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Amount (PHP)</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {topUpRequests && topUpRequests.length > 0 ? (
+                                        topUpRequests.map(req => {
+                                            const asPayment: Payment = {
+                                                id: req.id,
+                                                date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
+                                                description: `Top-Up Request`,
+                                                amount: req.amount,
+                                                status: req.status as any, // Cast because statuses don't perfectly align
+                                                proofOfPaymentUrl: req.proofOfPaymentUrl,
+                                            };
+                                            return (
+                                                <TableRow key={req.id}>
+                                                    <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
+                                                    <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={
+                                                          req.status === 'Approved' ? 'default' :
+                                                          req.status === 'Pending Review' ? 'secondary' :
+                                                          'destructive'
+                                                        } className={cn(
+                                                            req.status === 'Approved' && 'bg-green-100 text-green-800'
+                                                        )}>
+                                                            {req.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                     <TableCell className="text-right">
+                                                        <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)}>
+                                                            View Receipt
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )
+                                        })
+                                    ) : (
                                         <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Amount (PHP)</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Action</TableHead>
+                                            <TableCell colSpan={4} className="text-center">No top-up requests yet.</TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {topUpRequests && topUpRequests.length > 0 ? (
-                                            topUpRequests.map(req => {
-                                                const asPayment: Payment = {
-                                                    id: req.id,
-                                                    date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
-                                                    description: `Top-Up Request`,
-                                                    amount: req.amount,
-                                                    status: req.status as any, // Cast because statuses don't perfectly align
-                                                    proofOfPaymentUrl: req.proofOfPaymentUrl,
-                                                };
-                                                return (
-                                                    <TableRow key={req.id}>
-                                                        <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
-                                                        <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={
-                                                              req.status === 'Approved' ? 'default' :
-                                                              req.status === 'Pending Review' ? 'secondary' :
-                                                              'destructive'
-                                                            } className={cn(
-                                                                req.status === 'Approved' && 'bg-green-100 text-green-800'
-                                                            )}>
-                                                                {req.status}
-                                                            </Badge>
-                                                        </TableCell>
-                                                         <TableCell className="text-right">
-                                                            <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)}>
-                                                                View Receipt
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )
-                                            })
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center">No top-up requests yet.</TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    )}
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
                  </TabsContent>
                  <TabsContent value="branches" className="py-4">
                     <Card>

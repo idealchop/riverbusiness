@@ -1,7 +1,5 @@
 
 
-
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -244,9 +242,9 @@ export interface TopUpRequest {
   id: string;
   userId: string;
   amount: number;
-  status: 'Pending Review' | 'Approved' | 'Rejected';
+  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
   requestedAt: FieldValue | Timestamp;
-  proofOfPaymentUrl: string;
+  proofOfPaymentUrl?: string;
   rejectionReason?: string;
 }
     
@@ -255,5 +253,3 @@ export interface TopUpRequest {
 
     
 
-
-    
