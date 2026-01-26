@@ -216,6 +216,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
     const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
+    const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = React.useState(false);
     const [isTopUpDialogOpen, setIsTopUpDialogOpen] = React.useState(false);
     const [topUpAmount, setTopUpAmount] = React.useState<number>(0);
     const [isDebitDialogOpen, setIsDebitDialogOpen] = React.useState(false);
@@ -530,6 +531,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 autoRefillEnabled: true,
             }
         }
+    });
+
+    const invoiceFormSchema = z.object({
+        description: z.string().min(1, 'Description is required'),
+        amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
+        date: z.date({ required_error: 'Date is required.' }),
+    });
+    type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
+
+    const invoiceForm = useForm<InvoiceFormValues>({
+        resolver: zodResolver(invoiceFormSchema),
     });
     
     const complianceReportForm = useForm<ComplianceReportFormValues>({
@@ -1116,6 +1128,47 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         
         setRejectionReason('');
     };
+
+    const handleCreateInvoice = async (values: InvoiceFormValues) => {
+        const userToUpdate = userForInvoices || selectedUser;
+        if (!userToUpdate || !firestore) return;
+        setIsSubmitting(true);
+
+        try {
+            const invoiceDate = values.date;
+            const invoiceId = `INV-MANUAL-${invoiceDate.getTime()}`;
+            
+            const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', invoiceId);
+            
+            const newInvoiceData: Payment = {
+                id: invoiceId,
+                date: values.date.toISOString(),
+                description: values.description,
+                amount: values.amount,
+                status: 'Upcoming',
+            };
+
+            await setDoc(invoiceRef, newInvoiceData);
+
+            await createNotification(userToUpdate.id, {
+                type: 'payment',
+                title: 'New Invoice Issued',
+                description: `A new invoice for ${values.description} (₱${values.amount.toFixed(2)}) is available.`,
+                data: { paymentId: invoiceId }
+            });
+
+            toast({ title: "Invoice Created", description: `A new invoice has been created for ${userToUpdate.businessName}.` });
+            setIsCreateInvoiceOpen(false);
+            invoiceForm.reset();
+
+        } catch (error) {
+            console.error("Error creating invoice:", error);
+            toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the invoice.' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
         if (!firestore || !selectedUser || !storage || !auth || !authUser) return;
@@ -1894,8 +1947,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <Dialog open={isUserInvoicesOpen} onOpenChange={(open) => { if (!open) { setUserForInvoices(null); } setIsUserInvoicesOpen(open);}}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Invoice History for {userForInvoices?.businessName}</DialogTitle>
-                    <DialogDescription>Review and manage payment statuses.</DialogDescription>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <DialogTitle>Invoice History for {userForInvoices?.businessName}</DialogTitle>
+                            <DialogDescription>Review and manage payment statuses.</DialogDescription>
+                        </div>
+                        <Button onClick={() => setIsCreateInvoiceOpen(true)} size="sm">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Create Invoice
+                        </Button>
+                    </div>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh] pr-6 -mr-6">
                     {paymentsLoading ? (
@@ -2480,6 +2541,91 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsManageInvoiceOpen(false)}>Close</Button>
                 </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isCreateInvoiceOpen} onOpenChange={setIsCreateInvoiceOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create Manual Invoice</DialogTitle>
+                    <DialogDescription>Create a new invoice for {userForInvoices?.businessName}. The user will be notified.</DialogDescription>
+                </DialogHeader>
+                <Form {...invoiceForm}>
+                    <form onSubmit={invoiceForm.handleSubmit(handleCreateInvoice)} className="space-y-4 py-4">
+                        <FormField
+                            control={invoiceForm.control}
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Billing Period</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full text-left font-normal",
+                                                        !field.value && "text-muted-foreground"
+                                                    )}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    {field.value ? (
+                                                        format(field.value, "MMMM yyyy")
+                                                    ) : (
+                                                        <span>Pick a month</span>
+                                                    )}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={invoiceForm.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Monthly Subscription" {...field} disabled={isSubmitting} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={invoiceForm.control}
+                            name="amount"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Amount (PHP)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="e.g., 5000" {...field} disabled={isSubmitting} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <DialogClose asChild><Button variant="secondary" disabled={isSubmitting}>Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? "Creating..." : "Create and Notify"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
         
