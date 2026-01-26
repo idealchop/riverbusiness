@@ -212,9 +212,9 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
             </ScrollArea>
         </div>
 
-        <DialogFooter className="border-t p-6 pt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center">
+        <DialogFooter className="border-t p-6 pt-4 flex flex-col-reverse sm:flex-row sm:items-center gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Close</Button>
-            <div className="flex items-center justify-center space-x-2">
+            <div className="flex items-center justify-center sm:ml-auto space-x-2">
                 <Button
                     variant="outline"
                     size="sm"
