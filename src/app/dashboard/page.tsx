@@ -43,6 +43,7 @@ import {
   Settings,
   FileX,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -136,6 +137,7 @@ export default function DashboardPage() {
     compliance: false,
     refillStatus: false,
     welcome: false,
+    partnerNotice: false,
   });
 
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
@@ -370,6 +372,7 @@ export default function DashboardPage() {
           onRefillRequest={handleOneClickRefill}
           onComplianceClick={() => openDialog('compliance')}
           hasPendingRefill={hasPendingRefill}
+          onPartnerNoticeClick={() => openDialog('partnerNotice')}
         />
         
         <StatCards
@@ -457,6 +460,27 @@ export default function DashboardPage() {
             onOpenChange={() => closeDialog('refillStatus')}
             activeRefillRequest={activeRefillRequest}
         />
+        <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        Partner Station Notice
+                    </DialogTitle>
+                    <DialogDescription>
+                        Important information regarding our partner water refilling stations.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <p>Content for the partner station notice will be added here.</p>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
       </div>
     </TooltipProvider>

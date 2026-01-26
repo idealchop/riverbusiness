@@ -2,7 +2,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { BellRing, ShieldCheck } from 'lucide-react';
+import { BellRing, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 interface DashboardHeaderProps {
   greeting: string;
@@ -11,6 +11,7 @@ interface DashboardHeaderProps {
   onRefillRequest: () => void;
   onComplianceClick: () => void;
   hasPendingRefill: boolean;
+  onPartnerNoticeClick: () => void;
 }
 
 export function DashboardHeader({
@@ -20,6 +21,7 @@ export function DashboardHeader({
   onRefillRequest,
   onComplianceClick,
   hasPendingRefill,
+  onPartnerNoticeClick,
 }: DashboardHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -47,9 +49,11 @@ export function DashboardHeader({
           <ShieldCheck className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Compliance &amp; Sanitation</span>
         </Button>
+        <Button variant="outline" size="icon" onClick={onPartnerNoticeClick}>
+            <AlertTriangle className="h-4 w-4" />
+            <span className="sr-only">Partner Station Notice</span>
+        </Button>
       </div>
     </div>
   );
 }
-
-    
