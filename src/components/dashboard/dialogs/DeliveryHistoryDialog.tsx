@@ -33,7 +33,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
   const [deliveryDateRange, setDeliveryDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
-  const ITEMS_PER_PAGE = 8;
+  const ITEMS_PER_PAGE = 6;
   
   const branchMap = useMemo(() => {
     if (!branches) return {};
