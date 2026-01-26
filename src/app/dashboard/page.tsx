@@ -485,7 +485,7 @@ export default function DashboardPage() {
                         <div className="space-y-4">
                             {stationOKImage && (
                                 <div className="relative h-40 w-full overflow-hidden rounded-lg">
-                                     <Image src={stationOKImage.imageUrl} alt="Water station under maintenance" layout="fill" objectFit="cover" className="opacity-50 grayscale" data-ai-hint="water station" />
+                                     <Image src={stationOKImage.imageUrl} alt="Water station under maintenance" layout="fill" objectFit="contain" className="opacity-50 grayscale" data-ai-hint="water station" />
                                 </div>
                             )}
                             <h3 className="font-semibold">Station is Under Maintenance</h3>
@@ -507,7 +507,7 @@ export default function DashboardPage() {
                         <div className="space-y-4 text-center">
                             {stationOKImage && (
                                 <div className="relative h-40 w-full overflow-hidden rounded-lg">
-                                    <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="cover" data-ai-hint={stationOKImage.imageHint} />
+                                    <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="contain" data-ai-hint={stationOKImage.imageHint} />
                                 </div>
                             )}
                             <h3 className="font-semibold">All Systems Operational</h3>
@@ -530,5 +530,3 @@ export default function DashboardPage() {
     </TooltipProvider>
   );
 }
-
-    
