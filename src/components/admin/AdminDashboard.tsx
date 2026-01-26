@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -26,7 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInMonths, addMonths, isWithinInterval, startOfMonth, endOfMonth, subMonths, formatDistanceToNow, getYear, getMonth } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport, Transaction, TopUpRequest } from '@/lib/types';
+import type { AppUser, Delivery, WaterStation, Payment, ComplianceReport, SanitationVisit, Schedule, RefillRequest, SanitationChecklistItem, RefillRequestStatus, Notification, DispenserReport, Transaction, TopUpRequest, ManualCharge } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -216,7 +215,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [visitToEdit, setVisitToEdit] = React.useState<SanitationVisit | null>(null);
     const [visitToDelete, setVisitToDelete] = React.useState<SanitationVisit | null>(null);
     const [isCreateUserOpen, setIsCreateUserOpen] = React.useState(false);
-    const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = React.useState(false);
+    const [isAddChargeOpen, setIsAddChargeOpen] = React.useState(false);
     const [isTopUpDialogOpen, setIsTopUpDialogOpen] = React.useState(false);
     const [topUpAmount, setTopUpAmount] = React.useState<number>(0);
     const [isDebitDialogOpen, setIsDebitDialogOpen] = React.useState(false);
@@ -333,6 +332,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             const planCost = (userToCalc.plan?.price || 0);
             estimatedCost = planCost + monthlyEquipmentCost;
         }
+
+        const pendingChargesTotal = (userToCalc.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
+        estimatedCost += pendingChargesTotal;
     
         return {
             id: `INV-${userToCalc.id.substring(0, 5)}-${invoiceIdSuffix}`,
@@ -533,15 +535,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     });
 
-    const invoiceFormSchema = z.object({
+    const addChargeSchema = z.object({
         description: z.string().min(1, 'Description is required'),
         amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
-        date: z.date({ required_error: 'Date is required.' }),
     });
-    type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
+    type AddChargeFormValues = z.infer<typeof addChargeSchema>;
 
-    const invoiceForm = useForm<InvoiceFormValues>({
-        resolver: zodResolver(invoiceFormSchema),
+    const addChargeForm = useForm<AddChargeFormValues>({
+        resolver: zodResolver(addChargeSchema),
+        defaultValues: {
+            description: '',
+            amount: 0,
+        }
     });
     
     const complianceReportForm = useForm<ComplianceReportFormValues>({
@@ -559,7 +564,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         defaultValues: {
             status: 'Scheduled',
             assignedTo: '',
-            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` }],
+            dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: '', dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` }],
         }
     });
 
@@ -585,7 +590,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 status: 'Scheduled',
                 assignedTo: '',
                 reportFile: null,
-                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: 'Dispenser 1', dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` }],
+                dispenserReports: [{ dispenserId: 'dispenser-1', dispenserName: '', dispenserCode: `SAN${Math.floor(10000 + Math.random() * 90000)}` }],
             });
         }
     }, [visitToEdit, sanitationVisitForm]);
@@ -1129,41 +1134,26 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         setRejectionReason('');
     };
 
-    const handleCreateInvoice = async (values: InvoiceFormValues) => {
+    const handleAddCharge = async (values: AddChargeFormValues) => {
         const userToUpdate = userForInvoices || selectedUser;
         if (!userToUpdate || !firestore) return;
         setIsSubmitting(true);
-
         try {
-            const invoiceDate = values.date;
-            const invoiceId = `INV-MANUAL-${invoiceDate.getTime()}`;
-            
-            const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', invoiceId);
-            
-            const newInvoiceData: Payment = {
-                id: invoiceId,
-                date: values.date.toISOString(),
+            const userRef = doc(firestore, 'users', userToUpdate.id);
+            const newCharge: Omit<ManualCharge, 'dateAdded'> = {
+                id: `manual-${Date.now()}`,
                 description: values.description,
                 amount: values.amount,
-                status: 'Upcoming',
             };
-
-            await setDoc(invoiceRef, newInvoiceData);
-
-            await createNotification(userToUpdate.id, {
-                type: 'payment',
-                title: 'New Invoice Issued',
-                description: `A new invoice for ${values.description} (₱${values.amount.toFixed(2)}) is available.`,
-                data: { paymentId: invoiceId }
+            await updateDoc(userRef, {
+                pendingCharges: arrayUnion({ ...newCharge, dateAdded: serverTimestamp() }),
             });
-
-            toast({ title: "Invoice Created", description: `A new invoice has been created for ${userToUpdate.businessName}.` });
-            setIsCreateInvoiceOpen(false);
-            invoiceForm.reset();
-
+            toast({ title: 'Charge Added', description: `A charge for ${values.description} will be added to ${userToUpdate.businessName}'s next invoice.` });
+            setIsAddChargeOpen(false);
+            addChargeForm.reset();
         } catch (error) {
-            console.error("Error creating invoice:", error);
-            toast({ variant: 'destructive', title: 'Creation Failed', description: 'Could not create the invoice.' });
+            console.error("Error adding charge:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not add the charge.' });
         } finally {
             setIsSubmitting(false);
         }
@@ -1952,9 +1942,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                             <DialogTitle>Invoice History for {userForInvoices?.businessName}</DialogTitle>
                             <DialogDescription>Review and manage payment statuses.</DialogDescription>
                         </div>
-                        <Button onClick={() => setIsCreateInvoiceOpen(true)} size="sm">
+                        <Button onClick={() => setIsAddChargeOpen(true)} size="sm">
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Create Invoice
+                            Add Charge
                         </Button>
                     </div>
                 </DialogHeader>
@@ -1965,17 +1955,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Invoice ID</TableHead>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Amount</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {currentMonthInvoice && (
                                      <TableRow className="bg-muted/50 font-semibold cursor-pointer hover:bg-muted" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>
-                                        <TableCell className="font-mono text-xs">{currentMonthInvoice.id}</TableCell>
-                                        <TableCell>{format(new Date(currentMonthInvoice.date), 'PP')}</TableCell>
+                                        <TableCell>
+                                            <div className="font-medium">{currentMonthInvoice.description}</div>
+                                            <div className="text-xs text-muted-foreground">{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</div>
+                                        </TableCell>
                                         <TableCell>
                                             <Badge
                                                 variant="outline"
@@ -1983,15 +1975,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             >{currentMonthInvoice.status}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">₱{currentMonthInvoice.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button size="sm" variant="ghost" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>Review Payment</Button>
+                                        </TableCell>
                                     </TableRow>
                                 )}
                                 {(userPaymentsData && userPaymentsData.length > 0) ? (
                                     userPaymentsData.map((invoice) => {
                                         const safeDate = toSafeDate(invoice.date);
                                         return (
-                                        <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedInvoice(invoice); setIsManageInvoiceOpen(true); }}>
-                                            <TableCell className="font-mono text-xs">{invoice.id}</TableCell>
-                                            <TableCell>{safeDate ? format(safeDate, 'PP') : 'Invalid Date'}</TableCell>
+                                        <TableRow key={invoice.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{invoice.description}</div>
+                                                <div className="text-xs text-muted-foreground">{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</div>
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant={invoice.status === 'Paid' ? 'default' : invoice.status === 'Pending Review' ? 'secondary' : 'outline'}
@@ -2004,6 +2001,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 >{invoice.status}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right">₱{invoice.amount.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        <DropdownMenuItem onClick={() => {setSelectedInvoice(invoice); setIsManageInvoiceOpen(true);}}>Review Payment</DropdownMenuItem>
+                                                        <DropdownMenuSeparator/>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className="text-destructive">Delete Invoice</DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
                                         </TableRow>
                                     )})
                                 ) : (
@@ -2471,7 +2480,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <Dialog open={isManageInvoiceOpen} onOpenChange={setIsManageInvoiceOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Manage Invoice</DialogTitle>
+                    <DialogTitle>Review Payment</DialogTitle>
                     <DialogDescription>Review payment and update the status for invoice {selectedInvoice?.id}.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-6">
@@ -2544,75 +2553,35 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isCreateInvoiceOpen} onOpenChange={setIsCreateInvoiceOpen}>
+        <Dialog open={isAddChargeOpen} onOpenChange={setIsAddChargeOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Create Manual Invoice</DialogTitle>
-                    <DialogDescription>Create a new invoice for {userForInvoices?.businessName}. The user will be notified.</DialogDescription>
+                    <DialogTitle>Add Manual Charge</DialogTitle>
+                    <DialogDescription>This charge will be added to the user's next monthly invoice.</DialogDescription>
                 </DialogHeader>
-                <Form {...invoiceForm}>
-                    <form onSubmit={invoiceForm.handleSubmit(handleCreateInvoice)} className="space-y-4 py-4">
+                <Form {...addChargeForm}>
+                    <form onSubmit={addChargeForm.handleSubmit(handleAddCharge)} className="space-y-4 py-4">
                         <FormField
-                            control={invoiceForm.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                    <FormLabel>Billing Period</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full text-left font-normal",
-                                                        !field.value && "text-muted-foreground"
-                                                    )}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    {field.value ? (
-                                                        format(field.value, "MMMM yyyy")
-                                                    ) : (
-                                                        <span>Pick a month</span>
-                                                    )}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={invoiceForm.control}
+                            control={addChargeForm.control}
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Description</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., Monthly Subscription" {...field} disabled={isSubmitting} />
+                                        <Input placeholder="e.g., One-time setup fee" {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                         <FormField
-                            control={invoiceForm.control}
+                            control={addChargeForm.control}
                             name="amount"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Amount (PHP)</FormLabel>
                                     <FormControl>
-                                        <Input type="number" placeholder="e.g., 5000" {...field} disabled={isSubmitting} />
+                                        <Input type="number" placeholder="e.g., 500" {...field} disabled={isSubmitting} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -2621,7 +2590,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <DialogFooter>
                             <DialogClose asChild><Button variant="secondary" disabled={isSubmitting}>Cancel</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? "Creating..." : "Create and Notify"}
+                                {isSubmitting ? "Adding..." : "Add Charge"}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -3751,5 +3720,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-    

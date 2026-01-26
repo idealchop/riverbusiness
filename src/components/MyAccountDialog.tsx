@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -26,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
+import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ManualCharge } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign, Droplets, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -312,6 +311,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         const planCost = (user.plan?.price || 0) * (user.plan?.isConsumptionBased ? 1 : monthsToBill);
         estimatedCost += planCost;
     }
+
+    // Add pending manual charges to the current estimate
+    const pendingChargesTotal = (user.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
+    estimatedCost += pendingChargesTotal;
+
     
     return {
         id: `INV-${user.id.substring(0, 5)}-${invoiceIdSuffix}`,
@@ -324,7 +328,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
 
     const breakdownDetails = useMemo(() => {
-        const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false };
+        const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false, manualCharges: [], pendingCharges: [] };
         if (!user || !state.invoiceForBreakdown || !deliveries) {
             return emptyDetails;
         }
@@ -371,6 +375,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
         if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
 
+        const manualCharges = state.invoiceForBreakdown.manualCharges || [];
+        const pendingCharges = (isCurrent && user.pendingCharges) ? user.pendingCharges : [];
+
         return {
             planCost,
             gallonCost,
@@ -379,14 +386,20 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             consumedLiters,
             isCurrent,
             isFirstInvoice,
+            manualCharges,
+            pendingCharges
         };
     }, [user, state.invoiceForBreakdown, currentMonthInvoice, deliveries]);
 
     const totalBreakdownAmount = useMemo(() => {
+        const manualChargeTotal = (breakdownDetails.manualCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
+        const pendingChargeTotal = (breakdownDetails.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
         return (breakdownDetails.planCost || 0) +
                (breakdownDetails.consumptionCost || 0) +
                (breakdownDetails.gallonCost || 0) +
-               (breakdownDetails.dispenserCost || 0);
+               (breakdownDetails.dispenserCost || 0) +
+               manualChargeTotal +
+               pendingChargeTotal;
     }, [breakdownDetails]);
 
   const availableMonths = useMemo(() => {
@@ -1451,6 +1464,24 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                         <span className="font-medium">P{(breakdownDetails.dispenserCost || 0).toFixed(2)}</span>
                     </div>
                 }
+                {(breakdownDetails.manualCharges || []).map((charge, index) => (
+                  <div className="flex justify-between" key={`manual-${index}`}>
+                    <span className="text-muted-foreground">
+                      {charge.description}
+                      <span className="text-xs ml-1">(Manual Charge)</span>
+                    </span>
+                    <span className="font-medium">P{charge.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                {(breakdownDetails.pendingCharges || []).map((charge, index) => (
+                  <div className="flex justify-between" key={`pending-${index}`}>
+                    <span className="text-muted-foreground italic">
+                      {charge.description}
+                      <span className="text-xs ml-1">(Pending Charge)</span>
+                    </span>
+                    <span className="font-medium italic">P{charge.amount.toFixed(2)}</span>
+                  </div>
+                ))}
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total Amount</span>

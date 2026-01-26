@@ -77,6 +77,13 @@ export type Permission =
 
 export type AccountType = 'Single' | 'Parent' | 'Branch';
 
+export interface ManualCharge {
+  id: string;
+  description: string;
+  amount: number;
+  dateAdded: FieldValue | Timestamp;
+}
+
 export interface AppUser {
     id: string; // This is the Firebase Auth UID
     clientId?: string; // This is the manually entered client ID
@@ -128,6 +135,7 @@ export interface AppUser {
     accountType?: AccountType;
     parentId?: string;
     topUpBalanceCredits?: number;
+    pendingCharges?: ManualCharge[];
 }
 
 export interface LoginLog {
@@ -157,6 +165,7 @@ export interface Payment {
   status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review' | 'Covered by Parent Account';
   proofOfPaymentUrl?: string;
   rejectionReason?: string;
+  manualCharges?: ManualCharge[];
 }
 
 export type ImagePlaceholder = {
@@ -252,4 +261,3 @@ export interface TopUpRequest {
     
 
     
-
