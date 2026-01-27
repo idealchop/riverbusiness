@@ -184,7 +184,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogTitle>User Account Management</DialogTitle>
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="pr-6 -mr-6 flex-1">
+                    <ScrollArea className="flex-1">
                         <Tabs defaultValue="overview">
                             <TabsList>
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
