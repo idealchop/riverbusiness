@@ -41,8 +41,8 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                 <ScrollArea className="max-h-[60vh]">
                     <div className="py-4 pr-4 space-y-4">
                         {visit?.dispenserReports && visit.dispenserReports.length > 0 ? (
-                            visit.dispenserReports.map(report => (
-                            <Card key={report.dispenserId}>
+                            visit.dispenserReports.map((report, reportIndex) => (
+                            <Card key={report.dispenserId || reportIndex}>
                                 <CardHeader>
                                     <CardTitle className="text-base">{report.dispenserName}</CardTitle>
                                     {report.dispenserCode && <CardDescription>Code: {report.dispenserCode}</CardDescription>}

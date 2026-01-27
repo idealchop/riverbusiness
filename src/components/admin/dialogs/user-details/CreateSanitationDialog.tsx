@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -22,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle } from 'lucide-react';
 
 const dispenserReportSchema = z.object({
+    dispenserId: z.string(),
     dispenserName: z.string().min(1, "Dispenser name is required."),
     dispenserCode: z.string().optional(),
     checklist: z.array(z.object({
@@ -39,6 +39,12 @@ const sanitationVisitSchema = z.object({
 });
 type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
 
+const defaultChecklist = [
+    { item: 'Cleaned exterior', checked: false, remarks: '' },
+    { item: 'Flushed lines', checked: false, remarks: '' },
+    { item: 'Checked for leaks', checked: false, remarks: '' }
+];
+
 interface CreateSanitationDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
@@ -50,7 +56,17 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user 
     const { toast } = useToast();
     const firestore = useFirestore();
 
-    const sanitationVisitForm = useForm<SanitationVisitFormValues>({ resolver: zodResolver(sanitationVisitSchema), defaultValues: { status: 'Scheduled', dispenserReports: [{ dispenserName: 'Main Unit', checklist: [{ item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' }] }] } });
+    const sanitationVisitForm = useForm<SanitationVisitFormValues>({
+        resolver: zodResolver(sanitationVisitSchema),
+        defaultValues: {
+            status: 'Scheduled',
+            dispenserReports: [{
+                dispenserId: `disp-${Date.now()}`,
+                dispenserName: 'Main Unit',
+                checklist: defaultChecklist
+            }]
+        }
+    });
     const { fields, append, remove } = useFieldArray({ control: sanitationVisitForm.control, name: "dispenserReports" });
 
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
@@ -123,7 +139,18 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user 
                             </CardContent>
                         </Card>
                     ))}
-                    <Button type="button" variant="outline" onClick={() => append({ dispenserName: `Unit #${fields.length + 1}`, checklist: [{ item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' }] })}><PlusCircle className="mr-2 h-4 w-4" />Add Another Dispenser</Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => append({
+                            dispenserId: `disp-${Date.now()}-${fields.length}`,
+                            dispenserName: `Unit #${fields.length + 1}`,
+                            checklist: defaultChecklist
+                        })}
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Another Dispenser
+                    </Button>
 
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
