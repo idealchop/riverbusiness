@@ -1498,6 +1498,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             case 'SME': return smePlans;
             case 'Commercial': return commercialPlans;
             case 'Corporate': return corporatePlans;
+            case 'Enterprise': return enterprisePlans;
             default: return [];
         }
     };
@@ -1505,12 +1506,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const selectedClientType = newUserForm.watch('clientType');
     const selectedAccountType = newUserForm.watch('accountType');
     const selectedPlan = newUserForm.watch('plan');
+    const watchedPlanPrice = newUserForm.watch('planPrice');
 
     const planOptions = React.useMemo(() => {
         if (!selectedClientType) return [];
-        if (selectedClientType === 'Enterprise') {
-            return enterprisePlans;
-        }
         return getPlansForType(selectedClientType);
     }, [selectedClientType]);
 
@@ -3738,12 +3737,33 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         <FormField control={newUserForm.control} name="plan" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Select a {selectedClientType} Plan</FormLabel>
-                                                    <Select onValueChange={(value) => { const selectedPlan = planOptions.find(p => p.name === value); field.onChange(selectedPlan); }} value={field.value?.name}>
-                                                        <FormControl><SelectTrigger><SelectValue placeholder="Select a plan..." /></SelectTrigger></FormControl>
+                                                    <Select onValueChange={(value) => { 
+                                                        const selectedPlan = planOptions.find(p => p.name === value); 
+                                                        field.onChange(selectedPlan); 
+                                                        if (selectedPlan) {
+                                                            newUserForm.setValue('planPrice', selectedPlan.price || 0);
+                                                            if (selectedPlan.isConsumptionBased) {
+                                                                newUserForm.setValue('customPlanDetails.litersPerMonth', 0);
+                                                                newUserForm.setValue('customPlanDetails.bonusLiters', 0);
+                                                            }
+                                                        }
+                                                    }} value={field.value?.name}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                {field.value ? (
+                                                                    <span>
+                                                                        {field.value.name}
+                                                                        {field.value.isConsumptionBased && ` (P${watchedPlanPrice}/L)`}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-muted-foreground">Select a plan...</span>
+                                                                )}
+                                                            </SelectTrigger>
+                                                        </FormControl>
                                                         <SelectContent>
                                                             {planOptions.map(plan => (
                                                                 <SelectItem key={plan.name} value={plan.name}>
-                                                                    {plan.name} {plan.isConsumptionBased && `(P${plan.price}/L)`}
+                                                                    {plan.name}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -3858,6 +3878,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
 
 
 
