@@ -100,7 +100,6 @@ type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
 const planDetailsSchema = z.object({
   litersPerMonth: z.coerce.number().optional(),
   bonusLiters: z.coerce.number().optional(),
-  pricePerLiter: z.coerce.number().optional(),
   gallonQuantity: z.coerce.number().min(0, "Cannot be negative"),
   gallonPrice: z.coerce.number().min(0, "Cannot be negative"),
   gallonPaymentType: z.enum(['Monthly', 'One-Time']),
@@ -580,7 +579,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             customPlanDetails: {
                 litersPerMonth: 0,
                 bonusLiters: 0,
-                pricePerLiter: 0,
                 gallonQuantity: 0,
                 gallonPrice: 0,
                 gallonPaymentType: 'Monthly',
@@ -1559,6 +1557,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 adminCreatedAt: serverTimestamp(),
             };
 
+            if(plan.isConsumptionBased) {
+                delete profileData.customPlanDetails.litersPerMonth;
+                delete profileData.customPlanDetails.bonusLiters;
+            }
+
             if (parentId) {
                 profileData.parentId = parentId;
             }
@@ -1593,7 +1596,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const subscription = newUserForm.watch((value, { name, type }) => {
             if (name === 'clientType') {
                 const plans = getPlansForType(value.clientType!);
-                const newPlan = (value.clientType === 'Enterprise') ? enterprisePlans[0] : (plans.length > 0 ? plans[0] : null);
+                const newPlan = (plans.length > 0 ? plans[0] : null);
                  if (newPlan) {
                     newUserForm.setValue('plan', newPlan);
                     newUserForm.setValue('planPrice', newPlan.price || 0);
@@ -3751,28 +3754,25 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         field.onChange(selectedPlan); 
                                                         if (selectedPlan) {
                                                             newUserForm.setValue('planPrice', selectedPlan.price || 0);
-                                                            if (selectedPlan.isConsumptionBased) {
-                                                                newUserForm.setValue('customPlanDetails.litersPerMonth', 0);
-                                                                newUserForm.setValue('customPlanDetails.bonusLiters', 0);
-                                                            }
                                                         }
                                                     }} value={field.value?.name}>
                                                         <FormControl>
-                                                            <SelectTrigger>
-                                                                {field.value ? (
-                                                                    <span>
-                                                                        {field.value.name}
-                                                                        {field.value.isConsumptionBased && ` (P${watchedPlanPrice}/L)`}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-muted-foreground">Select a plan...</span>
-                                                                )}
-                                                            </SelectTrigger>
+                                                          <SelectTrigger>
+                                                            {field.value ? (
+                                                              <span>
+                                                                {field.value.name}
+                                                                {field.value.isConsumptionBased && ` (P${watchedPlanPrice}/L)`}
+                                                              </span>
+                                                            ) : (
+                                                              <span className="text-muted-foreground">Select a plan...</span>
+                                                            )}
+                                                          </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
                                                             {planOptions.map(plan => (
                                                                 <SelectItem key={plan.name} value={plan.name}>
-                                                                    {plan.name}
+                                                                     {plan.name}
+                                                                    {plan.isConsumptionBased && ` (P${plan.price}/L)`}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -3796,17 +3796,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                       </div>
                                     )}
 
+                                    {selectedPlan && !selectedPlan.isConsumptionBased && (
+                                        <div className="space-y-4 p-4 border rounded-lg">
+                                            <h4 className="font-medium">Monthly Allocation</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
-                                            {(selectedClientType !== 'Enterprise' && selectedPlan && !selectedPlan.isConsumptionBased) && (
-                                                <div className="space-y-4 p-4 border rounded-lg">
-                                                    <h4 className="font-medium">Monthly Allocation</h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
-                                                    </div>
-                                                </div>
-                                            )}
                                             {selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Delivery Schedule</h4>
@@ -3925,4 +3926,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-

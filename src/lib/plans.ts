@@ -13,14 +13,14 @@ export const familyPlans = [
     {
         name: 'Family Plan',
         price: 50,
-        recommended: true,
-        details: 'Admin-configured'
+        isConsumptionBased: false,
+        details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom Family Plan',
-        price: 0,
-        recommended: false,
-        details: 'Fully customizable'
+        name: 'Custom Family (Per-Liter)',
+        price: 3,
+        isConsumptionBased: true,
+        details: 'Pay for what you consume.'
     }
 ]
 
@@ -28,14 +28,14 @@ export const smePlans = [
     {
         name: 'SME Plan',
         price: 100,
-        recommended: true,
-        details: 'Admin-configured'
+        isConsumptionBased: false,
+        details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom SME Plan',
-        price: 0,
-        recommended: false,
-        details: 'Fully customizable'
+        name: 'Custom SME (Per-Liter)',
+        price: 3,
+        isConsumptionBased: true,
+        details: 'Pay for what you consume.'
     }
 ]
 
@@ -43,14 +43,14 @@ export const commercialPlans = [
     {
         name: 'Commercial Plan',
         price: 150,
-        recommended: true,
-        details: 'Admin-configured'
+        isConsumptionBased: false,
+        details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom Commercial Plan',
-        price: 0,
-        recommended: false,
-        details: 'Fully customizable'
+        name: 'Custom Commercial (Per-Liter)',
+        price: 3,
+        isConsumptionBased: true,
+        details: 'Pay for what you consume.'
     }
 ];
 
@@ -58,23 +58,22 @@ export const corporatePlans = [
     {
         name: 'Corporate Plan',
         price: 250,
-        recommended: true,
-        details: 'Admin-configured'
+        isConsumptionBased: false,
+        details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom Corporate Plan',
-        price: 0,
-        recommended: false,
-        details: 'Fully customizable'
+        name: 'Custom Corporate (Per-Liter)',
+        price: 3,
+        isConsumptionBased: true,
+        details: 'Pay for what you consume.'
     }
 ];
 
 export const enterprisePlans = [
     {
-        name: 'Customized Plan',
+        name: 'Customized Enterprise Plan',
         price: 0,
         description: 'A tailored, fixed-price plan with a set monthly allocation.',
-        recommended: false,
         isConsumptionBased: false,
         imageId: 'plan-enterprise-customized',
         details: [
@@ -86,7 +85,6 @@ export const enterprisePlans = [
         name: 'Flow Plan',
         price: 3, // Default price per liter, adjustable in the form
         description: 'A flexible plan where you pay only for what you consume.',
-        recommended: true,
         isConsumptionBased: true,
         imageId: 'plan-enterprise-flowing',
         details: [

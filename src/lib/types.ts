@@ -1,5 +1,6 @@
 
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -106,7 +107,6 @@ export interface AppUser {
     customPlanDetails?: {
         litersPerMonth?: number;
         bonusLiters?: number;
-        pricePerLiter?: number;
         gallonQuantity?: number;
         gallonPrice?: number;
         gallonPaymentType?: 'Monthly' | 'One-Time';
@@ -264,3 +264,4 @@ export interface TopUpRequest {
     
 
     
+
