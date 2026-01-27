@@ -20,9 +20,9 @@ export default {
         'gradient-primary': 'linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--primary-light)))',
       },
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['PT Sans', 'sans-serif'],
-        sans: ['PT Sans', 'sans-serif'],
+        body: ['Manrope', 'sans-serif'],
+        headline: ['Manrope', 'sans-serif'],
+        sans: ['Manrope', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
