@@ -1554,7 +1554,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 },
                 role: 'User',
                 accountStatus: 'Active',
-                totalConsumptionLiters: values.customPlanDetails?.litersPerMonth || 0,
+                totalConsumptionLiters: values.accountType === 'Parent' ? 0 : (values.customPlanDetails?.litersPerMonth || 0),
                 topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
             };
@@ -1608,11 +1608,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     newUserForm.setValue('plan', null);
                     newUserForm.setValue('planPrice', 0);
                 }
-            }
-             if (name === 'plan' && value.plan) {
+            } else if (name === 'plan' && value.plan) {
                 const planPrice = value.plan.price || 0;
                 if (newUserForm.getValues('planPrice') !== planPrice) {
                     newUserForm.setValue('planPrice', planPrice);
+                }
+            } else if (name === 'accountType' && value.accountType === 'Parent') {
+                const parentPlan = enterprisePlans.find(p => p.name === 'Parent Account Plan');
+                if (parentPlan) {
+                    newUserForm.setValue('clientType', 'Enterprise');
+                    newUserForm.setValue('plan', parentPlan);
+                    newUserForm.setValue('planPrice', parentPlan.price);
                 }
             }
         });
@@ -3726,170 +3732,190 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 <div className="space-y-6">
                                     <div>
                                         <h3 className="font-semibold text-lg">Step 2: Plan &amp; Configuration</h3>
-                                        <p className="text-sm text-muted-foreground">Select a plan type, then choose and configure a specific plan.</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {selectedAccountType === 'Parent' ? 'Configure the consumption rate for the parent account.' : 'Select a plan type, then choose and configure a specific plan.'}
+                                        </p>
                                     </div>
-                                    <FormField control={newUserForm.control} name="clientType" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Select a Plan Type</FormLabel>
-                                                <FormControl>
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                                                        {clientTypes.map(type => {
-                                                            const image = PlaceHolderImages.find(p => p.id === type.imageId);
-                                                            return (
-                                                                <Card key={type.name} onClick={() => { field.onChange(type.name); }} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>
-                                                                    {image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
-                                                                    <CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></CardHeader>
-                                                                </Card>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                    )}/>
-                                    
-                                    {selectedClientType && (
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormField control={newUserForm.control} name="plan" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Select a {selectedClientType} Plan</FormLabel>
-                                                <Select onValueChange={(value) => { 
-                                                    const selectedPlan = planOptions.find(p => p.name === value); 
-                                                    field.onChange(selectedPlan); 
-                                                    if (selectedPlan) {
-                                                        newUserForm.setValue('planPrice', selectedPlan.price || 0);
-                                                    }
-                                                }} value={field.value?.name}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a plan..." />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {planOptions.map(plan => (
-                                                            <SelectItem key={plan.name} value={plan.name}>
-                                                                {plan.name}
-                                                                {plan.isConsumptionBased && ` (P${plan.price}/L)`}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                        {selectedPlan && (
-                                            <FormField
-                                                control={newUserForm.control}
-                                                name="planPrice"
-                                                render={({ field }) => (
+
+                                    {selectedAccountType === 'Parent' ? (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle>Parent Account Plan</CardTitle>
+                                                <CardDescription>
+                                                    This account acts as a central wallet. Set the rate at which the balance is converted to liters for branch deliveries.
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <FormField control={newUserForm.control} name="planPrice" render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel>{selectedPlan.isConsumptionBased ? "Price per Liter (PHP)" : "Monthly Price (PHP)"}</FormLabel>
+                                                        <FormLabel>Consumption Rate (PHP per Liter)</FormLabel>
                                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                                         <FormMessage />
                                                     </FormItem>
+                                                )} />
+                                            </CardContent>
+                                        </Card>
+                                    ) : (
+                                        <>
+                                            <FormField control={newUserForm.control} name="clientType" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Select a Plan Type</FormLabel>
+                                                        <FormControl>
+                                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                                                                {clientTypes.map(type => {
+                                                                    const image = PlaceHolderImages.find(p => p.id === type.imageId);
+                                                                    return (
+                                                                        <Card key={type.name} onClick={() => { field.onChange(type.name); }} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>
+                                                                            {image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}
+                                                                            <CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></CardHeader>
+                                                                        </Card>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                            )}/>
+                                            
+                                            {selectedClientType && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormField control={newUserForm.control} name="plan" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Select a {selectedClientType} Plan</FormLabel>
+                                                        <Select onValueChange={(value) => { 
+                                                            const selectedPlan = planOptions.find(p => p.name === value); 
+                                                            field.onChange(selectedPlan); 
+                                                            if (selectedPlan) {
+                                                                newUserForm.setValue('planPrice', selectedPlan.price || 0);
+                                                            }
+                                                        }} value={field.value?.name}>
+                                                            <FormControl>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Select a plan...">
+                                                                        {selectedPlan?.name && (
+                                                                            `${selectedPlan.name} ${selectedPlan.isConsumptionBased ? `(P${watchedPlanPrice}/L)` : ''}`
+                                                                        )}
+                                                                    </SelectValue>
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {planOptions.map(plan => (
+                                                                    <SelectItem key={plan.name} value={plan.name}>
+                                                                        {plan.name}
+                                                                        {plan.isConsumptionBased && ` (P${plan.price}/L)`}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )} />
+                                                {selectedPlan && (
+                                                    <FormField control={newUserForm.control} name="planPrice" render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>{selectedPlan.isConsumptionBased ? "Price per Liter (PHP)" : "Monthly Price (PHP)"}</FormLabel>
+                                                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
                                                 )}
-                                            />
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {selectedPlan && !selectedPlan.isConsumptionBased && (
-                                        <div className="space-y-4 p-4 border rounded-lg">
-                                            <h4 className="font-medium">Monthly Allocation</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
                                             </div>
-                                        </div>
-                                    )}
-                                     {selectedPlan?.isConsumptionBased && selectedClientType === 'Enterprise' && (
-                                        <div className="space-y-4 p-4 border rounded-lg">
-                                            <h4 className="font-medium">Initial Liters</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Initial Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                            </div>
-                                        </div>
-                                    )}
+                                            )}
 
-                                    {selectedPlan && (
-                                        <div className="space-y-6 pt-4">
-                                            {selectedAccountType !== 'Branch' && (
+                                            {selectedPlan && !selectedPlan.isConsumptionBased && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
-                                                    <h4 className="font-medium">Delivery Schedule</h4>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.deliveryFrequency" render={({ field }) => (<FormItem><FormLabel>Frequency</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.deliveryDay" render={({ field }) => (<FormItem><FormLabel>Day</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                                                    <h4 className="font-medium">Monthly Allocation</h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                        <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
+                                                        <FormField control={newUserForm.control} name="customPlanDetails.pricePerLiter" render={({ field }) => (<FormItem><FormLabel>Price Per Liter (for excess)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
                                                     </div>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.deliveryTime" render={({ field }) => (<FormItem><FormLabel>Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage/></FormItem>)}/>
                                                 </div>
                                             )}
 
-                                            <div className="space-y-4 p-4 border rounded-lg">
-                                                <h4 className="font-medium">Equipment Setup</h4>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (<FormItem><FormLabel>Containers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField
-                                                        control={newUserForm.control}
-                                                        name="customPlanDetails.dispenserPaymentType"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Payment</FormLabel>
-                                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                                    <FormControl>
-                                                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                                                    </FormControl>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="Monthly">Monthly</SelectItem>
-                                                                        <SelectItem value="One-Time">One-Time</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div className="flex items-center pt-5">
-                                                        <p className="text-sm font-medium">Monthly Sanitation</p>
+                                            {selectedPlan && (
+                                                <div className="space-y-6 pt-4">
+                                                    {selectedAccountType !== 'Branch' && (
+                                                        <div className="space-y-4 p-4 border rounded-lg">
+                                                            <h4 className="font-medium">Delivery Schedule</h4>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <FormField control={newUserForm.control} name="customPlanDetails.deliveryFrequency" render={({ field }) => (<FormItem><FormLabel>Frequency</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                                                                <FormField control={newUserForm.control} name="customPlanDetails.deliveryDay" render={({ field }) => (<FormItem><FormLabel>Day</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                                                            </div>
+                                                            <FormField control={newUserForm.control} name="customPlanDetails.deliveryTime" render={({ field }) => (<FormItem><FormLabel>Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="space-y-4 p-4 border rounded-lg">
+                                                        <h4 className="font-medium">Equipment Setup</h4>
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (<FormItem><FormLabel>Containers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                            <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                            <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                            <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                            <FormField
+                                                                control={newUserForm.control}
+                                                                name="customPlanDetails.dispenserPaymentType"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>Payment</FormLabel>
+                                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                            <FormControl>
+                                                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                            </FormControl>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="Monthly">Monthly</SelectItem>
+                                                                                <SelectItem value="One-Time">One-Time</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <div className="flex items-center pt-5">
+                                                                <p className="text-sm font-medium">Monthly Sanitation</p>
+                                                            </div>
+                                                            <FormField
+                                                                control={newUserForm.control}
+                                                                name="customPlanDetails.sanitationPrice"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>Price</FormLabel>
+                                                                        <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                            <FormField
+                                                                control={newUserForm.control}
+                                                                name="customPlanDetails.sanitationPaymentType"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>Payment</FormLabel>
+                                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="Monthly">Monthly</SelectItem>
+                                                                                <SelectItem value="One-Time">One-Time</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <FormField
-                                                        control={newUserForm.control}
-                                                        name="customPlanDetails.sanitationPrice"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Price</FormLabel>
-                                                                <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                    <FormField
-                                                        control={newUserForm.control}
-                                                        name="customPlanDetails.sanitationPaymentType"
-                                                        render={({ field }) => (
-                                                            <FormItem>
-                                                                <FormLabel>Payment</FormLabel>
-                                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="Monthly">Monthly</SelectItem>
-                                                                        <SelectItem value="One-Time">One-Time</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <FormMessage />
-                                                            </FormItem>
-                                                        )}
-                                                    />
                                                 </div>
-                                            </div>
-                                        </div>
+                                            )}
+                                        </>
                                     )}
+
                                 </div>
                             )}
                         </div>

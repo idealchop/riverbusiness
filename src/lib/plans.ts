@@ -91,5 +91,17 @@ export const enterprisePlans = [
             { label: 'Pricing', value: 'Per Liter' },
             { label: 'Billing', value: 'Based on consumption' },
         ]
+    },
+    {
+        name: 'Parent Account Plan',
+        price: 3, // Default price per liter, adjustable
+        description: 'A central wallet for managing branch consumption at a set per-liter rate.',
+        isConsumptionBased: true,
+        isParentPlan: true,
+        imageId: 'plan-enterprise-customized',
+        details: [
+            { label: 'Pricing', value: 'Per Liter' },
+            { label: 'Billing', value: 'Deducted from Top-Up Balance' },
+        ]
     }
 ];
