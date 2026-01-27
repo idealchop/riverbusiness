@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -118,14 +117,10 @@ export function BillingTab({
                                     <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
                                     <TableCell>
                                         <Badge
-                                            onClick={() => {
-                                                if (!isEstimated) {
-                                                    handleOpenPaymentReview(payment);
-                                                }
-                                            }}
+                                            onClick={() => handleOpenPaymentReview(payment)}
                                             variant={isEstimated ? 'outline' : 'default'}
                                             className={cn(
-                                                !isEstimated && "cursor-pointer",
+                                                "cursor-pointer",
                                                 isEstimated ? 'border-blue-500 text-blue-600' :
                                                     payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' :
                                                         payment.status === 'Paid' ? 'bg-green-100 text-green-800' :

@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -63,11 +62,13 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
         }
     };
     
+    const isEstimated = paymentToReview?.id.startsWith('INV-EST');
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{paymentToReview?.status === 'Pending Review' ? 'Review Payment' : 'Payment Details'}</DialogTitle>
+                    <DialogTitle>{isEstimated ? 'Estimated Invoice' : paymentToReview?.status === 'Pending Review' ? 'Review Payment' : 'Payment Details'}</DialogTitle>
                     <DialogDescription>
                         Invoice ID: {paymentToReview?.id}
                     </DialogDescription>
@@ -77,7 +78,7 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         {paymentToReview?.proofOfPaymentUrl ? (
                             <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" layout="fill" className="object-contain" />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">No proof of payment available.</div>
+                            <div className="flex items-center justify-center h-full text-muted-foreground">{isEstimated ? 'This is an estimate. No proof of payment is applicable.' : 'No proof of payment available.'}</div>
                         )}
                     </div>
 
@@ -99,6 +100,8 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                             <Button variant="ghost" onClick={() => setShowRejectionInput(false)}>Cancel</Button>
                             <Button variant="destructive" onClick={() => handleUpdatePaymentStatus('Upcoming')}>Confirm Rejection</Button>
                         </>
+                    ) : isEstimated ? (
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     ) : paymentToReview?.status === 'Pending Review' ? (
                         <>
                             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
@@ -118,4 +121,3 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
         </Dialog>
     );
 }
-
