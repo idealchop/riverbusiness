@@ -645,17 +645,18 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                             <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
                                                             <TableCell>{payment.description}</TableCell>
                                                             <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
-                                                            <TableCell
-                                                                className={cn(payment.status === 'Pending Review' && 'cursor-pointer hover:bg-muted/50')}
-                                                                onClick={() => payment.status === 'Pending Review' && handleOpenPaymentReview(payment)}
-                                                            >
-                                                                <Badge variant={isEstimated ? 'outline' : 'default'} className={cn(
-                                                                    isEstimated ? 'border-blue-500 text-blue-600' : 
-                                                                    payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                                                    payment.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                                                    payment.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                                                    'bg-gray-100 text-gray-800'
-                                                                )}>
+                                                            <TableCell>
+                                                                <Badge
+                                                                    onClick={() => payment.status === 'Pending Review' && handleOpenPaymentReview(payment)}
+                                                                    variant={isEstimated ? 'outline' : 'default'}
+                                                                    className={cn(
+                                                                        isEstimated ? 'border-blue-500 text-blue-600' : 
+                                                                        payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800 cursor-pointer hover:bg-yellow-200' :
+                                                                        payment.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                                                        payment.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                                                        'bg-gray-100 text-gray-800'
+                                                                    )}
+                                                                >
                                                                     {isEstimated ? 'Estimated' : payment.status}
                                                                 </Badge>
                                                             </TableCell>
