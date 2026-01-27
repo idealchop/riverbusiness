@@ -100,6 +100,7 @@ type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
 const planDetailsSchema = z.object({
   litersPerMonth: z.coerce.number().optional(),
   bonusLiters: z.coerce.number().optional(),
+  pricePerLiter: z.coerce.number().optional(),
   gallonQuantity: z.coerce.number().min(0, "Cannot be negative"),
   gallonPrice: z.coerce.number().min(0, "Cannot be negative"),
   gallonPaymentType: z.enum(['Monthly', 'One-Time']),
@@ -579,6 +580,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             customPlanDetails: {
                 litersPerMonth: 0,
                 bonusLiters: 0,
+                pricePerLiter: 0,
                 gallonQuantity: 0,
                 gallonPrice: 0,
                 gallonPaymentType: 'Monthly',
@@ -1560,6 +1562,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             if(plan.isConsumptionBased) {
                 delete profileData.customPlanDetails.litersPerMonth;
                 delete profileData.customPlanDetails.bonusLiters;
+            } else {
+                 delete profileData.customPlanDetails.pricePerLiter;
             }
 
             if (parentId) {
@@ -3747,38 +3751,31 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     {selectedClientType && (
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={newUserForm.control} name="plan" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Select a {selectedClientType} Plan</FormLabel>
-                                                    <Select onValueChange={(value) => { 
-                                                        const selectedPlan = planOptions.find(p => p.name === value); 
-                                                        field.onChange(selectedPlan); 
-                                                        if (selectedPlan) {
-                                                            newUserForm.setValue('planPrice', selectedPlan.price || 0);
-                                                        }
-                                                    }} value={field.value?.name}>
-                                                        <FormControl>
-                                                          <SelectTrigger>
-                                                            {field.value ? (
-                                                              <span>
-                                                                {field.value.name}
-                                                                {field.value.isConsumptionBased && ` (P${watchedPlanPrice}/L)`}
-                                                              </span>
-                                                            ) : (
-                                                              <span className="text-muted-foreground">Select a plan...</span>
-                                                            )}
-                                                          </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {planOptions.map(plan => (
-                                                                <SelectItem key={plan.name} value={plan.name}>
-                                                                     {plan.name}
-                                                                    {plan.isConsumptionBased && ` (P${plan.price}/L)`}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
+                                            <FormItem>
+                                                <FormLabel>Select a {selectedClientType} Plan</FormLabel>
+                                                <Select onValueChange={(value) => { 
+                                                    const selectedPlan = planOptions.find(p => p.name === value); 
+                                                    field.onChange(selectedPlan); 
+                                                    if (selectedPlan) {
+                                                        newUserForm.setValue('planPrice', selectedPlan.price || 0);
+                                                    }
+                                                }} value={field.value?.name}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a plan..." />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {planOptions.map(plan => (
+                                                            <SelectItem key={plan.name} value={plan.name}>
+                                                                {plan.name}
+                                                                {plan.isConsumptionBased && ` (P${plan.price}/L)`}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
                                         )} />
                                         {selectedPlan && (
                                             <FormField
@@ -3802,6 +3799,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                 <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
+                                            </div>
+                                        </div>
+                                    )}
+                                     {selectedPlan?.isConsumptionBased && selectedClientType === 'Enterprise' && (
+                                        <div className="space-y-4 p-4 border rounded-lg">
+                                            <h4 className="font-medium">Initial Liters</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Initial Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                             </div>
                                         </div>
                                     )}

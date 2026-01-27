@@ -17,8 +17,8 @@ export const familyPlans = [
         details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom Family (Per-Liter)',
-        price: 3,
+        name: 'Family Flow Plan',
+        price: 3.5,
         isConsumptionBased: true,
         details: 'Pay for what you consume.'
     }
@@ -32,7 +32,7 @@ export const smePlans = [
         details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom SME (Per-Liter)',
+        name: 'SME Flow Plan',
         price: 3,
         isConsumptionBased: true,
         details: 'Pay for what you consume.'
@@ -47,7 +47,7 @@ export const commercialPlans = [
         details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom Commercial (Per-Liter)',
+        name: 'Commercial Flow Plan',
         price: 3,
         isConsumptionBased: true,
         details: 'Pay for what you consume.'
@@ -62,8 +62,8 @@ export const corporatePlans = [
         details: 'Fixed monthly pricing.'
     },
     {
-        name: 'Custom Corporate (Per-Liter)',
-        price: 3,
+        name: 'Corporate Flow Plan',
+        price: 2.5,
         isConsumptionBased: true,
         details: 'Pay for what you consume.'
     }
