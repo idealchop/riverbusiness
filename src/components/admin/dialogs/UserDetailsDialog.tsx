@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -499,12 +500,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                     <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4">
-                                                <div><span className="font-semibold">Email:</span> {user.email}</div>
-                                                <div><span className="font-semibold">Contact:</span> {user.contactNumber}</div>
-                                                <div className="md:col-span-2"><span className="font-semibold">Address:</span> {user.address}</div>
-                                                <div><span className="font-semibold">Account Type:</span> {user.accountType}</div>
-                                                {user.accountType === 'Branch' && user.parentId && <div><span className="font-semibold">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm pt-4">
+                                                <div><span className="font-medium text-muted-foreground">Email:</span> {user.email}</div>
+                                                <div><span className="font-medium text-muted-foreground">Contact:</span> {user.contactNumber}</div>
+                                                <div className="md:col-span-2"><span className="font-medium text-muted-foreground">Address:</span> {user.address}</div>
+                                                <div><span className="font-medium text-muted-foreground">Account Type:</span> <Badge variant={user.accountType === 'Parent' ? 'default' : 'secondary'}>{user.accountType}</Badge></div>
+                                                {user.accountType === 'Branch' && user.parentId && <div><span className="font-medium text-muted-foreground">Parent:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -714,8 +715,9 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                                     onClick={() => handleOpenPaymentReview(payment)}
                                                                     variant={isEstimated ? 'outline' : 'default'}
                                                                     className={cn(
+                                                                        "cursor-pointer",
                                                                         isEstimated ? 'border-blue-500 text-blue-600' : 
-                                                                        payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800 cursor-pointer hover:bg-yellow-200' :
+                                                                        payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' :
                                                                         payment.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                                                         payment.status === 'Overdue' ? 'bg-red-100 text-red-800' :
                                                                         'bg-gray-100 text-gray-800'
