@@ -6,8 +6,9 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Share2 } from 'lucide-react';
+import { Share2, Signature } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 interface SanitationHistoryDialogProps {
     isOpen: boolean;
@@ -72,6 +73,39 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                             <div className="text-center text-muted-foreground py-10">
                                 <p>No checklist data has been recorded for this visit yet.</p>
                             </div>
+                        )}
+
+                        {visit?.status === 'Completed' && (visit.officerSignature || visit.clientSignature) && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Signature className="h-5 w-5" />
+                                        Signatures
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {visit.officerSignature && (
+                                        <div className="space-y-2 text-center">
+                                            <p className="text-xs font-semibold">Quality Officer</p>
+                                            <Image src={visit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                                            <div className="text-xs text-muted-foreground">
+                                                <p>{visit.assignedTo}</p>
+                                                <p>{visit.officerSignatureDate ? format(new Date(visit.officerSignatureDate), 'PP') : ''}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {visit.clientSignature && (
+                                        <div className="space-y-2 text-center">
+                                            <p className="text-xs font-semibold">Client Representative</p>
+                                            <Image src={visit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
+                                            <div className="text-xs text-muted-foreground">
+                                                <p>{visit.clientRepName}</p>
+                                                <p>{visit.clientSignatureDate ? format(new Date(visit.clientSignatureDate), 'PP') : ''}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         )}
                     </div>
                 </ScrollArea>
