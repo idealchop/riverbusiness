@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -245,17 +246,181 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             <TabsTrigger value="billing">Billing</TabsTrigger>
                             <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
                          </TabsList>
-                         <TabsContent value="overview">
-                           {/* TODO: Add User Overview Content */}
+                         <TabsContent value="overview" className="py-6 space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Client Profile</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-16 w-16">
+                                            <AvatarImage src={user.photoURL || undefined} alt={user.name}/>
+                                            <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <h3 className="text-lg font-semibold">{user.businessName}</h3>
+                                            <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4">
+                                        <div><span className="font-semibold">Email:</span> {user.email}</div>
+                                        <div><span className="font-semibold">Contact:</span> {user.contactNumber}</div>
+                                        <div className="md:col-span-2"><span className="font-semibold">Address:</span> {user.address}</div>
+                                        <div><span className="font-semibold">Account Type:</span> {user.accountType}</div>
+                                        {user.accountType === 'Branch' && user.parentId && <div><span className="font-semibold">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
+
+                                    </div>
+                                </CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader>
+                                    <CardTitle>Plan & Station</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div>
+                                        <h4 className="font-medium">Current Plan</h4>
+                                        <p className="text-sm text-muted-foreground">{user.plan?.name || 'Not set'}</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Assigned Water Station</Label>
+                                        <Select onValueChange={handleAssignStation} defaultValue={user.assignedWaterStationId}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Assign a station..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {(waterStations || []).map(station => (
+                                                    <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Contract Management</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                     <div className="flex items-center gap-4 p-4 border rounded-lg">
+                                        {user.currentContractUrl ? (
+                                            <>
+                                                <FileText className="h-6 w-6"/>
+                                                <div className="flex-1">
+                                                    <p>Contract on File</p>
+                                                    <p className="text-xs text-muted-foreground">Uploaded on: {user.contractUploadedDate ? toSafeDate(user.contractUploadedDate)?.toLocaleDateString() : 'N/A'}</p>
+                                                </div>
+                                                <Button asChild variant="outline">
+                                                    <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4"/> View</a>
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <div className="text-center w-full text-muted-foreground text-sm">No contract uploaded.</div>
+                                        )}
+                                    </div>
+                                    <div className="mt-4">
+                                        <Label>Upload New/Updated Contract</Label>
+                                        <div className="flex gap-2">
+                                            <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} disabled={isUploadingContract} />
+                                            <Button onClick={handleContractUpload} disabled={!contractFile || isUploadingContract}>{isUploadingContract ? 'Uploading...' : 'Upload'}</Button>
+                                        </div>
+                                        {isUploadingContract && <Progress value={uploadProgress} className="mt-2" />}
+                                    </div>
+                                </CardContent>
+                            </Card>
                          </TabsContent>
-                         <TabsContent value="deliveries">
-                            {/* TODO: Add User Deliveries Content */}
+                         <TabsContent value="deliveries" className="py-6 space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Delivery History</CardTitle>
+                                        <CardDescription>Log of all deliveries for this user.</CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsCreateDeliveryOpen(true)}>
+                                        <PlusCircle className="mr-2 h-4 w-4"/> Create Delivery
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Volume</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {(userDeliveriesData || []).map(delivery => (
+                                                <TableRow key={delivery.id}>
+                                                    <TableCell>{toSafeDate(delivery.date)?.toLocaleDateString()}</TableCell>
+                                                    <TableCell>{delivery.volumeContainers} containers</TableCell>
+                                                    <TableCell><Badge>{delivery.status}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                         <Button variant="ghost" size="sm" onClick={() => { setDeliveryToEdit(delivery); setIsCreateDeliveryOpen(true); }}><Edit className="h-4 w-4"/></Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
                          </TabsContent>
-                         <TabsContent value="billing">
-                           {/* TODO: Add User Billing Content */}
+                         <TabsContent value="billing" className="py-6 space-y-6">
+                           <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                     <div>
+                                        <CardTitle>Billing & Invoices</CardTitle>
+                                        <CardDescription>Manage invoices and charges.</CardDescription>
+                                    </div>
+                                     {user.accountType === 'Parent' ? (
+                                        <Button onClick={() => setIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Top-up Credits</Button>
+                                     ) : (
+                                        <Button onClick={() => setIsManualChargeOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Manual Charge</Button>
+                                     )}
+                                </CardHeader>
+                                 <CardContent>
+                                    {user.accountType === 'Parent' && (
+                                        <div className="mb-4">
+                                            <p className="text-sm text-muted-foreground">Current Credit Balance</p>
+                                            <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits || 0).toLocaleString()}</p>
+                                        </div>
+                                    )}
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {(userPaymentsData || []).map(payment => (
+                                                 <TableRow key={payment.id}>
+                                                    <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
+                                                    <TableCell>{payment.description}</TableCell>
+                                                    <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
+                                                    <TableCell><Badge>{payment.status}</Badge></TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                 </CardContent>
+                            </Card>
                          </TabsContent>
-                         <TabsContent value="sanitation">
-                            {/* TODO: Add User Sanitation Content */}
+                         <TabsContent value="sanitation" className="py-6 space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div>
+                                        <CardTitle>Sanitation Schedule</CardTitle>
+                                        <CardDescription>Manage office sanitation visits.</CardDescription>
+                                    </div>
+                                    <Button onClick={() => setIsCreateSanitationOpen(true)}>
+                                        <PlusCircle className="mr-2 h-4 w-4"/> Schedule Visit
+                                    </Button>
+                                </CardHeader>
+                                <CardContent>
+                                     <Table>
+                                        <TableHeader><TableRow><TableHead>Scheduled Date</TableHead><TableHead>Status</TableHead><TableHead>Assigned To</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {(sanitationVisitsData || []).map(visit => (
+                                                <TableRow key={visit.id}>
+                                                    <TableCell>{toSafeDate(visit.scheduledDate)?.toLocaleDateString()}</TableCell>
+                                                    <TableCell><Badge>{visit.status}</Badge></TableCell>
+                                                    <TableCell>{visit.assignedTo}</TableCell>
+                                                    <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => { setSelectedSanitationVisit(visit); setIsSanitationHistoryOpen(true); }}><Eye className="h-4 w-4"/></Button></TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
                          </TabsContent>
                     </Tabs>
                 </ScrollArea>
@@ -263,7 +428,37 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                 </DialogFooter>
             </DialogContent>
-            {/* TODO: Add all other nested dialogs here */}
+            {/* Create/Edit Delivery Dialog */}
+            <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{deliveryToEdit ? 'Edit' : 'Create'} Delivery</DialogTitle>
+                    </DialogHeader>
+                    {/* Delivery Form */}
+                </DialogContent>
+            </Dialog>
+            {/* Manual Charge Dialog */}
+             <Dialog open={isManualChargeOpen} onOpenChange={setIsManualChargeOpen}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Add Manual Charge</DialogTitle></DialogHeader>
+                    {/* Manual Charge Form */}
+                </DialogContent>
+            </Dialog>
+            {/* Top-up Dialog */}
+             <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Top-up Credits</DialogTitle></DialogHeader>
+                   {/* Top Up Form */}
+                </DialogContent>
+            </Dialog>
+            {/* Create Sanitation Visit Dialog */}
+            <Dialog open={isCreateSanitationOpen} onOpenChange={setIsCreateSanitationOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader><DialogTitle>Schedule Sanitation Visit</DialogTitle></DialogHeader>
+                    {/* Sanitation Visit Form */}
+                </DialogContent>
+            </Dialog>
         </Dialog>
     );
 }
+
