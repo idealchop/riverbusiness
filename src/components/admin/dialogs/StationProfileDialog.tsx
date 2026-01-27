@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -28,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Card, CardContent } from '@/components/ui/card';
 
 
 const newStationSchema = z.object({
@@ -221,7 +221,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                         <div><h3 className="font-semibold text-base">Compliance Docs</h3><p className="text-sm text-muted-foreground">Manage compliance reports.</p></div>
                                         <Button size="sm" onClick={() => setIsComplianceReportDialogOpen(true)} disabled={!station}><PlusCircle className="mr-2 h-4 w-4" /> Create Report</Button>
                                     </div>
-                                    <Table>
+                                    <Table className="hidden md:table">
                                         <TableHeader><TableRow><TableHead>Report</TableHead><TableHead>Month</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {complianceReports?.map((report) => (
@@ -241,8 +241,40 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
+                                            {(complianceReports?.length === 0) && (
+                                                <TableRow>
+                                                    <TableCell colSpan={4} className="h-24 text-center">No compliance reports yet.</TableCell>
+                                                </TableRow>
+                                            )}
                                         </TableBody>
                                     </Table>
+                                    <div className="space-y-4 md:hidden">
+                                        {(complianceReports && complianceReports.length > 0) ? complianceReports.map((report) => (
+                                            <Card key={report.id}>
+                                                <CardContent className="p-4 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-semibold">{report.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{report.date ? format((report.date as any).toDate(), 'MMM yyyy') : 'N/A'}</p>
+                                                        </div>
+                                                        <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
+                                                    </div>
+                                                    <div className="flex gap-2 pt-2">
+                                                        <Button variant="outline" size="sm" className="w-full" onClick={() => setComplianceAttachmentUrl(report.reportUrl!)} disabled={!report.reportUrl}><Eye className="mr-2 h-4 w-4" />View</Button>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild><Button variant="secondary" size="sm" className="w-full">Actions</Button></DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                                <DropdownMenuItem className="text-destructive" onClick={() => setComplianceReportToDelete(report)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )) : (
+                                            <p className="text-center py-10 text-muted-foreground">No compliance reports found.</p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                             <Separator />

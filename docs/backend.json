@@ -15,7 +15,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "For Prepaid plans, this is the remaining credit in liters. For fixed plans, this represents rollover. For Parent accounts, this field is not directly used; balance is derived from topUpBalanceCredits." },
+        "totalConsumptionLiters": { "type": "number", "description": "This field is deprecated for Parent/Prepaid accounts. For fixed plans, this represents rollover. For Parent accounts, balance is derived from topUpBalanceCredits." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
@@ -45,9 +45,22 @@
         },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"], "description": "The type of account, used for multi-branch functionality." },
         "parentId": { "type": "string", "description": "If accountType is 'Branch', this is the ID of the parent account." },
-        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of monetary credits (e.g., in PHP)." }
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of monetary credits (e.g., in PHP)." },
+        "pendingCharges": {
+            "type": "array",
+            "description": "A list of one-off charges to be added to the next invoice.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "description": { "type": "string" },
+                "amount": { "type": "number" },
+                "dateAdded": { "type": "string", "format": "date-time" }
+              }
+            }
+        }
       },
-      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId", "totalConsumptionLiters"]
+      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId"]
     },
     "Transaction": {
         "title": "Transaction",
@@ -72,12 +85,12 @@
             "id": { "type": "string" },
             "userId": { "type": "string" },
             "amount": { "type": "number" },
-            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected"] },
+            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected", "Approved (Initial Balance)"] },
             "requestedAt": { "type": "string", "format": "date-time" },
             "proofOfPaymentUrl": { "type": "string", "format": "uri" },
             "rejectionReason": { "type": "string" }
         },
-        "required": ["id", "userId", "amount", "status", "requestedAt", "proofOfPaymentUrl"]
+        "required": ["id", "userId", "amount", "status", "requestedAt"]
     },
     "UnclaimedProfile": {
       "title": "UnclaimedProfile",
@@ -90,7 +103,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for Prepaid or fixed plans." },
+        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for fixed plans. Deprecated for prepaid/parent." },
         "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
@@ -98,7 +111,7 @@
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
         "parentId": { "type": "string" },
-        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' or 'Prepaid Flow Plan' accounts, this is the initial central, shared balance of monetary credits." }
+        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of monetary credits." }
       },
       "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
     },
@@ -124,9 +137,11 @@
         "id": { "type": "string", "description": "Unique identifier for the station." },
         "name": { "type": "string", "description": "Name of the station." },
         "location": { "type": "string", "description": "Location of the station." },
-        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." }
+        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." },
+        "status": { "type": "string", "enum": ["Operational", "Under Maintenance"], "description": "The operational status of the station." },
+        "statusMessage": { "type": "string", "description": "An optional message regarding the station's status (e.g., maintenance details)." }
       },
-      "required": ["id", "name", "location"]
+      "required": ["id", "name", "location", "status"]
     },
     "Delivery": {
       "title": "Delivery",
@@ -155,7 +170,20 @@
         "amount": { "type": "number" },
         "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review", "Covered by Parent Account"] },
         "proofOfPaymentUrl": { "type": "string", "format": "uri" },
-        "rejectionReason": { "type": "string", "description": "Reason provided by admin for rejecting a payment." }
+        "rejectionReason": { "type": "string", "description": "Reason provided by admin for rejecting a payment." },
+        "manualCharges": {
+          "type": "array",
+          "description": "A list of one-off charges included in this invoice.",
+          "items": {
+             "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "description": { "type": "string" },
+                "amount": { "type": "number" },
+                "dateAdded": { "type": "string", "format": "date-time" }
+              }
+          }
+        }
       },
       "required": ["id", "date", "description", "amount", "status"]
     },
