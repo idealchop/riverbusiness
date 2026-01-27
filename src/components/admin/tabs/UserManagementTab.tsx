@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -273,28 +274,64 @@ export function UserManagementTab({
                             <p className="text-sm text-muted-foreground">These profiles are waiting for users to claim them.</p>
                             <Button onClick={onAddNewClientClick}><UserPlus className="mr-2 h-4 w-4" /> Add New Client</Button>
                         </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Client ID</TableHead>
-                                    <TableHead>Business Name</TableHead>
-                                    <TableHead>Plan</TableHead>
-                                    <TableHead>Account Type</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {(unclaimedProfiles || []).map((profile) => (
-                                    <TableRow key={profile.id}>
-                                        <TableCell>{profile.clientId}</TableCell>
-                                        <TableCell>{profile.businessName}</TableCell>
-                                        <TableCell>{profile.plan?.name}</TableCell>
-                                        <TableCell>{profile.accountType}</TableCell>
-                                        <TableCell><Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending Claim</Badge></TableCell>
+                        
+                        {/* Desktop Table View */}
+                        <div className="overflow-x-auto hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Client ID</TableHead>
+                                        <TableHead>Business Name</TableHead>
+                                        <TableHead>Plan</TableHead>
+                                        <TableHead>Account Type</TableHead>
+                                        <TableHead>Status</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {(unclaimedProfiles && unclaimedProfiles.length > 0) ? (unclaimedProfiles || []).map((profile) => (
+                                        <TableRow key={profile.id}>
+                                            <TableCell>{profile.clientId}</TableCell>
+                                            <TableCell>{profile.businessName}</TableCell>
+                                            <TableCell>{profile.plan?.name}</TableCell>
+                                            <TableCell>{profile.accountType}</TableCell>
+                                            <TableCell><Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending Claim</Badge></TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow><TableCell colSpan={5} className="h-24 text-center">No unclaimed profiles found.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="space-y-4 md:hidden">
+                            {(unclaimedProfiles && unclaimedProfiles.length > 0) ? unclaimedProfiles.map(profile => (
+                                <Card key={profile.id}>
+                                    <CardContent className="p-4 space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-semibold">{profile.businessName}</p>
+                                                <p className="text-xs text-muted-foreground">ID: {profile.clientId}</p>
+                                            </div>
+                                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending Claim</Badge>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm pt-2">
+                                            <span className="text-muted-foreground">Plan:</span>
+                                            <span className="font-medium">{profile.plan?.name}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-muted-foreground">Account Type:</span>
+                                            <span className="font-medium">{profile.accountType}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )) : (
+                                <div className="text-center text-muted-foreground py-10">
+                                    <UserPlus className="mx-auto h-12 w-12 text-gray-400" />
+                                    <p className="mt-2">No unclaimed profiles found.</p>
+                                </div>
+                            )}
+                        </div>
                     </TabsContent>
                 </Tabs>
             </CardContent>
