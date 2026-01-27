@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -42,8 +43,6 @@ export function StatCards({
   
   const consumptionDetails = useMemo(() => {
     const now = new Date();
-    const currentYear = getYear(now);
-    const currentMonth = getMonth(now);
     
     const emptyState = {
         monthlyPlanLiters: 0,
@@ -60,18 +59,9 @@ export function StatCards({
         return emptyState;
     }
 
-    let cycleStart: Date;
-    let cycleEnd: Date;
-    let monthsToBill = 1;
-
-    if (currentYear === 2026 && currentMonth === 0) { 
-        cycleStart = new Date(2025, 11, 1); 
-        cycleEnd = endOfMonth(now); 
-        monthsToBill = 2;
-    } else {
-        cycleStart = startOfMonth(now);
-        cycleEnd = endOfMonth(now);
-    }
+    const cycleStart = startOfMonth(now);
+    const cycleEnd = endOfMonth(now);
+    const monthsToBill = 1;
     
     const deliveriesThisCycle = deliveries.filter(d => {
         const deliveryDate = new Date(d.date);
