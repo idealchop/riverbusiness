@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { PaymentReviewDialog } from '../dialogs/user-details/PaymentReviewDialog';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -57,6 +58,11 @@ export function UserManagementTab({
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
+    const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
+    const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
+    const [selectedUserForPayment, setSelectedUserForPayment] = useState<AppUser | null>(null);
+
+
     const paymentStatusesByUser = useMemo(() => {
         if (!allPayments) return {};
         return allPayments.reduce((acc, payment) => {
@@ -64,16 +70,18 @@ export function UserManagementTab({
             if (!userId) return acc;
     
             if (!acc[userId]) {
-                acc[userId] = { pending: 0, overdue: 0 };
+                acc[userId] = { pending: 0, overdue: 0, firstPending: null, firstOverdue: null };
             }
     
             if (payment.status === 'Pending Review') {
                 acc[userId].pending += 1;
+                 if (!acc[userId].firstPending) acc[userId].firstPending = payment;
             } else if (payment.status === 'Overdue') {
                 acc[userId].overdue += 1;
+                if (!acc[userId].firstOverdue) acc[userId].firstOverdue = payment;
             }
             return acc;
-        }, {} as Record<string, { pending: number; overdue: number }>);
+        }, {} as Record<string, { pending: number; overdue: number; firstPending: Payment | null; firstOverdue: Payment | null; }>);
     }, [allPayments]);
 
     const handleRefillStatusUpdate = async (request: RefillRequest, newStatus: RefillRequest['status']) => {
@@ -105,7 +113,16 @@ export function UserManagementTab({
         return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
     }, [filteredUsers, currentPage, itemsPerPage]);
 
+    const handleOpenPaymentReview = (e: React.MouseEvent, user: AppUser, payment: Payment | null) => {
+        if (!payment) return;
+        e.stopPropagation(); // Prevent row click
+        setSelectedUserForPayment(user);
+        setPaymentToReview(payment);
+        setIsPaymentReviewOpen(true);
+    };
+
     return (
+        <>
         <Card>
             <CardHeader>
                 <CardTitle>Client Accounts ({filteredUsers.length})</CardTitle>
@@ -201,8 +218,8 @@ export function UserManagementTab({
                                         <TableHead>Client ID</TableHead>
                                         <TableHead>Business Name</TableHead>
                                         <TableHead>Account Type</TableHead>
-                                        <TableHead>Payment Status</TableHead>
                                         <TableHead>Plan</TableHead>
+                                        <TableHead>Payment Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -213,16 +230,16 @@ export function UserManagementTab({
                                                 <TableCell>{user.clientId}</TableCell>
                                                 <TableCell>{user.businessName}</TableCell>
                                                 <TableCell><Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge></TableCell>
+                                                <TableCell>{user.plan?.name || 'N/A'}</TableCell>
                                                 <TableCell>
                                                     {paymentStatus?.overdue > 0 ? (
-                                                        <Badge variant="destructive">{paymentStatus.overdue} Overdue</Badge>
+                                                        <Badge variant="destructive" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstOverdue)} className="cursor-pointer">{paymentStatus.overdue} Overdue</Badge>
                                                     ) : paymentStatus?.pending > 0 ? (
-                                                        <Badge className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200">{paymentStatus.pending} Pending</Badge>
+                                                        <Badge className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstPending)}>{paymentStatus.pending} Pending</Badge>
                                                     ) : (
                                                         <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
                                                     )}
                                                 </TableCell>
-                                                <TableCell>{user.plan?.name || 'N/A'}</TableCell>
                                             </TableRow>
                                         )
                                     })}
@@ -244,19 +261,19 @@ export function UserManagementTab({
                                                 </div>
                                                 <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge>
                                             </div>
-                                            <div className="flex justify-between items-center text-sm pt-2">
-                                                <span className="text-muted-foreground">Payment Status:</span>
-                                                {paymentStatus?.overdue > 0 ? (
-                                                    <Badge variant="destructive">{paymentStatus.overdue} Overdue</Badge>
-                                                ) : paymentStatus?.pending > 0 ? (
-                                                    <Badge className="bg-blue-100 text-blue-800">{paymentStatus.pending} Pending</Badge>
-                                                ) : (
-                                                    <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
-                                                )}
-                                            </div>
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-muted-foreground">Plan:</span>
                                                 <span className="font-medium">{user.plan?.name || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm pt-2">
+                                                <span className="text-muted-foreground">Payment Status:</span>
+                                                {paymentStatus?.overdue > 0 ? (
+                                                    <Badge variant="destructive" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstOverdue)} className="cursor-pointer">{paymentStatus.overdue} Overdue</Badge>
+                                                ) : paymentStatus?.pending > 0 ? (
+                                                    <Badge className="cursor-pointer bg-blue-100 text-blue-800" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstPending)}>{paymentStatus.pending} Pending</Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -348,5 +365,16 @@ export function UserManagementTab({
                 </Tabs>
             </CardContent>
         </Card>
+        
+        {firestore && (
+             <PaymentReviewDialog
+                isOpen={isPaymentReviewOpen}
+                onOpenChange={setIsPaymentReviewOpen}
+                paymentToReview={paymentToReview}
+                userDocRef={selectedUserForPayment ? doc(firestore, 'users', selectedUserForPayment.id) : null}
+            />
+        )}
+       
+        </>
     );
 }
