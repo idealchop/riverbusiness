@@ -1,5 +1,4 @@
 
-
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -426,10 +425,10 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
-        await paymentRef.update({
+        await paymentRef.set({
             proofOfPaymentUrl: url,
             status: "Pending Review",
-        });
+        }, { merge: true });
 
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
         
@@ -470,3 +469,5 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    
