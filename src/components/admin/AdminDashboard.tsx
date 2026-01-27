@@ -122,6 +122,7 @@ const newUserSchema = z.object({
   contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
   clientType: z.string().min(1, { message: 'Plan type is required' }),
   plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
+  planPrice: z.coerce.number().min(0, "Price cannot be negative."),
   initialTopUp: z.coerce.number().optional(), 
   accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
   parentId: z.string().optional(),
@@ -570,9 +571,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             contactNumber: '',
             clientType: '',
             plan: null,
+            planPrice: 0,
             initialTopUp: 0,
             accountType: 'Single',
             customPlanDetails: {
+                litersPerMonth: 0,
+                bonusLiters: 0,
                 gallonQuantity: 0,
                 gallonPrice: 0,
                 gallonPaymentType: 'Monthly',
@@ -1500,6 +1504,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     
     const selectedClientType = newUserForm.watch('clientType');
     const selectedAccountType = newUserForm.watch('accountType');
+    const selectedPlan = newUserForm.watch('plan');
 
     const planOptions = React.useMemo(() => {
         if (!selectedClientType) return [];
@@ -1524,7 +1529,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 return;
             }
             
-            const { plan, initialTopUp, parentId, ...rest } = values;
+            const { plan, planPrice, initialTopUp, parentId, ...rest } = values;
 
             let topUpCredits = 0;
 
@@ -1536,12 +1541,17 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 ...rest, 
                 plan: {
                     name: plan.name,
-                    price: plan.price,
+                    price: planPrice,
                     isConsumptionBased: plan.isConsumptionBased || false,
+                },
+                customPlanDetails: {
+                  ...values.customPlanDetails,
+                  litersPerMonth: values.customPlanDetails?.litersPerMonth,
+                  bonusLiters: values.customPlanDetails?.bonusLiters
                 },
                 role: 'User',
                 accountStatus: 'Active',
-                totalConsumptionLiters: 0,
+                totalConsumptionLiters: values.customPlanDetails?.litersPerMonth || 0,
                 topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
             };
@@ -1576,8 +1586,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         }
     }
     
-    const selectedPlan = newUserForm.watch('plan');
-
      useEffect(() => {
         const subscription = newUserForm.watch((value, { name, type }) => {
             if (name === 'clientType') {
@@ -1585,14 +1593,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 const newPlan = (value.clientType === 'Enterprise') ? enterprisePlans[0] : (plans.length > 0 ? plans[0] : null);
                  if (newPlan) {
                     newUserForm.setValue('plan', newPlan);
+                    newUserForm.setValue('planPrice', newPlan.price || 0);
                 } else {
                     newUserForm.setValue('plan', null);
+                    newUserForm.setValue('planPrice', 0);
                 }
             }
              if (name === 'plan' && value.plan) {
                 const planPrice = value.plan.price || 0;
-                if (newUserForm.getValues('plan.price') !== planPrice) {
-                    newUserForm.setValue('plan.price', planPrice);
+                if (newUserForm.getValues('planPrice') !== planPrice) {
+                    newUserForm.setValue('planPrice', planPrice);
                 }
             }
         });
@@ -3724,6 +3734,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                     )}/>
                                     
                                     {selectedClientType && (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={newUserForm.control} name="plan" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Select a {selectedClientType} Plan</FormLabel>
@@ -3738,10 +3749,33 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                     <FormMessage />
                                                 </FormItem>
                                         )} />
+                                        {selectedPlan && (
+                                            <FormField
+                                                control={newUserForm.control}
+                                                name="planPrice"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>{selectedPlan.isConsumptionBased ? "Price per Liter (PHP)" : "Monthly Price (PHP)"}</FormLabel>
+                                                        <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        )}
+                                      </div>
                                     )}
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
+                                            {!selectedPlan.isConsumptionBased && selectedAccountType !== 'Branch' && (
+                                                <div className="space-y-4 p-4 border rounded-lg">
+                                                    <h4 className="font-medium">Monthly Allocation</h4>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                        <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Delivery Schedule</h4>
@@ -3756,13 +3790,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             <div className="space-y-4 p-4 border rounded-lg">
                                                 <h4 className="font-medium">Equipment Setup</h4>
                                                 <div className="grid grid-cols-3 gap-4">
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (<FormItem><FormLabel>Containers</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (<FormItem><FormLabel>Containers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
+                                                    <FormField control={newUserForm.control} name="customPlanDetails.dispenserPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                     <FormField
                                                         control={newUserForm.control}
                                                         name="customPlanDetails.dispenserPaymentType"
@@ -3822,3 +3856,4 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
