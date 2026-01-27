@@ -112,6 +112,8 @@ export interface AppUser {
         dispenserQuantity?: number;
         dispenserPrice?: number;
         dispenserPaymentType?: 'Monthly' | 'One-Time';
+        sanitationPrice?: number;
+        sanitationPaymentType?: 'Monthly' | 'One-Time';
         deliveryFrequency?: string;
         deliveryDay?: string;
         deliveryTime?: string;
@@ -261,3 +263,4 @@ export interface TopUpRequest {
     
 
     
+

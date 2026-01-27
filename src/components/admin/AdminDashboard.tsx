@@ -106,6 +106,8 @@ const planDetailsSchema = z.object({
   dispenserQuantity: z.coerce.number().min(0, "Cannot be negative"),
   dispenserPrice: z.coerce.number().min(0, "Cannot be negative"),
   dispenserPaymentType: z.enum(['Monthly', 'One-Time']),
+  sanitationPrice: z.coerce.number().optional(),
+  sanitationPaymentType: z.enum(['Monthly', 'One-Time']).optional(),
   deliveryFrequency: z.string().optional(),
   deliveryDay: z.string().optional(),
   deliveryTime: z.string().optional(),
@@ -583,6 +585,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 dispenserQuantity: 0,
                 dispenserPrice: 0,
                 dispenserPaymentType: 'Monthly',
+                sanitationPrice: 0,
+                sanitationPaymentType: 'Monthly',
                 deliveryFrequency: 'Weekly',
                 deliveryDay: 'Monday',
                 deliveryTime: '09:00',
@@ -3789,7 +3793,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
-                                            {(selectedClientType === 'Enterprise' || !selectedPlan.isConsumptionBased) && selectedAccountType !== 'Branch' && (
+                                            {selectedClientType !== 'Enterprise' && (selectedPlan && !selectedPlan.isConsumptionBased) && selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Monthly Allocation</h4>
                                                     <div className="grid grid-cols-2 gap-4">
@@ -3839,6 +3843,39 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         )}
                                                     />
                                                 </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="flex items-center pt-5">
+                                                        <p className="text-sm font-medium">Monthly Sanitation</p>
+                                                    </div>
+                                                    <FormField
+                                                        control={newUserForm.control}
+                                                        name="customPlanDetails.sanitationPrice"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Price</FormLabel>
+                                                                <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={newUserForm.control}
+                                                        name="customPlanDetails.sanitationPaymentType"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>Payment</FormLabel>
+                                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="Monthly">Monthly</SelectItem>
+                                                                        <SelectItem value="One-Time">One-Time</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -3878,6 +3915,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
 
 
 
