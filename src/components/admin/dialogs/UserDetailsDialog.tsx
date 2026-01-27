@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -52,7 +51,7 @@ const toSafeDate = (timestamp: any): Date | null => {
 };
 
 const deliverySchema = z.object({
-    id: z.string().optional(),
+    id: z.string().min(1, "Tracking # is required."),
     date: z.date({ required_error: "A date is required." }),
     volumeContainers: z.coerce.number().min(1, "Must be at least 1."),
     status: z.enum(['Delivered', 'In Transit', 'Pending']),
@@ -147,10 +146,15 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     }, [userDeliveriesData, deliveriesCurrentPage]);
 
     useEffect(() => {
-        if (isCreateDeliveryOpen && deliveryToEdit) {
-            deliveryForm.reset({ ...deliveryToEdit, date: new Date(deliveryToEdit.date) });
+        if (isCreateDeliveryOpen) {
+            if (deliveryToEdit) {
+                deliveryForm.reset({ ...deliveryToEdit, date: new Date(deliveryToEdit.date) });
+            } else {
+                const defaultId = `D-${Date.now().toString().slice(-6)}`;
+                deliveryForm.reset({ id: defaultId, status: 'Pending', volumeContainers: 1, date: new Date(), adminNotes: '' });
+            }
         } else {
-            deliveryForm.reset({ status: 'Pending', volumeContainers: 1, date: new Date(), adminNotes: '' });
+            setDeliveryToEdit(null);
         }
         setProofFile(null);
     }, [isCreateDeliveryOpen, deliveryToEdit, deliveryForm]);
@@ -162,37 +166,53 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userDocRef || !auth?.currentUser || !storage) return;
+        if (!userDocRef || !auth?.currentUser || !storage || !firestore) return;
 
         try {
-            const deliveryData = { ...values, userId: user.id, date: values.date.toISOString() };
-            const deliveriesCol = collection(userDocRef, 'deliveries');
-            let deliveryId = deliveryToEdit?.id;
+            const { id: deliveryId, ...restOfValues } = values;
 
-            if (deliveryToEdit) {
-                await setDoc(doc(deliveriesCol, deliveryToEdit.id), deliveryData);
-            } else {
-                const newDocRef = doc(deliveriesCol);
-                deliveryId = newDocRef.id;
-                await setDoc(newDocRef, {...deliveryData, id: newDocRef.id});
+            if (!deliveryToEdit) {
+                const newDocRef = doc(userDocRef, 'deliveries', deliveryId);
+                const docSnap = await getDoc(newDocRef);
+                if (docSnap.exists()) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Tracking # Exists',
+                        description: `A delivery with ID ${deliveryId} already exists. Please use a unique ID.`,
+                    });
+                    return;
+                }
             }
 
-            if (proofFile && deliveryId) {
+            const deliveryRef = doc(userDocRef, 'deliveries', deliveryId);
+
+            const deliveryData = {
+                ...restOfValues,
+                id: deliveryId,
+                userId: user.id,
+                date: values.date.toISOString(),
+            };
+
+            await setDoc(deliveryRef, deliveryData, { merge: true });
+
+            if (proofFile) {
                 setIsUploadingProof(true);
+                setUploadProgress(0);
                 const filePath = `admin_uploads/${auth.currentUser.uid}/proofs_for/${user.id}/${deliveryId}-${Date.now()}-${proofFile.name}`;
                 await uploadFileWithProgress(storage, auth, filePath, proofFile, {}, setUploadProgress);
-                toast({ title: "Proof of Delivery Uploaded" });
+                toast({ title: 'Proof upload in progress...' });
             }
 
             toast({ title: deliveryToEdit ? "Delivery Updated" : "Delivery Created" });
+            setIsCreateDeliveryOpen(false);
+
         } catch (error) {
             console.error("Delivery operation failed:", error);
             toast({ variant: 'destructive', title: "Operation Failed" });
         } finally {
-            setIsCreateDeliveryOpen(false);
-            setDeliveryToEdit(null);
-            setProofFile(null);
             setIsUploadingProof(false);
+            setUploadProgress(0);
+            setProofFile(null);
         }
     };
 
@@ -523,12 +543,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogTitle>{deliveryToEdit ? 'Edit' : 'Create'} Delivery</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
-                        {deliveryToEdit && (
-                            <div>
-                                <Label htmlFor="trackingNumber">Tracking Number</Label>
-                                <Input id="trackingNumber" value={deliveryToEdit.id} readOnly disabled />
-                            </div>
-                        )}
+                        <div>
+                            <Label htmlFor="trackingNumber">Tracking Number</Label>
+                            <Input id="trackingNumber" {...deliveryForm.register('id')} disabled={!!deliveryToEdit}/>
+                            {deliveryForm.formState.errors.id && <p className="text-sm text-destructive">{deliveryForm.formState.errors.id.message}</p>}
+                        </div>
                         <div>
                             <Label>Delivery Date</Label>
                             <Popover>
