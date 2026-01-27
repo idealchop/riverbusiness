@@ -117,6 +117,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [proofToViewUrl, setProofToViewUrl] = useState<string | null>(null);
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [isUploadingProof, setIsUploadingProof] = useState(false);
+    const [deliveriesCurrentPage, setDeliveriesCurrentPage] = useState(1);
+    const DELIVERIES_PER_PAGE = 5;
 
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
@@ -132,6 +134,17 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const topUpForm = useForm<TopUpFormValues>({ resolver: zodResolver(topUpSchema) });
     const sanitationVisitForm = useForm<SanitationVisitFormValues>({ resolver: zodResolver(sanitationVisitSchema), defaultValues: { status: 'Scheduled', dispenserReports: [{ dispenserName: 'Main Unit', checklist: [ { item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' } ] }] } });
     const { fields, append, remove } = useFieldArray({ control: sanitationVisitForm.control, name: "dispenserReports" });
+
+    const totalDeliveryPages = useMemo(() => {
+        if (!userDeliveriesData) return 0;
+        return Math.ceil(userDeliveriesData.length / DELIVERIES_PER_PAGE);
+    }, [userDeliveriesData]);
+
+    const paginatedDeliveries = useMemo(() => {
+        if (!userDeliveriesData) return [];
+        const startIndex = (deliveriesCurrentPage - 1) * DELIVERIES_PER_PAGE;
+        return userDeliveriesData.slice(startIndex, startIndex + DELIVERIES_PER_PAGE);
+    }, [userDeliveriesData, deliveriesCurrentPage]);
 
     useEffect(() => {
         if (isCreateDeliveryOpen && deliveryToEdit) {
@@ -379,11 +392,14 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {(userDeliveriesData || []).map(delivery => (
+                                                {paginatedDeliveries.map(delivery => (
                                                     <TableRow key={delivery.id}>
                                                         <TableCell className="font-mono text-xs">{delivery.id}</TableCell>
                                                         <TableCell>{toSafeDate(delivery.date)?.toLocaleDateString()}</TableCell>
-                                                        <TableCell>{delivery.volumeContainers} containers</TableCell>
+                                                        <TableCell>
+                                                            <div>{delivery.volumeContainers} containers</div>
+                                                            <div className="text-xs text-muted-foreground">({containerToLiter(delivery.volumeContainers).toLocaleString(undefined, {maximumFractionDigits: 0})} L)</div>
+                                                        </TableCell>
                                                         <TableCell><Badge>{delivery.status}</Badge></TableCell>
                                                         <TableCell>
                                                             {delivery.proofOfDeliveryUrl ? (
@@ -397,8 +413,34 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
+                                                 {paginatedDeliveries.length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No deliveries found.</TableCell>
+                                                    </TableRow>
+                                                )}
                                             </TableBody>
                                         </Table>
+                                        <div className="flex items-center justify-end space-x-2 pt-4">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setDeliveriesCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={deliveriesCurrentPage === 1}
+                                            >
+                                                Previous
+                                            </Button>
+                                            <span className="text-sm text-muted-foreground">
+                                                Page {deliveriesCurrentPage} of {totalDeliveryPages > 0 ? totalDeliveryPages : 1}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setDeliveriesCurrentPage(p => Math.min(totalDeliveryPages, p + 1))}
+                                                disabled={deliveriesCurrentPage === totalDeliveryPages || totalDeliveryPages === 0}
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -532,26 +574,26 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             <Label htmlFor="adminNotes">Admin Notes</Label>
                             <Textarea id="adminNotes" {...deliveryForm.register('adminNotes')} />
                         </div>
-                        {deliveryToEdit && (
-                            <div>
-                                <Label>Proof of Delivery</Label>
-                                {deliveryToEdit.proofOfDeliveryUrl && !proofFile ? (
-                                     <div className="flex items-center gap-2 text-sm p-2 bg-muted rounded-md">
-                                        <FileText className="h-4 w-4" />
-                                        <a href={deliveryToEdit.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex-1 truncate">View current proof</a>
-                                    </div>
-                                ) : <p className="text-xs text-muted-foreground mt-1">No proof uploaded yet.</p>}
-                                <Input 
-                                    id="proof-upload"
-                                    type="file"
-                                    onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                                    className="mt-2"
-                                    disabled={isUploadingProof}
-                                />
-                                {isUploadingProof && <Progress value={uploadProgress} className="mt-2 h-1" />}
-                                {proofFile && <p className="text-xs text-muted-foreground mt-1">New file selected: {proofFile.name}</p>}
-                            </div>
-                        )}
+                        
+                        <div>
+                            <Label>Proof of Delivery</Label>
+                            {deliveryToEdit?.proofOfDeliveryUrl && !proofFile ? (
+                                    <div className="flex items-center gap-2 text-sm p-2 bg-muted rounded-md">
+                                    <FileText className="h-4 w-4" />
+                                    <a href={deliveryToEdit.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex-1 truncate">View current proof</a>
+                                </div>
+                            ) : <p className="text-xs text-muted-foreground mt-1">No proof uploaded yet.</p>}
+                            <Input 
+                                id="proof-upload"
+                                type="file"
+                                onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                                className="mt-2"
+                                disabled={isUploadingProof}
+                            />
+                            {isUploadingProof && <Progress value={uploadProgress} className="mt-2 h-1" />}
+                            {proofFile && <p className="text-xs text-muted-foreground mt-1">New file selected: {proofFile.name}</p>}
+                        </div>
+                        
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setIsCreateDeliveryOpen(false)}>Cancel</Button>
                             <Button type="submit" disabled={isUploadingProof}>
