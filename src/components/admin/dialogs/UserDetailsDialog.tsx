@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy, RefreshCw, Droplets } from 'lucide-react';
+import { UserCog, UserPlus, KeyRound, Trash2, MoreHorizontal, Users, Building, LogIn, Eye, EyeOff, FileText, Users2, UserCheck, Paperclip, Upload, MinusCircle, Info, Download, Calendar as CalendarIcon, PlusCircle, FileHeart, ShieldX, Receipt, History, Truck, PackageCheck, Package, LogOut, Edit, Shield, Wrench, BarChart, Save, StickyNote, Repeat, BellRing, X, Search, Pencil, CheckCircle, AlertTriangle, MessageSquare, Share2, Copy, RefreshCw, Droplets, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -150,19 +150,50 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         return userDeliveriesData.slice(startIndex, startIndex + DELIVERIES_PER_PAGE);
     }, [userDeliveriesData, deliveriesCurrentPage]);
     
-    const currentMonthInvoice = useMemo(() => {
-        if (!user || !userDeliveriesData) return null;
-    
+    const consumedLitersThisMonth = useMemo(() => {
+        if (!userDeliveriesData) return 0;
         const now = new Date();
         const cycleStart = startOfMonth(now);
         const cycleEnd = endOfMonth(now);
-        const monthsToBill = 1;
-    
+        
         const deliveriesThisCycle = userDeliveriesData.filter(d => {
             const deliveryDate = toSafeDate(d.date);
             return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
         });
-        const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        return deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    }, [userDeliveriesData]);
+    
+    const consumptionComparison = useMemo(() => {
+        if (!userDeliveriesData) return { percentageChange: 0, changeType: 'same' };
+    
+        const now = new Date();
+        const lastMonthStart = startOfMonth(subMonths(now, 1));
+        const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    
+        const consumedLitersLastMonth = userDeliveriesData
+            .filter(d => {
+                const deliveryDate = toSafeDate(d.date);
+                return deliveryDate ? isWithinInterval(deliveryDate, { start: lastMonthStart, end: lastMonthEnd }) : false;
+            })
+            .reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+    
+        if (consumedLitersLastMonth === 0) {
+            return { percentageChange: consumedLitersThisMonth > 0 ? 100 : 0, changeType: consumedLitersThisMonth > 0 ? 'increase' : 'same' };
+        }
+    
+        const percentageChange = ((consumedLitersThisMonth - consumedLitersLastMonth) / consumedLitersLastMonth) * 100;
+    
+        return {
+            percentageChange: Math.abs(percentageChange),
+            changeType: percentageChange > 0 ? 'increase' : (percentageChange < 0 ? 'decrease' : 'same'),
+        };
+      }, [userDeliveriesData, consumedLitersThisMonth]);
+
+    const currentMonthInvoice = useMemo(() => {
+        if (!user || !userDeliveriesData) return null;
+    
+        const now = new Date();
+        const monthsToBill = 1;
     
         let estimatedCost = 0;
         const userCreationDate = toSafeDate(user.createdAt);
@@ -180,7 +211,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         estimatedCost += monthlyEquipmentCost * monthsToBill;
     
         if (user.plan?.isConsumptionBased) {
-            estimatedCost += consumedLitersThisCycle * (user.plan.price || 0);
+            estimatedCost += consumedLitersThisMonth * (user.plan.price || 0);
         } else {
             estimatedCost += user.plan?.price || 0;
         }
@@ -195,7 +226,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             amount: estimatedCost,
             status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
         };
-    }, [user, userDeliveriesData]);
+    }, [user, userDeliveriesData, consumedLitersThisMonth]);
 
     const showCurrentMonthInvoice = useMemo(() => {
         if (!currentMonthInvoice || !userPaymentsData) return false;
@@ -452,86 +483,119 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                 <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
                             </TabsList>
                             <TabsContent value="overview" className="py-6 space-y-6">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Client Profile</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="flex items-center gap-4">
-                                            <Avatar className="h-16 w-16">
-                                                <AvatarImage src={user.photoURL || undefined} alt={user.name}/>
-                                                <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
-                                            </Avatar>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Client Profile</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div className="flex items-center gap-4">
+                                                <Avatar className="h-16 w-16">
+                                                    <AvatarImage src={user.photoURL || undefined} alt={user.name}/>
+                                                    <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold">{user.businessName}</h3>
+                                                    <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4">
+                                                <div><span className="font-semibold">Email:</span> {user.email}</div>
+                                                <div><span className="font-semibold">Contact:</span> {user.contactNumber}</div>
+                                                <div className="md:col-span-2"><span className="font-semibold">Address:</span> {user.address}</div>
+                                                <div><span className="font-semibold">Account Type:</span> {user.accountType}</div>
+                                                {user.accountType === 'Branch' && user.parentId && <div><span className="font-semibold">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Current Month Snapshot</CardTitle>
+                                            <CardDescription>A real-time look at this month's activity.</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
                                             <div>
-                                                <h3 className="text-lg font-semibold">{user.businessName}</h3>
-                                                <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
+                                                <Label className="text-sm text-muted-foreground">Estimated Bill</Label>
+                                                <p className="text-2xl font-bold">₱{currentMonthInvoice?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                                             </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4">
-                                            <div><span className="font-semibold">Email:</span> {user.email}</div>
-                                            <div><span className="font-semibold">Contact:</span> {user.contactNumber}</div>
-                                            <div className="md:col-span-2"><span className="font-semibold">Address:</span> {user.address}</div>
-                                            <div><span className="font-semibold">Account Type:</span> {user.accountType}</div>
-                                            {user.accountType === 'Branch' && user.parentId && <div><span className="font-semibold">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
-
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Plan & Station</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div>
-                                            <h4 className="font-medium">Current Plan</h4>
-                                            <p className="text-sm text-muted-foreground">{user.plan?.name || 'Not set'}</p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Assigned Water Station</Label>
-                                            <Select onValueChange={handleAssignStation} defaultValue={user.assignedWaterStationId}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Assign a station..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {(waterStations || []).map(station => (
-                                                        <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Contract Management</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="flex items-center gap-4 p-4 border rounded-lg">
-                                            {user.currentContractUrl ? (
-                                                <>
-                                                    <FileText className="h-6 w-6"/>
-                                                    <div className="flex-1">
-                                                        <p>Contract on File</p>
-                                                        <p className="text-xs text-muted-foreground">Uploaded on: {user.contractUploadedDate ? toSafeDate(user.contractUploadedDate)?.toLocaleDateString() : 'N/A'}</p>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label className="text-sm text-muted-foreground">Consumption</Label>
+                                                    <p className="text-xl font-bold">{consumedLitersThisMonth.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-sm text-muted-foreground">vs. Last Month</Label>
+                                                    <div className={cn(
+                                                        "flex items-center text-xl font-bold",
+                                                        consumptionComparison.changeType === 'increase' && 'text-red-500',
+                                                        consumptionComparison.changeType === 'decrease' && 'text-green-500',
+                                                    )}>
+                                                        {consumptionComparison.changeType === 'increase' && <ArrowUp className="h-5 w-5 mr-1" />}
+                                                        {consumptionComparison.changeType === 'decrease' && <ArrowDown className="h-5 w-5 mr-1" />}
+                                                        <span>{consumptionComparison.percentageChange.toFixed(0)}%</span>
                                                     </div>
-                                                    <Button asChild variant="outline">
-                                                        <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4"/> View</a>
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <div className="text-center w-full text-muted-foreground text-sm">No contract uploaded.</div>
-                                            )}
-                                        </div>
-                                        <div className="mt-4">
-                                            <Label>Upload New/Updated Contract</Label>
-                                            <div className="flex gap-2">
-                                                <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} disabled={isUploadingContract} />
-                                                <Button onClick={handleContractUpload} disabled={!contractFile || isUploadingContract}>{isUploadingContract ? 'Uploading...' : 'Upload'}</Button>
+                                                </div>
                                             </div>
-                                            {isUploadingContract && <Progress value={uploadProgress} className="mt-2" />}
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Plan & Station</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div>
+                                                <h4 className="font-medium">Current Plan</h4>
+                                                <p className="text-sm text-muted-foreground">{user.plan?.name || 'Not set'}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Assigned Water Station</Label>
+                                                <Select onValueChange={handleAssignStation} defaultValue={user.assignedWaterStationId}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Assign a station..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {(waterStations || []).map(station => (
+                                                            <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle>Contract Management</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="flex items-center gap-4 p-4 border rounded-lg">
+                                                {user.currentContractUrl ? (
+                                                    <>
+                                                        <FileText className="h-6 w-6"/>
+                                                        <div className="flex-1">
+                                                            <p>Contract on File</p>
+                                                            <p className="text-xs text-muted-foreground">Uploaded on: {user.contractUploadedDate ? toSafeDate(user.contractUploadedDate)?.toLocaleDateString() : 'N/A'}</p>
+                                                        </div>
+                                                        <Button asChild variant="outline">
+                                                            <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4"/> View</a>
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-center w-full text-muted-foreground text-sm">No contract uploaded.</div>
+                                                )}
+                                            </div>
+                                            <div className="mt-4">
+                                                <Label>Upload New/Updated Contract</Label>
+                                                <div className="flex gap-2">
+                                                    <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} disabled={isUploadingContract} />
+                                                    <Button onClick={handleContractUpload} disabled={!contractFile || isUploadingContract}>{isUploadingContract ? 'Uploading...' : 'Upload'}</Button>
+                                                </div>
+                                                {isUploadingContract && <Progress value={uploadProgress} className="mt-2" />}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6 space-y-6">
                                 <Card>
@@ -647,7 +711,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                             <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
                                                             <TableCell>
                                                                 <Badge
-                                                                    onClick={() => payment.status === 'Pending Review' && handleOpenPaymentReview(payment)}
+                                                                    onClick={() => handleOpenPaymentReview(payment)}
                                                                     variant={isEstimated ? 'outline' : 'default'}
                                                                     className={cn(
                                                                         isEstimated ? 'border-blue-500 text-blue-600' : 
