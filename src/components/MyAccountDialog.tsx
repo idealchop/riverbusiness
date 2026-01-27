@@ -187,6 +187,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [topUpProof, setTopUpProof] = useState<File | null>(null);
   const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false);
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
+  const [paymentProofPreview, setPaymentProofPreview] = React.useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
 
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -783,7 +785,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     
     setIsSubmittingTopUp(true);
     try {
-        const filePath = `topup_proofs/${user.id}/${Date.now()}-${topUpProof.name}`;
+        const filePath = `users/${user.id}/topup_proofs/${Date.now()}-${topUpProof.name}`;
         const proofUrl = await uploadFileWithProgress(storage, auth, filePath, topUpProof, {}, setUploadProgress);
 
         const requestData: Omit<TopUpRequest, 'id' | 'rejectionReason'> = {
@@ -1901,6 +1903,19 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         </DialogContent>
       </Dialog>
 
+       {/* Image Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Image Preview</DialogTitle>
+          </DialogHeader>
+          {paymentProofPreview && (
+            <div className="py-4 flex justify-center">
+              <Image src={paymentProofPreview} alt="Payment Proof Preview" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AlertDialog>
   );
 }

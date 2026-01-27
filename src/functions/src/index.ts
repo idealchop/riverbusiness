@@ -364,6 +364,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
+    // Handle user profile photo uploads
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -373,6 +374,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
+    // Handle user contract uploads by admin
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -386,7 +388,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
-    // Handle admin-uploaded proofs
+    // Handle admin-uploaded proofs of delivery
     if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
         const parts = filePath.split('/');
         const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
@@ -412,7 +414,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Handle user-uploaded payment proofs using metadata
+    // Handle user-uploaded proofs of payment
     if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
         const { userId, paymentId } = customMetadata;
 
@@ -424,34 +426,19 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
-        await paymentRef.set({
+        await paymentRef.update({
             proofOfPaymentUrl: url,
             status: "Pending Review",
-        }, { merge: true });
+        });
 
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
         
         await createNotification(userId, {
             type: 'payment',
             title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} is under review.`,
+            description: `Your payment proof for invoice ${paymentId} has been submitted for review.`,
             data: { paymentId: paymentId }
         });
-
-        // Also notify the admin
-        const adminId = await getAdminId();
-        if (adminId) {
-            const userDoc = await db.collection('users').doc(userId).get();
-            const userData = userDoc.data();
-            if (userData) {
-                 await createNotification(adminId, {
-                    type: 'payment',
-                    title: 'Payment for Review',
-                    description: `${userData.businessName} (ID: ${userData.clientId}) submitted payment proof.`,
-                    data: { userId: userId, paymentId: paymentId }
-                });
-            }
-        }
         return;
     }
     
