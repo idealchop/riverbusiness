@@ -240,8 +240,12 @@ export function StatCards({
           <Card className="flex flex-col lg:col-span-2 col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                {isBranchAccount ? `Consumed this Month (${user?.businessName})` 
-                  : isParentAccount ? 'Remaining Liter Credits'
+                {isBranchAccount
+                  ? `Consumed this Month (${user?.businessName})`
+                  : isParentAccount
+                  ? 'Remaining Liter Credits'
+                  : isFlowPlan
+                  ? 'Estimated Cost This Month'
                   : `Remaining Liters`}
               </CardTitle>
             </CardHeader>
