@@ -51,6 +51,7 @@ const toSafeDate = (timestamp: any): Date | null => {
 };
 
 const deliverySchema = z.object({
+    id: z.string().optional(),
     date: z.date({ required_error: "A date is required." }),
     volumeContainers: z.coerce.number().min(1, "Must be at least 1."),
     status: z.enum(['Delivered', 'In Transit', 'Pending']),
@@ -341,10 +342,19 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Volume</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Tracking #</TableHead>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Volume</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
                                         <TableBody>
                                             {(userDeliveriesData || []).map(delivery => (
                                                 <TableRow key={delivery.id}>
+                                                    <TableCell className="font-mono text-xs">{delivery.id}</TableCell>
                                                     <TableCell>{toSafeDate(delivery.date)?.toLocaleDateString()}</TableCell>
                                                     <TableCell>{delivery.volumeContainers} containers</TableCell>
                                                     <TableCell><Badge>{delivery.status}</Badge></TableCell>
@@ -435,6 +445,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogTitle>{deliveryToEdit ? 'Edit' : 'Create'} Delivery</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
+                        {deliveryToEdit && (
+                            <div>
+                                <Label htmlFor="trackingNumber">Tracking Number</Label>
+                                <Input id="trackingNumber" value={deliveryToEdit.id} readOnly disabled />
+                            </div>
+                        )}
                         <div>
                             <Label>Delivery Date</Label>
                              <Popover>
