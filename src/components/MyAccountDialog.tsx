@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -23,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup, setDoc } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ManualCharge } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
@@ -259,7 +260,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     let description: string;
     let invoiceIdSuffix: string;
 
-    if (currentYear === 2026 && currentMonth === 1 && user.plan?.isConsumptionBased) {
+    if (currentYear === 2026 && currentMonth === 1) {
         cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
         cycleEnd = endOfMonth(new Date(2026, 0, 1)); // Jan 31, 2026
         monthsToBill = 2;
@@ -308,11 +309,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
         estimatedCost += consumptionCost;
     } else {
-        const planCost = (user.plan?.price || 0) * (user.plan?.isConsumptionBased ? 1 : monthsToBill);
+        const planCost = user.plan?.price || 0;
         estimatedCost += planCost;
     }
 
-    // Add pending manual charges to the current estimate
     const pendingChargesTotal = (user.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
     estimatedCost += pendingChargesTotal;
 
@@ -353,8 +353,20 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         let gallonCost = 0;
         let dispenserCost = 0;
 
-        const cycleStart = startOfMonth(invoiceDate);
-        const cycleEnd = endOfMonth(invoiceDate);
+        let cycleStart: Date;
+        let cycleEnd: Date;
+        let monthsToBill = 1;
+
+        if (state.invoiceForBreakdown.description.includes('December 2025 - January 2026')) {
+            cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
+            cycleEnd = endOfDay(endOfMonth(new Date(2026, 0, 1))); // Jan 31, 2026
+            monthsToBill = 2;
+        } else {
+            const billingMonth = isCurrent ? new Date() : subMonths(invoiceDate, 1);
+            cycleStart = startOfMonth(billingMonth);
+            cycleEnd = endOfDay(endOfMonth(billingMonth));
+        }
+
         const deliveriesInPeriod = deliveries.filter(d => {
             const dDate = toSafeDate(d.date);
             return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
@@ -372,8 +384,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             if (user.customPlanDetails?.dispenserPaymentType === 'One-Time') dispenserCost += dispenserPrice;
         }
         
-        if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += gallonPrice;
-        if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += dispenserPrice;
+        if (user.customPlanDetails?.gallonPaymentType === 'Monthly') gallonCost += (gallonPrice * monthsToBill);
+        if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') dispenserCost += (dispenserPrice * monthsToBill);
 
         const manualCharges = state.invoiceForBreakdown.manualCharges || [];
         const pendingCharges = (isCurrent && user.pendingCharges) ? user.pendingCharges : [];
@@ -751,8 +763,17 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const getInvoiceDisplayDate = (invoice: Payment) => {
+    if (invoice.description.includes('December 2025 - January 2026')) {
+        return 'Dec 2025 - Jan 2026';
+    }
     const safeDate = toSafeDate(invoice.date);
-    return safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date';
+    if (!safeDate) return 'Invalid Date';
+    
+    if (currentMonthInvoice && invoice.id === currentMonthInvoice.id) {
+        return format(new Date(), 'MMMM yyyy');
+    }
+
+    return format(subMonths(safeDate, 1), 'MMMM yyyy');
   };
   
   const userFirstName = user.name.split(' ')[0];
@@ -1354,17 +1375,17 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                     <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
                                                     <TableCell>
                                                         <Badge variant={
-                                                          req.status === 'Approved' ? 'default' :
+                                                          req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
                                                           req.status === 'Pending Review' ? 'secondary' :
                                                           'destructive'
                                                         } className={cn(
-                                                            req.status === 'Approved' && 'bg-green-100 text-green-800'
+                                                            (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
                                                         )}>
                                                             {req.status}
                                                         </Badge>
                                                     </TableCell>
                                                      <TableCell className="text-right">
-                                                        <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)}>
+                                                        <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)} disabled={!req.proofOfPaymentUrl}>
                                                             View Receipt
                                                         </Button>
                                                     </TableCell>
@@ -1428,7 +1449,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" />Invoice Breakdown</DialogTitle>
             <DialogDescription>
-               This is a breakdown of the total amount for the invoice for {state.invoiceForBreakdown ? getInvoiceDisplayDate(state.invoiceForBreakdown) : ''}.
+               This is a breakdown of your charges for {state.invoiceForBreakdown ? getInvoiceDisplayDate(state.invoiceForBreakdown) : ''}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -1541,6 +1562,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                 >
                                     <Download className="mr-2 h-4 w-4" /> Download Invoice
                                 </Button>
+                                {state.selectedInvoiceForDetail?.proofOfPaymentUrl && (
+                                     <Button 
+                                        variant="link" 
+                                        className="p-0 h-auto text-primary" 
+                                        onClick={() => window.open(state.selectedInvoiceForDetail?.proofOfPaymentUrl, '_blank')}
+                                    >
+                                        <Eye className="mr-2 h-4 w-4" /> View Proof of Payment
+                                    </Button>
+                                )}
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Receipt number</span>
                                     <span className="font-medium font-mono">{state.selectedInvoiceForDetail?.id.split('-').pop()}</span>
