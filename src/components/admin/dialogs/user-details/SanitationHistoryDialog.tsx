@@ -1,4 +1,3 @@
-
 'use client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,8 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Share2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface SanitationHistoryDialogProps {
     isOpen: boolean;
@@ -15,6 +16,18 @@ interface SanitationHistoryDialogProps {
 }
 
 export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: SanitationHistoryDialogProps) {
+    const { toast } = useToast();
+
+    const handleShare = () => {
+        if (visit?.shareableLink) {
+            navigator.clipboard.writeText(visit.shareableLink);
+            toast({
+                title: 'Link Copied!',
+                description: 'The shareable report link has been copied to your clipboard.',
+            });
+        }
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
@@ -26,7 +39,8 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh]">
                     <div className="py-4 pr-4 space-y-4">
-                        {visit?.dispenserReports?.map(report => (
+                        {visit?.dispenserReports && visit.dispenserReports.length > 0 ? (
+                            visit.dispenserReports.map(report => (
                             <Card key={report.dispenserId}>
                                 <CardHeader>
                                     <CardTitle className="text-base">{report.dispenserName}</CardTitle>
@@ -53,12 +67,25 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                                     </Table>
                                 </CardContent>
                             </Card>
-                        ))}
+                        ))
+                        ) : (
+                            <div className="text-center text-muted-foreground py-10">
+                                <p>No checklist data has been recorded for this visit yet.</p>
+                            </div>
+                        )}
                     </div>
                 </ScrollArea>
-                <DialogFooter>
+                <DialogFooter className="justify-between">
+                     {visit?.shareableLink ? (
+                        <Button variant="outline" onClick={handleShare}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Share Report
+                        </Button>
+                    ) : (
+                        <div /> 
+                    )}
                     <DialogClose asChild>
-                        <Button variant="outline">Close</Button>
+                        <Button>Close</Button>
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>
