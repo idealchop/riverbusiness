@@ -60,6 +60,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
     const storage = useStorage();
     const auth = useAuth();
 
+    const [isEditing, setIsEditing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -88,16 +89,20 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
     });
 
     useEffect(() => {
-        if (isOpen && station) {
-            stationForm.reset({ 
-                name: station.name, 
-                location: station.location,
-                status: station.status,
-                statusMessage: station.statusMessage || ''
-            });
-        } else {
-            stationForm.reset({ name: '', location: '', status: 'Operational', statusMessage: '' });
-            setUploadedAgreementUrl(null);
+        if (isOpen) {
+            if (station) {
+                stationForm.reset({ 
+                    name: station.name, 
+                    location: station.location,
+                    status: station.status,
+                    statusMessage: station.statusMessage || ''
+                });
+                setIsEditing(false);
+            } else {
+                stationForm.reset({ name: '', location: '', status: 'Operational', statusMessage: '' });
+                setIsEditing(true); // Start in edit mode for new stations
+                setUploadedAgreementUrl(null);
+            }
         }
     }, [station, stationForm, isOpen]);
 
@@ -119,6 +124,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                 const stationRef = doc(firestore, 'waterStations', station.id);
                 await updateDoc(stationRef, values);
                 toast({ title: 'Station Updated' });
+                setIsEditing(false);
             } else {
                 await addDoc(collection(firestore, 'waterStations'), { ...values, partnershipAgreementUrl: uploadedAgreementUrl });
                 toast({ title: "Station Created" });
@@ -192,6 +198,18 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
         setComplianceReportToDelete(null);
         setComplianceRefresher(c => c + 1);
     };
+    
+    const cancelEdit = () => {
+        setIsEditing(false);
+        if (station) {
+             stationForm.reset({ 
+                name: station.name, 
+                location: station.location,
+                status: station.status,
+                statusMessage: station.statusMessage || ''
+            });
+        }
+    }
 
     return (
         <>
@@ -205,13 +223,28 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                         <div className="space-y-8 p-4">
                             <Form {...stationForm}>
                                 <form className="space-y-4" onSubmit={stationForm.handleSubmit(handleStationSubmit)}>
-                                    <FormField control={stationForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Station Name</FormLabel><FormControl><Input {...field} disabled={!isAdmin} /></FormControl><FormMessage /></FormItem>)}/>
-                                    <FormField control={stationForm.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input {...field} disabled={!isAdmin} /></FormControl><FormMessage /></FormItem>)}/>
+                                     <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-semibold text-base">Station Details</h3>
+                                        {station && !isEditing && (
+                                            <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={!isAdmin}>
+                                                <Edit className="mr-2 h-4 w-4" /> Edit Details
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <FormField control={stationForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Station Name</FormLabel><FormControl><Input {...field} disabled={!isEditing || !isAdmin} /></FormControl><FormMessage /></FormItem>)}/>
+                                      <FormField control={stationForm.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input {...field} disabled={!isEditing || !isAdmin} /></FormControl><FormMessage /></FormItem>)}/>
+                                    </div>
                                     {station && ( <>
-                                        <FormField control={stationForm.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!isAdmin}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="Operational">Operational</SelectItem><SelectItem value="Under Maintenance">Under Maintenance</SelectItem></SelectContent></Select></FormItem>)}/>
-                                        {stationForm.watch('status') === 'Under Maintenance' && (<FormField control={stationForm.control} name="statusMessage" render={({ field }) => (<FormItem><FormLabel>Status Message</FormLabel><FormControl><Textarea {...field} disabled={!isAdmin} /></FormControl></FormItem>)}/>)}
-                                        <Button type="submit" size="sm" disabled={!isAdmin}>Save Details</Button>
+                                        <FormField control={stationForm.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!isEditing || !isAdmin}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="Operational">Operational</SelectItem><SelectItem value="Under Maintenance">Under Maintenance</SelectItem></SelectContent></Select></FormItem>)}/>
+                                        {stationForm.watch('status') === 'Under Maintenance' && (<FormField control={stationForm.control} name="statusMessage" render={({ field }) => (<FormItem><FormLabel>Status Message</FormLabel><FormControl><Textarea {...field} disabled={!isEditing || !isAdmin} /></FormControl></FormItem>)}/>)}
                                     </>)}
+                                    {isEditing && station && (
+                                        <div className="flex justify-end gap-2">
+                                            <Button type="button" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                                            <Button type="submit" size="sm" disabled={!isAdmin || isSubmitting}>Save Details</Button>
+                                        </div>
+                                    )}
                                 </form>
                             </Form>
                             <Separator />
