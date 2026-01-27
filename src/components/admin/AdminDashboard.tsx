@@ -128,7 +128,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 setSelectedUser={setSelectedUser}
                 isAdmin={isAdmin}
                 allUsers={appUsers || []}
-                waterStations={waterStations}
+                waterStations={waterStations || []}
             />
         )}
         
@@ -153,4 +153,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
