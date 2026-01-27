@@ -1,4 +1,5 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -413,31 +414,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Handle user-uploaded proofs of payment
+    // Handle user-uploaded proofs of payment.
+    // This function only needs to log receipt of the file. The client is now responsible
+    // for writing the proofOfPaymentUrl to the Firestore document after a successful upload.
     if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
         const { userId, paymentId } = customMetadata;
-
-        if (!userId || !paymentId) {
-            logger.error(`Missing userId or paymentId in metadata for file: ${filePath}`);
-            return;
-        }
-
-        const url = await getPublicUrl();
-        const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
-        
-        await paymentRef.set({
-            proofOfPaymentUrl: url,
-            status: "Pending Review",
-        }, { merge: true });
-
-        logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
-        
-        await createNotification(userId, {
-            type: 'payment',
-            title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} has been submitted for review.`,
-            data: { paymentId: paymentId }
-        });
+        logger.log(`Payment proof received for user: ${userId}, payment: ${paymentId}. Client will handle database update.`);
         return;
     }
     
@@ -469,5 +451,3 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    
