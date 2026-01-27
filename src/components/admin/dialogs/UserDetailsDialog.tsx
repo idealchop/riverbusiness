@@ -120,6 +120,10 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const DELIVERIES_PER_PAGE = 5;
     const [paymentsCurrentPage, setPaymentsCurrentPage] = useState(1);
     const PAYMENTS_PER_PAGE = 5;
+    const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
+    const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [showRejectionInput, setShowRejectionInput] = useState(false);
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -233,6 +237,14 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         setProofFile(null);
     }, [isCreateDeliveryOpen, deliveryToEdit, deliveryForm]);
     
+    useEffect(() => {
+        if (!isPaymentReviewOpen) {
+            setPaymentToReview(null);
+            setRejectionReason('');
+            setShowRejectionInput(false);
+        }
+    }, [isPaymentReviewOpen]);
+
     const handleAssignStation = async (stationId: string) => {
         if (!userDocRef) return;
         await updateDoc(userDocRef, { assignedWaterStationId: stationId });
@@ -369,6 +381,58 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         navigator.clipboard.writeText(text).then(() => {
           toast({ title: `${label} Copied!`, description: 'The ID has been copied to your clipboard.' });
         });
+    };
+
+    const handleOpenPaymentReview = (payment: Payment) => {
+        if (payment.status !== 'Pending Review') {
+            toast({
+                title: 'No action needed',
+                description: `This payment is already marked as '${payment.status}'.`,
+            });
+            return;
+        }
+        if (!payment.proofOfPaymentUrl) {
+            toast({
+                variant: 'destructive',
+                title: 'No Proof Available',
+                description: 'There is no proof of payment uploaded for this invoice.',
+            });
+            return;
+        }
+        setPaymentToReview(payment);
+        setIsPaymentReviewOpen(true);
+    };
+
+    const handleUpdatePaymentStatus = async (newStatus: 'Paid' | 'Upcoming') => {
+        if (!userDocRef || !paymentToReview) return;
+    
+        if (newStatus === 'Upcoming' && !rejectionReason.trim()) {
+            toast({
+                variant: 'destructive',
+                title: 'Reason Required',
+                description: 'Please provide a reason for rejecting the payment.',
+            });
+            return;
+        }
+    
+        const paymentRef = doc(userDocRef, 'payments', paymentToReview.id);
+        
+        try {
+            await updateDoc(paymentRef, {
+                status: newStatus,
+                rejectionReason: newStatus === 'Upcoming' ? rejectionReason : deleteField(),
+            });
+    
+            toast({
+                title: `Payment ${newStatus === 'Paid' ? 'Approved' : 'Rejected'}`,
+                description: `The invoice status has been updated.`,
+            });
+    
+            setIsPaymentReviewOpen(false);
+        } catch (error) {
+            console.error("Failed to update payment status:", error);
+            toast({ variant: 'destructive', title: 'Update Failed' });
+        }
     };
 
     return (
@@ -581,7 +645,20 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                                             <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
                                                             <TableCell>{payment.description}</TableCell>
                                                             <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
-                                                            <TableCell><Badge variant={isEstimated ? 'outline' : 'default'} className={cn(isEstimated && 'border-blue-500 text-blue-600')}>{isEstimated ? 'Estimated' : payment.status}</Badge></TableCell>
+                                                            <TableCell
+                                                                className={cn(payment.status === 'Pending Review' && 'cursor-pointer hover:bg-muted/50')}
+                                                                onClick={() => payment.status === 'Pending Review' && handleOpenPaymentReview(payment)}
+                                                            >
+                                                                <Badge variant={isEstimated ? 'outline' : 'default'} className={cn(
+                                                                    isEstimated ? 'border-blue-500 text-blue-600' : 
+                                                                    payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    payment.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                                                    payment.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                                                    'bg-gray-100 text-gray-800'
+                                                                )}>
+                                                                    {isEstimated ? 'Estimated' : payment.status}
+                                                                </Badge>
+                                                            </TableCell>
                                                         </TableRow>
                                                     )
                                                 })}
@@ -715,6 +792,52 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Payment Review Dialog */}
+            <Dialog open={isPaymentReviewOpen} onOpenChange={setIsPaymentReviewOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Review Payment</DialogTitle>
+                        <DialogDescription>
+                            Invoice ID: {paymentToReview?.id}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="relative w-full aspect-[9/16] max-h-[50vh] rounded-lg border overflow-hidden bg-muted">
+                            {paymentToReview?.proofOfPaymentUrl ? (
+                                <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" layout="fill" className="object-contain" />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">No proof available</div>
+                            )}
+                        </div>
+                        
+                        {showRejectionInput ? (
+                            <div className="space-y-2 pt-4">
+                                <Label htmlFor="rejectionReason">Rejection Reason</Label>
+                                <Textarea 
+                                    id="rejectionReason"
+                                    placeholder="e.g., Unclear image, amount does not match..."
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                />
+                                <div className="flex gap-2 justify-end">
+                                    <Button variant="ghost" onClick={() => {setShowRejectionInput(false); setRejectionReason('')}}>Cancel</Button>
+                                    <Button variant="destructive" onClick={() => handleUpdatePaymentStatus('Upcoming')}>Confirm Rejection</Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4 pt-4">
+                                <Button onClick={() => handleUpdatePaymentStatus('Paid')}>
+                                    <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                                </Button>
+                                <Button variant="outline" onClick={() => setShowRejectionInput(true)}>
+                                <X className="mr-2 h-4 w-4" /> Reject
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
 
