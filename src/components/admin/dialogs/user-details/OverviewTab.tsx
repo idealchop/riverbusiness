@@ -57,24 +57,22 @@ export function OverviewTab({
         <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Client Profile</CardTitle>
+                        <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-16 w-16">
-                                    <AvatarImage src={user.photoURL || undefined} alt={user.name} />
-                                    <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h3 className="text-lg font-semibold">{user.businessName}</h3>
-                                    <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
-                                </div>
+                        <div className="flex items-center gap-4">
+                            <Avatar className="h-16 w-16">
+                                <AvatarImage src={user.photoURL || undefined} alt={user.name} />
+                                <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <h3 className="text-lg font-semibold">{user.businessName}</h3>
+                                <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
                             </div>
-                            <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge>
                         </div>
-                        <div className="grid grid-cols-1 gap-y-4 text-sm pt-4">
+                        <div className="grid grid-cols-1 gap-y-2 text-sm pt-4">
                             <div><span className="font-medium text-muted-foreground">Email:</span> {user.email}</div>
                             <div><span className="font-medium text-muted-foreground">Contact:</span> {user.contactNumber}</div>
                             <div><span className="font-medium text-muted-foreground">Address:</span> {user.address}</div>
