@@ -76,21 +76,6 @@ export function BillingTab({
     };
 
     const handleOpenPaymentReview = (payment: Payment) => {
-        if (payment.status !== 'Pending Review') {
-            toast({
-                title: 'No action needed',
-                description: `This payment is already marked as '${payment.status}'.`,
-            });
-            return;
-        }
-        if (!payment.proofOfPaymentUrl) {
-            toast({
-                variant: 'destructive',
-                title: 'No Proof Available',
-                description: 'There is no proof of payment uploaded for this invoice.',
-            });
-            return;
-        }
         onSetPaymentToReview(payment);
         onSetIsPaymentReviewOpen(true);
     };
@@ -133,10 +118,14 @@ export function BillingTab({
                                     <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
                                     <TableCell>
                                         <Badge
-                                            onClick={() => handleOpenPaymentReview(payment)}
+                                            onClick={() => {
+                                                if (!isEstimated) {
+                                                    handleOpenPaymentReview(payment);
+                                                }
+                                            }}
                                             variant={isEstimated ? 'outline' : 'default'}
                                             className={cn(
-                                                "cursor-pointer",
+                                                !isEstimated && "cursor-pointer",
                                                 isEstimated ? 'border-blue-500 text-blue-600' :
                                                     payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' :
                                                         payment.status === 'Paid' ? 'bg-green-100 text-green-800' :

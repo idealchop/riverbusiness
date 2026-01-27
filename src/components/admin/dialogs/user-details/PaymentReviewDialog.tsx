@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,6 +22,14 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
     const { toast } = useToast();
     const [rejectionReason, setRejectionReason] = useState('');
     const [showRejectionInput, setShowRejectionInput] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) {
+            // Reset state when dialog closes
+            setRejectionReason('');
+            setShowRejectionInput(false);
+        }
+    }, [isOpen]);
 
     const handleUpdatePaymentStatus = async (newStatus: 'Paid' | 'Upcoming') => {
         if (!userDocRef || !paymentToReview) return;
@@ -59,7 +67,7 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Review Payment</DialogTitle>
+                    <DialogTitle>{paymentToReview?.status === 'Pending Review' ? 'Review Payment' : 'Payment Details'}</DialogTitle>
                     <DialogDescription>
                         Invoice ID: {paymentToReview?.id}
                     </DialogDescription>
@@ -69,36 +77,45 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         {paymentToReview?.proofOfPaymentUrl ? (
                             <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" layout="fill" className="object-contain" />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">No proof available</div>
+                            <div className="flex items-center justify-center h-full text-muted-foreground">No proof of payment available.</div>
                         )}
                     </div>
 
-                    {showRejectionInput ? (
+                    {showRejectionInput && (
                         <div className="space-y-2 pt-4">
-                            <Label htmlFor="rejectionReason">Rejection Reason</Label>
+                            <Label htmlFor="rejectionReason">Reason for Rejection</Label>
                             <Textarea
                                 id="rejectionReason"
                                 placeholder="e.g., Unclear image, amount does not match..."
                                 value={rejectionReason}
                                 onChange={(e) => setRejectionReason(e.target.value)}
                             />
-                            <div className="flex gap-2 justify-end">
-                                <Button variant="ghost" onClick={() => { setShowRejectionInput(false); setRejectionReason('') }}>Cancel</Button>
-                                <Button variant="destructive" onClick={() => handleUpdatePaymentStatus('Upcoming')}>Confirm Rejection</Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-2 gap-4 pt-4">
-                            <Button onClick={() => handleUpdatePaymentStatus('Paid')}>
-                                <CheckCircle className="mr-2 h-4 w-4" /> Approve
-                            </Button>
-                            <Button variant="outline" onClick={() => setShowRejectionInput(true)}>
-                                <X className="mr-2 h-4 w-4" /> Reject
-                            </Button>
                         </div>
                     )}
                 </div>
+                <DialogFooter>
+                     {showRejectionInput ? (
+                        <>
+                            <Button variant="ghost" onClick={() => setShowRejectionInput(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={() => handleUpdatePaymentStatus('Upcoming')}>Confirm Rejection</Button>
+                        </>
+                    ) : paymentToReview?.status === 'Pending Review' ? (
+                        <>
+                            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                            <div className='flex-grow' />
+                            <Button variant="destructive" onClick={() => setShowRejectionInput(true)}>
+                                <X className="mr-2 h-4 w-4" /> Reject
+                            </Button>
+                            <Button onClick={() => handleUpdatePaymentStatus('Paid')}>
+                                <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                            </Button>
+                        </>
+                    ) : (
+                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                    )}
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
+
