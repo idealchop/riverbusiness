@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import { useForm } from 'react-hook-form';
@@ -8,10 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DocumentReference, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { DocumentReference, updateDoc, arrayUnion, serverTimestamp, doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManualCharge } from '@/lib/types';
-import { doc, collection, useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase';
 
 const manualChargeSchema = z.object({
     description: z.string().min(1, "Description is required."),
