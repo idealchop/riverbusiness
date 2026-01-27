@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Delivery } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 import { PlusCircle, Edit, Eye } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -60,7 +60,8 @@ export function DeliveriesTab({
                 </Button>
             </CardHeader>
             <CardContent>
-                <Table>
+                {/* Desktop Table View */}
+                <Table className="hidden md:table">
                     <TableHeader>
                         <TableRow>
                             <TableHead>Tracking #</TableHead>
@@ -100,6 +101,42 @@ export function DeliveriesTab({
                         )}
                     </TableBody>
                 </Table>
+                
+                {/* Mobile Card View */}
+                <div className="space-y-4 md:hidden">
+                    {paginatedDeliveries.map(delivery => (
+                        <Card key={delivery.id}>
+                            <CardContent className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{toSafeDate(delivery.date)?.toLocaleDateString()}</p>
+                                        <p className="text-xs text-muted-foreground">ID: {delivery.id}</p>
+                                    </div>
+                                    <Badge>{delivery.status}</Badge>
+                                </div>
+                                <div className="text-sm">
+                                    <p><strong>Volume:</strong> {delivery.volumeContainers} containers ({containerToLiter(delivery.volumeContainers).toLocaleString(undefined, { maximumFractionDigits: 0 })} L)</p>
+                                </div>
+                                <div className="flex gap-2 pt-2">
+                                    {delivery.proofOfDeliveryUrl ? (
+                                        <Button variant="outline" size="sm" className="w-full" onClick={() => onSetProofToViewUrl(delivery.proofOfDeliveryUrl!)}>
+                                            <Eye className="mr-2 h-4 w-4" /> View Proof
+                                        </Button>
+                                    ) : (
+                                        <div className="flex-1" />
+                                    )}
+                                    <Button variant="secondary" size="sm" className="w-full" onClick={() => { onSetDeliveryToEdit(delivery); onSetIsCreateDeliveryOpen(true); }}>
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                    {paginatedDeliveries.length === 0 && (
+                        <p className="text-center text-muted-foreground py-10">No deliveries found.</p>
+                    )}
+                </div>
+
                 <div className="flex items-center justify-end space-x-2 pt-4">
                     <Button
                         variant="outline"

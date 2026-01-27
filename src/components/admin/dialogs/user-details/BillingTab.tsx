@@ -99,7 +99,8 @@ export function BillingTab({
                         <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits || 0).toLocaleString()}</p>
                     </div>
                 )}
-                <Table>
+                {/* Desktop Table */}
+                <Table className="hidden md:table">
                     <TableHeader><TableRow><TableHead>Invoice ID</TableHead><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {paginatedPayments.map(payment => {
@@ -134,8 +135,49 @@ export function BillingTab({
                                 </TableRow>
                             )
                         })}
+                         {paginatedPayments.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No invoices found.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
+                
+                {/* Mobile Card View */}
+                <div className="space-y-4 md:hidden">
+                    {paginatedPayments.map(payment => {
+                        const isEstimated = payment.id.startsWith('INV-EST');
+                        return (
+                        <Card key={payment.id} onClick={() => handleOpenPaymentReview(payment)} className="cursor-pointer">
+                            <CardContent className="p-4 space-y-2">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{payment.description}</p>
+                                        <p className="text-xs text-muted-foreground">{toSafeDate(payment.date)?.toLocaleDateString()}</p>
+                                        <p className="text-sm">₱{payment.amount.toLocaleString()}</p>
+                                    </div>
+                                    <Badge
+                                        variant={isEstimated ? 'outline' : 'default'}
+                                        className={cn(
+                                            isEstimated ? 'border-blue-500 text-blue-600' :
+                                                payment.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                payment.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                                payment.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                                'bg-gray-100 text-gray-800'
+                                        )}
+                                    >
+                                        {isEstimated ? 'Estimated' : payment.status}
+                                    </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground pt-1">ID: {payment.id}</p>
+                            </CardContent>
+                        </Card>
+                    )})}
+                    {paginatedPayments.length === 0 && (
+                         <p className="text-center py-10 text-muted-foreground">No invoices found.</p>
+                    )}
+                </div>
+
                 <div className="flex items-center justify-end space-x-2 pt-4">
                     <Button variant="outline" size="sm" onClick={() => setPaymentsCurrentPage(p => Math.max(1, p - 1))} disabled={paymentsCurrentPage === 1}>Previous</Button>
                     <span className="text-sm text-muted-foreground">Page {paymentsCurrentPage} of {totalPaymentPages > 0 ? totalPaymentPages : 1}</span>
