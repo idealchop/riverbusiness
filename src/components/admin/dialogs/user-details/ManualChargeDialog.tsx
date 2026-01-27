@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DocumentReference, updateDoc, arrayUnion, serverTimestamp, doc, collection } from 'firebase/firestore';
+import { DocumentReference, updateDoc, arrayUnion, doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { ManualCharge } from '@/lib/types';
 import { useFirestore } from '@/firebase';
@@ -33,7 +33,7 @@ export function ManualChargeDialog({ isOpen, onOpenChange, userDocRef }: ManualC
         if (!userDocRef || !firestore) return;
         const newCharge: Omit<ManualCharge, 'id'> = {
             ...values,
-            dateAdded: serverTimestamp(),
+            dateAdded: new Date(),
         };
         await updateDoc(userDocRef, { pendingCharges: arrayUnion({ ...newCharge, id: doc(collection(firestore, '_')).id }) });
         toast({ title: "Charge Added", description: "This will be included in the next invoice." });
