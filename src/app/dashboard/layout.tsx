@@ -154,20 +154,14 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    // Wait until both authentication and user document loading are complete
-    if (isUserLoading || isUserDocLoading) {
-      return;
-    }
-
-    // If authentication is done and there's no authenticated user, redirect to login
+    if (isUserLoading) return;
+  
     if (!authUser) {
       router.push('/login');
       return;
     }
-
-    // If the user is authenticated but their Firestore document doesn't exist,
-    // they need to claim their account.
-    if (authUser && !user) {
+  
+    if (user === null && !isUserDocLoading) {
       router.push('/claim-account');
     }
   }, [authUser, user, isUserLoading, isUserDocLoading, router]);
@@ -240,7 +234,7 @@ export default function DashboardLayout({
     setIsSubmittingProof(true);
     setUploadProgress(0);
     
-    const filePath = `user_proofs/${authUser.uid}/${Date.now()}-${paymentProofFile.name}`;
+    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${Date.now()}-${paymentProofFile.name}`;
     const metadata = {
         customMetadata: {
             paymentId: selectedInvoice.id,
@@ -249,7 +243,6 @@ export default function DashboardLayout({
     };
 
     try {
-        // The client only uploads the file. The backend will handle all database updates.
         await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
         
         toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });

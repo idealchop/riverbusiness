@@ -39,7 +39,7 @@ service firebase.storage {
     }
 
     // Users can upload their own payment proofs.
-    match /user_proofs/{userId}/{fileName} {
+    match /users/{userId}/payments/{fileName} {
        allow write: if request.auth.uid == userId;
     }
     

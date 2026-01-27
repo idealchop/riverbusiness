@@ -414,8 +414,8 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Handle user-uploaded proofs of payment (New Robust Flow)
-    if (filePath.startsWith("user_proofs/") && customMetadata?.paymentId) {
+    // Handle user-uploaded proofs of payment
+    if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
         const { userId, paymentId } = customMetadata;
 
         if (!userId || !paymentId) {
@@ -433,8 +433,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
 
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
         
-        // Notify the user that their payment is under review.
-        // onpaymentupdate will notify the admin separately.
         await createNotification(userId, {
             type: 'payment',
             title: 'Payment Under Review',
