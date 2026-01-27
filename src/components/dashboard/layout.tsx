@@ -253,9 +253,14 @@ export default function DashboardLayout({
     setIsSubmittingProof(true);
     setUploadProgress(0);
     
-    // Ensure invoice exists before upload
     const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-    await setDoc(paymentRef, { id: selectedInvoice.id, date: selectedInvoice.date, description: selectedInvoice.description, amount: selectedInvoice.amount, status: selectedInvoice.status }, { merge: true });
+    await setDoc(paymentRef, { 
+        id: selectedInvoice.id, 
+        date: selectedInvoice.date, 
+        description: selectedInvoice.description, 
+        amount: selectedInvoice.amount, 
+        status: 'Pending Review' // Initially set to pending, backend will confirm
+    }, { merge: true });
 
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${Date.now()}-${paymentProofFile.name}`;
     const metadata = {
@@ -269,7 +274,8 @@ export default function DashboardLayout({
         await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
         
         toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
-        setIsPaymentDialogOpen(false);
+        // Not closing the dialog automatically anymore based on user request.
+        // setIsPaymentDialogOpen(false); 
 
     } catch (error: any) {
         console.error("Proof upload failed", error);
@@ -282,6 +288,10 @@ export default function DashboardLayout({
         setIsSubmittingProof(false);
         setUploadProgress(0);
         setPaymentProofFile(null);
+        if (paymentProofPreview) {
+            URL.revokeObjectURL(paymentProofPreview);
+        }
+        setPaymentProofPreview(null);
     }
   };
 
@@ -777,5 +787,3 @@ export default function DashboardLayout({
       </div>
   );
 }
-
-    
