@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AppUser, Delivery, WaterStation, Payment, SanitationVisit, RefillRequest, RefillRequestStatus, Notification, DispenserReport, Transaction, TopUpRequest, ManualCharge } from '@/lib/types';
-import { format, formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { format, formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, subMonths, getYear, getMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -118,7 +118,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isUploadingProof, setIsUploadingProof] = useState(false);
     const [deliveriesCurrentPage, setDeliveriesCurrentPage] = useState(1);
     const DELIVERIES_PER_PAGE = 5;
-
+    const [paymentsCurrentPage, setPaymentsCurrentPage] = useState(1);
+    const PAYMENTS_PER_PAGE = 5;
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -144,6 +145,79 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         const startIndex = (deliveriesCurrentPage - 1) * DELIVERIES_PER_PAGE;
         return userDeliveriesData.slice(startIndex, startIndex + DELIVERIES_PER_PAGE);
     }, [userDeliveriesData, deliveriesCurrentPage]);
+    
+    const currentMonthInvoice = useMemo(() => {
+        if (!user || !userDeliveriesData) return null;
+    
+        const now = new Date();
+        const cycleStart = startOfMonth(now);
+        const cycleEnd = endOfMonth(now);
+        const monthsToBill = 1;
+    
+        const deliveriesThisCycle = userDeliveriesData.filter(d => {
+            const deliveryDate = toSafeDate(d.date);
+            return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
+        });
+        const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    
+        let estimatedCost = 0;
+        const userCreationDate = toSafeDate(user.createdAt);
+        const isFirstMonth = userCreationDate ? getYear(userCreationDate) === getYear(now) && getMonth(userCreationDate) === getMonth(now) : false;
+    
+        if (isFirstMonth && user.customPlanDetails) {
+            if (user.customPlanDetails.gallonPaymentType === 'One-Time') estimatedCost += user.customPlanDetails.gallonPrice || 0;
+            if (user.customPlanDetails.dispenserPaymentType === 'One-Time') estimatedCost += user.customPlanDetails.dispenserPrice || 0;
+        }
+    
+        let monthlyEquipmentCost = 0;
+        if (user.customPlanDetails?.gallonPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+        if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
+        
+        estimatedCost += monthlyEquipmentCost * monthsToBill;
+    
+        if (user.plan?.isConsumptionBased) {
+            estimatedCost += consumedLitersThisCycle * (user.plan.price || 0);
+        } else {
+            estimatedCost += user.plan?.price || 0;
+        }
+    
+        const pendingChargesTotal = (user.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
+        estimatedCost += pendingChargesTotal;
+    
+        return {
+            id: `INV-EST-${user.id.substring(0, 5)}-${format(now, 'yyyyMM')}`,
+            date: new Date().toISOString(),
+            description: `Estimated bill for ${format(now, 'MMMM yyyy')}`,
+            amount: estimatedCost,
+            status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
+        };
+    }, [user, userDeliveriesData]);
+
+    const showCurrentMonthInvoice = useMemo(() => {
+        if (!currentMonthInvoice || !userPaymentsData) return false;
+        return !userPaymentsData.some(inv => inv.description === currentMonthInvoice.description);
+      }, [currentMonthInvoice, userPaymentsData]);
+    
+      const allPayments = useMemo(() => {
+        const invoices = userPaymentsData ? [...userPaymentsData] : [];
+        if (showCurrentMonthInvoice && currentMonthInvoice) {
+          invoices.unshift(currentMonthInvoice);
+        }
+        return invoices
+          .sort((a, b) => {
+            const dateA = toSafeDate(a.date)!;
+            const dateB = toSafeDate(b.date)!;
+            return dateB.getTime() - dateA.getTime();
+          });
+      }, [userPaymentsData, showCurrentMonthInvoice, currentMonthInvoice]);
+    
+      const totalPaymentPages = Math.ceil(allPayments.length / PAYMENTS_PER_PAGE);
+    
+      const paginatedPayments = useMemo(() => {
+        const startIndex = (paymentsCurrentPage - 1) * PAYMENTS_PER_PAGE;
+        return allPayments.slice(startIndex, startIndex + PAYMENTS_PER_PAGE);
+      }, [allPayments, paymentsCurrentPage]);
+
 
     useEffect(() => {
         if (isCreateDeliveryOpen) {
@@ -186,22 +260,23 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
 
             const deliveryRef = doc(userDocRef, 'deliveries', deliveryId);
 
-            const deliveryData = {
+            const deliveryData:Partial<Delivery> = {
                 ...restOfValues,
                 id: deliveryId,
                 userId: user.id,
                 date: values.date.toISOString(),
             };
 
-            await setDoc(deliveryRef, deliveryData, { merge: true });
-
             if (proofFile) {
                 setIsUploadingProof(true);
                 setUploadProgress(0);
                 const filePath = `admin_uploads/${auth.currentUser.uid}/proofs_for/${user.id}/${deliveryId}-${Date.now()}-${proofFile.name}`;
-                await uploadFileWithProgress(storage, auth, filePath, proofFile, {}, setUploadProgress);
-                toast({ title: 'Proof upload in progress...' });
+                const downloadURL = await uploadFileWithProgress(storage, auth, filePath, proofFile, {}, setUploadProgress);
+                deliveryData.proofOfDeliveryUrl = downloadURL;
+                toast({ title: 'Proof upload complete.' });
             }
+
+            await setDoc(deliveryRef, deliveryData, { merge: true });
 
             toast({ title: deliveryToEdit ? "Delivery Updated" : "Delivery Created" });
             setIsCreateDeliveryOpen(false);
@@ -290,6 +365,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         }
     };
     
+    const copyToClipboard = (text: string, label: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+          toast({ title: `${label} Copied!`, description: 'The ID has been copied to your clipboard.' });
+        });
+    };
+
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -485,18 +566,32 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                             </div>
                                         )}
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Invoice ID</TableHead><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                                             <TableBody>
-                                                {(userPaymentsData || []).map(payment => (
-                                                    <TableRow key={payment.id}>
-                                                        <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
-                                                        <TableCell>{payment.description}</TableCell>
-                                                        <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
-                                                        <TableCell><Badge>{payment.status}</Badge></TableCell>
-                                                    </TableRow>
-                                                ))}
+                                                {paginatedPayments.map(payment => {
+                                                    const isEstimated = payment.id.startsWith('INV-EST');
+                                                    return (
+                                                        <TableRow key={payment.id} className={cn(isEstimated && 'bg-blue-50')}>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-mono text-xs">{payment.id}</span>
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(payment.id, 'Invoice ID')}><Copy className="h-3 w-3"/></Button>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
+                                                            <TableCell>{payment.description}</TableCell>
+                                                            <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
+                                                            <TableCell><Badge variant={isEstimated ? 'outline' : 'default'} className={cn(isEstimated && 'border-blue-500 text-blue-600')}>{isEstimated ? 'Estimated' : payment.status}</Badge></TableCell>
+                                                        </TableRow>
+                                                    )
+                                                })}
                                             </TableBody>
                                         </Table>
+                                        <div className="flex items-center justify-end space-x-2 pt-4">
+                                            <Button variant="outline" size="sm" onClick={() => setPaymentsCurrentPage(p => Math.max(1, p - 1))} disabled={paymentsCurrentPage === 1}>Previous</Button>
+                                            <span className="text-sm text-muted-foreground">Page {paymentsCurrentPage} of {totalPaymentPages > 0 ? totalPaymentPages : 1}</span>
+                                            <Button variant="outline" size="sm" onClick={() => setPaymentsCurrentPage(p => Math.min(totalPaymentPages, p + 1))} disabled={paymentsCurrentPage === totalPaymentPages || totalPaymentPages === 0}>Next</Button>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
