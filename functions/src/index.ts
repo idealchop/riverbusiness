@@ -1,4 +1,5 @@
 
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -123,14 +124,6 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             // Optional: Add error handling, like sending a notification to the admin
             return;
         }
-
-    } else if (userData?.plan?.isPrepaid) {
-        // For Prepaid plans, deduct from their own liter balance
-        const litersToDeduct = containerToLiter(delivery.volumeContainers);
-        const userRef = db.collection('users').doc(userId);
-        await userRef.update({
-            totalConsumptionLiters: increment(-litersToDeduct)
-        });
     }
 
     // Always notify the user receiving the delivery
@@ -352,6 +345,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   const fileBucket = event.data.bucket;
   const filePath = event.data.name;
   const contentType = event.data.contentType;
+  const customMetadata = event.data.metadata?.customMetadata;
 
   if (!filePath || contentType?.startsWith('application/x-directory')) {
     logger.log(`Ignoring event for folder: ${filePath}`);
@@ -418,21 +412,28 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
+    // Handle user-uploaded payment proofs using metadata
+    if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
+        const { userId, paymentId } = customMetadata;
 
-    if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const paymentId = path.basename(filePath).split('-')[0];
+        if (!userId || !paymentId) {
+            logger.error(`Missing userId or paymentId in metadata for file: ${filePath}`);
+            return;
+        }
+
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
-        await paymentRef.set({
+        // The client-side already set the status to "Pending Review".
+        // We just need to add the URL.
+        await paymentRef.update({
             proofOfPaymentUrl: url,
-            status: "Pending Review",
-        }, { merge: true });
+        });
 
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
         
+        // Notify the user that their payment is under review.
+        // The admin is notified separately by the onpaymentupdate trigger.
         await createNotification(userId, {
             type: 'payment',
             title: 'Payment Under Review',
@@ -440,20 +441,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             data: { paymentId: paymentId }
         });
 
-        // Also notify the admin
-        const adminId = await getAdminId();
-        if (adminId) {
-            const userDoc = await db.collection('users').doc(userId).get();
-            const userData = userDoc.data();
-            if (userData) {
-                 await createNotification(adminId, {
-                    type: 'payment',
-                    title: 'Payment for Review',
-                    description: `${userData.businessName} (ID: ${userData.clientId}) submitted payment proof.`,
-                    data: { userId: userId, paymentId: paymentId }
-                });
-            }
-        }
         return;
     }
     
