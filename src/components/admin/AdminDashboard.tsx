@@ -3742,7 +3742,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                         <FormControl><SelectTrigger><SelectValue placeholder="Select a plan..." /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             {planOptions.map(plan => (
-                                                                <SelectItem key={plan.name} value={plan.name}>{plan.name} {plan.price > 0 && !plan.isConsumptionBased && `(P${plan.price}/mo)`} {plan.isConsumptionBased && `(P${plan.price}/L)`}</SelectItem>
+                                                                <SelectItem key={plan.name} value={plan.name}>
+                                                                    {plan.name} {plan.isConsumptionBased && `(P${plan.price}/L)`}
+                                                                </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -3856,4 +3858,5 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
 
