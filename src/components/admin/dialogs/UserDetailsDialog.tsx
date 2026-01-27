@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -113,6 +114,10 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [contractFile, setContractFile] = useState<File | null>(null);
     const [isUploadingContract, setIsUploadingContract] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [proofToViewUrl, setProofToViewUrl] = useState<string | null>(null);
+    const [proofFile, setProofFile] = useState<File | null>(null);
+    const [isUploadingProof, setIsUploadingProof] = useState(false);
+
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -134,6 +139,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         } else {
             deliveryForm.reset({ status: 'Pending', volumeContainers: 1, date: new Date(), adminNotes: '' });
         }
+        setProofFile(null);
     }, [isCreateDeliveryOpen, deliveryToEdit, deliveryForm]);
     
     const handleAssignStation = async (stationId: string) => {
@@ -143,19 +149,38 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     };
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
-        if (!userDocRef) return;
-        const deliveryData = { ...values, userId: user.id, date: values.date.toISOString() };
-        const deliveriesCol = collection(userDocRef, 'deliveries');
-        if (deliveryToEdit) {
-            await setDoc(doc(deliveriesCol, deliveryToEdit.id), deliveryData);
-            toast({ title: "Delivery Updated" });
-        } else {
-            const newDocRef = doc(deliveriesCol);
-            await setDoc(newDocRef, {...deliveryData, id: newDocRef.id});
-            toast({ title: "Delivery Created" });
+        if (!userDocRef || !auth?.currentUser || !storage) return;
+
+        try {
+            const deliveryData = { ...values, userId: user.id, date: values.date.toISOString() };
+            const deliveriesCol = collection(userDocRef, 'deliveries');
+            let deliveryId = deliveryToEdit?.id;
+
+            if (deliveryToEdit) {
+                await setDoc(doc(deliveriesCol, deliveryToEdit.id), deliveryData);
+            } else {
+                const newDocRef = doc(deliveriesCol);
+                deliveryId = newDocRef.id;
+                await setDoc(newDocRef, {...deliveryData, id: newDocRef.id});
+            }
+
+            if (proofFile && deliveryId) {
+                setIsUploadingProof(true);
+                const filePath = `admin_uploads/${auth.currentUser.uid}/proofs_for/${user.id}/${deliveryId}-${Date.now()}-${proofFile.name}`;
+                await uploadFileWithProgress(storage, auth, filePath, proofFile, {}, setUploadProgress);
+                toast({ title: "Proof of Delivery Uploaded" });
+            }
+
+            toast({ title: deliveryToEdit ? "Delivery Updated" : "Delivery Created" });
+        } catch (error) {
+            console.error("Delivery operation failed:", error);
+            toast({ variant: 'destructive', title: "Operation Failed" });
+        } finally {
+            setIsCreateDeliveryOpen(false);
+            setDeliveryToEdit(null);
+            setProofFile(null);
+            setIsUploadingProof(false);
         }
-        setIsCreateDeliveryOpen(false);
-        setDeliveryToEdit(null);
     };
 
     const handleManualChargeSubmit = async (values: ManualChargeFormValues) => {
@@ -233,211 +258,222 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     };
     
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>User Account Management</DialogTitle>
-                    <DialogDescription>View user details and perform administrative actions.</DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="pr-6 -mr-6 flex-1">
-                    <Tabs defaultValue="overview">
-                         <TabsList>
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-                            <TabsTrigger value="billing">Billing</TabsTrigger>
-                            <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
-                         </TabsList>
-                         <TabsContent value="overview" className="py-6 space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Client Profile</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-16 w-16">
-                                            <AvatarImage src={user.photoURL || undefined} alt={user.name}/>
-                                            <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <h3 className="text-lg font-semibold">{user.businessName}</h3>
-                                            <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
+        <>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>User Account Management</DialogTitle>
+                        <DialogDescription>View user details and perform administrative actions.</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="pr-6 -mr-6 flex-1">
+                        <Tabs defaultValue="overview">
+                            <TabsList>
+                                <TabsTrigger value="overview">Overview</TabsTrigger>
+                                <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
+                                <TabsTrigger value="billing">Billing</TabsTrigger>
+                                <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="overview" className="py-6 space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Client Profile</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-16 w-16">
+                                                <AvatarImage src={user.photoURL || undefined} alt={user.name}/>
+                                                <AvatarFallback>{user.businessName?.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <h3 className="text-lg font-semibold">{user.businessName}</h3>
+                                                <p className="text-sm text-muted-foreground">{user.name} - {user.clientId}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4">
-                                        <div><span className="font-semibold">Email:</span> {user.email}</div>
-                                        <div><span className="font-semibold">Contact:</span> {user.contactNumber}</div>
-                                        <div className="md:col-span-2"><span className="font-semibold">Address:</span> {user.address}</div>
-                                        <div><span className="font-semibold">Account Type:</span> {user.accountType}</div>
-                                        {user.accountType === 'Branch' && user.parentId && <div><span className="font-semibold">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm pt-4">
+                                            <div><span className="font-semibold">Email:</span> {user.email}</div>
+                                            <div><span className="font-semibold">Contact:</span> {user.contactNumber}</div>
+                                            <div className="md:col-span-2"><span className="font-semibold">Address:</span> {user.address}</div>
+                                            <div><span className="font-semibold">Account Type:</span> {user.accountType}</div>
+                                            {user.accountType === 'Branch' && user.parentId && <div><span className="font-semibold">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
 
-                                    </div>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Plan & Station</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div>
-                                        <h4 className="font-medium">Current Plan</h4>
-                                        <p className="text-sm text-muted-foreground">{user.plan?.name || 'Not set'}</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Assigned Water Station</Label>
-                                        <Select onValueChange={handleAssignStation} defaultValue={user.assignedWaterStationId}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Assign a station..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {(waterStations || []).map(station => (
-                                                    <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Plan & Station</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div>
+                                            <h4 className="font-medium">Current Plan</h4>
+                                            <p className="text-sm text-muted-foreground">{user.plan?.name || 'Not set'}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Assigned Water Station</Label>
+                                            <Select onValueChange={handleAssignStation} defaultValue={user.assignedWaterStationId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Assign a station..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {(waterStations || []).map(station => (
+                                                        <SelectItem key={station.id} value={station.id}>{station.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Contract Management</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center gap-4 p-4 border rounded-lg">
+                                            {user.currentContractUrl ? (
+                                                <>
+                                                    <FileText className="h-6 w-6"/>
+                                                    <div className="flex-1">
+                                                        <p>Contract on File</p>
+                                                        <p className="text-xs text-muted-foreground">Uploaded on: {user.contractUploadedDate ? toSafeDate(user.contractUploadedDate)?.toLocaleDateString() : 'N/A'}</p>
+                                                    </div>
+                                                    <Button asChild variant="outline">
+                                                        <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4"/> View</a>
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <div className="text-center w-full text-muted-foreground text-sm">No contract uploaded.</div>
+                                            )}
+                                        </div>
+                                        <div className="mt-4">
+                                            <Label>Upload New/Updated Contract</Label>
+                                            <div className="flex gap-2">
+                                                <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} disabled={isUploadingContract} />
+                                                <Button onClick={handleContractUpload} disabled={!contractFile || isUploadingContract}>{isUploadingContract ? 'Uploading...' : 'Upload'}</Button>
+                                            </div>
+                                            {isUploadingContract && <Progress value={uploadProgress} className="mt-2" />}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="deliveries" className="py-6 space-y-6">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle>Delivery History</CardTitle>
+                                            <CardDescription>Log of all deliveries for this user.</CardDescription>
+                                        </div>
+                                        <Button onClick={() => setIsCreateDeliveryOpen(true)}>
+                                            <PlusCircle className="mr-2 h-4 w-4"/> Create Delivery
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Tracking #</TableHead>
+                                                    <TableHead>Date</TableHead>
+                                                    <TableHead>Volume</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>Proof</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {(userDeliveriesData || []).map(delivery => (
+                                                    <TableRow key={delivery.id}>
+                                                        <TableCell className="font-mono text-xs">{delivery.id}</TableCell>
+                                                        <TableCell>{toSafeDate(delivery.date)?.toLocaleDateString()}</TableCell>
+                                                        <TableCell>{delivery.volumeContainers} containers</TableCell>
+                                                        <TableCell><Badge>{delivery.status}</Badge></TableCell>
+                                                        <TableCell>
+                                                            {delivery.proofOfDeliveryUrl ? (
+                                                                <Button variant="link" className="p-0 h-auto" onClick={() => setProofToViewUrl(delivery.proofOfDeliveryUrl!)}>View</Button>
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs">None</span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="sm" onClick={() => { setDeliveryToEdit(delivery); setIsCreateDeliveryOpen(true); }}><Edit className="h-4 w-4"/></Button>
+                                                        </TableCell>
+                                                    </TableRow>
                                                 ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="billing" className="py-6 space-y-6">
                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Contract Management</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                     <div className="flex items-center gap-4 p-4 border rounded-lg">
-                                        {user.currentContractUrl ? (
-                                            <>
-                                                <FileText className="h-6 w-6"/>
-                                                <div className="flex-1">
-                                                    <p>Contract on File</p>
-                                                    <p className="text-xs text-muted-foreground">Uploaded on: {user.contractUploadedDate ? toSafeDate(user.contractUploadedDate)?.toLocaleDateString() : 'N/A'}</p>
-                                                </div>
-                                                <Button asChild variant="outline">
-                                                    <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4"/> View</a>
-                                                </Button>
-                                            </>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle>Billing & Invoices</CardTitle>
+                                            <CardDescription>Manage invoices and charges.</CardDescription>
+                                        </div>
+                                        {user.accountType === 'Parent' ? (
+                                            <Button onClick={() => setIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Top-up Credits</Button>
                                         ) : (
-                                            <div className="text-center w-full text-muted-foreground text-sm">No contract uploaded.</div>
+                                            <Button onClick={() => setIsManualChargeOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Manual Charge</Button>
                                         )}
-                                    </div>
-                                    <div className="mt-4">
-                                        <Label>Upload New/Updated Contract</Label>
-                                        <div className="flex gap-2">
-                                            <Input type="file" onChange={(e) => setContractFile(e.target.files?.[0] || null)} disabled={isUploadingContract} />
-                                            <Button onClick={handleContractUpload} disabled={!contractFile || isUploadingContract}>{isUploadingContract ? 'Uploading...' : 'Upload'}</Button>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {user.accountType === 'Parent' && (
+                                            <div className="mb-4">
+                                                <p className="text-sm text-muted-foreground">Current Credit Balance</p>
+                                                <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits || 0).toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {(userPaymentsData || []).map(payment => (
+                                                    <TableRow key={payment.id}>
+                                                        <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
+                                                        <TableCell>{payment.description}</TableCell>
+                                                        <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
+                                                        <TableCell><Badge>{payment.status}</Badge></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="sanitation" className="py-6 space-y-6">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle>Sanitation Schedule</CardTitle>
+                                            <CardDescription>Manage office sanitation visits.</CardDescription>
                                         </div>
-                                        {isUploadingContract && <Progress value={uploadProgress} className="mt-2" />}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                         </TabsContent>
-                         <TabsContent value="deliveries" className="py-6 space-y-6">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle>Delivery History</CardTitle>
-                                        <CardDescription>Log of all deliveries for this user.</CardDescription>
-                                    </div>
-                                    <Button onClick={() => setIsCreateDeliveryOpen(true)}>
-                                        <PlusCircle className="mr-2 h-4 w-4"/> Create Delivery
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Tracking #</TableHead>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Volume</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {(userDeliveriesData || []).map(delivery => (
-                                                <TableRow key={delivery.id}>
-                                                    <TableCell className="font-mono text-xs">{delivery.id}</TableCell>
-                                                    <TableCell>{toSafeDate(delivery.date)?.toLocaleDateString()}</TableCell>
-                                                    <TableCell>{delivery.volumeContainers} containers</TableCell>
-                                                    <TableCell><Badge>{delivery.status}</Badge></TableCell>
-                                                    <TableCell className="text-right">
-                                                         <Button variant="ghost" size="sm" onClick={() => { setDeliveryToEdit(delivery); setIsCreateDeliveryOpen(true); }}><Edit className="h-4 w-4"/></Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                         </TabsContent>
-                         <TabsContent value="billing" className="py-6 space-y-6">
-                           <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                     <div>
-                                        <CardTitle>Billing & Invoices</CardTitle>
-                                        <CardDescription>Manage invoices and charges.</CardDescription>
-                                    </div>
-                                     {user.accountType === 'Parent' ? (
-                                        <Button onClick={() => setIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Top-up Credits</Button>
-                                     ) : (
-                                        <Button onClick={() => setIsManualChargeOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Manual Charge</Button>
-                                     )}
-                                </CardHeader>
-                                 <CardContent>
-                                    {user.accountType === 'Parent' && (
-                                        <div className="mb-4">
-                                            <p className="text-sm text-muted-foreground">Current Credit Balance</p>
-                                            <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits || 0).toLocaleString()}</p>
-                                        </div>
-                                    )}
-                                    <Table>
-                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-                                        <TableBody>
-                                            {(userPaymentsData || []).map(payment => (
-                                                 <TableRow key={payment.id}>
-                                                    <TableCell>{toSafeDate(payment.date)?.toLocaleDateString()}</TableCell>
-                                                    <TableCell>{payment.description}</TableCell>
-                                                    <TableCell>₱{payment.amount.toLocaleString()}</TableCell>
-                                                    <TableCell><Badge>{payment.status}</Badge></TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                 </CardContent>
-                            </Card>
-                         </TabsContent>
-                         <TabsContent value="sanitation" className="py-6 space-y-6">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle>Sanitation Schedule</CardTitle>
-                                        <CardDescription>Manage office sanitation visits.</CardDescription>
-                                    </div>
-                                    <Button onClick={() => setIsCreateSanitationOpen(true)}>
-                                        <PlusCircle className="mr-2 h-4 w-4"/> Schedule Visit
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Scheduled Date</TableHead><TableHead>Status</TableHead><TableHead>Assigned To</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                                        <TableBody>
-                                            {(sanitationVisitsData || []).map(visit => (
-                                                <TableRow key={visit.id}>
-                                                    <TableCell>{toSafeDate(visit.scheduledDate)?.toLocaleDateString()}</TableCell>
-                                                    <TableCell><Badge>{visit.status}</Badge></TableCell>
-                                                    <TableCell>{visit.assignedTo}</TableCell>
-                                                    <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => { setSelectedSanitationVisit(visit); setIsSanitationHistoryOpen(true); }}><Eye className="h-4 w-4"/></Button></TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                         </TabsContent>
-                    </Tabs>
-                </ScrollArea>
-                <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-                </DialogFooter>
-            </DialogContent>
+                                        <Button onClick={() => setIsCreateSanitationOpen(true)}>
+                                            <PlusCircle className="mr-2 h-4 w-4"/> Schedule Visit
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Scheduled Date</TableHead><TableHead>Status</TableHead><TableHead>Assigned To</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {(sanitationVisitsData || []).map(visit => (
+                                                    <TableRow key={visit.id}>
+                                                        <TableCell>{toSafeDate(visit.scheduledDate)?.toLocaleDateString()}</TableCell>
+                                                        <TableCell><Badge>{visit.status}</Badge></TableCell>
+                                                        <TableCell>{visit.assignedTo}</TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => { setSelectedSanitationVisit(visit); setIsSanitationHistoryOpen(true); }}><Eye className="h-4 w-4"/></Button></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
+                    </ScrollArea>
+                    <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Create/Edit Delivery Dialog */}
             <Dialog open={isCreateDeliveryOpen} onOpenChange={setIsCreateDeliveryOpen}>
                 <DialogContent>
@@ -453,35 +489,35 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         )}
                         <div>
                             <Label>Delivery Date</Label>
-                             <Popover>
+                            <Popover>
                                 <PopoverTrigger asChild>
-                                  <Button
+                                <Button
                                     variant={"outline"}
                                     className={cn(
-                                      "w-full justify-start text-left font-normal",
-                                      !deliveryForm.watch('date') && "text-muted-foreground"
+                                    "w-full justify-start text-left font-normal",
+                                    !deliveryForm.watch('date') && "text-muted-foreground"
                                     )}
-                                  >
+                                >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {deliveryForm.watch('date') ? format(deliveryForm.watch('date'), "PPP") : <span>Pick a date</span>}
-                                  </Button>
+                                </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
-                                  <Calendar
+                                <Calendar
                                     mode="single"
                                     selected={deliveryForm.watch('date')}
                                     onSelect={(date) => deliveryForm.setValue('date', date as Date)}
                                     initialFocus
-                                  />
+                                />
                                 </PopoverContent>
-                              </Popover>
+                            </Popover>
                         </div>
-                         <div>
+                        <div>
                             <Label htmlFor="volumeContainers">Volume (containers)</Label>
                             <Input id="volumeContainers" type="number" {...deliveryForm.register('volumeContainers')} />
                             {deliveryForm.formState.errors.volumeContainers && <p className="text-sm text-destructive">{deliveryForm.formState.errors.volumeContainers.message}</p>}
                         </div>
-                         <div>
+                        <div>
                             <Label htmlFor="status">Status</Label>
                             <Select onValueChange={(value) => deliveryForm.setValue('status', value as any)} defaultValue={deliveryForm.getValues('status')}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -496,22 +532,45 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             <Label htmlFor="adminNotes">Admin Notes</Label>
                             <Textarea id="adminNotes" {...deliveryForm.register('adminNotes')} />
                         </div>
+                        {deliveryToEdit && (
+                            <div>
+                                <Label>Proof of Delivery</Label>
+                                {deliveryToEdit.proofOfDeliveryUrl && !proofFile ? (
+                                     <div className="flex items-center gap-2 text-sm p-2 bg-muted rounded-md">
+                                        <FileText className="h-4 w-4" />
+                                        <a href={deliveryToEdit.proofOfDeliveryUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex-1 truncate">View current proof</a>
+                                    </div>
+                                ) : <p className="text-xs text-muted-foreground mt-1">No proof uploaded yet.</p>}
+                                <Input 
+                                    id="proof-upload"
+                                    type="file"
+                                    onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                                    className="mt-2"
+                                    disabled={isUploadingProof}
+                                />
+                                {isUploadingProof && <Progress value={uploadProgress} className="mt-2 h-1" />}
+                                {proofFile && <p className="text-xs text-muted-foreground mt-1">New file selected: {proofFile.name}</p>}
+                            </div>
+                        )}
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setIsCreateDeliveryOpen(false)}>Cancel</Button>
-                            <Button type="submit">Save Delivery</Button>
+                            <Button type="submit" disabled={isUploadingProof}>
+                                {isUploadingProof ? 'Uploading...' : 'Save Delivery'}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
+
             {/* Manual Charge Dialog */}
-             <Dialog open={isManualChargeOpen} onOpenChange={setIsManualChargeOpen}>
+            <Dialog open={isManualChargeOpen} onOpenChange={setIsManualChargeOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Add Manual Charge</DialogTitle></DialogHeader>
                     <form onSubmit={manualChargeForm.handleSubmit(handleManualChargeSubmit)} className="space-y-4 py-4">
                         <div>
                             <Label htmlFor="chargeDesc">Description</Label>
                             <Input id="chargeDesc" {...manualChargeForm.register('description')} />
-                             {manualChargeForm.formState.errors.description && <p className="text-sm text-destructive">{manualChargeForm.formState.errors.description.message}</p>}
+                            {manualChargeForm.formState.errors.description && <p className="text-sm text-destructive">{manualChargeForm.formState.errors.description.message}</p>}
                         </div>
                         <div>
                             <Label htmlFor="chargeAmount">Amount (PHP)</Label>
@@ -519,25 +578,25 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             {manualChargeForm.formState.errors.amount && <p className="text-sm text-destructive">{manualChargeForm.formState.errors.amount.message}</p>}
                         </div>
                         <DialogFooter>
-                             <Button type="button" variant="ghost" onClick={() => setIsManualChargeOpen(false)}>Cancel</Button>
-                             <Button type="submit">Add Charge</Button>
+                            <Button type="button" variant="ghost" onClick={() => setIsManualChargeOpen(false)}>Cancel</Button>
+                            <Button type="submit">Add Charge</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
             {/* Top-up Dialog */}
-             <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
+            <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Top-up Credits</DialogTitle></DialogHeader>
                     <form onSubmit={topUpForm.handleSubmit(handleTopUpSubmit)} className="space-y-4 py-4">
-                         <div>
+                        <div>
                             <Label htmlFor="topupAmount">Amount (PHP)</Label>
                             <Input id="topupAmount" type="number" {...topUpForm.register('amount')} />
-                             {topUpForm.formState.errors.amount && <p className="text-sm text-destructive">{topUpForm.formState.errors.amount.message}</p>}
+                            {topUpForm.formState.errors.amount && <p className="text-sm text-destructive">{topUpForm.formState.errors.amount.message}</p>}
                         </div>
-                         <DialogFooter>
-                             <Button type="button" variant="ghost" onClick={() => setIsTopUpOpen(false)}>Cancel</Button>
-                             <Button type="submit">Add Credits</Button>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIsTopUpOpen(false)}>Cancel</Button>
+                            <Button type="submit">Add Credits</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
@@ -550,12 +609,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Scheduled Date</Label>
-                                 <Popover>
+                                <Popover>
                                     <PopoverTrigger asChild>
-                                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !sanitationVisitForm.watch('scheduledDate') && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{sanitationVisitForm.watch('scheduledDate') ? format(sanitationVisitForm.watch('scheduledDate'), "PPP") : <span>Pick a date</span>}</Button>
+                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !sanitationVisitForm.watch('scheduledDate') && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{sanitationVisitForm.watch('scheduledDate') ? format(sanitationVisitForm.watch('scheduledDate'), "PPP") : <span>Pick a date</span>}</Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={sanitationVisitForm.watch('scheduledDate')} onSelect={(date) => sanitationVisitForm.setValue('scheduledDate', date as Date)} initialFocus/></PopoverContent>
-                                  </Popover>
+                                </Popover>
                             </div>
                             <div>
                                 <Label>Status</Label>
@@ -581,24 +640,30 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><MinusCircle className="h-4 w-4 text-destructive"/></Button>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                     <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserName`)} placeholder="Dispenser Name (e.g., Lobby)" />
                                         <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserCode`)} placeholder="Dispenser Code (Optional)" />
                                     </div>
                                 </CardContent>
                             </Card>
                         ))}
-                         <Button type="button" variant="outline" onClick={() => append({ dispenserName: `Unit #${fields.length + 1}`, checklist: [ { item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' } ] })}><PlusCircle className="mr-2 h-4 w-4"/>Add Another Dispenser</Button>
+                        <Button type="button" variant="outline" onClick={() => append({ dispenserName: `Unit #${fields.length + 1}`, checklist: [ { item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' } ] })}><PlusCircle className="mr-2 h-4 w-4"/>Add Another Dispenser</Button>
 
-                         <DialogFooter className="pt-4">
+                        <DialogFooter className="pt-4">
                             <Button type="button" variant="ghost" onClick={() => setIsCreateSanitationOpen(false)}>Cancel</Button>
                             <Button type="submit">Schedule Visit</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
-        </Dialog>
+            <Dialog open={!!proofToViewUrl} onOpenChange={() => setProofToViewUrl(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Proof of Delivery</DialogTitle>
+                    </DialogHeader>
+                    {proofToViewUrl && <div className="relative w-full aspect-auto h-[70vh]"><Image src={proofToViewUrl} alt="Proof of delivery" layout="fill" className="object-contain rounded-md" /></div>}
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
-
-    
