@@ -235,12 +235,12 @@ export default function DashboardLayout({
   }
 
   const handleProofUpload = async () => {
-    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth || !firestore) return;
+    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth) return;
 
     setIsSubmittingProof(true);
     setUploadProgress(0);
     
-    const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${paymentProofFile.name}`;
+    const filePath = `user_proofs/${authUser.uid}/${Date.now()}-${paymentProofFile.name}`;
     const metadata = {
         customMetadata: {
             paymentId: selectedInvoice.id,
@@ -249,13 +249,7 @@ export default function DashboardLayout({
     };
 
     try {
-        const paymentRef = doc(firestore, "users", authUser.uid, "payments", selectedInvoice.id);
-        
-        await setDoc(paymentRef, {
-            ...selectedInvoice, 
-            status: "Pending Review",
-        }, { merge: true });
-
+        // The client only uploads the file. The backend will handle all database updates.
         await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
         
         toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
@@ -271,6 +265,7 @@ export default function DashboardLayout({
     } finally {
         setIsSubmittingProof(false);
         setUploadProgress(0);
+        setPaymentProofFile(null);
     }
   };
 

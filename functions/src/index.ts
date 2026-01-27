@@ -364,6 +364,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
   };
 
   try {
+    // Handle user profile photo uploads
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -373,6 +374,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
+    // Handle user contract uploads by admin
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
@@ -386,7 +388,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
     
-    // Handle admin-uploaded proofs
+    // Handle admin-uploaded proofs of delivery
     if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
         const parts = filePath.split('/');
         const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
@@ -412,8 +414,8 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Handle user-uploaded payment proofs using metadata
-    if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
+    // Handle user-uploaded proofs of payment (New Robust Flow)
+    if (filePath.startsWith("user_proofs/") && customMetadata?.paymentId) {
         const { userId, paymentId } = customMetadata;
 
         if (!userId || !paymentId) {
@@ -424,23 +426,21 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
-        // The client-side already set the status to "Pending Review".
-        // We just need to add the URL.
         await paymentRef.update({
             proofOfPaymentUrl: url,
+            status: "Pending Review",
         });
 
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
         
         // Notify the user that their payment is under review.
-        // The admin is notified separately by the onpaymentupdate trigger.
+        // onpaymentupdate will notify the admin separately.
         await createNotification(userId, {
             type: 'payment',
             title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} is under review.`,
+            description: `Your payment proof for invoice ${paymentId} has been submitted for review.`,
             data: { paymentId: paymentId }
         });
-
         return;
     }
     
