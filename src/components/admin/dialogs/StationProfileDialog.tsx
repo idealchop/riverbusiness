@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { useAuth, useCollection, useFirestore, useStorage } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useStorage, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, addDoc, deleteDoc, DocumentReference, serverTimestamp } from 'firebase/firestore';
 import { WaterStation, ComplianceReport } from '@/lib/types';
 import { PlusCircle, Trash2, Edit, Eye, MoreHorizontal, FileText, AlertTriangle, Download } from 'lucide-react';
@@ -71,7 +71,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
     const [complianceAttachmentUrl, setComplianceAttachmentUrl] = useState<string | null>(null);
     
     const [complianceRefresher, setComplianceRefresher] = useState(0);
-    const complianceReportsQuery = useMemo(
+    const complianceReportsQuery = useMemoFirebase(
         () => (firestore && station?.id) ? collection(firestore, 'waterStations', station.id, 'complianceReports') : null,
         [firestore, station?.id, complianceRefresher]
     );
