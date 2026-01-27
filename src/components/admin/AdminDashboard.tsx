@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -320,15 +321,31 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const currentMonthInvoice = React.useMemo(() => {
         const userToCalc = userForInvoices || selectedUser;
-        if (!userToCalc) return null;
+        if (!userToCalc || !userDeliveriesData) return null;
     
         const now = new Date();
-        const cycleStart = startOfMonth(now);
-        const cycleEnd = endOfMonth(now);
-        
-        const description = `Bill for ${format(now, 'MMMM yyyy')}`;
-        const invoiceIdSuffix = format(now, 'yyyyMM');
+        const currentYear = getYear(now);
+        const currentMonth = getMonth(now);
     
+        let cycleStart: Date;
+        let cycleEnd: Date;
+        let monthsToBill = 1;
+        let description: string;
+        let invoiceIdSuffix: string;
+    
+        if (currentYear === 2026 && currentMonth === 1) { // Feb 2026
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = endOfMonth(new Date(2026, 0, 1));
+            monthsToBill = 2;
+            description = 'Bill for December 2025 - January 2026';
+            invoiceIdSuffix = '202512-202601';
+        } else {
+            cycleStart = startOfMonth(now);
+            cycleEnd = endOfMonth(now);
+            description = `Bill for ${format(now, 'MMMM yyyy')}`;
+            invoiceIdSuffix = format(now, 'yyyyMM');
+        }
+        
         const deliveriesThisCycle = (userDeliveriesData || []).filter(d => {
             const deliveryDate = new Date(d.date);
             return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
@@ -344,27 +361,42 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (userToCalc.customPlanDetails?.dispenserPaymentType === 'Monthly') {
             monthlyEquipmentCost += (userToCalc.customPlanDetails?.dispenserPrice || 0);
         }
-
+    
+        const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
+    
         if (userToCalc.plan?.isConsumptionBased) {
             const consumptionCost = consumedLitersThisCycle * (userToCalc.plan.price || 0);
-            estimatedCost = consumptionCost + monthlyEquipmentCost;
+            estimatedCost = consumptionCost + equipmentCostForPeriod;
         } else {
-            const planCost = (userToCalc.plan?.price || 0);
-            estimatedCost = planCost + monthlyEquipmentCost;
+            const planCost = (userToCalc.plan?.price || 0) * (monthsToBill > 1 ? 1 : monthsToBill);
+            estimatedCost = planCost + equipmentCostForPeriod;
         }
-
+        
         const pendingChargesTotal = (userToCalc.pendingCharges || []).reduce((sum, charge) => sum + charge.amount, 0);
         estimatedCost += pendingChargesTotal;
     
+        const invoiceId = `INV-${userToCalc.id.substring(0, 5)}-${invoiceIdSuffix}`;
+    
         return {
-            id: `INV-${userToCalc.id.substring(0, 5)}-${invoiceIdSuffix}`,
+            id: invoiceId,
             date: new Date().toISOString(),
             description: description,
             amount: estimatedCost,
             status: 'Upcoming',
+            manualCharges: userToCalc.pendingCharges || [],
         } as Payment;
     
     }, [userForInvoices, selectedUser, userDeliveriesData]);
+
+    const allInvoicesForUser = React.useMemo(() => {
+        const invoices = [...(userPaymentsData || [])];
+        const showCurrentMonthInvoice = currentMonthInvoice && !(userPaymentsData || []).some(inv => inv.id === currentMonthInvoice.id);
+        
+        if (showCurrentMonthInvoice && currentMonthInvoice.amount > 0) {
+            invoices.unshift(currentMonthInvoice);
+        }
+        return invoices.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [userPaymentsData, currentMonthInvoice]);
     
     const consumptionDetails = React.useMemo(() => {
         const now = new Date();
@@ -1138,15 +1170,19 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         if (!userToUpdate || !selectedInvoice || !firestore) return;
     
         const invoiceRef = doc(firestore, 'users', userToUpdate.id, 'payments', selectedInvoice.id);
-    
         const isCurrentMonthVirtualInvoice = selectedInvoice.id === currentMonthInvoice?.id;
     
-        if (newStatus === 'Paid' && isCurrentMonthVirtualInvoice) {
-            const docToCreate = {
+        if (isCurrentMonthVirtualInvoice) {
+            const docToCreate: Payment = {
                 ...selectedInvoice,
-                status: 'Paid',
-                date: serverTimestamp(),
+                status: newStatus,
+                date: serverTimestamp() as any,
+                rejectionReason: newStatus === 'Upcoming' ? rejectionReason : undefined,
             };
+            if (newStatus === 'Paid') {
+                const userRef = doc(firestore, 'users', userToUpdate.id);
+                await updateDoc(userRef, { pendingCharges: deleteField() });
+            }
             await setDoc(invoiceRef, docToCreate);
         } else {
             const updatePayload: any = { status: newStatus };
@@ -1157,31 +1193,13 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             }
             await updateDoc(invoiceRef, updatePayload);
         }
-
-        if (newStatus === 'Paid') {
-            await createNotification(userToUpdate.id, {
-                type: 'payment',
-                title: 'Payment Confirmed',
-                description: `Your payment for invoice ${selectedInvoice.id} has been confirmed. Thank you!`,
-                data: { paymentId: selectedInvoice.id }
-            });
-        } else {
-             await createNotification(userToUpdate.id, {
-                type: 'payment',
-                title: 'Payment Action Required',
-                description: `Your payment for invoice ${selectedInvoice.id} requires attention. Reason: ${rejectionReason || 'Please contact support.'}`,
-                data: { paymentId: selectedInvoice.id }
-            });
-        }
         
         toast({ title: 'Invoice Updated', description: `Invoice status changed to ${newStatus}.` });
     
         setIsManageInvoiceOpen(false);
-        setTimeout(() => {
-            const currentlySelected = userForInvoices;
-            setUserForInvoices(null);
-            setUserForInvoices(currentlySelected);
-        }, 500);
+        const currentlySelected = userForInvoices;
+        setUserForInvoices(null);
+        setTimeout(() => setUserForInvoices(currentlySelected), 100);
         
         setRejectionReason('');
     };
@@ -2014,32 +2032,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentMonthInvoice && (
-                                     <TableRow className="bg-muted/50 font-semibold cursor-pointer hover:bg-muted" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>
-                                        <TableCell>
-                                            <div className="font-medium">{currentMonthInvoice.description}</div>
-                                            <div className="text-xs text-muted-foreground">{format(new Date(currentMonthInvoice.date), 'MMMM yyyy')}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                variant="outline"
-                                                className='bg-blue-100 text-blue-800'
-                                            >{currentMonthInvoice.status}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">₱{currentMonthInvoice.amount.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button size="sm" variant="ghost" onClick={() => { setSelectedInvoice(currentMonthInvoice); setIsManageInvoiceOpen(true); }}>Review Payment</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                                {(userPaymentsData && userPaymentsData.length > 0) ? (
-                                    userPaymentsData.map((invoice) => {
-                                        const safeDate = toSafeDate(invoice.date);
+                                {allInvoicesForUser.length > 0 ? (
+                                    allInvoicesForUser.map((invoice) => {
+                                        const isCurrentEst = currentMonthInvoice?.id === invoice.id;
                                         return (
                                         <TableRow key={invoice.id}>
                                             <TableCell>
                                                 <div className="font-medium">{invoice.description}</div>
-                                                <div className="text-xs text-muted-foreground">{safeDate ? format(safeDate, 'MMMM yyyy') : 'Invalid Date'}</div>
+                                                <div className="text-xs text-muted-foreground">{toSafeDate(invoice.date) ? format(toSafeDate(invoice.date)!, 'MMMM yyyy') : 'Current'}</div>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
@@ -2085,7 +2085,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                         </TableRow>
                                     )})
                                 ) : (
-                                    !currentMonthInvoice &&
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center text-muted-foreground py-10">No invoices found for this user.</TableCell>
                                     </TableRow>

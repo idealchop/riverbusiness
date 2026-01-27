@@ -173,6 +173,39 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
 });
 
 /**
+ * Cloud Function to create notifications when a new payment document is created.
+ * This typically happens when a user submits proof for a new (current month) invoice.
+ */
+export const onpaymentcreate = onDocumentCreated("users/{userId}/payments/{paymentId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const payment = event.data.data();
+
+    // We only care about notifying the admin when a user submits a payment for review.
+    if (payment.status !== 'Pending Review') {
+        return;
+    }
+
+    const adminId = await getAdminId();
+    if (!adminId) return;
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    
+    if (userData) {
+        const adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+            type: 'payment',
+            title: 'Payment for Review',
+            description: `${userData.businessName} (ID: ${userData.clientId}) has submitted a proof of payment.`,
+            data: { userId: userId, paymentId: event.params.paymentId }
+        };
+        await createNotification(adminId, adminNotification);
+    }
+});
+
+
+/**
  * Cloud Function to create notifications when a payment status is updated by an admin.
  */
 export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{paymentId}", async (event) => {
@@ -426,19 +459,14 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
-        await paymentRef.update({
+        await paymentRef.set({
             proofOfPaymentUrl: url,
             status: "Pending Review",
-        });
+        }, { merge: true });
 
         logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
         
-        await createNotification(userId, {
-            type: 'payment',
-            title: 'Payment Under Review',
-            description: `Your payment proof for invoice ${paymentId} has been submitted for review.`,
-            data: { paymentId: paymentId }
-        });
+        // This will trigger onpaymentcreate or onpaymentupdate which handles notifications
         return;
     }
     
