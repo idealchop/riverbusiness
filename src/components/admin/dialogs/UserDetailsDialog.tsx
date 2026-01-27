@@ -434,31 +434,155 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                     <DialogHeader>
                         <DialogTitle>{deliveryToEdit ? 'Edit' : 'Create'} Delivery</DialogTitle>
                     </DialogHeader>
-                    {/* Delivery Form */}
+                    <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
+                        <div>
+                            <Label>Delivery Date</Label>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !deliveryForm.watch('date') && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {deliveryForm.watch('date') ? format(deliveryForm.watch('date'), "PPP") : <span>Pick a date</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    mode="single"
+                                    selected={deliveryForm.watch('date')}
+                                    onSelect={(date) => deliveryForm.setValue('date', date as Date)}
+                                    initialFocus
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                        </div>
+                         <div>
+                            <Label htmlFor="volumeContainers">Volume (containers)</Label>
+                            <Input id="volumeContainers" type="number" {...deliveryForm.register('volumeContainers')} />
+                            {deliveryForm.formState.errors.volumeContainers && <p className="text-sm text-destructive">{deliveryForm.formState.errors.volumeContainers.message}</p>}
+                        </div>
+                         <div>
+                            <Label htmlFor="status">Status</Label>
+                            <Select onValueChange={(value) => deliveryForm.setValue('status', value as any)} defaultValue={deliveryForm.getValues('status')}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                    <SelectItem value="In Transit">In Transit</SelectItem>
+                                    <SelectItem value="Delivered">Delivered</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="adminNotes">Admin Notes</Label>
+                            <Textarea id="adminNotes" {...deliveryForm.register('adminNotes')} />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIsCreateDeliveryOpen(false)}>Cancel</Button>
+                            <Button type="submit">Save Delivery</Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
             {/* Manual Charge Dialog */}
              <Dialog open={isManualChargeOpen} onOpenChange={setIsManualChargeOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Add Manual Charge</DialogTitle></DialogHeader>
-                    {/* Manual Charge Form */}
+                    <form onSubmit={manualChargeForm.handleSubmit(handleManualChargeSubmit)} className="space-y-4 py-4">
+                        <div>
+                            <Label htmlFor="chargeDesc">Description</Label>
+                            <Input id="chargeDesc" {...manualChargeForm.register('description')} />
+                             {manualChargeForm.formState.errors.description && <p className="text-sm text-destructive">{manualChargeForm.formState.errors.description.message}</p>}
+                        </div>
+                        <div>
+                            <Label htmlFor="chargeAmount">Amount (PHP)</Label>
+                            <Input id="chargeAmount" type="number" {...manualChargeForm.register('amount')} />
+                            {manualChargeForm.formState.errors.amount && <p className="text-sm text-destructive">{manualChargeForm.formState.errors.amount.message}</p>}
+                        </div>
+                        <DialogFooter>
+                             <Button type="button" variant="ghost" onClick={() => setIsManualChargeOpen(false)}>Cancel</Button>
+                             <Button type="submit">Add Charge</Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
             {/* Top-up Dialog */}
              <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Top-up Credits</DialogTitle></DialogHeader>
-                   {/* Top Up Form */}
+                    <form onSubmit={topUpForm.handleSubmit(handleTopUpSubmit)} className="space-y-4 py-4">
+                         <div>
+                            <Label htmlFor="topupAmount">Amount (PHP)</Label>
+                            <Input id="topupAmount" type="number" {...topUpForm.register('amount')} />
+                             {topUpForm.formState.errors.amount && <p className="text-sm text-destructive">{topUpForm.formState.errors.amount.message}</p>}
+                        </div>
+                         <DialogFooter>
+                             <Button type="button" variant="ghost" onClick={() => setIsTopUpOpen(false)}>Cancel</Button>
+                             <Button type="submit">Add Credits</Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
             {/* Create Sanitation Visit Dialog */}
             <Dialog open={isCreateSanitationOpen} onOpenChange={setIsCreateSanitationOpen}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader><DialogTitle>Schedule Sanitation Visit</DialogTitle></DialogHeader>
-                    {/* Sanitation Visit Form */}
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>Scheduled Date</Label>
+                                 <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !sanitationVisitForm.watch('scheduledDate') && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{sanitationVisitForm.watch('scheduledDate') ? format(sanitationVisitForm.watch('scheduledDate'), "PPP") : <span>Pick a date</span>}</Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={sanitationVisitForm.watch('scheduledDate')} onSelect={(date) => sanitationVisitForm.setValue('scheduledDate', date as Date)} initialFocus/></PopoverContent>
+                                  </Popover>
+                            </div>
+                            <div>
+                                <Label>Status</Label>
+                                <Select onValueChange={(value) => sanitationVisitForm.setValue('status', value as any)} defaultValue={sanitationVisitForm.getValues('status')}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div>
+                            <Label>Assigned To</Label>
+                            <Input {...sanitationVisitForm.register('assignedTo')} />
+                        </div>
+
+                        {fields.map((field, index) => (
+                            <Card key={field.id}>
+                                <CardHeader className="flex flex-row items-center justify-between py-4">
+                                    <CardTitle className="text-base">Dispenser #{index + 1}</CardTitle>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><MinusCircle className="h-4 w-4 text-destructive"/></Button>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                     <div className="grid grid-cols-2 gap-4">
+                                        <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserName`)} placeholder="Dispenser Name (e.g., Lobby)" />
+                                        <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserCode`)} placeholder="Dispenser Code (Optional)" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                         <Button type="button" variant="outline" onClick={() => append({ dispenserName: `Unit #${fields.length + 1}`, checklist: [ { item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' } ] })}><PlusCircle className="mr-2 h-4 w-4"/>Add Another Dispenser</Button>
+
+                         <DialogFooter className="pt-4">
+                            <Button type="button" variant="ghost" onClick={() => setIsCreateSanitationOpen(false)}>Cancel</Button>
+                            <Button type="submit">Schedule Visit</Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
         </Dialog>
     );
 }
 
+    
