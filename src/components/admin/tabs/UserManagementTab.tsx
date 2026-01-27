@@ -57,16 +57,23 @@ export function UserManagementTab({
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
 
-    const pendingPaymentsByUser = useMemo(() => {
+    const paymentStatusesByUser = useMemo(() => {
         if (!allPayments) return {};
         return allPayments.reduce((acc, payment) => {
-            if (payment.status === 'Pending Review' && payment.parentId) {
-                const userId = payment.parentId;
-                if (!acc[userId]) acc[userId] = [];
-                acc[userId].push(payment);
+            const userId = payment.parentId;
+            if (!userId) return acc;
+    
+            if (!acc[userId]) {
+                acc[userId] = { pending: 0, overdue: 0 };
+            }
+    
+            if (payment.status === 'Pending Review') {
+                acc[userId].pending += 1;
+            } else if (payment.status === 'Overdue') {
+                acc[userId].overdue += 1;
             }
             return acc;
-        }, {} as Record<string, any[]>);
+        }, {} as Record<string, { pending: number; overdue: number }>);
     }, [allPayments]);
 
     const handleRefillStatusUpdate = async (request: RefillRequest, newStatus: RefillRequest['status']) => {
@@ -200,17 +207,19 @@ export function UserManagementTab({
                                 </TableHeader>
                                 <TableBody>
                                     {paginatedUsers.map((user) => {
-                                        const userPendingPayments = pendingPaymentsByUser[user.id] || [];
+                                        const paymentStatus = paymentStatusesByUser[user.id];
                                         return (
                                             <TableRow key={user.id} onClick={() => onUserClick(user)} className="cursor-pointer">
                                                 <TableCell>{user.clientId}</TableCell>
                                                 <TableCell>{user.businessName}</TableCell>
                                                 <TableCell><Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge></TableCell>
                                                 <TableCell>
-                                                    {userPendingPayments.length > 0 ? (
-                                                        <Badge className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200">{userPendingPayments.length} Pending</Badge>
+                                                    {paymentStatus?.overdue > 0 ? (
+                                                        <Badge variant="destructive">{paymentStatus.overdue} Overdue</Badge>
+                                                    ) : paymentStatus?.pending > 0 ? (
+                                                        <Badge className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200">{paymentStatus.pending} Pending</Badge>
                                                     ) : (
-                                                        <div className="text-xs text-muted-foreground">Up to date</div>
+                                                        <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
                                                     )}
                                                 </TableCell>
                                                 <TableCell>{user.plan?.name || 'N/A'}</TableCell>
@@ -224,7 +233,7 @@ export function UserManagementTab({
                         {/* Mobile Card View */}
                         <div className="space-y-4 md:hidden">
                             {paginatedUsers.map(user => {
-                                const userPendingPayments = pendingPaymentsByUser[user.id] || [];
+                                const paymentStatus = paymentStatusesByUser[user.id];
                                 return (
                                     <Card key={user.id} onClick={() => onUserClick(user)} className="cursor-pointer">
                                         <CardContent className="p-4 space-y-2">
@@ -236,11 +245,13 @@ export function UserManagementTab({
                                                 <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge>
                                             </div>
                                             <div className="flex justify-between items-center text-sm pt-2">
-                                                <span className="text-muted-foreground">Payment:</span>
-                                                {userPendingPayments.length > 0 ? (
-                                                    <Badge className="bg-blue-100 text-blue-800">{userPendingPayments.length} Pending</Badge>
+                                                <span className="text-muted-foreground">Payment Status:</span>
+                                                {paymentStatus?.overdue > 0 ? (
+                                                    <Badge variant="destructive">{paymentStatus.overdue} Overdue</Badge>
+                                                ) : paymentStatus?.pending > 0 ? (
+                                                    <Badge className="bg-blue-100 text-blue-800">{paymentStatus.pending} Pending</Badge>
                                                 ) : (
-                                                    <span className="text-muted-foreground">Up to date</span>
+                                                    <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
                                                 )}
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
