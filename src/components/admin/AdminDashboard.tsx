@@ -100,6 +100,7 @@ type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
 const planDetailsSchema = z.object({
   litersPerMonth: z.coerce.number().optional(),
   bonusLiters: z.coerce.number().optional(),
+  pricePerLiter: z.coerce.number().optional(),
   gallonQuantity: z.coerce.number().min(0, "Cannot be negative"),
   gallonPrice: z.coerce.number().min(0, "Cannot be negative"),
   gallonPaymentType: z.enum(['Monthly', 'One-Time']),
@@ -579,6 +580,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
             customPlanDetails: {
                 litersPerMonth: 0,
                 bonusLiters: 0,
+                pricePerLiter: 0,
                 gallonQuantity: 0,
                 gallonPrice: 0,
                 gallonPaymentType: 'Monthly',
@@ -1549,8 +1551,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 },
                 customPlanDetails: {
                   ...values.customPlanDetails,
-                  litersPerMonth: values.customPlanDetails?.litersPerMonth,
-                  bonusLiters: values.customPlanDetails?.bonusLiters
                 },
                 role: 'User',
                 accountStatus: 'Active',
@@ -3396,7 +3396,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteComplianceReport}>Delete Report</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </AlertDialog>
+        </Dialog>
 
         <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
             <DialogContent className="sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
@@ -3796,9 +3796,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                             {selectedClientType !== 'Enterprise' && (selectedPlan && !selectedPlan.isConsumptionBased) && selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Monthly Allocation</h4>
-                                                    <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                         <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                         <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
+                                                        <FormField control={newUserForm.control} name="customPlanDetails.pricePerLiter" render={({ field }) => (<FormItem><FormLabel>Price Per Liter (PHP)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                     </div>
                                                 </div>
                                             )}
@@ -3818,7 +3819,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonQuantity" render={({ field }) => (<FormItem><FormLabel>Containers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                     <FormField control={newUserForm.control} name="customPlanDetails.gallonPrice" render={({ field }) => (<FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
-                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
+                                                    <FormField control={newUserForm.control} name="customPlanDetails.gallonPaymentType" render={({ field }) => (<FormItem><FormLabel>Payment</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="One-Time">One-Time</SelectItem></SelectContent></Select><FormMessage/></FormItem>)}/>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <FormField control={newUserForm.control} name="customPlanDetails.dispenserQuantity" render={({ field }) => (<FormItem><FormLabel>Dispensers</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
@@ -3915,8 +3916,3 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
-
-
-
-
-
