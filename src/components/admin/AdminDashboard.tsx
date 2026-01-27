@@ -237,6 +237,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
+    React.useEffect(() => {
+        if (selectedUser && appUsers) {
+            const updatedUser = appUsers.find(u => u.id === selectedUser.id);
+            if (updatedUser) {
+                setSelectedUser(updatedUser);
+            }
+        }
+    }, [appUsers, selectedUser?.id]);
+
+    React.useEffect(() => {
+        if (userForInvoices && appUsers) {
+            const updatedUser = appUsers.find(u => u.id === userForInvoices.id);
+            if (updatedUser) {
+                setUserForInvoices(updatedUser);
+            }
+        }
+    }, [appUsers, userForInvoices?.id]);
+
     const userDeliveriesQuery = useMemoFirebase(() => {
         const userToQuery = userForHistory || selectedUser || userForInvoices;
         if (!firestore || !userToQuery) return null;
@@ -983,12 +1001,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     }, [filteredUsers, currentPage, itemsPerPage]);
 
     const filteredDeliveries = React.useMemo(() => {
-        const sorted = (userDeliveriesData || []).slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const getSortableDate = (date: any): Date => {
+            if (!date) return new Date(0);
+            if (date.toDate && typeof date.toDate === 'function') return date.toDate();
+            return new Date(date);
+        };
+        const sorted = (userDeliveriesData || []).slice().sort((a, b) => getSortableDate(b.date).getTime() - getSortableDate(a.date).getTime());
+        
         return sorted.filter(delivery => {
             if (!deliveryDateRange?.from) return true;
             const fromDate = deliveryDateRange.from;
             const toDate = deliveryDateRange.to || fromDate;
-            const deliveryDate = new Date(delivery.date);
+            const deliveryDate = getSortableDate(delivery.date);
             return deliveryDate >= fromDate && deliveryDate <= toDate;
         });
     }, [userDeliveriesData, deliveryDateRange]);
@@ -1174,7 +1198,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 amount: values.amount,
             };
             await updateDoc(userRef, {
-                pendingCharges: arrayUnion({ ...newCharge, dateAdded: Timestamp.now() }),
+                pendingCharges: arrayUnion({ ...newCharge, dateAdded: new Date().toISOString() }),
             });
             toast({ title: 'Charge Added', description: `A charge for ${values.description} will be added to ${userToUpdate.businessName}'s next invoice.` });
             setIsAddChargeOpen(false);
@@ -2250,7 +2274,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the invoice record for ID: <span className="font-semibold">{invoiceToDelete?.id}</span>.
+                        This will permanently delete the invoice record: <span className="font-semibold">{invoiceToDelete?.id}</span>. This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
