@@ -183,7 +183,9 @@ export function UserManagementTab({
                                 />
                             </div>
                         </div>
-                        <div className="overflow-x-auto">
+                        
+                        {/* Desktop Table View */}
+                        <div className="overflow-x-auto hidden md:block">
                             <Table className="min-w-full">
                                 <TableHeader>
                                     <TableRow>
@@ -216,6 +218,39 @@ export function UserManagementTab({
                                 </TableBody>
                             </Table>
                         </div>
+                        
+                        {/* Mobile Card View */}
+                        <div className="space-y-4 md:hidden">
+                            {paginatedUsers.map(user => {
+                                const userPendingPayments = pendingPaymentsByUser[user.id] || [];
+                                return (
+                                    <Card key={user.id} onClick={() => onUserClick(user)} className="cursor-pointer">
+                                        <CardContent className="p-4 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-semibold">{user.businessName}</p>
+                                                    <p className="text-xs text-muted-foreground">ID: {user.clientId}</p>
+                                                </div>
+                                                <Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm pt-2">
+                                                <span className="text-muted-foreground">Payment:</span>
+                                                {userPendingPayments.length > 0 ? (
+                                                    <Badge className="bg-blue-100 text-blue-800">{userPendingPayments.length} Pending</Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground">Up to date</span>
+                                                )}
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-muted-foreground">Station:</span>
+                                                <span className="font-medium">{user.assignedWaterStationId ? 'Assigned' : 'N/A'}</span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+                        
                          <div className="flex items-center justify-end space-x-2 py-4">
                             <div className="flex items-center gap-2">
                                 <Label htmlFor="items-per-page" className="text-sm font-normal">Rows per page:</Label>
