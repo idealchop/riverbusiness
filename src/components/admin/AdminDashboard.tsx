@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -41,6 +42,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const [isUserDetailOpen, setIsUserDetailOpen] = React.useState(false);
     const [selectedUser, setSelectedUser] = React.useState<AppUser | null>(null);
+    const [initialUserDetailTab, setInitialUserDetailTab] = React.useState<string | undefined>();
     
     const [stationToUpdate, setStationToUpdate] = React.useState<WaterStation | null>(null);
     const [isStationProfileOpen, setIsStationProfileOpen] = React.useState(false);
@@ -74,8 +76,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         };
     }, [appUsers]);
     
-    const handleOpenUserDetails = (user: AppUser) => {
+    const handleOpenUserDetails = (user: AppUser, tab?: string) => {
         setSelectedUser(user);
+        setInitialUserDetailTab(tab);
         setIsUserDetailOpen(true);
     };
 
@@ -121,12 +124,16 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         {selectedUser && (
             <UserDetailsDialog
                 isOpen={isUserDetailOpen}
-                onOpenChange={setIsUserDetailOpen}
+                onOpenChange={(open) => {
+                    if (!open) setInitialUserDetailTab(undefined);
+                    setIsUserDetailOpen(open);
+                }}
                 user={selectedUser}
                 setSelectedUser={setSelectedUser}
                 isAdmin={isAdmin}
                 allUsers={appUsers || []}
                 waterStations={waterStations || []}
+                initialTab={initialUserDetailTab}
             />
         )}
         

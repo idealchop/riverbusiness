@@ -39,7 +39,7 @@ interface UserManagementTabProps {
     refillRequests: RefillRequest[] | null;
     refillRequestsLoading: boolean;
     allPayments: Payment[] | null;
-    onUserClick: (user: AppUser) => void;
+    onUserClick: (user: AppUser, tab?: string) => void;
     onAddNewClientClick: () => void;
 }
 
@@ -219,7 +219,7 @@ export function UserManagementTab({
                                         <TableHead>Business Name</TableHead>
                                         <TableHead>Account Type</TableHead>
                                         <TableHead>Plan</TableHead>
-                                        <TableHead>Payment Status</TableHead>
+                                        <TableHead className="text-right">Payment Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -231,13 +231,13 @@ export function UserManagementTab({
                                                 <TableCell>{user.businessName}</TableCell>
                                                 <TableCell><Badge variant={user.accountType === 'Parent' ? 'default' : user.accountType === 'Branch' ? 'secondary' : 'outline'}>{user.accountType || 'Single'}</Badge></TableCell>
                                                 <TableCell>{user.plan?.name || 'N/A'}</TableCell>
-                                                <TableCell>
+                                                <TableCell className="text-right">
                                                     {paymentStatus?.overdue > 0 ? (
                                                         <Badge variant="destructive" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstOverdue)} className="cursor-pointer">{paymentStatus.overdue} Overdue</Badge>
                                                     ) : paymentStatus?.pending > 0 ? (
                                                         <Badge className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstPending)}>{paymentStatus.pending} Pending</Badge>
                                                     ) : (
-                                                        <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
+                                                        <Badge variant="secondary" className="bg-green-100 text-green-800 cursor-pointer" onClick={(e) => { e.stopPropagation(); onUserClick(user, 'billing'); }}>Up to date</Badge>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
@@ -272,7 +272,7 @@ export function UserManagementTab({
                                                 ) : paymentStatus?.pending > 0 ? (
                                                     <Badge className="cursor-pointer bg-blue-100 text-blue-800" onClick={(e) => handleOpenPaymentReview(e, user, paymentStatus.firstPending)}>{paymentStatus.pending} Pending</Badge>
                                                 ) : (
-                                                    <Badge variant="secondary" className="bg-green-100 text-green-800">Up to date</Badge>
+                                                    <Badge variant="secondary" className="bg-green-100 text-green-800 cursor-pointer" onClick={(e) => { e.stopPropagation(); onUserClick(user, 'billing'); }}>Up to date</Badge>
                                                 )}
                                             </div>
                                         </CardContent>

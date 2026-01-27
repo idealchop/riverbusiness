@@ -46,9 +46,10 @@ interface UserDetailsDialogProps {
     isAdmin: boolean;
     allUsers: AppUser[];
     waterStations: WaterStation[];
+    initialTab?: string;
 }
 
-export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser, isAdmin, allUsers, waterStations }: UserDetailsDialogProps) {
+export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser, isAdmin, allUsers, waterStations, initialTab }: UserDetailsDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
     const storage = useStorage();
@@ -185,7 +186,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1">
-                        <Tabs defaultValue="overview">
+                        <Tabs defaultValue={initialTab || "overview"}>
                             <TabsList>
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
                                 <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
