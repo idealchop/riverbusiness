@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -123,7 +122,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const deliveryForm = useForm<DeliveryFormValues>({ resolver: zodResolver(deliverySchema), defaultValues: { status: 'Pending', volumeContainers: 1 } });
     const manualChargeForm = useForm<ManualChargeFormValues>({ resolver: zodResolver(manualChargeSchema) });
     const topUpForm = useForm<TopUpFormValues>({ resolver: zodResolver(topUpSchema) });
-    const sanitationVisitForm = useForm<SanitationVisitFormValues>({ resolver: zodResolver(sanitationVisitSchema), defaultValues: { status: 'Scheduled', dispenserReports: [{ dispenserName: 'Main Unit', checklist: [ { item: 'Cleaned exterior', checked: false }, { item: 'Flushed lines', checked: false }, { item: 'Checked for leaks', checked: false } ] }] } });
+    const sanitationVisitForm = useForm<SanitationVisitFormValues>({ resolver: zodResolver(sanitationVisitSchema), defaultValues: { status: 'Scheduled', dispenserReports: [{ dispenserName: 'Main Unit', checklist: [ { item: 'Cleaned exterior', checked: false, remarks: '' }, { item: 'Flushed lines', checked: false, remarks: '' }, { item: 'Checked for leaks', checked: false, remarks: '' } ] }] } });
     const { fields, append, remove } = useFieldArray({ control: sanitationVisitForm.control, name: "dispenserReports" });
 
     useEffect(() => {

@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth, useCollection, useFirestore, useStorage } from '@/firebase';
 import { collection, doc, updateDoc, addDoc, deleteDoc, DocumentReference, serverTimestamp } from 'firebase/firestore';
 import { WaterStation, ComplianceReport } from '@/lib/types';
-import { PlusCircle, Trash2, Edit, Eye, MoreHorizontal, FileText, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Eye, MoreHorizontal, FileText, AlertTriangle, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -287,4 +286,3 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
         </>
     );
 }
-

@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -86,7 +85,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
     });
 
     const getPlansForType = (type: string) => {
-        if (type === 'Enterprise') return enterprisePlans;
+        if (type === 'Enterprise') return enterprisePlans.filter(p => !p.isParentPlan);
         const plans = {
             'Family': familyPlans, 'SME': smePlans, 'Commercial': commercialPlans, 'Corporate': corporatePlans,
         }[type] || [];
@@ -156,6 +155,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                     amount: initialTopUp,
                     status: 'Approved (Initial Balance)',
                     requestedAt: serverTimestamp(),
+                    proofOfPaymentUrl: "N/A - Initial Balance",
                 });
             }
             
@@ -316,4 +316,3 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
         </Dialog>
     );
 }
-
