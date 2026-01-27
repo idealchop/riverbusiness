@@ -49,52 +49,25 @@ export const enterprisePlans = [
     {
         name: 'Customized Plan',
         price: 0,
-        description: 'Tailored for predictable, prepaid enterprise solutions.',
+        description: 'A tailored, fixed-price plan with a set monthly allocation.',
         recommended: false,
+        isConsumptionBased: false,
         imageId: 'plan-enterprise-customized',
         details: [
             { label: 'Liters/Month', value: 'Custom' },
-            { label: 'Deliveries', value: 'Custom' },
-            { label: 'Stations', value: 'Custom' },
+            { label: 'Pricing', value: 'Fixed Monthly' },
         ]
     },
     {
-        name: 'Flow Plan (P2.5/L)',
-        price: 2.5, // Price per liter
-        description: 'Pay based on consumption at P2.5 per liter.',
-        recommended: false,
+        name: 'Flow Plan',
+        price: 3, // Default price per liter, adjustable in the form
+        description: 'A flexible plan where you pay only for what you consume.',
+        recommended: true,
         isConsumptionBased: true,
         imageId: 'plan-enterprise-flowing',
         details: [
-            { label: 'Pricing', value: 'P2.5 per Liter' },
-            { label: 'Deliveries', value: 'Automated or On-demand' },
-            { label: 'Billing', value: 'Pay based on consumption' },
-        ]
-    },
-    {
-        name: 'Flow Plan (P3/L)',
-        price: 3, // Price per liter
-        description: 'Pay based on consumption at P3 per liter.',
-        recommended: false,
-        isConsumptionBased: true,
-        imageId: 'plan-enterprise-flowing',
-        details: [
-            { label: 'Pricing', value: 'P3 per Liter' },
-            { label: 'Deliveries', value: 'Automated or On-demand' },
-            { label: 'Billing', value: 'Pay based on consumption' },
-        ]
-    },
-    {
-        name: 'Pay-As-You-Go Plan',
-        price: 3.5,
-        description: 'A flexible plan billed monthly based on your consumption.',
-        recommended: false,
-        isConsumptionBased: true,
-        imageId: 'plan-enterprise-flowing',
-        details: [
-            { label: 'Pricing', value: 'P3.5 per Liter' },
-            { label: 'Deliveries', value: 'On-demand' },
-            { label: 'Billing', value: 'Billed monthly' },
+            { label: 'Pricing', value: 'Per Liter' },
+            { label: 'Billing', value: 'Based on consumption' },
         ]
     }
 ];

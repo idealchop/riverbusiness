@@ -3769,7 +3769,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
-                                            {!selectedPlan.isConsumptionBased && selectedAccountType !== 'Branch' && (
+                                            {(selectedClientType === 'Enterprise' || !selectedPlan.isConsumptionBased) && selectedAccountType !== 'Branch' && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Monthly Allocation</h4>
                                                     <div className="grid grid-cols-2 gap-4">
@@ -3858,5 +3858,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     </>
   );
 }
+
 
 
