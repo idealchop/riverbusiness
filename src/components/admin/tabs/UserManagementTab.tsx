@@ -194,7 +194,7 @@ export function UserManagementTab({
                                         <TableHead>Business Name</TableHead>
                                         <TableHead>Account Type</TableHead>
                                         <TableHead>Payment Status</TableHead>
-                                        <TableHead>Assigned Station</TableHead>
+                                        <TableHead>Plan</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -212,7 +212,7 @@ export function UserManagementTab({
                                                         <div className="text-xs text-muted-foreground">Up to date</div>
                                                     )}
                                                 </TableCell>
-                                                <TableCell>{user.assignedWaterStationId ? 'Assigned' : 'N/A'}</TableCell>
+                                                <TableCell>{user.plan?.name || 'N/A'}</TableCell>
                                             </TableRow>
                                         )
                                     })}
@@ -243,8 +243,8 @@ export function UserManagementTab({
                                                 )}
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
-                                                <span className="text-muted-foreground">Station:</span>
-                                                <span className="font-medium">{user.assignedWaterStationId ? 'Assigned' : 'N/A'}</span>
+                                                <span className="text-muted-foreground">Plan:</span>
+                                                <span className="font-medium">{user.plan?.name || 'N/A'}</span>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -337,4 +337,5 @@ export function UserManagementTab({
             </CardContent>
         </Card>
     );
-}
+
+    
