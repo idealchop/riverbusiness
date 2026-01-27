@@ -1040,7 +1040,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         const requestRef = doc(firestore, 'users', request.userId, 'refillRequests', request.id);
         await updateDoc(requestRef, {
             status: newStatus,
-            statusHistory: arrayUnion({ status: newStatus, timestamp: new Date().toISOString() })
+            statusHistory: arrayUnion({ status: newStatus, timestamp: Timestamp.now() })
         });
         await createNotification(request.userId, {
             type: 'delivery',
@@ -1174,7 +1174,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 amount: values.amount,
             };
             await updateDoc(userRef, {
-                pendingCharges: arrayUnion({ ...newCharge, dateAdded: serverTimestamp() }),
+                pendingCharges: arrayUnion({ ...newCharge, dateAdded: Timestamp.now() }),
             });
             toast({ title: 'Charge Added', description: `A charge for ${values.description} will be added to ${userToUpdate.businessName}'s next invoice.` });
             setIsAddChargeOpen(false);
@@ -2248,7 +2248,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
         <AlertDialog open={!!invoiceToDelete} onOpenChange={(open) => !open && setInvoiceToDelete(null)}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                     <AlertDialogDescription>
                         This action cannot be undone. This will permanently delete the invoice record for ID: <span className="font-semibold">{invoiceToDelete?.id}</span>.
                     </AlertDialogDescription>

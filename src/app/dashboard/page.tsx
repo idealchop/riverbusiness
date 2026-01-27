@@ -87,6 +87,7 @@ import {
   arrayUnion,
   addDoc,
   collectionGroup,
+  orderBy,
 } from 'firebase/firestore';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -151,7 +152,7 @@ export default function DashboardPage() {
   // This query is now used for ALL user types. 
   // For parents, it will fetch the copies of branch deliveries from their own subcollection.
   const deliveriesQuery = useMemoFirebase(
-    () => (firestore && user ? collection(firestore, 'users', user.id, 'deliveries') : null),
+    () => (firestore && user ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null),
     [firestore, user]
   );
   const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -242,7 +243,7 @@ export default function DashboardPage() {
       clientId: user.clientId || '',
       requestedAt: serverTimestamp(),
       status: 'Requested',
-      statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+      statusHistory: [{ status: 'Requested', timestamp: Timestamp.now() }],
     };
 
     try {
@@ -322,7 +323,7 @@ export default function DashboardPage() {
       clientId: user.clientId || '',
       requestedAt: serverTimestamp(),
       status: 'Requested',
-      statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+      statusHistory: [{ status: 'Requested', timestamp: Timestamp.now() }],
       volumeContainers: containers,
       requestedDate: date.toISOString(),
     };
