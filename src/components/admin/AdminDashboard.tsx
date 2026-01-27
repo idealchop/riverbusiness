@@ -1499,14 +1499,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const [formStep, setFormStep] = React.useState(0);
 
     const getPlansForType = (type: string) => {
-        switch (type) {
-            case 'Family': return familyPlans;
-            case 'SME': return smePlans;
-            case 'Commercial': return commercialPlans;
-            case 'Corporate': return corporatePlans;
-            case 'Enterprise': return enterprisePlans;
-            default: return [];
-        }
+        if (type === 'Enterprise') return enterprisePlans;
+        
+        const plans = {
+            'Family': familyPlans,
+            'SME': smePlans,
+            'Commercial': commercialPlans,
+            'Corporate': corporatePlans,
+        }[type] || [];
+        
+        return [
+            ...plans.filter(p => !p.isConsumptionBased),
+            { name: `Custom ${type} Plan`, price: 0, isConsumptionBased: false, details: 'Custom fixed pricing' },
+            ...plans.filter(p => p.isConsumptionBased)
+        ];
     };
     
     const selectedClientType = newUserForm.watch('clientType');
@@ -1515,9 +1521,10 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const watchedPlanPrice = newUserForm.watch('planPrice');
 
     const planOptions = React.useMemo(() => {
+        if (selectedAccountType === 'Parent') return [enterprisePlans.find(p => p.isParentPlan)].filter(Boolean);
         if (!selectedClientType) return [];
         return getPlansForType(selectedClientType);
-    }, [selectedClientType]);
+    }, [selectedClientType, selectedAccountType]);
 
     
     const handleCreateNewUser = async (values: NewUserFormValues) => {
@@ -1554,7 +1561,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 },
                 role: 'User',
                 accountStatus: 'Active',
-                totalConsumptionLiters: values.accountType === 'Parent' ? 0 : (values.customPlanDetails?.litersPerMonth || 0),
+                totalConsumptionLiters: (selectedAccountType !== 'Parent' && !plan.isConsumptionBased) ? (values.customPlanDetails?.litersPerMonth || 0) : 0,
                 topUpBalanceCredits: topUpCredits,
                 adminCreatedAt: serverTimestamp(),
             };
@@ -1613,12 +1620,18 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 if (newUserForm.getValues('planPrice') !== planPrice) {
                     newUserForm.setValue('planPrice', planPrice);
                 }
-            } else if (name === 'accountType' && value.accountType === 'Parent') {
-                const parentPlan = enterprisePlans.find(p => p.name === 'Parent Account Plan');
-                if (parentPlan) {
-                    newUserForm.setValue('clientType', 'Enterprise');
-                    newUserForm.setValue('plan', parentPlan);
-                    newUserForm.setValue('planPrice', parentPlan.price);
+            } else if (name === 'accountType') {
+                if(value.accountType === 'Parent') {
+                    const parentPlan = enterprisePlans.find(p => p.isParentPlan);
+                    if (parentPlan) {
+                        newUserForm.setValue('clientType', 'Enterprise');
+                        newUserForm.setValue('plan', parentPlan);
+                        newUserForm.setValue('planPrice', parentPlan.price);
+                    }
+                } else {
+                    // Reset to default when not parent
+                    newUserForm.setValue('clientType', '');
+                    newUserForm.setValue('plan', null);
                 }
             }
         });
@@ -3653,6 +3666,21 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 </Form>
             </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={!!visitToDelete} onOpenChange={(open) => !open && setVisitToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the sanitation visit scheduled for {visitToDelete ? format(new Date(visitToDelete.scheduledDate), 'PP') : ''}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setVisitToDelete(null)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteSanitationVisit}>Delete Visit</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
         <Dialog open={isCreateUserOpen} onOpenChange={(open) => { if (!open) { newUserForm.reset(); setFormStep(0); } setIsCreateUserOpen(open); }}>
             <DialogContent className="sm:max-w-4xl">
@@ -3793,7 +3821,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 <SelectTrigger>
                                                                     <SelectValue placeholder="Select a plan...">
                                                                         {selectedPlan?.name && (
-                                                                            `${selectedPlan.name} ${selectedPlan.isConsumptionBased ? `(P${watchedPlanPrice}/L)` : ''}`
+                                                                            <span>
+                                                                                {`${selectedPlan.name} ${selectedPlan.isConsumptionBased ? `(P${watchedPlanPrice}/L)` : ''}`}
+                                                                            </span>
                                                                         )}
                                                                     </SelectValue>
                                                                 </SelectTrigger>
@@ -3802,7 +3832,6 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                                                                 {planOptions.map(plan => (
                                                                     <SelectItem key={plan.name} value={plan.name}>
                                                                         {plan.name}
-                                                                        {plan.isConsumptionBased && ` (P${plan.price}/L)`}
                                                                     </SelectItem>
                                                                 ))}
                                                             </SelectContent>
