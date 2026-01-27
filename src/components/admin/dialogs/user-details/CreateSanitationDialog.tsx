@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -40,10 +41,16 @@ const sanitationVisitSchema = z.object({
 type SanitationVisitFormValues = z.infer<typeof sanitationVisitSchema>;
 
 const defaultChecklist = [
-    { item: 'Cleaned exterior', checked: false, remarks: '' },
-    { item: 'Flushed lines', checked: false, remarks: '' },
-    { item: 'Checked for leaks', checked: false, remarks: '' }
+    { item: 'Wipe down and sanitize the entire exterior of the unit.', checked: false, remarks: '' },
+    { item: 'Remove, clean, and sanitize the drip tray.', checked: false, remarks: '' },
+    { item: 'Sanitize and wipe all water dispensing points (faucets/taps).', checked: false, remarks: '' },
+    { item: 'Flush the system with a cleaning solution to sanitize internal water lines.', checked: false, remarks: '' },
+    { item: 'Thoroughly rinse the system to remove all cleaning solution.', checked: false, remarks: '' },
+    { item: 'Inspect all connections and lines for any signs of leaks.', checked: false, remarks: '' },
+    { item: 'Verify that hot and cold water are at appropriate temperatures (if applicable).', checked: false, remarks: '' },
+    { item: 'Inspect and note the status of the water filter (if applicable).', checked: false, remarks: '' },
 ];
+
 
 interface CreateSanitationDialogProps {
     isOpen: boolean;
