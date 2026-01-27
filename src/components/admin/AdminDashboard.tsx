@@ -2550,6 +2550,11 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <Image src={selectedProofUrl} alt="Proof of delivery" width={400} height={600} className="rounded-md object-contain" />
                     </div>
                 )}
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">Close</Button>
+                  </DialogClose>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
         
@@ -3396,7 +3401,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                     <AlertDialogAction onClick={handleDeleteComplianceReport}>Delete Report</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
-        </Dialog>
+        </AlertDialog>
 
         <Dialog open={isSanitationHistoryOpen} onOpenChange={setIsSanitationHistoryOpen}>
             <DialogContent className="sm:max-w-2xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
@@ -3793,13 +3798,12 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
                                     {selectedPlan && (
                                         <div className="space-y-6 pt-4">
-                                            {selectedClientType !== 'Enterprise' && (selectedPlan && !selectedPlan.isConsumptionBased) && selectedAccountType !== 'Branch' && (
+                                            {(selectedClientType !== 'Enterprise' && selectedPlan && !selectedPlan.isConsumptionBased) && (
                                                 <div className="space-y-4 p-4 border rounded-lg">
                                                     <h4 className="font-medium">Monthly Allocation</h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <FormField control={newUserForm.control} name="customPlanDetails.litersPerMonth" render={({ field }) => (<FormItem><FormLabel>Liters per Month</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                         <FormField control={newUserForm.control} name="customPlanDetails.bonusLiters" render={({ field }) => (<FormItem><FormLabel>Bonus Liters</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}/></FormControl><FormMessage/></FormItem>)}/>
-                                                        <FormField control={newUserForm.control} name="customPlanDetails.pricePerLiter" render={({ field }) => (<FormItem><FormLabel>Price Per Liter (PHP)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage/></FormItem>)}/>
                                                     </div>
                                                 </div>
                                             )}
@@ -3911,8 +3915,14 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         <Image src={complianceAttachmentUrl} alt="Compliance Document" width={400} height={600} className="rounded-md object-contain" />
                     </div>
                 )}
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     </>
   );
 }
+
