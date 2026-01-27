@@ -134,6 +134,8 @@ export default function DashboardLayout({
   const [isSubmittingProof, setIsSubmittingProof] = React.useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [initialAccountDialogTab, setInitialAccountDialogTab] = React.useState<string | undefined>(undefined);
+  const [paymentProofPreview, setPaymentProofPreview] = React.useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
 
 
   useEffect(() => {
@@ -201,8 +203,12 @@ export default function DashboardLayout({
       setSelectedPaymentMethod(null);
       setPaymentProofFile(null);
       setSelectedInvoice(null);
+       if (paymentProofPreview) {
+        URL.revokeObjectURL(paymentProofPreview);
+      }
+      setPaymentProofPreview(null);
     }
-  }, [isPaymentDialogOpen]);
+  }, [isPaymentDialogOpen, paymentProofPreview]);
 
   if (isUserLoading || isUserDocLoading || !isMounted || !auth || !authUser || !user) {
     return <FullScreenLoader />;
@@ -228,12 +234,34 @@ export default function DashboardLayout({
     })
   }
 
+  const handleProofFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPaymentProofFile(file || null);
+    if (paymentProofPreview) {
+        URL.revokeObjectURL(paymentProofPreview);
+    }
+    if (file) {
+        setPaymentProofPreview(URL.createObjectURL(file));
+    } else {
+        setPaymentProofPreview(null);
+    }
+  };
+
   const handleProofUpload = async () => {
-    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth) return;
+    if (!paymentProofFile || !selectedInvoice || !authUser || !storage || !auth || !firestore) return;
 
     setIsSubmittingProof(true);
     setUploadProgress(0);
     
+    const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
+    await setDoc(paymentRef, { 
+        id: selectedInvoice.id, 
+        date: selectedInvoice.date, 
+        description: selectedInvoice.description, 
+        amount: selectedInvoice.amount, 
+        status: 'Pending Review' // Initially set to pending, backend will confirm
+    }, { merge: true });
+
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${Date.now()}-${paymentProofFile.name}`;
     const metadata = {
         customMetadata: {
@@ -246,7 +274,8 @@ export default function DashboardLayout({
         await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
         
         toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
-        setIsPaymentDialogOpen(false);
+        // Not closing the dialog automatically anymore based on user request.
+        // setIsPaymentDialogOpen(false); 
 
     } catch (error: any) {
         console.error("Proof upload failed", error);
@@ -259,6 +288,10 @@ export default function DashboardLayout({
         setIsSubmittingProof(false);
         setUploadProgress(0);
         setPaymentProofFile(null);
+        if (paymentProofPreview) {
+            URL.revokeObjectURL(paymentProofPreview);
+        }
+        setPaymentProofPreview(null);
     }
   };
 
@@ -714,8 +747,15 @@ export default function DashboardLayout({
                              </p>
                             <div className="grid w-full max-w-sm items-center gap-1.5">
                                 <Label htmlFor="payment-proof">Receipt Screenshot</Label>
-                                <Input id="payment-proof" type="file" onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)} disabled={isSubmittingProof} />
+                                <Input id="payment-proof" type="file" onChange={handleProofFileChange} disabled={isSubmittingProof} />
                             </div>
+                            {paymentProofPreview && (
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Image src={paymentProofPreview} alt="Preview" width={40} height={40} className="rounded-md object-cover" />
+                                    <span className="truncate flex-1">{paymentProofFile?.name}</span>
+                                    <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
+                                </div>
+                            )}
                             {uploadProgress > 0 && (
                                 <Progress value={uploadProgress} className="mt-2 h-2.5" />
                             )}
@@ -730,6 +770,20 @@ export default function DashboardLayout({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+            <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Image Preview</DialogTitle>
+            </DialogHeader>
+            {paymentProofPreview && (
+                <div className="py-4 flex justify-center">
+                <Image src={paymentProofPreview} alt="Payment Proof Preview" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
+                </div>
+            )}
+            </DialogContent>
+        </Dialog>
+
       </div>
   );
 }

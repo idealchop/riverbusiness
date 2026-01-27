@@ -1179,7 +1179,8 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                 date: serverTimestamp() as any,
                 rejectionReason: newStatus === 'Upcoming' ? rejectionReason : undefined,
             };
-            if (newStatus === 'Paid') {
+            if (newStatus === 'Paid' && userToUpdate.pendingCharges) {
+                docToCreate.manualCharges = userToUpdate.pendingCharges;
                 const userRef = doc(firestore, 'users', userToUpdate.id);
                 await updateDoc(userRef, { pendingCharges: deleteField() });
             }
