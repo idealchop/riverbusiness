@@ -278,12 +278,12 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
      if (user.customPlanDetails) {
         const { gallonQuantity, dispenserQuantity, litersPerMonth, gallonPaymentType, dispenserPaymentType } = user.customPlanDetails;
         let equipmentBody: string[][] = [];
-        if(litersPerMonth > 0) equipmentBody.push(['Purchased Liters', `${litersPerMonth.toLocaleString()} L/month`]);
-        if (gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity} (${gallonPaymentType})`]);
-        if (dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity} (${dispenserPaymentType})`]);
+        if(litersPerMonth && litersPerMonth > 0) equipmentBody.push(['Purchased Liters', `${litersPerMonth.toLocaleString()} L/month`]);
+        if (gallonQuantity && gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity} (${gallonPaymentType})`]);
+        if (dispenserQuantity && dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity} (${dispenserPaymentType})`]);
         
         if (equipmentBody.length > 0) {
-            lastY = renderTable('Subscription Details', [], equipmentBody, lastY);
+            lastY = renderTable('Subscription Details', [['Item', 'Details']], equipmentBody, lastY);
             lastY += 20;
         }
     }
