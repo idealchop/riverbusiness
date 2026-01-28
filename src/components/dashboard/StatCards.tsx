@@ -97,10 +97,8 @@ export function StatCards({
     
     const totalLitersForMonth = monthlyPlanLiters + bonusLiters + rolloverLiters;
 
-    // The `user.totalConsumptionLiters` field is set by the billing function at the start of the month.
-    // It represents the *starting* balance for this period.
-    const startingBalanceForMonth = user.totalConsumptionLiters || totalLitersForMonth;
-    const remainingBalance = startingBalanceForMonth - consumedLitersThisCycle;
+    // The remaining balance is the total allocation for the month minus what's been consumed.
+    const remainingBalance = totalLitersForMonth - consumedLitersThisCycle;
     
     const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisCycle / totalLitersForMonth) * 100 : 0;
     
