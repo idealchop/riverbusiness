@@ -173,31 +173,31 @@ async function generateInvoiceForUser(
         description = `Monthly Subscription for ${billingPeriod}`;
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
-        let rolloverLiters = 0;
+        
+        // This is the new rollover, calculated from the period that just ended.
+        const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
+        const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
-        if (monthlyAllocation > 0) {
-            const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
-            rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
-
-            if (rolloverLiters > 0) {
-                const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
-                    type: 'general',
-                    title: 'Liters Rolled Over!',
-                    description: `You've saved ${rolloverLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} liters from ${billingPeriod}. They've been added to your current balance.`,
-                    data: { rolloverLiters, period: billingPeriod }
-                };
-                const notificationWithMeta = { ...rolloverNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
-                batch.set(notificationsRef.doc(), notificationWithMeta);
-                console.log(`Generated rollover notification for user ${userRef.id} for ${rolloverLiters} liters.`);
-            }
+        if (newRollover > 0) {
+            const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+                type: 'general',
+                title: 'Liters Rolled Over!',
+                description: `You've saved ${newRollover.toLocaleString(undefined, { maximumFractionDigits: 0 })} liters from ${billingPeriod}. They've been added to your balance for this month.`,
+                data: { rolloverLiters: newRollover, period: billingPeriod }
+            };
+            const notificationWithMeta = { ...rolloverNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+            batch.set(notificationsRef.doc(), notificationWithMeta);
+            console.log(`Generated rollover notification for user ${userRef.id} for ${newRollover} liters.`);
         }
         
-        const startingBalanceForMonth = (monthlyAllocation * monthsToBill) + rolloverLiters;
-        batch.update(userRef, {
-            totalConsumptionLiters: startingBalanceForMonth,
-            'customPlanDetails.lastMonthRollover': rolloverLiters,
-        });
+        // This is the starting balance for the NEW month, which begins today.
+        // It's an increment to add to any existing balance from manual adjustments.
+        const creditsForNewMonth = monthlyAllocation + newRollover;
 
+        batch.update(userRef, {
+            totalConsumptionLiters: admin.firestore.FieldValue.increment(creditsForNewMonth),
+            'customPlanDetails.lastMonthRollover': newRollover,
+        });
     }
     
     // Add one-time fees to the very first invoice
