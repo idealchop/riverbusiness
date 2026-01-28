@@ -17,6 +17,7 @@ import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 import { OverviewTab } from './OverviewTab';
 import { DeliveriesTab } from './DeliveriesTab';
+import { BranchDeliveriesTab } from './BranchDeliveriesTab';
 import { BillingTab } from './BillingTab';
 import { SanitationTab } from './SanitationTab';
 import { CreateDeliveryDialog } from './CreateDeliveryDialog';
@@ -236,7 +237,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                             {user.accountType === 'Parent' && (
                                 <TabsContent value="branch-deliveries" className="py-6">
-                                    {/* Placeholder for Branch Deliveries content */}
+                                    <BranchDeliveriesTab
+                                        user={user}
+                                        onSetProofToViewUrl={setProofToViewUrl}
+                                        allUsers={allUsers}
+                                    />
                                 </TabsContent>
                             )}
                             <TabsContent value="billing" className="py-6">
