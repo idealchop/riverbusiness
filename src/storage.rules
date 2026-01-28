@@ -18,9 +18,8 @@ service firebase.storage {
     }
 
     // Rule for admins uploading contracts for users.
-    // Loosened to fix upload failures, as only admins have UI access to this path anyway.
     match /userContracts/{userId}/{fileName} {
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
     
     // Rule for admins managing water station documents (agreements, compliance).
@@ -34,10 +33,20 @@ service firebase.storage {
     match /users/{userId}/profile/{fileName} {
       allow write: if request.auth.uid == userId;
     }
+    
+    // Admin can upload their support profile photo.
+    match /users/{userId}/support_profile/{fileName} {
+      allow write: if request.auth.uid == userId && isAdmin();
+    }
 
     // Users can upload their own payment proofs.
     match /users/{userId}/payments/{fileName} {
        allow write: if request.auth.uid == userId;
+    }
+    
+    // Users can upload their own top-up proofs.
+    match /users/{userId}/topup_proofs/{fileName} {
+        allow write: if request.auth.uid == userId;
     }
 
     // Rule for both users and admins to upload chat attachments.
