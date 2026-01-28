@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -77,6 +78,20 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
         [firestore, station?.id, complianceRefresher]
     );
     const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
+
+    const [complianceCurrentPage, setComplianceCurrentPage] = useState(1);
+    const COMPLIANCE_ITEMS_PER_PAGE = 5;
+
+    const totalCompliancePages = useMemo(() => {
+        if (!complianceReports) return 0;
+        return Math.ceil(complianceReports.length / COMPLIANCE_ITEMS_PER_PAGE);
+    }, [complianceReports]);
+
+    const paginatedComplianceReports = useMemo(() => {
+        if (!complianceReports) return [];
+        const startIndex = (complianceCurrentPage - 1) * COMPLIANCE_ITEMS_PER_PAGE;
+        return complianceReports.slice(startIndex, startIndex + COMPLIANCE_ITEMS_PER_PAGE);
+    }, [complianceReports, complianceCurrentPage]);
     
     const stationForm = useForm<NewStationFormValues>({
         resolver: zodResolver(newStationSchema),
@@ -257,7 +272,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                     <Table className="hidden md:table">
                                         <TableHeader><TableRow><TableHead>Report</TableHead><TableHead>Month</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                                         <TableBody>
-                                            {complianceReports?.map((report) => (
+                                            {paginatedComplianceReports?.map((report) => (
                                                 <TableRow key={report.id}>
                                                     <TableCell>{report.name}</TableCell>
                                                     <TableCell>{report.date ? format((report.date as any).toDate(), 'MMM yyyy') : 'N/A'}</TableCell>
@@ -274,7 +289,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
-                                            {(complianceReports?.length === 0) && (
+                                            {(paginatedComplianceReports?.length === 0) && (
                                                 <TableRow>
                                                     <TableCell colSpan={4} className="h-24 text-center">No compliance reports yet.</TableCell>
                                                 </TableRow>
@@ -282,7 +297,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                         </TableBody>
                                     </Table>
                                     <div className="space-y-4 md:hidden">
-                                        {(complianceReports && complianceReports.length > 0) ? complianceReports.map((report) => (
+                                        {(paginatedComplianceReports && paginatedComplianceReports.length > 0) ? paginatedComplianceReports.map((report) => (
                                             <Card key={report.id}>
                                                 <CardContent className="p-4 space-y-3">
                                                     <div className="flex justify-between items-start">
@@ -307,6 +322,27 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                         )) : (
                                             <p className="text-center py-10 text-muted-foreground">No compliance reports found.</p>
                                         )}
+                                    </div>
+                                    <div className="flex items-center justify-end space-x-2 pt-4">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={complianceCurrentPage === 1}
+                                        >
+                                            Previous
+                                        </Button>
+                                        <span className="text-sm text-muted-foreground">
+                                            Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
+                                            disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
+                                        >
+                                            Next
+                                        </Button>
                                     </div>
                                 </div>
                             )}
