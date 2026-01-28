@@ -199,6 +199,8 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     }
     
     const userId = event.params.userId;
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
 
     // If it's a branch delivery, update the copy in the parent's collection as well
     if (after.parentId) {
@@ -208,19 +210,28 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
         });
     }
 
-    const notification = {
+    // Notify User
+    await createNotification(userId, {
         type: 'delivery',
         title: `Delivery ${after.status}`,
         description: `Your delivery of ${after.volumeContainers} containers is now ${after.status}.`,
         data: { deliveryId: event.params.deliveryId }
-    };
+    });
     
-    await createNotification(userId, notification);
+    // Notify Admin
+    const adminId = await getAdminId();
+    if (adminId && userData) {
+        await createNotification(adminId, {
+            type: 'delivery',
+            title: 'Delivery Status Updated',
+            description: `Delivery for ${userData.businessName} is now ${after.status}.`,
+            data: { userId, deliveryId: event.params.deliveryId }
+        });
+    }
 });
 
 /**
  * Cloud Function to create notifications when a new payment document is created.
- * This typically happens when a user submits proof for a new (current month) invoice.
  */
 export const onpaymentcreate = onDocumentCreated("users/{userId}/payments/{paymentId}", async (event) => {
     if (!event.data) return;
@@ -271,40 +282,62 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     const userData = userDoc.data();
     const adminId = await getAdminId();
 
-    let notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
+    let userNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
     let adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
+    
+    if (!userData) {
+        logger.error(`User data not found for ${userId} in onpaymentupdate.`);
+        return;
+    }
 
-
-    if (payment.status === 'Paid') {
-        notification = {
+    // Admin approves payment
+    if (before.status === 'Pending Review' && after.status === 'Paid') {
+        userNotification = {
             type: 'payment',
             title: 'Payment Confirmed',
             description: `Your payment for invoice ${payment.id} has been confirmed. Thank you!`,
             data: { paymentId: payment.id }
         };
-    } else if (before.status === 'Pending Review' && payment.status === 'Upcoming') {
-        // This logic specifically targets the rejection flow
-        notification = {
+        adminNotification = {
+            type: 'payment',
+            title: 'Payment Approved',
+            description: `You approved a payment of ₱${payment.amount.toFixed(2)} from ${userData.businessName}.`,
+            data: { userId, paymentId: payment.id }
+        };
+    } 
+    // Admin rejects payment
+    else if (before.status === 'Pending Review' && after.status === 'Upcoming') {
+        userNotification = {
             type: 'payment',
             title: 'Payment Action Required',
             description: `Your payment for invoice ${payment.id} requires attention. Reason: ${payment.rejectionReason || 'Please contact support.'}`,
             data: { paymentId: payment.id }
         };
-    } else if (before.status === 'Upcoming' && payment.status === 'Pending Review' && adminId && userData) {
+         adminNotification = {
+            type: 'payment',
+            title: 'Payment Rejected',
+            description: `You rejected a payment from ${userData.businessName}. Reason: ${payment.rejectionReason || 'Not specified'}.`,
+            data: { userId, paymentId: payment.id }
+        };
+    }
+    // User submits payment for review
+    else if ((before.status === 'Upcoming' || before.status === 'Overdue') && after.status === 'Pending Review') {
          adminNotification = {
             type: 'payment',
             title: 'Payment for Review',
-            description: `${userData.businessName} (ID: ${userData.clientId}) has submitted a proof of payment.`,
-            data: { userId: userId, paymentId: payment.id }
+            description: `${userData.businessName} has submitted a proof of payment.`,
+            data: { userId, paymentId: payment.id }
         };
     }
     
-    if (notification) {
-        await createNotification(userId, notification);
+    const promises = [];
+    if (userNotification) {
+        promises.push(createNotification(userId, userNotification));
     }
     if (adminNotification && adminId) {
-        await createNotification(adminId, adminNotification);
+        promises.push(createNotification(adminId, adminNotification));
     }
+    await Promise.all(promises);
 });
 
 
@@ -342,19 +375,31 @@ export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitat
     if (!event.data) return;
     const userId = event.params.userId;
     const visit = event.data.data();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
 
     const scheduledDate = new Date(visit.scheduledDate).toLocaleDateString('en-US', {
         month: 'long', day: 'numeric', year: 'numeric'
     });
 
-    const notification = {
+    // Notify User
+    await createNotification(userId, {
         type: 'sanitation',
         title: 'Sanitation Visit Scheduled',
         description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
         data: { visitId: event.params.visitId }
-    };
+    });
 
-    await createNotification(userId, notification);
+    // Notify Admin
+    const adminId = await getAdminId();
+    if (adminId && userData) {
+         await createNotification(adminId, {
+            type: 'sanitation',
+            title: 'Sanitation Visit Scheduled',
+            description: `A visit for ${userData.businessName} has been scheduled for ${scheduledDate}.`,
+            data: { userId, visitId: event.params.visitId }
+        });
+    }
 });
 
 /**
@@ -368,18 +413,31 @@ export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitat
 
     if (before.status === after.status) return; // No change, no notification
 
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
     const scheduledDate = new Date(after.scheduledDate).toLocaleDateString('en-US', {
         month: 'long', day: 'numeric', year: 'numeric'
     });
 
-    const notification = {
+    // Notify user
+    await createNotification(userId, {
         type: 'sanitation',
         title: `Sanitation Visit: ${after.status}`,
         description: `Your sanitation visit for ${scheduledDate} is now ${after.status}.`,
         data: { visitId: event.params.visitId }
-    };
+    });
     
-    await createNotification(userId, notification);
+    // Notify admin
+    const adminId = await getAdminId();
+    if(adminId && userData) {
+        await createNotification(adminId, {
+            type: 'sanitation',
+            title: 'Sanitation Visit Updated',
+            description: `The visit for ${userData.businessName} on ${scheduledDate} is now ${after.status}.`,
+            data: { userId, visitId: event.params.visitId }
+        });
+    }
 });
 
 /**
