@@ -9,7 +9,7 @@ import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection 
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { AppUser, Notification as NotificationType } from '@/lib/types';
-import { doc, collection, query, writeBatch, Timestamp, where } from 'firebase/firestore';
+import { doc, collection, query, writeBatch, Timestamp, where, orderBy } from 'firebase/firestore';
 import { useMounted } from '@/hooks/use-mounted';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,10 @@ import { cn } from '@/lib/utils';
 const NOTIFICATION_ICONS: { [key: string]: React.ElementType } = {
   payment: Receipt,
   general: Info,
+  delivery: Info,
+  'top-up': Info,
+  compliance: Info,
+  sanitation: Info,
   default: Bell,
 };
 
@@ -37,7 +41,7 @@ export default function AdminLayout({
   const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
-  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications')) : null, [firestore, authUser]);
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
   
   const usersWithUnreadQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('hasUnreadUserMessages', '==', true)) : null, [firestore]);
@@ -143,14 +147,7 @@ export default function AdminLayout({
               <Separator className="my-4" />
                 <div className="space-y-4 max-h-80 overflow-y-auto">
                     {notifications && notifications.length > 0 ? (
-                        notifications.sort((a,b) => {
-                            const aSeconds = (a.date instanceof Timestamp) ? a.date.seconds : 0;
-                            const bSeconds = (b.date instanceof Timestamp) ? b.date.seconds : 0;
-                            if (aSeconds === 0 && bSeconds === 0) return 0;
-                            if (aSeconds === 0) return -1;
-                            if (bSeconds === 0) return 1;
-                            return bSeconds - aSeconds;
-                        }).map((notification) => {
+                        notifications.map((notification) => {
                             const Icon = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.default;
                             const date = notification.date instanceof Timestamp ? notification.date.toDate() : null;
                              const isActionable = !!notification.data?.userId;
