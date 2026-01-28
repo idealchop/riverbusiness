@@ -225,29 +225,46 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     };
     
     drawHeader();
+    
+    // --- FROM/TO & DATE INFO ---
     lastY = 100;
+    const fromToY = lastY;
 
-    // --- BILLING & DATE INFO ---
+    // FROM (Company Info)
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('BILL TO:', margin, lastY);
-    
+    doc.text('FROM:', margin, fromToY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(user.businessName || 'N/A', margin, lastY + 12);
-    doc.text(user.address || 'No address provided', margin, lastY + 22);
-    
-    const now = new Date();
+    doc.text('River Tech Inc.', margin, fromToY + 12);
+    doc.text('Filinvest Axis Tower 1, Alabang', margin, fromToY + 22);
+    doc.text('customer@riverph.com', margin, fromToY + 32);
+
+    // TO (Client Info)
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('STATEMENT DATE:', pageWidth / 2, lastY);
-    doc.text('BILLING PERIOD:', pageWidth / 2, lastY + 12);
+    doc.text('TO:', pageWidth / 2, fromToY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(format(now, 'PP'), (pageWidth / 2) + 85, lastY);
-    doc.text(billingPeriod, (pageWidth / 2) + 85, lastY + 12);
+    doc.text(user.businessName || 'N/A', pageWidth / 2, fromToY + 12);
+    doc.text(user.address || 'No address provided', pageWidth / 2, fromToY + 22);
+    doc.text(user.email || '', pageWidth / 2, fromToY + 32);
+
+    lastY = fromToY + 50;
     
+    const now = new Date();
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('STATEMENT DATE:', margin, lastY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(format(now, 'PP'), margin + 100, lastY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILLING PERIOD:', margin, lastY + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text(billingPeriod, margin + 100, lastY + 15);
+
     lastY += 40;
 
     // --- RENDER TABLES ---
@@ -522,3 +539,4 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     // --- SAVE PDF ---
     doc.save(`Invoice_${invoice.id}.pdf`);
 };
+
