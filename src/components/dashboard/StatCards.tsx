@@ -406,8 +406,7 @@ export function StatCards({
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
-
-    
