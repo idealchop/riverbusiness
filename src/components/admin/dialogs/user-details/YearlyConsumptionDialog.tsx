@@ -47,7 +47,8 @@ export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user
 
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
         name: format(new Date(currentYear, i), 'MMM'),
-        Liters: 0
+        Liters: 0,
+        Containers: 0,
     }));
 
     filteredDeliveries.forEach(d => {
@@ -55,6 +56,7 @@ export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user
         if (deliveryDate) {
             const month = getMonth(deliveryDate);
             monthlyData[month].Liters += containerToLiter(d.volumeContainers);
+            monthlyData[month].Containers += d.volumeContainers;
         }
     });
 
@@ -105,7 +107,10 @@ export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user
                                 borderRadius: 'var(--radius)',
                             }}
                             labelStyle={{ color: 'hsl(var(--foreground))' }}
-                            formatter={(value: number) => [`${value.toLocaleString()} Liters`, 'Consumption']}
+                            formatter={(value: number, name, props) => {
+                                const containers = props.payload.Containers || 0;
+                                return [`${value.toLocaleString()} Liters / ${containers.toLocaleString()} containers`, 'Consumption'];
+                            }}
                         />
                         <Bar dataKey="Liters" radius={[4, 4, 0, 0]} fill="hsl(var(--primary))" />
                     </BarChart>
