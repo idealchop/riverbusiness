@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -198,7 +197,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogTitle>User Account Management</DialogTitle>
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1">
+                    <ScrollArea className="flex-1 min-h-0">
                         <Tabs defaultValue={initialTab || "overview"}>
                             <TabsList>
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -305,5 +304,4 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             />
         </>
     );
-
-    
+}

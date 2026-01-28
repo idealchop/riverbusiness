@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -24,14 +23,14 @@ const toSafeDate = (timestamp: any): Date | null => {
 };
 
 
-interface YearlyConsumptionDialogProps {
+interface ConsumptionHistoryDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   deliveries: Delivery[] | null;
   user: AppUser | null;
 }
 
-export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user }: YearlyConsumptionDialogProps) {
+export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user }: ConsumptionHistoryDialogProps) {
 
   const yearlyData = useMemo(() => {
     if (!deliveries) return { chartData: [], total: 0, average: 0, highest: null, lowest: null };
@@ -74,9 +73,9 @@ export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Consumption History ({getYear(new Date())})</DialogTitle>
+          <DialogTitle>Consumption History</DialogTitle>
           <DialogDescription>
-            An overview of {user?.businessName}'s monthly water consumption for the current year.
+            An overview of {user?.businessName}'s monthly water consumption.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-4">
