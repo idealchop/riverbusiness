@@ -93,8 +93,8 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
 
   // 4. Create Table
   const tableStartY = docDetailsY + 15;
-  const tableColumn = ["Ref ID", "Delivery Date", "Volume (Containers)", "Volume (Liters)", "Status"];
-  const tableRows: (string | number)[][] = [];
+  const tableColumn = ["Ref ID", "Delivery Date", "Volume (Containers)", "Volume (Liters)", "Status", "Proof"];
+  const tableRows: (string | number | object)[][] = [];
 
   deliveries.forEach(delivery => {
     const deliveryData = [
@@ -103,6 +103,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
       delivery.volumeContainers,
       containerToLiter(delivery.volumeContainers),
       delivery.status,
+      delivery.proofOfDeliveryUrl ? { content: 'See Delivery Proof', href: delivery.proofOfDeliveryUrl } : 'N/A'
     ];
     tableRows.push(deliveryData);
   });
@@ -115,6 +116,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
       { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
       { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
       { content: totalLiters.toLocaleString(), styles: { fontStyle: 'bold' } },
+      { content: '', styles: {} },
       { content: '', styles: {} },
   ];
   tableRows.push(summaryRow as any);
