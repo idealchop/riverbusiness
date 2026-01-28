@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -29,7 +28,7 @@ import { uploadFileWithProgress } from '@/lib/storage-utils';
 import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
-
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 const newStationSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -234,128 +233,136 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                         <DialogTitle>{station ? 'Station Profile' : 'Create New Station'}</DialogTitle>
                         <DialogDescription>{station ? `Manage compliance for ${station.name}.` : "Set up a new water refilling station."}</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="pr-6 -mr-6">
-                        <div className="space-y-8 p-4">
-                            <Form {...stationForm}>
-                                <form className="space-y-4" onSubmit={stationForm.handleSubmit(handleStationSubmit)}>
-                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-semibold text-base">Station Details</h3>
-                                        {station && !isEditing && (
-                                            <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={!isAdmin}>
-                                                <Edit className="mr-2 h-4 w-4" /> Edit Details
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <FormField control={stationForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Station Name</FormLabel><FormControl><Input {...field} disabled={!isEditing || !isAdmin} /></FormControl><FormMessage /></FormItem>)}/>
-                                      <FormField control={stationForm.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input {...field} disabled={!isEditing || !isAdmin} /></FormControl><FormMessage /></FormItem>)}/>
-                                    </div>
-                                    {station && ( <>
-                                        <FormField control={stationForm.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!isEditing || !isAdmin}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="Operational">Operational</SelectItem><SelectItem value="Under Maintenance">Under Maintenance</SelectItem></SelectContent></Select></FormItem>)}/>
-                                        {stationForm.watch('status') === 'Under Maintenance' && (<FormField control={stationForm.control} name="statusMessage" render={({ field }) => (<FormItem><FormLabel>Status Message</FormLabel><FormControl><Textarea {...field} disabled={!isEditing || !isAdmin} /></FormControl></FormItem>)}/>)}
-                                    </>)}
-                                    {isEditing && station && (
-                                        <div className="flex justify-end gap-2">
-                                            <Button type="button" variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                                            <Button type="submit" size="sm" disabled={!isAdmin || isSubmitting}>Save Details</Button>
-                                        </div>
-                                    )}
-                                </form>
-                            </Form>
-                            <Separator />
-                            {station && (
-                                <div>
-                                    <div className="flex justify-between items-center mb-4">
-                                        <div><h3 className="font-semibold text-base">Compliance Docs</h3><p className="text-sm text-muted-foreground">Manage compliance reports.</p></div>
-                                        <Button size="sm" onClick={() => setIsComplianceReportDialogOpen(true)} disabled={!station}><PlusCircle className="mr-2 h-4 w-4" /> Create Report</Button>
-                                    </div>
-                                    <Table className="hidden md:table">
-                                        <TableHeader><TableRow><TableHead>Report</TableHead><TableHead>Month</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                                        <TableBody>
-                                            {paginatedComplianceReports?.map((report) => (
-                                                <TableRow key={report.id}>
-                                                    <TableCell>{report.name}</TableCell>
-                                                    <TableCell>{report.date ? format((report.date as any).toDate(), 'MMM yyyy') : 'N/A'}</TableCell>
-                                                    <TableCell><Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge></TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => setComplianceAttachmentUrl(report.reportUrl!)} disabled={!report.reportUrl}><Eye className="mr-2 h-4 w-4" />View</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                                                <DropdownMenuItem className="text-destructive" onClick={() => setComplianceReportToDelete(report)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {(paginatedComplianceReports?.length === 0) && (
-                                                <TableRow>
-                                                    <TableCell colSpan={4} className="h-24 text-center">No compliance reports yet.</TableCell>
-                                                </TableRow>
+                    <Carousel className="w-full py-4">
+                        <CarouselContent>
+                            <CarouselItem>
+                                <div className="space-y-8 p-1">
+                                    <Form {...stationForm}>
+                                        <form className="space-y-4" onSubmit={stationForm.handleSubmit(handleStationSubmit)}>
+                                            <div className="flex justify-between items-center mb-4">
+                                                <h3 className="font-semibold text-base">Station Details</h3>
+                                                {station && !isEditing && (
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => setIsEditing(true)} disabled={!isAdmin}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit Details
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <FormField control={stationForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Station Name</FormLabel><FormControl><Input {...field} disabled={!isEditing || !isAdmin} /></FormControl><FormMessage /></FormItem>)} />
+                                                <FormField control={stationForm.control} name="location" render={({ field }) => (<FormItem><FormLabel>Location</FormLabel><FormControl><Input {...field} disabled={!isEditing || !isAdmin} /></FormControl><FormMessage /></FormItem>)} />
+                                            </div>
+                                            {station && (<>
+                                                <FormField control={stationForm.control} name="status" render={({ field }) => (<FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!isEditing || !isAdmin}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="Operational">Operational</SelectItem><SelectItem value="Under Maintenance">Under Maintenance</SelectItem></SelectContent></Select></FormItem>)} />
+                                                {stationForm.watch('status') === 'Under Maintenance' && (<FormField control={stationForm.control} name="statusMessage" render={({ field }) => (<FormItem><FormLabel>Status Message</FormLabel><FormControl><Textarea {...field} disabled={!isEditing || !isAdmin} /></FormControl></FormItem>)} />)}
+                                            </>)}
+                                            {isEditing && station && (
+                                                <div className="flex justify-end gap-2">
+                                                    <Button type="button" variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                                                    <Button type="submit" size="sm" disabled={!isAdmin || isSubmitting}>Save Details</Button>
+                                                </div>
                                             )}
-                                        </TableBody>
-                                    </Table>
-                                    <div className="space-y-4 md:hidden">
-                                        {(paginatedComplianceReports && paginatedComplianceReports.length > 0) ? paginatedComplianceReports.map((report) => (
-                                            <Card key={report.id}>
-                                                <CardContent className="p-4 space-y-3">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <p className="font-semibold">{report.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{report.date ? format((report.date as any).toDate(), 'MMM yyyy') : 'N/A'}</p>
+                                        </form>
+                                    </Form>
+                                    <Separator />
+                                    <div>
+                                        <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
+                                        <div className="flex items-center gap-4 p-4 border rounded-lg">
+                                            {station?.partnershipAgreementUrl ? (<><FileText className="h-6 w-6" /><div className="flex-1"><p>Agreement on File</p></div><Button asChild variant="outline"><a href={station.partnershipAgreementUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4" /> View</a></Button></>)
+                                                : (<div className="w-full"><Label>Attach Signed Agreement</Label><Input type="file" onChange={handleAgreementFileChange} disabled={isUploading} />{isUploading && <Progress value={uploadProgress} className="mt-2" />}</div>)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </CarouselItem>
+                            {station && (
+                                <CarouselItem>
+                                    <div className="p-1">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <div><h3 className="font-semibold text-base">Compliance Docs</h3><p className="text-sm text-muted-foreground">Manage compliance reports.</p></div>
+                                            <Button size="sm" onClick={() => setIsComplianceReportDialogOpen(true)} disabled={!station}><PlusCircle className="mr-2 h-4 w-4" /> Create Report</Button>
+                                        </div>
+                                        <Table className="hidden md:table">
+                                            <TableHeader><TableRow><TableHead>Report</TableHead><TableHead>Month</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {paginatedComplianceReports?.map((report) => (
+                                                    <TableRow key={report.id}>
+                                                        <TableCell>{report.name}</TableCell>
+                                                        <TableCell>{report.date ? format((report.date as any).toDate(), 'MMM yyyy') : 'N/A'}</TableCell>
+                                                        <TableCell><Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => setComplianceAttachmentUrl(report.reportUrl!)} disabled={!report.reportUrl}><Eye className="mr-2 h-4 w-4" />View</DropdownMenuItem>
+                                                                    <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                                    <DropdownMenuItem className="text-destructive" onClick={() => setComplianceReportToDelete(report)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                {(paginatedComplianceReports?.length === 0) && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center">No compliance reports yet.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                        <div className="space-y-4 md:hidden">
+                                            {(paginatedComplianceReports && paginatedComplianceReports.length > 0) ? paginatedComplianceReports.map((report) => (
+                                                <Card key={report.id}>
+                                                    <CardContent className="p-4 space-y-3">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <p className="font-semibold">{report.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{report.date ? format((report.date as any).toDate(), 'MMM yyyy') : 'N/A'}</p>
+                                                            </div>
+                                                            <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
                                                         </div>
-                                                        <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
-                                                    </div>
-                                                    <div className="flex gap-2 pt-2">
-                                                        <Button variant="outline" size="sm" className="w-full" onClick={() => setComplianceAttachmentUrl(report.reportUrl!)} disabled={!report.reportUrl}><Eye className="mr-2 h-4 w-4" />View</Button>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild><Button variant="secondary" size="sm" className="w-full">Actions</Button></DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                                                <DropdownMenuItem className="text-destructive" onClick={() => setComplianceReportToDelete(report)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        )) : (
-                                            <p className="text-center py-10 text-muted-foreground">No compliance reports found.</p>
-                                        )}
+                                                        <div className="flex gap-2 pt-2">
+                                                            <Button variant="outline" size="sm" className="w-full" onClick={() => setComplianceAttachmentUrl(report.reportUrl!)} disabled={!report.reportUrl}><Eye className="mr-2 h-4 w-4" />View</Button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild><Button variant="secondary" size="sm" className="w-full">Actions</Button></DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => { setComplianceReportToEdit(report); setIsComplianceReportDialogOpen(true); }}><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                                    <DropdownMenuItem className="text-destructive" onClick={() => setComplianceReportToDelete(report)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            )) : (
+                                                <p className="text-center py-10 text-muted-foreground">No compliance reports found.</p>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center justify-end space-x-2 pt-4">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={complianceCurrentPage === 1}
+                                            >
+                                                Previous
+                                            </Button>
+                                            <span className="text-sm text-muted-foreground">
+                                                Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
+                                                disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-end space-x-2 pt-4">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
-                                            disabled={complianceCurrentPage === 1}
-                                        >
-                                            Previous
-                                        </Button>
-                                        <span className="text-sm text-muted-foreground">
-                                            Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
-                                        </span>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
-                                            disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
-                                        >
-                                            Next
-                                        </Button>
-                                    </div>
-                                </div>
+                                </CarouselItem>
                             )}
-                            <Separator />
-                            <div>
-                                <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
-                                <div className="flex items-center gap-4 p-4 border rounded-lg">
-                                    {station?.partnershipAgreementUrl ? (<><FileText className="h-6 w-6"/><div className="flex-1"><p>Agreement on File</p></div><Button asChild variant="outline"><a href={station.partnershipAgreementUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4" /> View</a></Button></>)
-                                    : (<div className="w-full"><Label>Attach Signed Agreement</Label><Input type="file" onChange={handleAgreementFileChange} disabled={isUploading}/>{isUploading && <Progress value={uploadProgress} className="mt-2" />}</div>)}
-                                </div>
-                            </div>
-                        </div>
-                    </ScrollArea>
+                        </CarouselContent>
+                        <CarouselPrevious className="hidden sm:flex -left-4" />
+                        <CarouselNext className="hidden sm:flex -right-4" />
+                    </Carousel>
+
                     <DialogFooter className="mt-4 pt-4 border-t flex justify-between w-full">
                         <div>{station && (<Button variant="destructive" onClick={() => setStationToDelete(station)} disabled={!isAdmin || isSubmitting}><Trash2 className="mr-2 h-4 w-4" />Delete</Button>)}</div>
                         <div className="flex gap-2"><DialogClose asChild><Button type="button" variant="outline">Close</Button></DialogClose>{!station && (<Button onClick={stationForm.handleSubmit(handleStationSubmit)} disabled={isSubmitting || isUploading || !stationForm.formState.isValid}>{isSubmitting ? "Creating..." : "Create"}</Button>)}</div>
