@@ -93,7 +93,7 @@ export interface AppUser {
     businessName: string;
     address?: string;
     contactNumber?: string;
-    totalConsumptionLiters: number;
+    totalConsumptionLiters: number; // For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated.
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];

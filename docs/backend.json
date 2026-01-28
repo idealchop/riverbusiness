@@ -15,7 +15,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Current water credit balance in liters for fixed-plan accounts. This is refilled monthly and decremented by deliveries." },
+        "totalConsumptionLiters": { "type": "number", "description": "For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
@@ -103,7 +103,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for fixed plans. Deprecated for prepaid/parent." },
+        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for fixed plans. Deprecated for prepaid/parent account types." },
         "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
@@ -398,8 +398,3 @@
     }
   }
 }
-
-    
-
-
-    

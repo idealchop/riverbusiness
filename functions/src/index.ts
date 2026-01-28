@@ -1,5 +1,4 @@
 
-
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -71,14 +70,22 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
 
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+    const adminId = await getAdminId();
 
-    // Handle consumption for branch accounts
+    // Handle consumption for different account types
     if (userData?.accountType === 'Branch' && userData.parentId) {
         const parentRef = db.collection('users').doc(userData.parentId);
         
-        // Calculate the cost of the delivery based on the branch's plan
+        const parentDoc = await parentRef.get();
+        if (!parentDoc.exists) {
+            logger.error(`Parent user with ID ${userData.parentId} not found for branch ${userId}.`);
+            return;
+        }
+        const parentData = parentDoc.data();
+        
+        // Calculate the cost of the delivery based on the PARENT's plan
         const litersDelivered = containerToLiter(delivery.volumeContainers);
-        const pricePerLiter = userData.plan?.price || 0;
+        const pricePerLiter = parentData?.plan?.price || 0;
         const deliveryCost = litersDelivered * pricePerLiter;
         
         try {
@@ -119,15 +126,40 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
                     data: { deliveryId: event.params.deliveryId, branchUserId: userId }
                 });
             }
+
+            // 5. Notify Admin of Branch Delivery
+            if (adminId) {
+                await createNotification(adminId, {
+                    type: 'delivery',
+                    title: 'Branch Delivery Created',
+                    description: `Delivery for ${userData.businessName} (Branch) scheduled, covered by ${parentData?.businessName}.`,
+                    data: { deliveryId: event.params.deliveryId, userId: userId }
+                });
+            }
+
         } catch (error) {
             logger.error(`Error processing branch delivery for parent ${userData.parentId}:`, error);
-            // Optional: Add error handling, like sending a notification to the admin
             return;
         }
-    }
-    // Note: Deduction for 'Single' account types is now handled on the client-side for a real-time UI update.
+    } else if (userData?.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
+        // For standard fixed-plan users, decrement their liter balance
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        await db.collection('users').doc(userId).update({
+            totalConsumptionLiters: increment(-litersDelivered)
+        });
 
-    // Always notify the user receiving the delivery
+        // Notify Admin of Single User Delivery
+        if (adminId) {
+             await createNotification(adminId, {
+                type: 'delivery',
+                title: 'Delivery Created',
+                description: `A delivery for ${userData.businessName} has been scheduled.`,
+                data: { deliveryId: event.params.deliveryId, userId: userId }
+            });
+        }
+    }
+
+    // Always notify the user receiving the delivery (The Branch or Single User)
     const notification = {
         type: 'delivery',
         title: 'Delivery Scheduled',
@@ -172,6 +204,39 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     
     await createNotification(userId, notification);
 });
+
+/**
+ * Cloud Function to create notifications when a new payment document is created.
+ * This typically happens when a user submits proof for a new (current month) invoice.
+ */
+export const onpaymentcreate = onDocumentCreated("users/{userId}/payments/{paymentId}", async (event) => {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const payment = event.data.data();
+
+    // We only care about notifying the admin when a user submits a payment for review.
+    if (payment.status !== 'Pending Review') {
+        return;
+    }
+
+    const adminId = await getAdminId();
+    if (!adminId) return;
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    
+    if (userData) {
+        const adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+            type: 'payment',
+            title: 'Payment for Review',
+            description: `${userData.businessName} (ID: ${userData.clientId}) has submitted a proof of payment.`,
+            data: { userId: userId, paymentId: event.params.paymentId }
+        };
+        await createNotification(adminId, adminNotification);
+    }
+});
+
 
 /**
  * Cloud Function to create notifications when a payment status is updated by an admin.
@@ -408,12 +473,26 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Handle user-uploaded proofs of payment.
-    // This function only needs to log receipt of the file. The client is now responsible
-    // for writing the proofOfPaymentUrl to the Firestore document after a successful upload.
+    // Handle user-uploaded proofs of payment
     if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
         const { userId, paymentId } = customMetadata;
-        logger.log(`Payment proof received for user: ${userId}, payment: ${paymentId}. Client will handle database update.`);
+
+        if (!userId || !paymentId) {
+            logger.error(`Missing userId or paymentId in metadata for file: ${filePath}`);
+            return;
+        }
+
+        const url = await getPublicUrl();
+        const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
+        
+        await paymentRef.set({
+            proofOfPaymentUrl: url,
+            status: "Pending Review",
+        }, { merge: true });
+
+        logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
+        
+        // This will trigger onpaymentcreate or onpaymentupdate which handles notifications
         return;
     }
     
