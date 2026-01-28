@@ -166,7 +166,7 @@ interface MonthlySOAProps {
     deliveries: Delivery[];
     sanitationVisits: SanitationVisit[];
     complianceReports: ComplianceReport[];
-    totalAmount: number;
+    totalAmount?: number;
     billingPeriod: string;
 }
 
@@ -309,17 +309,25 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     // --- Deliveries ---
     const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
     const totalLitersConsumed = containerToLiter(totalContainers);
-    const deliveryBody = deliveries.map(d => [d.id, format(new Date(d.date), 'PP'), d.volumeContainers, containerToLiter(d.volumeContainers).toFixed(1), d.status]);
+    const deliveryBody = deliveries.map(d => [
+        d.id,
+        format(new Date(d.date), 'PP'),
+        d.volumeContainers,
+        containerToLiter(d.volumeContainers).toFixed(1),
+        d.status,
+        d.proofOfDeliveryUrl ? { content: 'See Delivery Proof', href: d.proofOfDeliveryUrl } : 'N/A'
+    ]);
     if (deliveries.length > 0) {
         const deliverySummaryRow = [
           { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: '', styles: {fillColor: [230, 242, 255] } },
+          { content: '', styles: {fillColor: [230, 242, 255] } },
         ];
         deliveryBody.push(deliverySummaryRow as any);
     }
-    lastY = renderTable('Delivery History', [["Ref ID", "Date", "Containers", "Liters", "Status"]], deliveryBody, lastY);
+    lastY = renderTable('Delivery History', [["Ref ID", "Date", "Containers", "Liters", "Status", "Proof"]], deliveryBody, lastY);
     lastY += 20;
     
     // --- Sanitation & Compliance ---
@@ -350,29 +358,33 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }
     
     // --- FINANCIAL SUMMARY ---
-    const summaryX = pageWidth - margin - 220; 
-    
-    const subtotal = totalAmount;
-    const tax = totalAmount * 0.12;
-    const grandTotal = subtotal;
+    if (totalAmount && totalAmount > 0) {
+        const summaryX = pageWidth - margin - 220; 
+        
+        const subtotal = totalAmount;
+        const tax = totalAmount * 0.12;
+        const grandTotal = subtotal;
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80);
-    doc.text('Subtotal:', summaryX, lastY);
-    doc.text(`P ${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right' });
-    
-    doc.text('VAT (12%):', summaryX, lastY + 15);
-    doc.text(`P ${tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 15, { align: 'right' });
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text('Subtotal:', summaryX, lastY);
+        doc.text(`P ${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right' });
+        
+        doc.text('VAT (12%):', summaryX, lastY + 15);
+        doc.text(`P ${tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 15, { align: 'right' });
 
-    doc.setLineWidth(0.5);
-    doc.line(summaryX - 5, lastY + 28, pageWidth - margin, lastY + 28);
+        doc.setLineWidth(0.5);
+        doc.line(summaryX - 5, lastY + 28, pageWidth - margin, lastY + 28);
 
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0);
-    doc.text('Total Amount Due:', summaryX, lastY + 42);
-    doc.text(`P ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 42, { align: 'right' });
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
+        doc.text('Total Amount Due:', summaryX, lastY + 42);
+        doc.text(`P ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 42, { align: 'right' });
+        
+        lastY += 62;
+    }
     
     // Saved Liters for fixed plans
     if (user && !user.plan?.isConsumptionBased && user.customPlanDetails) {
@@ -382,7 +394,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
             doc.setFontSize(9);
             doc.setFont('helvetica', 'italic');
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.text(`Saved Liters: ${savedLiters.toLocaleString(undefined, {maximumFractionDigits:0})} L will be added to next month's balance.`, summaryX, lastY + 62);
+            doc.text(`Saved Liters: ${savedLiters.toLocaleString(undefined, {maximumFractionDigits:0})} L will be added to next month's balance.`, pageWidth - margin, lastY, { align: 'right' });
         }
     }
 
