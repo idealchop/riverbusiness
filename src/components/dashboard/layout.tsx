@@ -109,9 +109,9 @@ export default function DashboardLayout({
   const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
   const paymentOptions: PaymentOption[] = useMemo(() => [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
-      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
-      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
+      { name: 'BPI', qr: bankQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '3489145013' } },
+      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09557750188' } },
       { name: 'Credit Card', qr: cardQr }
   ], [gcashQr, bankQr, paymayaQr, cardQr]);
   
@@ -253,15 +253,6 @@ export default function DashboardLayout({
     setIsSubmittingProof(true);
     setUploadProgress(0);
     
-    const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
-    await setDoc(paymentRef, { 
-        id: selectedInvoice.id, 
-        date: selectedInvoice.date, 
-        description: selectedInvoice.description, 
-        amount: selectedInvoice.amount, 
-        status: 'Pending Review' // Initially set to pending, backend will confirm
-    }, { merge: true });
-
     const filePath = `users/${authUser.uid}/payments/${selectedInvoice.id}-${Date.now()}-${paymentProofFile.name}`;
     const metadata = {
         customMetadata: {
@@ -271,12 +262,20 @@ export default function DashboardLayout({
     };
 
     try {
-        await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
+        const downloadURL = await uploadFileWithProgress(storage, auth, filePath, paymentProofFile, metadata, setUploadProgress);
         
-        toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
-        // Not closing the dialog automatically anymore based on user request.
-        // setIsPaymentDialogOpen(false); 
+        const paymentRef = doc(firestore, 'users', authUser.uid, 'payments', selectedInvoice.id);
+        await setDoc(paymentRef, { 
+            id: selectedInvoice.id, 
+            date: selectedInvoice.date, 
+            description: selectedInvoice.description, 
+            amount: selectedInvoice.amount, 
+            status: 'Pending Review',
+            proofOfPaymentUrl: downloadURL,
+        }, { merge: true });
 
+        toast({ title: 'Upload Complete', description: 'Your proof of payment has been submitted for review.' });
+        
     } catch (error: any) {
         console.error("Proof upload failed", error);
         toast({

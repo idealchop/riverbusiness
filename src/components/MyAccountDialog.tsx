@@ -244,9 +244,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
 
   const paymentOptions: PaymentOption[] = [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
-      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
-      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
+      { name: 'BPI', qr: bankQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '3489145013' } },
+      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09557750188' } },
   ];
 
   const currentMonthInvoice = useMemo(() => {
