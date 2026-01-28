@@ -109,6 +109,15 @@ export function OverviewTab({
                                 </div>
                             </div>
                         </div>
+                        <div className="border-t pt-4">
+                            <Label className="text-sm text-muted-foreground">Available Liters</Label>
+                             <p className="text-xl font-bold">
+                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? 'N/A' : `${user.totalConsumptionLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L`}
+                            </p>
+                             <p className="text-xs text-muted-foreground">
+                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? 'Not applicable for this plan type.' : 'Remaining balance for this month.'}
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
