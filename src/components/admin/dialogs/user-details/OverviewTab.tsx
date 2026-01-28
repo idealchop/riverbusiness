@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,42 +98,38 @@ export function OverviewTab({
                             <Label className="text-sm text-muted-foreground">Estimated Bill</Label>
                             <p className="text-2xl font-bold">₱{currentMonthInvoice?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="border-t pt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-sm text-muted-foreground">Available Liters</Label>
+                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? (
+                                    <>
+                                        <p className="text-xl font-bold">N/A</p>
+                                        <p className="text-xs text-muted-foreground">Not applicable for flow plans.</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-xl font-bold">
+                                            {availableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            from {totalAllocation.toLocaleString(undefined, { maximumFractionDigits: 0 })} L total
+                                        </p>
+                                    </>
+                                )}
+                            </div>
                             <div>
                                 <Label className="text-sm text-muted-foreground">Consumption</Label>
                                 <p className="text-xl font-bold">{consumedLitersThisMonth.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</p>
-                            </div>
-                            <div>
-                                <Label className="text-sm text-muted-foreground">vs. Last Month</Label>
                                 <div className={cn(
-                                    "flex items-center text-xl font-bold",
+                                    "flex items-center text-xs",
                                     consumptionComparison.changeType === 'increase' && 'text-red-500',
                                     consumptionComparison.changeType === 'decrease' && 'text-green-500',
                                 )}>
-                                    {consumptionComparison.changeType === 'increase' && <ArrowUp className="h-5 w-5 mr-1" />}
-                                    {consumptionComparison.changeType === 'decrease' && <ArrowDown className="h-5 w-5 mr-1" />}
-                                    <span>{consumptionComparison.percentageChange.toFixed(0)}%</span>
+                                    {consumptionComparison.changeType === 'increase' && <ArrowUp className="h-4 w-4" />}
+                                    {consumptionComparison.changeType === 'decrease' && <ArrowDown className="h-4 w-4" />}
+                                    <span>{consumptionComparison.percentageChange.toFixed(0)}% vs last month</span>
                                 </div>
                             </div>
-                        </div>
-                         <div className="border-t pt-4">
-                            <Label className="text-sm text-muted-foreground">Monthly Water Credits</Label>
-                            {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? (
-                                <>
-                                    <p className="text-xl font-bold">N/A</p>
-                                    <p className="text-xs text-muted-foreground">Not applicable for this plan type.</p>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-xl font-bold">
-                                        {availableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L
-                                        <span className="text-sm font-normal text-muted-foreground"> available</span>
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        from {totalAllocation.toLocaleString(undefined, { maximumFractionDigits: 0 })} L total monthly allocation.
-                                    </p>
-                                </>
-                            )}
                         </div>
                     </CardContent>
                 </Card>
