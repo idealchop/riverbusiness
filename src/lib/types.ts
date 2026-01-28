@@ -1,6 +1,5 @@
 
 
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -119,6 +118,7 @@ export interface AppUser {
         deliveryDay?: string;
         deliveryTime?: string;
         autoRefillEnabled?: boolean;
+        lastMonthRollover?: number;
     };
     currentContractUrl?: string;
     photoURL?: string;
@@ -265,3 +265,5 @@ export interface TopUpRequest {
 
     
 
+
+    

@@ -173,9 +173,11 @@ async function generateInvoiceForUser(
         description = `Monthly Subscription for ${billingPeriod}`;
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
+        let rolloverLiters = 0;
+
         if (monthlyAllocation > 0) {
             const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
-            const rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
+            rolloverLiters = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
             if (rolloverLiters > 0) {
                 const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
@@ -189,6 +191,13 @@ async function generateInvoiceForUser(
                 console.log(`Generated rollover notification for user ${userRef.id} for ${rolloverLiters} liters.`);
             }
         }
+        
+        const newBalance = (monthlyAllocation * monthsToBill) + rolloverLiters;
+        batch.update(userRef, {
+            totalConsumptionLiters: newBalance,
+            'customPlanDetails.lastMonthRollover': rolloverLiters,
+        });
+
     }
     
     // Add one-time fees to the very first invoice
@@ -238,3 +247,5 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
+
+    

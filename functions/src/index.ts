@@ -124,6 +124,12 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             // Optional: Add error handling, like sending a notification to the admin
             return;
         }
+    } else if (userData?.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
+        // For standard fixed-plan users, decrement their liter balance
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        await db.collection('users').doc(userId).update({
+            totalConsumptionLiters: increment(-litersDelivered)
+        });
     }
 
     // Always notify the user receiving the delivery
@@ -376,15 +382,8 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
 
     // Handle user contract uploads by admin
     if (filePath.startsWith("userContracts/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).update({
-            currentContractUrl: url,
-            contractUploadedDate: FieldValue.serverTimestamp(),
-            contractStatus: "Active",
-        });
-        logger.log(`Updated contract for user: ${userId}`);
+        const userId = filePath.split('/')[1];
+        logger.log(`Contract received for user: ${userId}. Client will handle database update.`);
         return;
     }
     
@@ -451,3 +450,5 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    

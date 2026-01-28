@@ -69,7 +69,7 @@ export function StatCards({
     });
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
     
-    const currentBalance = user.totalConsumptionLiters;
+    const currentBalance = user.totalConsumptionLiters || 0;
     
     let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
@@ -91,34 +91,13 @@ export function StatCards({
         };
     }
     
-    const planDetails = user.customPlanDetails || user.plan.customPlanDetails;
-    if (!planDetails || !user.createdAt) {
-        const startingBalanceForMonth = currentBalance + consumedLitersThisCycle;
-        const consumedPercentage = startingBalanceForMonth > 0 ? (consumedLitersThisCycle / startingBalanceForMonth) * 100 : 0;
-        return { ...emptyState, currentBalance, consumedLitersThisMonth: consumedLitersThisCycle, totalLitersForMonth: startingBalanceForMonth, consumedPercentage, estimatedCost: (user.plan.price || 0) + equipmentCostForPeriod };
-    }
-
-    const createdAtDate = typeof (user.createdAt as any)?.toDate === 'function' 
-        ? (user.createdAt as any).toDate() 
-        : new Date(user.createdAt as string);
-
-    const lastMonth = subMonths(now, 1);
-    const lastCycleStart = startOfMonth(lastMonth);
+    const planDetails = user.customPlanDetails || {};
     
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
     const bonusLiters = planDetails.bonusLiters || 0;
-    const totalMonthlyAllocation = monthlyPlanLiters + bonusLiters;
+    const rolloverLiters = planDetails.lastMonthRollover || 0;
     
-    let rolloverLiters = 0;
-    if (isBefore(createdAtDate, lastCycleStart)) {
-        const lastCycleEnd = endOfMonth(lastMonth);
-        const deliveriesLastCycle = deliveries.filter(d => isWithinInterval(new Date(d.date), { start: lastCycleStart, end: lastCycleEnd }));
-        const consumedLitersLastMonth = deliveriesLastCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-        rolloverLiters = Math.max(0, totalMonthlyAllocation - consumedLitersLastMonth);
-    }
-    
-    const allocationForPeriod = totalMonthlyAllocation * monthsToBill;
-    const totalLitersForMonth = allocationForPeriod + rolloverLiters;
+    const totalLitersForMonth = monthlyPlanLiters + bonusLiters + rolloverLiters;
     const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisCycle / totalLitersForMonth) * 100 : 0;
     
     return {
@@ -427,7 +406,8 @@ export function StatCards({
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
+
+    
