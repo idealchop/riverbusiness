@@ -37,6 +37,7 @@ interface OverviewTabProps {
     onAssignStation: (stationId: string) => void;
     onContractFileChange: (file: File | null) => void;
     onContractUpload: () => void;
+    onSetIsYearlyConsumptionOpen: (isOpen: boolean) => void;
 }
 
 export function OverviewTab({
@@ -52,6 +53,7 @@ export function OverviewTab({
     onAssignStation,
     onContractFileChange,
     onContractUpload,
+    onSetIsYearlyConsumptionOpen,
 }: OverviewTabProps) {
 
     const planDetails = user.customPlanDetails || {};
@@ -129,6 +131,9 @@ export function OverviewTab({
                                     {consumptionComparison.changeType === 'decrease' && <ArrowDown className="h-4 w-4" />}
                                     <span>{consumptionComparison.percentageChange.toFixed(0)}% vs last month</span>
                                 </div>
+                                <Button variant="link" size="sm" className="h-auto p-0 text-xs mt-1" onClick={() => onSetIsYearlyConsumptionOpen(true)}>
+                                    View yearly history
+                                </Button>
                             </div>
                         </div>
                     </CardContent>
