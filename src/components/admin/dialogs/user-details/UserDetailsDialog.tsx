@@ -202,6 +202,9 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             <TabsList>
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
                                 <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
+                                {user.accountType === 'Parent' && (
+                                    <TabsTrigger value="branch-history">Branch History</TabsTrigger>
+                                )}
                                 <TabsTrigger value="billing">Billing</TabsTrigger>
                                 <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
                             </TabsList>
@@ -230,6 +233,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetProofToViewUrl={setProofToViewUrl}
                                 />
                             </TabsContent>
+                            {user.accountType === 'Parent' && (
+                                <TabsContent value="branch-history" className="py-6">
+                                    {/* Placeholder for Branch History content */}
+                                </TabsContent>
+                            )}
                             <TabsContent value="billing" className="py-6">
                                 <BillingTab
                                     user={user}
