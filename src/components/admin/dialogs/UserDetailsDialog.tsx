@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -13,6 +12,7 @@ import { collection, doc, serverTimestamp, updateDoc, getDoc, query, increment, 
 import { AppUser, Delivery, WaterStation, Payment, SanitationVisit, RefillRequest, RefillRequestStatus, Notification, DispenserReport, Transaction, TopUpRequest, ManualCharge } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, getYear, getMonth } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 import { OverviewTab } from './user-details/OverviewTab';
 import { DeliveriesTab } from './user-details/DeliveriesTab';
@@ -164,11 +164,21 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const handleContractUpload = async () => {
         if (!contractFile || !auth?.currentUser || !storage || !userDocRef) return;
         setIsUploadingContract(true);
+        setUploadProgress(0);
         const filePath = `userContracts/${user.id}/${Date.now()}-${contractFile.name}`;
         try {
-            await uploadFileWithProgress(storage, auth, filePath, contractFile, {}, setUploadProgress);
+            const downloadURL = await uploadFileWithProgress(storage, auth, filePath, contractFile, {}, setUploadProgress);
+
+            await updateDoc(userDocRef, {
+                currentContractUrl: downloadURL,
+                contractUploadedDate: serverTimestamp(),
+                contractStatus: "Active",
+            });
+            
             toast({ title: "Contract Uploaded", description: "The user's contract has been updated." });
+
         } catch (error) {
+            console.error("Contract upload failed:", error)
             toast({ variant: 'destructive', title: "Upload Failed" });
         } finally {
             setIsUploadingContract(false);

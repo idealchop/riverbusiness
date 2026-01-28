@@ -411,13 +411,7 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     if (filePath.startsWith("userContracts/")) {
         const parts = filePath.split("/");
         const userId = parts[1];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).update({
-            currentContractUrl: url,
-            contractUploadedDate: FieldValue.serverTimestamp(),
-            contractStatus: "Active",
-        });
-        logger.log(`Updated contract for user: ${userId}`);
+        logger.log(`Contract received for user: ${userId}. Client will handle database update.`);
         return;
     }
     
