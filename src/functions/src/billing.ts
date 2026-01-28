@@ -171,11 +171,12 @@ async function generateInvoiceForUser(
         const planCost = user.plan.price || 0;
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
-
+        
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         
         // This is the new rollover, calculated from the period that just ended.
-        const newRollover = Math.max(0, (monthlyAllocation * monthsToBill) - consumedLitersInPeriod);
+        const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
+        const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
         if (newRollover > 0) {
             const rolloverNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {

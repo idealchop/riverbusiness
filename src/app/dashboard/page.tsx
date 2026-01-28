@@ -243,7 +243,7 @@ export default function DashboardPage() {
       clientId: user.clientId || '',
       requestedAt: serverTimestamp(),
       status: 'Requested',
-      statusHistory: [{ status: 'Requested', timestamp: Timestamp.now() }],
+      statusHistory: [{ status: 'Requested', timestamp: serverTimestamp() }],
     };
 
     try {
@@ -323,7 +323,7 @@ export default function DashboardPage() {
       clientId: user.clientId || '',
       requestedAt: serverTimestamp(),
       status: 'Requested',
-      statusHistory: [{ status: 'Requested', timestamp: Timestamp.now() }],
+      statusHistory: [{ status: 'Requested', timestamp: serverTimestamp() }],
       volumeContainers: containers,
       requestedDate: date.toISOString(),
     };
