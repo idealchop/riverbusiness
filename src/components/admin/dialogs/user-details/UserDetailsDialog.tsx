@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -203,7 +204,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
                                 <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
                                 {user.accountType === 'Parent' && (
-                                    <TabsTrigger value="branch-history">Branch History</TabsTrigger>
+                                    <TabsTrigger value="branch-deliveries">Branch Deliveries</TabsTrigger>
                                 )}
                                 <TabsTrigger value="billing">Billing</TabsTrigger>
                                 <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
@@ -234,8 +235,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                 />
                             </TabsContent>
                             {user.accountType === 'Parent' && (
-                                <TabsContent value="branch-history" className="py-6">
-                                    {/* Placeholder for Branch History content */}
+                                <TabsContent value="branch-deliveries" className="py-6">
+                                    {/* Placeholder for Branch Deliveries content */}
                                 </TabsContent>
                             )}
                             <TabsContent value="billing" className="py-6">
