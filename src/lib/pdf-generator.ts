@@ -93,7 +93,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
 
   // 4. Create Table
   const tableStartY = docDetailsY + 15;
-  const tableColumn = ["Ref ID", "Delivery Date", "Volume (Containers)", "Volume (Liters)", "Status", "Proof"];
+  const tableColumn = ["Ref ID", "Delivery Date", "Volume (Containers)", "Volume (Liters)", "Status"];
   const tableRows: (string | number | object)[][] = [];
 
   deliveries.forEach(delivery => {
@@ -103,7 +103,6 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
       delivery.volumeContainers,
       containerToLiter(delivery.volumeContainers),
       delivery.status,
-      delivery.proofOfDeliveryUrl ? { content: 'See Delivery Proof', href: delivery.proofOfDeliveryUrl } : 'N/A'
     ];
     tableRows.push(deliveryData);
   });
@@ -116,7 +115,6 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
       { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
       { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
       { content: totalLiters.toLocaleString(), styles: { fontStyle: 'bold' } },
-      { content: '', styles: {} },
       { content: '', styles: {} },
   ];
   tableRows.push(summaryRow as any);
@@ -317,7 +315,6 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         d.volumeContainers,
         containerToLiter(d.volumeContainers).toFixed(1),
         d.status,
-        d.proofOfDeliveryUrl ? { content: 'See Delivery Proof', href: d.proofOfDeliveryUrl } : 'N/A'
     ]);
     if (deliveries.length > 0) {
         const deliverySummaryRow = [
@@ -325,11 +322,10 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: '', styles: {fillColor: [230, 242, 255] } },
-          { content: '', styles: {fillColor: [230, 242, 255] } },
         ];
         deliveryBody.push(deliverySummaryRow as any);
     }
-    lastY = renderTable('Delivery History', [["Ref ID", "Date", "Containers", "Liters", "Status", "Proof"]], deliveryBody, lastY);
+    lastY = renderTable('Delivery History', [["Ref ID", "Date", "Containers", "Liters", "Status"]], deliveryBody, lastY);
     lastY += 20;
     
     // --- Sanitation & Compliance ---
