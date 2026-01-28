@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -268,7 +269,7 @@ export function StationProfileDialog({ isOpen, onOpenChange, station, isAdmin }:
                                         <h3 className="font-semibold text-base mb-1">Partnership Agreement</h3>
                                         <div className="flex items-center gap-4 p-4 border rounded-lg">
                                             {station?.partnershipAgreementUrl ? (<><FileText className="h-6 w-6" /><div className="flex-1"><p>Agreement on File</p></div><Button asChild variant="outline"><a href={station.partnershipAgreementUrl} target="_blank" rel="noopener noreferrer"><Eye className="mr-2 h-4 w-4" /> View</a></Button></>)
-                                                : (<div className="w-full"><Label>Attach Signed Agreement</Label><Input type="file" onChange={handleAgreementFileChange} disabled={isUploading} />{isUploading && <Progress value={uploadProgress} className="mt-2" />}</div>)}
+                                                : (<div className="w-full"><Label>Attach Signed Agreement</Label><Input type="file" onChange={handleAgreementFileChange} disabled={isUploading} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />{isUploading && <Progress value={uploadProgress} className="mt-2" />}</div>)}
                                         </div>
                                     </div>
                                 </div>

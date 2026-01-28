@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -160,7 +161,7 @@ export function OverviewTab({
                         <div className="mt-4">
                             <Label>Upload New/Updated Contract</Label>
                             <div className="flex gap-2">
-                                <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} />
+                                <Input type="file" onChange={(e) => onContractFileChange(e.target.files?.[0] || null)} disabled={isUploadingContract} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
                                 <Button onClick={onContractUpload} disabled={!contractFile || isUploadingContract}>{isUploadingContract ? 'Uploading...' : 'Upload'}</Button>
                             </div>
                             {isUploadingContract && <Progress value={uploadProgress} className="mt-2" />}
