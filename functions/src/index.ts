@@ -72,7 +72,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
-    // Handle consumption for different account types
+    // Handle consumption for branch accounts
     if (userData?.accountType === 'Branch' && userData.parentId) {
         const parentRef = db.collection('users').doc(userData.parentId);
         
@@ -124,13 +124,8 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             // Optional: Add error handling, like sending a notification to the admin
             return;
         }
-    } else if (userData?.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
-        // For standard fixed-plan users, decrement their liter balance
-        const litersDelivered = containerToLiter(delivery.volumeContainers);
-        await db.collection('users').doc(userId).update({
-            totalConsumptionLiters: increment(-litersDelivered)
-        });
     }
+    // Note: Deduction for 'Single' account types is now handled on the client-side for a real-time UI update.
 
     // Always notify the user receiving the delivery
     const notification = {
@@ -450,5 +445,3 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
-
-    

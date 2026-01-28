@@ -50,7 +50,7 @@ export function StatCards({
         rolloverLiters: 0,
         totalLitersForMonth: 0,
         consumedLitersThisMonth: 0,
-        currentBalance: user?.totalConsumptionLiters || 0,
+        currentBalance: 0,
         consumedPercentage: 0,
         estimatedCost: 0,
     };
@@ -68,9 +68,7 @@ export function StatCards({
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-    
-    const currentBalance = user.totalConsumptionLiters || 0;
-    
+        
     let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
       monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
@@ -87,7 +85,7 @@ export function StatCards({
             ...emptyState,
             consumedLitersThisMonth: consumedLitersThisCycle,
             currentBalance: 0, 
-            estimatedCost: consumptionCost, 
+            estimatedCost: consumptionCost + equipmentCostForPeriod, 
         };
     }
     
@@ -98,6 +96,12 @@ export function StatCards({
     const rolloverLiters = planDetails.lastMonthRollover || 0;
     
     const totalLitersForMonth = monthlyPlanLiters + bonusLiters + rolloverLiters;
+
+    // The `user.totalConsumptionLiters` field is set by the billing function at the start of the month.
+    // It represents the *starting* balance for this period.
+    const startingBalanceForMonth = user.totalConsumptionLiters || totalLitersForMonth;
+    const remainingBalance = startingBalanceForMonth - consumedLitersThisCycle;
+    
     const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisCycle / totalLitersForMonth) * 100 : 0;
     
     return {
@@ -106,7 +110,7 @@ export function StatCards({
         rolloverLiters,
         totalLitersForMonth,
         consumedLitersThisMonth: consumedLitersThisCycle,
-        currentBalance,
+        currentBalance: remainingBalance,
         consumedPercentage,
         estimatedCost: (user.plan.price || 0) * monthsToBill + equipmentCostForPeriod,
     };

@@ -192,9 +192,9 @@ async function generateInvoiceForUser(
             }
         }
         
-        const newBalance = (monthlyAllocation * monthsToBill) + rolloverLiters;
+        const startingBalanceForMonth = (monthlyAllocation * monthsToBill) + rolloverLiters;
         batch.update(userRef, {
-            totalConsumptionLiters: newBalance,
+            totalConsumptionLiters: startingBalanceForMonth,
             'customPlanDetails.lastMonthRollover': rolloverLiters,
         });
 
@@ -247,5 +247,3 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
-
-    
