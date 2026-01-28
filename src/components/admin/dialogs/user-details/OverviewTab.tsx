@@ -54,6 +54,14 @@ export function OverviewTab({
     onContractFileChange,
     onContractUpload,
 }: OverviewTabProps) {
+
+    const planDetails = user.customPlanDetails || {};
+    const monthlyPlanLiters = planDetails.litersPerMonth || 0;
+    const bonusLiters = planDetails.bonusLiters || 0;
+    const rolloverLiters = user.customPlanDetails?.lastMonthRollover || 0;
+    const totalAllocation = monthlyPlanLiters + bonusLiters + rolloverLiters;
+    const availableLiters = totalAllocation - consumedLitersThisMonth;
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -109,14 +117,24 @@ export function OverviewTab({
                                 </div>
                             </div>
                         </div>
-                        <div className="border-t pt-4">
-                            <Label className="text-sm text-muted-foreground">Available Liters</Label>
-                             <p className="text-xl font-bold">
-                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? 'N/A' : `${user.totalConsumptionLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L`}
-                            </p>
-                             <p className="text-xs text-muted-foreground">
-                                {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? 'Not applicable for this plan type.' : 'Remaining balance for this month.'}
-                            </p>
+                         <div className="border-t pt-4">
+                            <Label className="text-sm text-muted-foreground">Monthly Water Credits</Label>
+                            {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? (
+                                <>
+                                    <p className="text-xl font-bold">N/A</p>
+                                    <p className="text-xs text-muted-foreground">Not applicable for this plan type.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-xl font-bold">
+                                        {availableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L
+                                        <span className="text-sm font-normal text-muted-foreground"> available</span>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        from {totalAllocation.toLocaleString(undefined, { maximumFractionDigits: 0 })} L total monthly allocation.
+                                    </p>
+                                </>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
