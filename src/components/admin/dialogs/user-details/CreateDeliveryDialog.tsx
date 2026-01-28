@@ -47,7 +47,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
     const auth = useAuth();
 
     const [proofFile, setProofFile] = useState<File | null>(null);
-    const [isUploadingProof, setIsUploadingProof] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
     const deliveryForm = useForm<DeliveryFormValues>({ resolver: zodResolver(deliverySchema), defaultValues: { status: 'Pending', volumeContainers: 1 } });
@@ -62,11 +62,13 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
             }
         } else {
             setProofFile(null);
+            setIsSubmitting(false);
         }
     }, [isOpen, deliveryToEdit, deliveryForm]);
 
     const handleCreateDelivery = async (values: DeliveryFormValues) => {
         if (!firestore || !auth?.currentUser || !storage) return;
+        setIsSubmitting(true);
 
         const userDocRef = doc(firestore, 'users', user.id);
 
@@ -82,6 +84,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                         title: 'Tracking # Exists',
                         description: `A delivery with ID ${deliveryId} already exists. Please use a unique ID.`,
                     });
+                    setIsSubmitting(false);
                     return;
                 }
             }
@@ -95,7 +98,6 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
             };
 
             if (proofFile) {
-                setIsUploadingProof(true);
                 setUploadProgress(0);
                 const filePath = `admin_uploads/${auth.currentUser.uid}/proofs_for/${user.id}/${deliveryId}-${Date.now()}-${proofFile.name}`;
                 const downloadURL = await uploadFileWithProgress(storage, auth, filePath, proofFile, {}, setUploadProgress);
@@ -112,7 +114,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
             console.error("Delivery operation failed:", error);
             toast({ variant: 'destructive', title: "Operation Failed" });
         } finally {
-            setIsUploadingProof(false);
+            setIsSubmitting(false);
             setUploadProgress(0);
             setProofFile(null);
         }
@@ -127,7 +129,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 <form onSubmit={deliveryForm.handleSubmit(handleCreateDelivery)} className="space-y-4 py-4">
                     <div>
                         <Label htmlFor="trackingNumber">Tracking Number</Label>
-                        <Input id="trackingNumber" {...deliveryForm.register('id')} disabled={!!deliveryToEdit} />
+                        <Input id="trackingNumber" {...deliveryForm.register('id')} disabled={!!deliveryToEdit || isSubmitting} />
                         {deliveryForm.formState.errors.id && <p className="text-sm text-destructive">{deliveryForm.formState.errors.id.message}</p>}
                     </div>
                     <div>
@@ -137,24 +139,25 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                                 <Button
                                     variant={"outline"}
                                     className={cn("w-full justify-start text-left font-normal", !deliveryForm.watch('date') && "text-muted-foreground")}
+                                    disabled={isSubmitting}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {deliveryForm.watch('date') ? format(deliveryForm.watch('date'), "PPP") : <span>Pick a date</span>}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
-                                <Calendar mode="single" selected={deliveryForm.watch('date')} onSelect={(date) => deliveryForm.setValue('date', date as Date)} initialFocus />
+                                <Calendar mode="single" selected={deliveryForm.watch('date')} onSelect={(date) => deliveryForm.setValue('date', date as Date)} initialFocus disabled={isSubmitting}/>
                             </PopoverContent>
                         </Popover>
                     </div>
                     <div>
                         <Label htmlFor="volumeContainers">Volume (containers)</Label>
-                        <Input id="volumeContainers" type="number" {...deliveryForm.register('volumeContainers')} />
+                        <Input id="volumeContainers" type="number" {...deliveryForm.register('volumeContainers')} disabled={isSubmitting}/>
                         {deliveryForm.formState.errors.volumeContainers && <p className="text-sm text-destructive">{deliveryForm.formState.errors.volumeContainers.message}</p>}
                     </div>
                     <div>
                         <Label htmlFor="status">Status</Label>
-                        <Select onValueChange={(value) => deliveryForm.setValue('status', value as any)} defaultValue={deliveryForm.getValues('status')}>
+                        <Select onValueChange={(value) => deliveryForm.setValue('status', value as any)} defaultValue={deliveryForm.getValues('status')} disabled={isSubmitting}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="Pending">Pending</SelectItem>
@@ -165,7 +168,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                     </div>
                     <div>
                         <Label htmlFor="adminNotes">Admin Notes</Label>
-                        <Textarea id="adminNotes" {...deliveryForm.register('adminNotes')} />
+                        <Textarea id="adminNotes" {...deliveryForm.register('adminNotes')} disabled={isSubmitting}/>
                     </div>
                     <div>
                         <Label>Proof of Delivery</Label>
@@ -180,15 +183,15 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                             type="file"
                             onChange={(e) => setProofFile(e.target.files?.[0] || null)}
                             className="mt-2"
-                            disabled={isUploadingProof}
+                            disabled={isSubmitting}
                         />
-                        {isUploadingProof && <Progress value={uploadProgress} className="mt-2 h-1" />}
+                        {uploadProgress > 0 && <Progress value={uploadProgress} className="mt-2 h-1" />}
                         {proofFile && <p className="text-xs text-muted-foreground mt-1">New file selected: {proofFile.name}</p>}
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit" disabled={isUploadingProof}>
-                            {isUploadingProof ? 'Uploading...' : 'Save Delivery'}
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Save Delivery'}
                         </Button>
                     </DialogFooter>
                 </form>
