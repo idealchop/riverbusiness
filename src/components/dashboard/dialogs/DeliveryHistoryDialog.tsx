@@ -15,7 +15,7 @@ import { History, Calendar as CalendarIcon, Download, PackageCheck, Truck, Packa
 import { DateRange } from 'react-day-picker';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { generateMonthlySOA } from '@/lib/pdf-generator';
+import { generateSOA } from '@/lib/pdf-generator';
 import { useToast } from '@/hooks/use-toast';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -78,28 +78,21 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
     return filteredDeliveries.slice(startIndex, endIndex);
   }, [filteredDeliveries, currentPage]);
 
-  const handleDownloadSOA = () => {
-    if (!user || !deliveries) {
+  const handleDownloadHistory = () => {
+    if (!user || !filteredDeliveries) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'User data not available to generate SOA.',
+        description: 'User data or deliveries not available to generate history.',
       });
       return;
     }
-    // Note: The original generateSOA function might need adjustment if it doesn't handle the new combined data structure
-    // For now, we'll pass the filtered deliveries, which is what the user sees.
-    generateMonthlySOA({
-        user,
-        deliveries: filteredDeliveries,
-        sanitationVisits: [], // This function might need to fetch this data if required
-        complianceReports: [], // Same as above
-        totalAmount: 0, // This would need to be calculated based on the context
-        billingPeriod: deliveryDateRange ? `${format(deliveryDateRange.from!, 'PP')} to ${format(deliveryDateRange.to!, 'PP')}` : 'All Time'
-    });
+    
+    generateSOA(user, filteredDeliveries, deliveryDateRange);
+
     toast({
       title: 'Download Started',
-      description: 'Your Statement of Account is being generated.',
+      description: 'Your delivery history is being generated.',
     });
   };
   
@@ -142,7 +135,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
               <Calendar initialFocus mode="range" defaultMonth={deliveryDateRange?.from} selected={deliveryDateRange} onSelect={setDeliveryDateRange} numberOfMonths={2} />
             </PopoverContent>
           </Popover>
-          <Button onClick={handleDownloadSOA} disabled={filteredDeliveries.length === 0} className="w-full sm:w-auto">
+          <Button onClick={handleDownloadHistory} disabled={filteredDeliveries.length === 0} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             Download History
           </Button>
