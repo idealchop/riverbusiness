@@ -124,6 +124,12 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             // Optional: Add error handling, like sending a notification to the admin
             return;
         }
+    } else if (userData?.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
+        // For standard fixed-plan users, decrement their liter balance
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        await db.collection('users').doc(userId).update({
+            totalConsumptionLiters: increment(-litersDelivered)
+        });
     }
 
     // Always notify the user receiving the delivery
