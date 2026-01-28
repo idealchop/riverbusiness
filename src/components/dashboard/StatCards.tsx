@@ -93,7 +93,7 @@ export function StatCards({
     
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
     const bonusLiters = planDetails.bonusLiters || 0;
-    const rolloverLiters = planDetails.lastMonthRollover || 0;
+    const rolloverLiters = user.customPlanDetails?.lastMonthRollover || 0;
     
     const totalLitersForMonth = monthlyPlanLiters + bonusLiters + rolloverLiters;
 
@@ -227,7 +227,7 @@ export function StatCards({
                   ? 'Remaining Liter Credits'
                   : isFlowPlan
                   ? 'Estimated Cost This Month'
-                  : `Remaining Liters`}
+                  : `Available Liters`}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
@@ -317,7 +317,7 @@ export function StatCards({
           <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                Remaining Balance
+                Available Liters
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
