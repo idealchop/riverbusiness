@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -232,7 +231,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetProofToViewUrl={setProofToViewUrl}
                                 />
                             </TabsContent>
-                            {user.accountType === 'Parent' && (
+                             {user.accountType === 'Parent' && (
                                 <TabsContent value="branch-deliveries" className="py-6">
                                     <BranchDeliveriesTab
                                         user={user}

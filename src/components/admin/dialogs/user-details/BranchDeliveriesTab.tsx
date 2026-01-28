@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Delivery, AppUser } from '@/lib/types';
-import { Timestamp, collectionGroup, query, where } from 'firebase/firestore';
+import { Timestamp, collection, query, orderBy } from 'firebase/firestore';
 import { Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -24,7 +24,7 @@ const toSafeDate = (timestamp: any): Date | null => {
 };
 
 interface BranchDeliveriesTabProps {
-    user: AppUser;
+    user: AppUser; // The parent user
     onSetProofToViewUrl: (url: string | null) => void;
     allUsers: AppUser[];
 }
@@ -36,20 +36,12 @@ export function BranchDeliveriesTab({
 }: BranchDeliveriesTabProps) {
     const firestore = useFirestore();
 
-    const branchIds = useMemo(() => {
-        return allUsers.filter(u => u.parentId === user.id).map(u => u.id);
-    }, [allUsers, user.id]);
+    const parentDeliveriesQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc'));
+    }, [firestore, user]);
 
-    // Firestore `in` queries are limited to 30 items. If there are more branches, this will need pagination or a different approach.
-    const branchDeliveriesQuery = useMemoFirebase(() => {
-        if (!firestore || branchIds.length === 0) return null;
-        if (branchIds.length > 30) {
-            console.warn("Branch delivery query is limited to 30 branches.");
-        }
-        return query(collectionGroup(firestore, 'deliveries'), where('userId', 'in', branchIds.slice(0, 30)));
-    }, [firestore, branchIds]);
-    
-    const { data: branchDeliveriesData, isLoading: deliveriesLoading } = useCollection<Delivery>(branchDeliveriesQuery);
+    const { data: branchDeliveriesData, isLoading: deliveriesLoading } = useCollection<Delivery>(parentDeliveriesQuery);
 
     const [deliveriesCurrentPage, setDeliveriesCurrentPage] = useState(1);
     const DELIVERIES_PER_PAGE = 5;
@@ -61,24 +53,16 @@ export function BranchDeliveriesTab({
 
     const paginatedDeliveries = useMemo(() => {
         if (!branchDeliveriesData) return [];
-        const sorted = branchDeliveriesData.sort((a, b) => {
-            const dateA = toSafeDate(a.date);
-            const dateB = toSafeDate(b.date);
-            if (!dateA || !dateB) return 0;
-            return dateB.getTime() - dateA.getTime();
-        });
         const startIndex = (deliveriesCurrentPage - 1) * DELIVERIES_PER_PAGE;
-        return sorted.slice(startIndex, startIndex + DELIVERIES_PER_PAGE);
+        return branchDeliveriesData.slice(startIndex, startIndex + DELIVERIES_PER_PAGE);
     }, [branchDeliveriesData, deliveriesCurrentPage]);
     
     const branchIdToName = useMemo(() => {
         return allUsers.reduce((acc, u) => {
-            if (u.parentId === user.id) {
-                acc[u.id] = u.businessName;
-            }
+            acc[u.id] = u.businessName;
             return acc;
         }, {} as Record<string, string>);
-    }, [allUsers, user.id]);
+    }, [allUsers]);
 
     return (
         <Card>
