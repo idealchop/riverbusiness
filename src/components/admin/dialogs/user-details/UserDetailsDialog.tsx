@@ -235,7 +235,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetProofToViewUrl={setProofToViewUrl}
                                 />
                             </TabsContent>
-                            {user.accountType === 'Parent' && (
+                             {user.accountType === 'Parent' && (
                                 <TabsContent value="branch-deliveries" className="py-6">
                                     <BranchDeliveriesTab
                                         user={user}
