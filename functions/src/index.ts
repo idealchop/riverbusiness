@@ -369,6 +369,78 @@ export const ontopuprequestcreate = onDocumentCreated("users/{userId}/topUpReque
 
 
 /**
+ * Cloud Function to handle admin updates to top-up requests.
+ */
+export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+    if (!event.data) return;
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Only notify if the status has changed from 'Pending Review'.
+    if (before.status !== 'Pending Review' || before.status === after.status) {
+        return;
+    }
+
+    const userId = event.params.userId;
+    const requestData = after;
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const adminId = await getAdminId();
+
+    if (!userData) {
+        logger.error(`User data not found for ${userId} in ontopuprequestupdate.`);
+        return;
+    }
+
+    let userNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
+    let adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
+
+    if (after.status === 'Approved') {
+        userNotification = {
+            type: 'top-up',
+            title: 'Top-Up Successful',
+            description: `Your top-up of ₱${requestData.amount.toLocaleString()} has been approved and added to your balance.`,
+            data: { requestId: event.params.requestId }
+        };
+        adminNotification = {
+            type: 'top-up',
+            title: 'Top-Up Approved',
+            description: `You approved a ₱${requestData.amount.toLocaleString()} top-up for ${userData.businessName}.`,
+            data: { userId, requestId: event.params.requestId }
+        };
+        
+        // Also increment the parent's balance
+        await db.collection('users').doc(userId).update({
+            topUpBalanceCredits: increment(requestData.amount)
+        });
+
+    } else if (after.status === 'Rejected') {
+        userNotification = {
+            type: 'top-up',
+            title: 'Top-Up Rejected',
+            description: `Your top-up request was rejected. Reason: ${requestData.rejectionReason || 'Not specified'}.`,
+            data: { requestId: event.params.requestId }
+        };
+         adminNotification = {
+            type: 'top-up',
+            title: 'Top-Up Rejected',
+            description: `You rejected a top-up request from ${userData.businessName}.`,
+            data: { userId, requestId: event.params.requestId }
+        };
+    }
+
+    const promises = [];
+    if (userNotification) {
+        promises.push(createNotification(userId, userNotification));
+    }
+    if (adminNotification && adminId) {
+        promises.push(createNotification(adminId, adminNotification));
+    }
+    await Promise.all(promises);
+});
+
+/**
  * Cloud Function to send notifications for sanitation visit creations.
  */
 export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
