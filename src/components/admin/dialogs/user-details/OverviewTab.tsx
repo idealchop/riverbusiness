@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -90,19 +90,19 @@ export function OverviewTab({
                         </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle>Current Month Snapshot</CardTitle>
                         <CardDescription>A real-time look at this month's activity.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 flex-1">
                         <div>
                             <Label className="text-sm text-muted-foreground">Estimated Bill</Label>
                             <p className="text-2xl font-bold">₱{currentMonthInvoice?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                         </div>
                         <div className="border-t pt-4 grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-sm text-muted-foreground">Available Liters</Label>
+                                <Label className="text-sm text-muted-foreground">Monthly Water Credits</Label>
                                 {user.plan?.isConsumptionBased || user.accountType === 'Branch' ? (
                                     <>
                                         <p className="text-xl font-bold">N/A</p>
@@ -131,12 +131,14 @@ export function OverviewTab({
                                     {consumptionComparison.changeType === 'decrease' && <ArrowDown className="h-4 w-4" />}
                                     <span>{consumptionComparison.percentageChange.toFixed(0)}% vs last month</span>
                                 </div>
-                                <Button variant="link" size="sm" className="h-auto p-0 text-xs mt-1" onClick={() => onSetIsYearlyConsumptionOpen(true)}>
-                                    View yearly history
-                                </Button>
                             </div>
                         </div>
                     </CardContent>
+                    <CardFooter>
+                         <Button variant="outline" size="sm" className="w-full" onClick={() => onSetIsYearlyConsumptionOpen(true)}>
+                            View Yearly Consumption History
+                        </Button>
+                    </CardFooter>
                 </Card>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
