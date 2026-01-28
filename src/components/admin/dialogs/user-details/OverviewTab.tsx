@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -136,7 +137,7 @@ export function OverviewTab({
                     </CardContent>
                     <CardFooter>
                          <Button variant="outline" size="sm" className="w-full" onClick={() => onSetIsYearlyConsumptionOpen(true)}>
-                            View Yearly Consumption History
+                            View Consumption History
                         </Button>
                     </CardFooter>
                 </Card>

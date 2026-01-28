@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -25,6 +26,7 @@ import { TopUpDialog } from './user-details/TopUpDialog';
 import { CreateSanitationDialog } from './user-details/CreateSanitationDialog';
 import { SanitationHistoryDialog } from './user-details/SanitationHistoryDialog';
 import { ProofViewerDialog } from './user-details/ProofViewerDialog';
+import { YearlyConsumptionDialog } from './user-details/YearlyConsumptionDialog';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -68,6 +70,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [proofToViewUrl, setProofToViewUrl] = useState<string | null>(null);
     const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
+    const [isYearlyConsumptionOpen, setIsYearlyConsumptionOpen] = useState(false);
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -217,6 +220,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onAssignStation={handleAssignStation}
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
+                                    onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
@@ -292,6 +296,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 isOpen={!!proofToViewUrl}
                 onOpenChange={() => setProofToViewUrl(null)}
                 proofUrl={proofToViewUrl}
+            />
+            <YearlyConsumptionDialog
+                isOpen={isYearlyConsumptionOpen}
+                onOpenChange={setIsYearlyConsumptionOpen}
+                deliveries={userDeliveriesData}
+                user={user}
             />
         </>
     );

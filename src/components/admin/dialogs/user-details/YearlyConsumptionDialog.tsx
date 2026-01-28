@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -73,9 +74,9 @@ export function YearlyConsumptionDialog({ isOpen, onOpenChange, deliveries, user
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Yearly Consumption Summary ({getYear(new Date())})</DialogTitle>
+          <DialogTitle>Consumption History ({getYear(new Date())})</DialogTitle>
           <DialogDescription>
-            An overview of {user?.businessName}'s water consumption for the current year.
+            An overview of {user?.businessName}'s monthly water consumption for the current year.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-4">
