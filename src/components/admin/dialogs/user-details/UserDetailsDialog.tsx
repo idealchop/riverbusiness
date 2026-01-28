@@ -1,9 +1,5 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -191,6 +187,87 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         }
     };
     
+    const TABS_CONFIG = [
+        {
+            value: 'overview',
+            label: 'Overview',
+            component: (
+                <OverviewTab
+                    user={user}
+                    allUsers={allUsers}
+                    waterStations={waterStations}
+                    consumedLitersThisMonth={consumedLitersThisMonth}
+                    consumptionComparison={consumptionComparison}
+                    currentMonthInvoice={currentMonthInvoice}
+                    contractFile={contractFile}
+                    isUploadingContract={isUploadingContract}
+                    uploadProgress={uploadProgress}
+                    onAssignStation={handleAssignStation}
+                    onContractFileChange={setContractFile}
+                    onContractUpload={handleContractUpload}
+                    onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
+                />
+            ),
+            condition: true,
+        },
+        {
+            value: 'deliveries',
+            label: 'Deliveries',
+            component: (
+                <DeliveriesTab
+                    userDeliveriesData={userDeliveriesData}
+                    onSetDeliveryToEdit={setDeliveryToEdit}
+                    onSetIsCreateDeliveryOpen={setIsCreateDeliveryOpen}
+                    onSetProofToViewUrl={setProofToViewUrl}
+                />
+            ),
+            condition: true,
+        },
+        {
+            value: 'branch-deliveries',
+            label: 'Branch Deliveries',
+            component: (
+                <BranchDeliveriesTab
+                    user={user}
+                    onSetProofToViewUrl={setProofToViewUrl}
+                    allUsers={allUsers}
+                />
+            ),
+            condition: user.accountType === 'Parent',
+        },
+        {
+            value: 'billing',
+            label: 'Billing',
+            component: (
+                <BillingTab
+                    user={user}
+                    userPaymentsData={userPaymentsData}
+                    currentMonthInvoice={currentMonthInvoice}
+                    onSetIsManualChargeOpen={setIsManualChargeOpen}
+                    onSetIsTopUpOpen={setIsTopUpOpen}
+                    onSetPaymentToReview={setPaymentToReview}
+                    onSetIsPaymentReviewOpen={setIsPaymentReviewOpen}
+                />
+            ),
+            condition: true,
+        },
+        {
+            value: 'sanitation',
+            label: 'Sanitation',
+            component: (
+                <SanitationTab
+                    sanitationVisitsData={sanitationVisitsData}
+                    onSetSelectedSanitationVisit={setSelectedSanitationVisit}
+                    onSetIsSanitationHistoryOpen={setIsSanitationHistoryOpen}
+                    onSetIsCreateSanitationOpen={setIsCreateSanitationOpen}
+                />
+            ),
+            condition: true,
+        },
+    ];
+
+    const visibleTabs = TABS_CONFIG.filter(tab => tab.condition);
+
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -202,67 +279,15 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                     <ScrollArea className="flex-1 min-h-0">
                         <Tabs defaultValue={initialTab || "overview"}>
                             <TabsList>
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-                                {user.accountType === 'Parent' && (
-                                    <TabsTrigger value="branch-deliveries">Branch Deliveries</TabsTrigger>
-                                )}
-                                <TabsTrigger value="billing">Billing</TabsTrigger>
-                                <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                                {visibleTabs.map(tab => (
+                                    <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+                                ))}
                             </TabsList>
-                            <TabsContent value="overview" className="py-6">
-                                <OverviewTab
-                                    user={user}
-                                    allUsers={allUsers}
-                                    waterStations={waterStations}
-                                    consumedLitersThisMonth={consumedLitersThisMonth}
-                                    consumptionComparison={consumptionComparison}
-                                    currentMonthInvoice={currentMonthInvoice}
-                                    contractFile={contractFile}
-                                    isUploadingContract={isUploadingContract}
-                                    uploadProgress={uploadProgress}
-                                    onAssignStation={handleAssignStation}
-                                    onContractFileChange={setContractFile}
-                                    onContractUpload={handleContractUpload}
-                                    onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
-                                />
-                            </TabsContent>
-                            <TabsContent value="deliveries" className="py-6">
-                                <DeliveriesTab
-                                    userDeliveriesData={userDeliveriesData}
-                                    onSetDeliveryToEdit={setDeliveryToEdit}
-                                    onSetIsCreateDeliveryOpen={setIsCreateDeliveryOpen}
-                                    onSetProofToViewUrl={setProofToViewUrl}
-                                />
-                            </TabsContent>
-                             {user.accountType === 'Parent' && (
-                                <TabsContent value="branch-deliveries" className="py-6">
-                                    <BranchDeliveriesTab
-                                        user={user}
-                                        onSetProofToViewUrl={setProofToViewUrl}
-                                        allUsers={allUsers}
-                                    />
+                             {visibleTabs.map(tab => (
+                                <TabsContent key={tab.value} value={tab.value} className="py-6">
+                                    {tab.component}
                                 </TabsContent>
-                            )}
-                            <TabsContent value="billing" className="py-6">
-                                <BillingTab
-                                    user={user}
-                                    userPaymentsData={userPaymentsData}
-                                    currentMonthInvoice={currentMonthInvoice}
-                                    onSetIsManualChargeOpen={setIsManualChargeOpen}
-                                    onSetIsTopUpOpen={setIsTopUpOpen}
-                                    onSetPaymentToReview={setPaymentToReview}
-                                    onSetIsPaymentReviewOpen={setIsPaymentReviewOpen}
-                                />
-                            </TabsContent>
-                            <TabsContent value="sanitation" className="py-6">
-                               <SanitationTab
-                                    sanitationVisitsData={sanitationVisitsData}
-                                    onSetSelectedSanitationVisit={setSelectedSanitationVisit}
-                                    onSetIsSanitationHistoryOpen={setIsSanitationHistoryOpen}
-                                    onSetIsCreateSanitationOpen={setIsCreateSanitationOpen}
-                               />
-                            </TabsContent>
+                            ))}
                         </Tabs>
                     </ScrollArea>
                     <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
