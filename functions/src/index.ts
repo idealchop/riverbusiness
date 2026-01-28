@@ -62,112 +62,125 @@ export async function createNotification(userId: string, notificationData: Omit<
  * Cloud Function to create a notification when a delivery is first created.
  */
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
-    if (!event.data) return;
+  try {
+    if (!event.data) {
+      logger.info("No data in event, exiting function.");
+      return;
+    }
 
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
+    logger.info(`Processing delivery ${deliveryId} for user ${userId}.`);
 
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-    const adminId = await getAdminId();
 
-    // Handle consumption for different account types
-    if (userData?.accountType === 'Branch' && userData.parentId) {
-        const parentRef = db.collection('users').doc(userData.parentId);
-        
-        const parentDoc = await parentRef.get();
-        if (!parentDoc.exists) {
-            logger.error(`Parent user with ID ${userData.parentId} not found for branch ${userId}.`);
-            return;
-        }
-        const parentData = parentDoc.data();
-        
-        // Calculate the cost of the delivery based on the PARENT's plan
-        const litersDelivered = containerToLiter(delivery.volumeContainers);
-        const pricePerLiter = parentData?.plan?.price || 0;
-        const deliveryCost = litersDelivered * pricePerLiter;
-        
-        try {
-            // 1. Create a copy of the delivery record in the parent's subcollection
-            const parentDeliveryRef = parentRef.collection('deliveries').doc(deliveryId);
-            const deliveryCopyToParent: Delivery = {
-                ...delivery,
-                id: deliveryId,
-                userId: userId, // Keep original userId to know which branch it was for
-                parentId: userData.parentId
-            };
-            await parentDeliveryRef.set(deliveryCopyToParent);
-
-            if (deliveryCost > 0) {
-                // 2. Debit the parent account's credit balance
-                await parentRef.update({ topUpBalanceCredits: increment(-deliveryCost) });
-
-                // 3. Create a transaction log on the parent account
-                const transactionRef = parentRef.collection('transactions').doc();
-                const transactionData = {
-                    id: transactionRef.id,
-                    date: delivery.date,
-                    type: 'Debit',
-                    amountCredits: deliveryCost,
-                    description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
-                    branchId: userId,
-                    branchName: userData.businessName
-                };
-                await transactionRef.set(transactionData);
-            }
-
-            // 4. Notify the Parent account of the deduction
-            if (deliveryCost > 0) {
-                await createNotification(userData.parentId, {
-                    type: 'delivery',
-                    title: 'Branch Consumption',
-                    description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
-                    data: { deliveryId: event.params.deliveryId, branchUserId: userId }
-                });
-            }
-
-            // 5. Notify Admin of Branch Delivery
-            if (adminId) {
-                await createNotification(adminId, {
-                    type: 'delivery',
-                    title: 'Branch Delivery Created',
-                    description: `Delivery for ${userData.businessName} (Branch) scheduled, covered by ${parentData?.businessName}.`,
-                    data: { deliveryId: event.params.deliveryId, userId: userId }
-                });
-            }
-
-        } catch (error) {
-            logger.error(`Error processing branch delivery for parent ${userData.parentId}:`, error);
-            return;
-        }
-    } else if (userData?.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
-        // For standard fixed-plan users, decrement their liter balance
-        const litersDelivered = containerToLiter(delivery.volumeContainers);
-        await db.collection('users').doc(userId).update({
-            totalConsumptionLiters: increment(-litersDelivered)
-        });
-
-        // Notify Admin of Single User Delivery
-        if (adminId) {
-             await createNotification(adminId, {
-                type: 'delivery',
-                title: 'Delivery Created',
-                description: `A delivery for ${userData.businessName} has been scheduled.`,
-                data: { deliveryId: event.params.deliveryId, userId: userId }
-            });
-        }
+    if (!userData) {
+      logger.error(`User document not found for userId: ${userId}. Cannot process delivery notifications.`);
+      return;
     }
 
-    // Always notify the user receiving the delivery (The Branch or Single User)
-    const notification = {
+    const adminId = await getAdminId();
+    let adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
+    const notificationsToSend: Promise<void>[] = [];
+
+    // Always create notification for the user receiving the delivery
+    notificationsToSend.push(createNotification(userId, {
+      type: 'delivery',
+      title: 'Delivery Scheduled',
+      description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
+      data: { deliveryId },
+    }));
+
+    // Logic for different account types
+    if (userData.accountType === 'Branch' && userData.parentId) {
+      const parentRef = db.collection('users').doc(userData.parentId);
+      const parentDoc = await parentRef.get();
+      const parentData = parentDoc.data();
+
+      if (parentData) {
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        const pricePerLiter = parentData.plan?.price || 0;
+        const deliveryCost = litersDelivered * pricePerLiter;
+
+        // Create a batch to perform multiple writes atomically
+        const batch = db.batch();
+        
+        // 1. Copy delivery to parent's subcollection
+        const parentDeliveryRef = parentRef.collection('deliveries').doc(deliveryId);
+        batch.set(parentDeliveryRef, { ...delivery, parentId: userData.parentId });
+
+        if (deliveryCost > 0) {
+            // 2. Debit parent's credit balance
+            batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
+            
+            // 3. Log the transaction on the parent account
+            const transactionRef = parentRef.collection('transactions').doc();
+            batch.set(transactionRef, {
+                id: transactionRef.id,
+                date: delivery.date,
+                type: 'Debit',
+                amountCredits: deliveryCost,
+                description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
+                branchId: userId,
+                branchName: userData.businessName
+            });
+        }
+        
+        // Commit the batch
+        await batch.commit();
+
+        // Schedule Parent Notification
+        if (deliveryCost > 0) {
+          notificationsToSend.push(createNotification(userData.parentId, {
+            type: 'delivery',
+            title: 'Branch Consumption',
+            description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
+            data: { deliveryId, branchUserId: userId },
+          }));
+        }
+        
+        // Prepare Admin Notification for Branch Delivery
+        adminNotification = {
+          type: 'delivery',
+          title: 'Branch Delivery Created',
+          description: `Delivery for ${userData.businessName} (Branch) scheduled, covered by ${parentData.businessName}.`,
+          data: { deliveryId, userId },
+        };
+      } else {
+         logger.error(`Parent user ${userData.parentId} not found for branch ${userId}.`);
+      }
+    } else { // Single or Parent account delivery
+      if (userData.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
+        // Decrement liter balance for fixed-plan single users
+        const litersDelivered = containerToLiter(delivery.volumeContainers);
+        await db.collection('users').doc(userId).update({
+          totalConsumptionLiters: increment(-litersDelivered)
+        });
+      }
+      
+      // Prepare Admin Notification for Single/Parent Delivery
+      adminNotification = {
         type: 'delivery',
-        title: 'Delivery Scheduled',
-        description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
-        data: { deliveryId: event.params.deliveryId }
-    };
+        title: `Delivery Created`,
+        description: `A delivery for ${userData.businessName} (${userData.accountType || 'Single'}) has been scheduled.`,
+        data: { deliveryId, userId },
+      };
+    }
     
-    await createNotification(userId, notification);
+    // Schedule admin notification if it was prepared
+    if (adminId && adminNotification) {
+      notificationsToSend.push(createNotification(adminId, adminNotification));
+    }
+    
+    // Await all scheduled notifications
+    await Promise.all(notificationsToSend);
+    logger.info(`Successfully processed notifications for delivery ${deliveryId}.`);
+
+  } catch (error) {
+    logger.error(`Error in ondeliverycreate for event ID ${event.id}:`, error);
+  }
 });
 
 
@@ -442,7 +455,8 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
 
     // Handle user contract uploads by admin
     if (filePath.startsWith("userContracts/")) {
-        const userId = filePath.split('/')[1];
+        const parts = filePath.split("/");
+        const userId = parts[1];
         logger.log(`Contract received for user: ${userId}. Client will handle database update.`);
         return;
     }
