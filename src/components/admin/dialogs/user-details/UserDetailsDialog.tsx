@@ -14,18 +14,18 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, getYear,
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 
-import { OverviewTab } from './user-details/OverviewTab';
-import { DeliveriesTab } from './user-details/DeliveriesTab';
-import { BillingTab } from './user-details/BillingTab';
-import { SanitationTab } from './user-details/SanitationTab';
-import { CreateDeliveryDialog } from './user-details/CreateDeliveryDialog';
-import { PaymentReviewDialog } from './user-details/PaymentReviewDialog';
-import { ManualChargeDialog } from './user-details/ManualChargeDialog';
-import { TopUpDialog } from './user-details/TopUpDialog';
-import { CreateSanitationDialog } from './user-details/CreateSanitationDialog';
-import { SanitationHistoryDialog } from './user-details/SanitationHistoryDialog';
-import { ProofViewerDialog } from './user-details/ProofViewerDialog';
-import { YearlyConsumptionDialog } from './user-details/YearlyConsumptionDialog';
+import { OverviewTab } from './OverviewTab';
+import { DeliveriesTab } from './DeliveriesTab';
+import { BillingTab } from './BillingTab';
+import { SanitationTab } from './SanitationTab';
+import { CreateDeliveryDialog } from './CreateDeliveryDialog';
+import { PaymentReviewDialog } from './PaymentReviewDialog';
+import { ManualChargeDialog } from './ManualChargeDialog';
+import { TopUpDialog } from './TopUpDialog';
+import { CreateSanitationDialog } from './CreateSanitationDialog';
+import { SanitationHistoryDialog } from './SanitationHistoryDialog';
+import { ProofViewerDialog } from './ProofViewerDialog';
+import { YearlyConsumptionDialog } from './YearlyConsumptionDialog';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
