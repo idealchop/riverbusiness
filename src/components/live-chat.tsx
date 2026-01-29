@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
@@ -182,8 +183,8 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUs
                     ) : (
                       <div className="flex flex-col items-start mb-1">
                         <span className="font-semibold text-xs">{displayName || 'Sender'}</span>
-                        <span className="text-xs text-muted-foreground">{displayDescription}</span>
                         {m.role === 'user' && user?.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
+                        <span className="text-xs text-muted-foreground">{displayDescription}</span>
                       </div>
                     )}
                   <div className={cn(
