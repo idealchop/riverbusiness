@@ -2,6 +2,7 @@
 
 
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -95,7 +96,8 @@ export interface AppUser {
     businessName: string;
     address?: string;
     contactNumber?: string;
-    totalConsumptionLiters: number; // For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated.
+    // For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated.
+    totalConsumptionLiters: number; 
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
@@ -105,6 +107,7 @@ export interface AppUser {
     onboardingComplete?: boolean;
     plan?: any;
     clientType?: string | null;
+    isPrepaid?: boolean;
     customPlanDetails?: {
         litersPerMonth?: number;
         bonusLiters?: number;
@@ -274,7 +277,5 @@ export interface PublicSanitationLink {
 
     
 
-
-    
 
     

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -7,7 +8,7 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -20,6 +21,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
+import { Switch } from '@/components/ui/switch';
 
 const planDetailsSchema = z.object({
     litersPerMonth: z.coerce.number().optional(),
@@ -48,6 +50,7 @@ const newUserSchema = z.object({
     contactNumber: z.string().min(1, { message: 'Contact Number is required' }),
     clientType: z.string().min(1, { message: 'Plan type is required' }),
     plan: z.any().refine(data => data !== null, { message: "Please select a plan." }),
+    isPrepaid: z.boolean().default(false),
     planPrice: z.coerce.number().min(0, "Price cannot be negative."),
     initialTopUp: z.coerce.number().optional(), 
     accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
@@ -75,6 +78,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
             clientId: '', name: '', businessEmail: '', businessName: '', address: '',
             contactNumber: '', clientType: '', plan: null, planPrice: 0, initialTopUp: 0,
             accountType: 'Single',
+            isPrepaid: false,
             customPlanDetails: {
                 litersPerMonth: 0, bonusLiters: 0, pricePerLiter: 0, gallonQuantity: 0, gallonPrice: 0,
                 gallonPaymentType: 'Monthly', dispenserQuantity: 0, dispenserPrice: 0, dispenserPaymentType: 'Monthly',
@@ -99,13 +103,14 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
     const selectedClientType = newUserForm.watch('clientType');
     const selectedAccountType = newUserForm.watch('accountType');
     const selectedPlan = newUserForm.watch('plan');
-    const watchedPlanPrice = newUserForm.watch('planPrice');
 
     const planOptions = useMemo(() => {
-        if (selectedAccountType === 'Parent') return [enterprisePlans.find(p => p.isParentPlan)].filter(Boolean);
-        if (!selectedClientType) return [];
-        return getPlansForType(selectedClientType);
-    }, [selectedClientType, selectedAccountType]);
+        if (selectedAccountType === 'Parent') {
+            newUserForm.setValue('isPrepaid', true);
+            return [enterprisePlans.find(p => p.isParentPlan)].filter(Boolean);
+        }
+        return getPlansForType(selectedClientType || '');
+    }, [selectedClientType, selectedAccountType, newUserForm]);
 
     const handleCreateNewUser = async (values: NewUserFormValues) => {
         if (!firestore) return;
@@ -130,6 +135,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                     price: planPrice,
                     isConsumptionBased: plan.isConsumptionBased || false,
                 },
+                isPrepaid: values.isPrepaid,
                 customPlanDetails: { ...values.customPlanDetails },
                 role: 'User',
                 accountStatus: 'Active',
@@ -188,10 +194,12 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                         newUserForm.setValue('clientType', 'Enterprise');
                         newUserForm.setValue('plan', parentPlan);
                         newUserForm.setValue('planPrice', parentPlan.price);
+                        newUserForm.setValue('isPrepaid', true);
                     }
                 } else {
                     newUserForm.setValue('clientType', '');
                     newUserForm.setValue('plan', null);
+                    newUserForm.setValue('isPrepaid', false);
                 }
             }
         });
@@ -265,6 +273,17 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                                         </Card>
                                     ) : (
                                         <>
+                                            <FormField control={newUserForm.control} name="isPrepaid" render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel>Prepaid Account</FormLabel>
+                                                        <FormDescription>
+                                                            User will top-up credits instead of receiving monthly invoices.
+                                                        </FormDescription>
+                                                    </div>
+                                                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                                </FormItem>
+                                            )}/>
                                             <FormField control={newUserForm.control} name="clientType" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Plan Type</FormLabel>

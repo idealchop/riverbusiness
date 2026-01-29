@@ -40,8 +40,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         const userRef = userDoc.ref;
         let user = userDoc.data();
         
-        // Skip admins
-        if (user.role === 'Admin') continue;
+        // Skip admins, branch accounts, and prepaid accounts
+        if (user.role === 'Admin' || user.accountType === 'Branch' || user.isPrepaid) continue;
 
         let billingPeriod: string;
         let billingCycleStart: Date;
@@ -128,8 +128,8 @@ async function generateInvoiceForUser(
     monthsToBill: number = 1,
     isFirstInvoice: boolean
 ) {
-    // Skip admins or users without a plan
-    if (user.role === 'Admin' || !user.plan) {
+    // Skip admins, users without a plan, branch accounts, or prepaid users
+    if (user.role === 'Admin' || !user.plan || user.accountType === 'Branch' || user.isPrepaid) {
         return;
     }
 
@@ -171,7 +171,7 @@ async function generateInvoiceForUser(
         const planCost = user.plan.price || 0;
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
-        
+
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         
         // This is the new rollover, calculated from the period that just ended.
@@ -191,12 +191,24 @@ async function generateInvoiceForUser(
         }
         
         // This is the starting balance for the NEW month, which begins today.
-        const startingBalanceForNewMonth = monthlyAllocation + newRollover;
+        // It's the new monthly allocation plus any rollover from the previous period.
+        const creditsForNewMonth = monthlyAllocation + newRollover;
 
+        // Set the user's balance for the new month. This is not an increment.
         batch.update(userRef, {
-            totalConsumptionLiters: startingBalanceForNewMonth, // Set the starting balance for the NEW month
-            'customPlanDetails.lastMonthRollover': newRollover, // Store the new rollover for the next cycle
+            totalConsumptionLiters: creditsForNewMonth,
+            'customPlanDetails.lastMonthRollover': newRollover,
         });
+
+        // Also create a notification for the credit refresh
+         const creditRefreshNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+            type: 'general',
+            title: 'Monthly Credits Refreshed',
+            description: `Your monthly balance has been updated with ${creditsForNewMonth.toLocaleString()} liters.`,
+            data: { newBalance: creditsForNewMonth }
+        };
+        const creditRefreshMeta = { ...creditRefreshNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+        batch.set(notificationsRef.doc(), creditRefreshMeta);
 
     }
     
@@ -247,3 +259,5 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
+
+    

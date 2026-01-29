@@ -79,7 +79,7 @@ export function StatCards({
 
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
-    if (user.plan.isConsumptionBased || user.accountType === 'Branch') {
+    if (user.plan.isConsumptionBased || user.accountType === 'Branch' || user.isPrepaid) {
         const consumptionCost = consumedLitersThisCycle * (user.plan.price || 0);
         return {
             ...emptyState,
@@ -154,7 +154,7 @@ export function StatCards({
   const isFlowPlan = user?.plan?.isConsumptionBased;
   const isBranchAccount = user?.accountType === 'Branch';
   const isParentAccount = user?.accountType === 'Parent';
-  const isPrepaidPlan = user?.plan?.isPrepaid;
+  const isPrepaidPlan = user?.isPrepaid;
   
   const parentRemainingLiters = useMemo(() => {
     if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
