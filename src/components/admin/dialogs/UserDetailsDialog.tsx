@@ -27,6 +27,7 @@ import { CreateSanitationDialog } from './user-details/CreateSanitationDialog';
 import { SanitationHistoryDialog } from './user-details/SanitationHistoryDialog';
 import { ProofViewerDialog } from './user-details/ProofViewerDialog';
 import { YearlyConsumptionDialog } from './user-details/YearlyConsumptionDialog';
+import { BranchDeliveriesTab } from './user-details/BranchDeliveriesTab';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -64,6 +65,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isCreateSanitationOpen, setIsCreateSanitationOpen] = useState(false);
     const [isSanitationHistoryOpen, setIsSanitationHistoryOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
+    const [visitToEdit, setVisitToEdit] = useState<SanitationVisit | null>(null);
     const [contractFile, setContractFile] = useState<File | null>(null);
     const [isUploadingContract, setIsUploadingContract] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -79,6 +81,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const { data: userPaymentsData } = useCollection<Payment>(userPaymentsQuery);
     const sanitationVisitsQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'sanitationVisits'), orderBy('scheduledDate', 'desc')) : null, [userDocRef]);
     const { data: sanitationVisitsData } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+    const topUpRequestsQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [userDocRef]);
+    const { data: topUpRequestsData } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
     const consumedLitersThisMonth = useMemo(() => {
         if (!userDeliveriesData) return 0;
@@ -190,6 +194,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         }
     };
     
+    const isParent = user.accountType === 'Parent';
+    
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -199,12 +205,22 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1 min-h-0">
-                        <Tabs defaultValue={initialTab || "overview"}>
-                            <TabsList>
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-                                <TabsTrigger value="billing">Billing</TabsTrigger>
-                                <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                        <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
+                             <TabsList>
+                                {isParent ? (
+                                    <>
+                                        <TabsTrigger value="overview">Parent Overview</TabsTrigger>
+                                        <TabsTrigger value="branch-deliveries">Branch Deliveries</TabsTrigger>
+                                        <TabsTrigger value="billing">Top-Ups</TabsTrigger>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                                        <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
+                                        <TabsTrigger value="billing">Billing</TabsTrigger>
+                                        <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                                    </>
+                                )}
                             </TabsList>
                             <TabsContent value="overview" className="py-6">
                                 <OverviewTab
@@ -231,6 +247,13 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetProofToViewUrl={setProofToViewUrl}
                                 />
                             </TabsContent>
+                             <TabsContent value="branch-deliveries" className="py-6">
+                                <BranchDeliveriesTab 
+                                    user={user} 
+                                    onSetProofToViewUrl={setProofToViewUrl} 
+                                    allUsers={allUsers}
+                                />
+                            </TabsContent>
                             <TabsContent value="billing" className="py-6">
                                 <BillingTab
                                     user={user}
@@ -248,6 +271,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetSelectedSanitationVisit={setSelectedSanitationVisit}
                                     onSetIsSanitationHistoryOpen={setIsSanitationHistoryOpen}
                                     onSetIsCreateSanitationOpen={setIsCreateSanitationOpen}
+                                    onSetVisitToEdit={setVisitToEdit}
                                />
                             </TabsContent>
                         </Tabs>
@@ -269,6 +293,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 onOpenChange={setIsPaymentReviewOpen}
                 paymentToReview={paymentToReview}
                 userDocRef={userDocRef}
+                user={user}
             />
             <ManualChargeDialog
                 isOpen={isManualChargeOpen}
@@ -283,9 +308,14 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             />
             <CreateSanitationDialog
                 isOpen={isCreateSanitationOpen}
-                onOpenChange={setIsCreateSanitationOpen}
+                onOpenChange={(open) => {
+                    if (!open) setVisitToEdit(null);
+                    setIsCreateSanitationOpen(open);
+                }}
                 userDocRef={userDocRef}
                 user={user}
+                visitToEdit={visitToEdit}
+                setVisitToEdit={setVisitToEdit}
             />
             <SanitationHistoryDialog
                 isOpen={isSanitationHistoryOpen}
@@ -306,5 +336,3 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         </>
     );
 }
-
-    
