@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle } from 'lucide-react';
 import { DocumentReference } from 'firebase/firestore';
+import { createClientNotification } from '@/lib/notifications';
 
 const dispenserReportSchema = z.object({
     dispenserId: z.string(),
@@ -55,7 +56,7 @@ const defaultChecklist = [
 
 interface CreateSanitationDialogProps {
     isOpen: boolean;
-    onOpenChange: (isOpen: boolean) => void;
+    onOpenChange: (open: boolean) => void;
     userDocRef: DocumentReference | null;
     user: AppUser;
     visitToEdit: SanitationVisit | null;
@@ -108,14 +109,35 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
         if (!userDocRef || !firestore || !auth?.currentUser) return;
         const isUpdate = !!visitToEdit;
+        const adminId = auth.currentUser.uid;
+        const scheduledDateFormatted = format(values.scheduledDate, 'PP');
 
         try {
-            if (isUpdate) {
+            if (isUpdate && visitToEdit) {
                 const visitRef = doc(userDocRef, 'sanitationVisits', visitToEdit.id);
                 const visitData = { ...values, scheduledDate: values.scheduledDate.toISOString() };
                 await updateDoc(visitRef, visitData);
                 toast({ title: "Sanitation Visit Updated" });
-            } else {
+
+                // Check if status changed to send notification
+                if (visitToEdit.status !== values.status) {
+                    // User Notification
+                    await createClientNotification(firestore, user.id, {
+                        type: 'sanitation',
+                        title: `Sanitation Visit: ${values.status}`,
+                        description: `Your sanitation visit for ${scheduledDateFormatted} is now ${values.status}.`,
+                        data: { visitId: visitToEdit.id }
+                    });
+                    
+                    // Admin Notification
+                    await createClientNotification(firestore, adminId, {
+                        type: 'sanitation',
+                        title: 'Sanitation Visit Updated',
+                        description: `The visit for ${user.businessName} on ${scheduledDateFormatted} is now ${values.status}.`,
+                        data: { userId: user.id, visitId: visitToEdit.id }
+                    });
+                }
+            } else { // This is a new visit
                 const visitsCol = collection(userDocRef, 'sanitationVisits');
                 const newVisitRef = doc(visitsCol);
                 const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
@@ -127,8 +149,24 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 await batch.commit();
                 
                 toast({ title: "Sanitation Visit Scheduled" });
+                
+                // User Notification
+                await createClientNotification(firestore, user.id, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A sanitation visit is scheduled for your office on ${scheduledDateFormatted}.`,
+                    data: { visitId: newVisitRef.id }
+                });
+
+                // Admin Notification
+                await createClientNotification(firestore, adminId, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A visit for ${user.businessName} has been scheduled for ${scheduledDateFormatted}.`,
+                    data: { userId: user.id, visitId: newVisitRef.id }
+                });
             }
-            // Notifications are now handled by backend Cloud Functions (onsanitationvisitcreate/update)
+            
             onOpenChange(false);
         } catch (error) {
             console.error("Sanitation visit submission failed:", error);
