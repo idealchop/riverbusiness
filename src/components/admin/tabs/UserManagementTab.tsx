@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -16,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AppUser, RefillRequest, Payment } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useAuth } from '@/firebase';
 import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { PaymentReviewDialog } from '../dialogs/user-details/PaymentReviewDialog';
+import { createClientNotification } from '@/lib/notifications';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -54,6 +53,7 @@ export function UserManagementTab({
 }: UserManagementTabProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const auth = useAuth();
     const [localSearchTerm, setLocalSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -85,13 +85,37 @@ export function UserManagementTab({
     }, [allPayments]);
 
     const handleRefillStatusUpdate = async (request: RefillRequest, newStatus: RefillRequest['status']) => {
-        if (!firestore) return;
+        if (!firestore || !auth?.currentUser) return;
+        const adminId = auth.currentUser.uid;
         const requestRef = doc(firestore, 'users', request.userId, 'refillRequests', request.id);
-        await updateDoc(requestRef, {
-            status: newStatus,
-            statusHistory: arrayUnion({ status: newStatus, timestamp: Timestamp.now() })
-        });
-        toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}".` });
+        
+        try {
+            await updateDoc(requestRef, {
+                status: newStatus,
+                statusHistory: arrayUnion({ status: newStatus, timestamp: Timestamp.now() })
+            });
+
+            // User Notification
+            await createClientNotification(firestore, request.userId, {
+                type: 'delivery',
+                title: `Refill Status: ${newStatus}`,
+                description: `Your refill request is now ${newStatus}.`,
+                data: { requestId: request.id },
+            });
+
+            // Admin Notification
+            await createClientNotification(firestore, adminId, {
+                type: 'delivery',
+                title: 'Refill Status Updated',
+                description: `Request for ${request.businessName} is now ${newStatus}.`,
+                data: { userId: request.userId, requestId: request.id },
+            });
+
+            toast({ title: 'Request Updated', description: `The refill request has been moved to "${newStatus}" and the user has been notified.` });
+        } catch (error) {
+            console.error("Error updating refill request:", error);
+            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update the request status.' });
+        }
     };
 
     const activeRefillRequests = useMemo(() => {
