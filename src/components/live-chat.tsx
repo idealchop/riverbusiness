@@ -28,6 +28,14 @@ interface LiveChatProps {
     currentUserRole: 'user' | 'admin';
 }
 
+const quickResponses = [
+    "I need a new dispenser.",
+    "How can I change my delivery schedule?",
+    "I have a question about my bill.",
+    "My delivery has not arrived.",
+];
+
+
 export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUserRole }: LiveChatProps) {
   const [input, setInput] = useState('');
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -117,6 +125,13 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUs
     onMessageSubmit(messagePayload);
     setInput('');
     removeAttachment();
+  };
+
+  const handleQuickResponseClick = (message: string) => {
+    onMessageSubmit({
+      text: message,
+      role: currentUserRole,
+    });
   };
 
   useEffect(() => {
@@ -210,43 +225,67 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUs
             )})}
           </div>
         </ScrollArea>
-        {attachment && (
-            <div className="relative p-2 border rounded-md">
-                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={removeAttachment}>
-                    <XCircle className="h-4 w-4" />
+        
+        {/* All content below the scroll area */}
+        <div className="pt-4 border-t">
+          {attachment && (
+              <div className="relative p-2 border rounded-md mb-4">
+                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={removeAttachment}>
+                      <XCircle className="h-4 w-4" />
+                  </Button>
+                  {attachmentPreview ? (
+                      <Image src={attachmentPreview} alt="Preview" width={80} height={80} className="rounded-md object-cover"/>
+                  ): (
+                      <div className="flex items-center gap-2">
+                          <FileIcon className="h-8 w-8 text-muted-foreground" />
+                          <div>
+                              <p className="text-sm font-medium truncate">{attachment.name}</p>
+                              <p className="text-xs text-muted-foreground">{(attachment.size / 1024).toFixed(2)} KB</p>
+                          </div>
+                      </div>
+                  )}
+                  {isUploading && <Progress value={uploadProgress} className="absolute bottom-0 left-0 right-0 h-1 rounded-b-md" />}
+              </div>
+          )}
+
+          {currentUserRole === 'user' && (
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground mb-2">Or use a quick response:</p>
+              <div className="flex flex-wrap gap-2">
+                {quickResponses.map((text) => (
+                  <Button
+                    key={text}
+                    variant="outline"
+                    size="sm"
+                    className="h-auto py-1.5 px-3 text-xs"
+                    onClick={() => handleQuickResponseClick(text)}
+                  >
+                    {text}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Input
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder="Type your message..."
+                  className="pl-10"
+                  disabled={isUploading}
+                />
+                <Button type="button" variant="ghost" size="icon" className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                    <Paperclip className="h-4 w-4" />
                 </Button>
-                {attachmentPreview ? (
-                     <Image src={attachmentPreview} alt="Preview" width={80} height={80} className="rounded-md object-cover"/>
-                ): (
-                    <div className="flex items-center gap-2">
-                        <FileIcon className="h-8 w-8 text-muted-foreground" />
-                        <div>
-                            <p className="text-sm font-medium truncate">{attachment.name}</p>
-                            <p className="text-xs text-muted-foreground">{(attachment.size / 1024).toFixed(2)} KB</p>
-                        </div>
-                    </div>
-                )}
-                 {isUploading && <Progress value={uploadProgress} className="absolute bottom-0 left-0 right-0 h-1 rounded-b-md" />}
-            </div>
-        )}
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Input
-                value={input}
-                onChange={handleInputChange}
-                placeholder="Type your message..."
-                className="pl-10"
-                disabled={isUploading}
-              />
-              <Button type="button" variant="ghost" size="icon" className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                  <Paperclip className="h-4 w-4" />
-              </Button>
-               <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-            </div>
-          <Button type="submit" size="icon" disabled={isUploading || (!input.trim() && !attachment)}>
-            {isUploading ? <div className="h-4 w-4 border-2 border-dashed rounded-full animate-spin"></div> : <Send className="h-4 w-4" />}
-          </Button>
-        </form>
+                <Input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+              </div>
+            <Button type="submit" size="icon" disabled={isUploading || (!input.trim() && !attachment)}>
+              {isUploading ? <div className="h-4 w-4 border-2 border-dashed rounded-full animate-spin"></div> : <Send className="h-4 w-4" />}
+            </Button>
+          </form>
+        </div>
       </CardContent>
     </Card>
   );
