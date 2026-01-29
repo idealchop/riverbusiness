@@ -175,14 +175,15 @@ export function LiveChat({ chatMessages, onMessageSubmit, user, agent, currentUs
                     isOwnMessage ? 'items-end' : 'items-start'
                 )}>
                     {isOwnMessage ? (
-                      <div className="flex items-center gap-2 mb-1 justify-end">
-                        <span className="font-semibold text-xs">{displayName || (currentUserRole === 'admin' ? 'You (Admin)' : 'You')}</span>
+                      <div className="flex flex-col items-end mb-1">
+                        <span className="font-semibold text-xs">{currentUserRole === 'admin' ? 'You (Admin)' : 'You'}</span>
                         <span className="text-xs text-muted-foreground">{displayDescription}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-col items-start mb-1">
                         <span className="font-semibold text-xs">{displayName || 'Sender'}</span>
                         <span className="text-xs text-muted-foreground">{displayDescription}</span>
+                        {m.role === 'user' && user?.email && <span className="text-xs text-muted-foreground">{user.email}</span>}
                       </div>
                     )}
                   <div className={cn(
