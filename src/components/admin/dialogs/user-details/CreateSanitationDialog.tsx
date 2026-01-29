@@ -20,7 +20,6 @@ import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle } from 'lucide-react';
-import { createClientNotification } from '@/lib/notifications';
 import { DocumentReference } from 'firebase/firestore';
 
 const dispenserReportSchema = z.object({
@@ -109,28 +108,12 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
         if (!userDocRef || !firestore || !auth?.currentUser) return;
         const isUpdate = !!visitToEdit;
-        const adminId = auth.currentUser.uid;
-        const scheduledDate = values.scheduledDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
         try {
             if (isUpdate) {
                 const visitRef = doc(userDocRef, 'sanitationVisits', visitToEdit.id);
                 const visitData = { ...values, scheduledDate: values.scheduledDate.toISOString() };
                 await updateDoc(visitRef, visitData);
-
-                await createClientNotification(firestore, user.id, {
-                    type: 'sanitation',
-                    title: `Sanitation Visit Updated`,
-                    description: `Your sanitation visit for ${scheduledDate} is now ${values.status}.`,
-                    data: { visitId: visitToEdit.id }
-                });
-                await createClientNotification(firestore, adminId, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Updated',
-                    description: `The visit for ${user.businessName} on ${scheduledDate} is now ${values.status}.`,
-                    data: { userId: user.id, visitId: visitToEdit.id }
-                });
-
                 toast({ title: "Sanitation Visit Updated" });
             } else {
                 const visitsCol = collection(userDocRef, 'sanitationVisits');
@@ -142,22 +125,10 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 batch.set(newVisitRef, visitData);
                 batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id });
                 await batch.commit();
-
-                await createClientNotification(firestore, user.id, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Scheduled',
-                    description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
-                    data: { visitId: newVisitRef.id }
-                });
-                await createClientNotification(firestore, adminId, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Scheduled',
-                    description: `A visit for ${user.businessName} has been scheduled for ${scheduledDate}.`,
-                    data: { userId: user.id, visitId: newVisitRef.id }
-                });
                 
                 toast({ title: "Sanitation Visit Scheduled" });
             }
+            // Notifications are now handled by backend Cloud Functions (onsanitationvisitcreate/update)
             onOpenChange(false);
         } catch (error) {
             console.error("Sanitation visit submission failed:", error);

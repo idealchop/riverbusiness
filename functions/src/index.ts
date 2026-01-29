@@ -535,24 +535,45 @@ export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitat
 
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+    if (!userData) {
+      logger.error(`User data not found for ${userId} in onsanitationvisitupdate.`);
+      return;
+    }
 
     const scheduledDate = new Date(after.scheduledDate).toLocaleDateString('en-US', {
         month: 'long', day: 'numeric', year: 'numeric'
     });
+    
+    // --- User Notification ---
+    let userTitle: string;
+    let userDescription: string;
 
+    if (after.status === 'Completed') {
+        userTitle = 'Sanitation Visit Completed';
+        userDescription = `Your sanitation report for ${scheduledDate} is complete. You can view the results now.`;
+    } else if (after.status === 'Cancelled') {
+        userTitle = 'Sanitation Visit Cancelled';
+        userDescription = `Your sanitation visit for ${scheduledDate} has been cancelled. Please contact us if you have questions.`;
+    } else { // Scheduled
+        userTitle = `Sanitation Visit: ${after.status}`;
+        userDescription = `Your sanitation visit for ${scheduledDate} has been updated to ${after.status}.`;
+    }
+
+    // Notify User
     await createNotification(userId, {
         type: 'sanitation',
-        title: `Sanitation Visit: ${after.status}`,
-        description: `Your sanitation visit for ${scheduledDate} is now ${after.status}.`,
+        title: userTitle,
+        description: userDescription,
         data: { visitId: event.params.visitId }
     });
     
+    // Notify Admin
     const adminId = await getAdminId();
-    if(adminId && userData) {
+    if(adminId) {
         await createNotification(adminId, {
             type: 'sanitation',
-            title: 'Sanitation Visit Updated',
-            description: `The visit for ${userData.businessName} on ${scheduledDate} is now ${after.status}.`,
+            title: `Visit for ${userData.businessName}: ${after.status}`,
+            description: `The sanitation visit on ${scheduledDate} is now ${after.status}.`,
             data: { userId, visitId: event.params.visitId }
         });
     }
@@ -590,6 +611,21 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
             type: 'general',
             title: 'Auto-Refill Changed',
             description: `${after.businessName} has ${after.customPlanDetails.autoRefillEnabled ? 'enabled' : 'disabled'} auto-refill.`,
+            data: { userId: userId }
+        });
+    }
+
+    if (before.currentContractUrl !== after.currentContractUrl && after.currentContractUrl) {
+        await createNotification(userId, {
+            type: 'general',
+            title: 'New Contract Uploaded',
+            description: 'A new contract has been added to your account by an admin.',
+            data: { userId: userId }
+        });
+        await createNotification(adminId, {
+            type: 'general',
+            title: 'Contract Added',
+            description: `You have successfully added a contract for ${after.businessName}.`,
             data: { userId: userId }
         });
     }
