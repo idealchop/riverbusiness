@@ -25,6 +25,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
@@ -384,10 +385,21 @@ export default function SanitationReportPage() {
                 </Card>
                 
                  <div className="flex justify-end pt-4">
-                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !allSignaturesCompleted}>
-                        <Save className="mr-2 h-4 w-4" />
-                        {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="inline-block"> {/* Wrapper needed for disabled button tooltip */}
+                                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !allSignaturesCompleted}>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
+                                    </Button>
+                                </div>
+                            </TooltipTrigger>
+                            {!allSignaturesCompleted && (
+                                <TooltipContent><p>Requires signatures from both officer and client, and the client representative's name.</p></TooltipContent>
+                            )}
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </div>
         </main>
