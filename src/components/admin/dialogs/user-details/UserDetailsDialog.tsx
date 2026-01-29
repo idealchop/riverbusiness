@@ -27,6 +27,7 @@ import { CreateSanitationDialog } from './CreateSanitationDialog';
 import { SanitationHistoryDialog } from './SanitationHistoryDialog';
 import { ProofViewerDialog } from './ProofViewerDialog';
 import { YearlyConsumptionDialog } from './YearlyConsumptionDialog';
+import { BranchDeliveriesTab } from './BranchDeliveriesTab';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -64,6 +65,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isCreateSanitationOpen, setIsCreateSanitationOpen] = useState(false);
     const [isSanitationHistoryOpen, setIsSanitationHistoryOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
+    const [visitToEdit, setVisitToEdit] = useState<SanitationVisit | null>(null);
     const [contractFile, setContractFile] = useState<File | null>(null);
     const [isUploadingContract, setIsUploadingContract] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -71,8 +73,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
     const [isYearlyConsumptionOpen, setIsYearlyConsumptionOpen] = useState(false);
-    const [visitToEdit, setVisitToEdit] = useState<SanitationVisit | null>(null);
-
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -81,6 +81,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const { data: userPaymentsData } = useCollection<Payment>(userPaymentsQuery);
     const sanitationVisitsQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'sanitationVisits'), orderBy('scheduledDate', 'desc')) : null, [userDocRef]);
     const { data: sanitationVisitsData } = useCollection<SanitationVisit>(sanitationVisitsQuery);
+    const topUpRequestsQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [userDocRef]);
+    const { data: topUpRequestsData } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
     const consumedLitersThisMonth = useMemo(() => {
         if (!userDeliveriesData) return 0;
@@ -192,6 +194,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         }
     };
     
+    const isParent = user.accountType === 'Parent';
+    
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -201,12 +205,22 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="flex-1 min-h-0">
-                        <Tabs defaultValue={initialTab || "overview"}>
-                            <TabsList>
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-                                <TabsTrigger value="billing">Billing</TabsTrigger>
-                                <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                        <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
+                             <TabsList>
+                                {isParent ? (
+                                    <>
+                                        <TabsTrigger value="overview">Parent Overview</TabsTrigger>
+                                        <TabsTrigger value="branch-deliveries">Branch Deliveries</TabsTrigger>
+                                        <TabsTrigger value="billing">Top-Ups</TabsTrigger>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                                        <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
+                                        <TabsTrigger value="billing">Billing</TabsTrigger>
+                                        <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
+                                    </>
+                                )}
                             </TabsList>
                             <TabsContent value="overview" className="py-6">
                                 <OverviewTab
@@ -233,10 +247,18 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetProofToViewUrl={setProofToViewUrl}
                                 />
                             </TabsContent>
+                             <TabsContent value="branch-deliveries" className="py-6">
+                                <BranchDeliveriesTab 
+                                    user={user} 
+                                    onSetProofToViewUrl={setProofToViewUrl} 
+                                    allUsers={allUsers}
+                                />
+                            </TabsContent>
                             <TabsContent value="billing" className="py-6">
                                 <BillingTab
                                     user={user}
                                     userPaymentsData={userPaymentsData}
+                                    topUpRequestsData={topUpRequestsData}
                                     currentMonthInvoice={currentMonthInvoice}
                                     onSetIsManualChargeOpen={setIsManualChargeOpen}
                                     onSetIsTopUpOpen={setIsTopUpOpen}
@@ -284,6 +306,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 onOpenChange={setIsTopUpOpen}
                 userDocRef={userDocRef}
                 user={user}
+                topUpToReview={paymentToReview as unknown as TopUpRequest}
             />
             <CreateSanitationDialog
                 isOpen={isCreateSanitationOpen}
