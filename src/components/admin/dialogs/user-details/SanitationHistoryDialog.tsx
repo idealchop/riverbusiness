@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SanitationVisit } from '@/lib/types';
@@ -20,14 +21,35 @@ interface SanitationHistoryDialogProps {
 
 export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: SanitationHistoryDialogProps) {
     const { toast } = useToast();
+    const [isSharing, setIsSharing] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setIsSharing(false);
+        }
+    }, [isOpen]);
 
     const handleShare = () => {
-        if (visit?.shareableLink) {
-            navigator.clipboard.writeText(visit.shareableLink);
-            toast({
-                title: 'Link Copied!',
-                description: 'The shareable report link has been copied to your clipboard.',
-            });
+        if (visit?.shareableLink && !isSharing) {
+            setIsSharing(true);
+            navigator.clipboard.writeText(visit.shareableLink)
+                .then(() => {
+                    toast({
+                        title: 'Link Copied!',
+                        description: 'The shareable report link has been copied to your clipboard.',
+                    });
+                })
+                .catch(err => {
+                    console.error("Failed to copy link:", err);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Copy Failed',
+                        description: 'Could not copy the link to your clipboard.',
+                    });
+                })
+                .finally(() => {
+                    setIsSharing(false);
+                });
         }
     };
 
@@ -126,9 +148,9 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                 </ScrollArea>
                 <DialogFooter className="justify-between">
                      {visit?.shareableLink ? (
-                        <Button variant="outline" onClick={handleShare}>
-                            <Share2 className="mr-2 h-4 w-4" />
-                            Share Report
+                        <Button variant="outline" onClick={handleShare} disabled={isSharing}>
+                            {isSharing ? <Hourglass className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
+                            {isSharing ? 'Copying...' : 'Share Report'}
                         </Button>
                     ) : (
                         <div /> 
