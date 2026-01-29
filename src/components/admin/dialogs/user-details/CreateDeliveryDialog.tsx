@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -6,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,11 +17,11 @@ import { Progress } from '@/components/ui/progress';
 import { AppUser, Delivery } from '@/lib/types';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, FileText } from 'lucide-react';
+import { Calendar as CalendarIcon, FileText, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { createClientNotification } from '@/lib/notifications';
 
@@ -49,6 +49,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
 
     const [proofFile, setProofFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
     const deliveryForm = useForm<DeliveryFormValues>({ resolver: zodResolver(deliverySchema), defaultValues: { status: 'Pending', volumeContainers: 1 } });
@@ -64,6 +65,7 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
         } else {
             setProofFile(null);
             setIsSubmitting(false);
+            setIsDeleting(false);
         }
     }, [isOpen, deliveryToEdit, deliveryForm]);
 
@@ -116,7 +118,6 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
             const adminId = auth.currentUser.uid;
 
             if (statusChanged) {
-                // Send UPDATE notifications
                 await createClientNotification(firestore, user.id, {
                     type: 'delivery',
                     title: `Delivery ${values.status}`,
@@ -130,7 +131,6 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                     data: { userId: user.id, deliveryId: deliveryId }
                 });
             } else if (!isUpdate) {
-                // Send CREATE notifications
                  await createClientNotification(firestore, user.id, {
                     type: 'delivery',
                     title: 'Delivery Scheduled',
@@ -157,8 +157,25 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
             setProofFile(null);
         }
     };
+
+    const handleDeleteDelivery = async () => {
+        if (!firestore || !deliveryToEdit || !user) return;
+        setIsDeleting(true);
+        const deliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryToEdit.id);
+        try {
+            await deleteDoc(deliveryRef);
+            toast({ title: 'Delivery Deleted', description: 'The delivery record has been removed.' });
+            onOpenChange(false);
+        } catch (error) {
+            console.error("Error deleting delivery:", error);
+            toast({ variant: 'destructive', title: 'Deletion Failed' });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
     
     return (
+        <AlertDialog>
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
@@ -226,14 +243,41 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                         {uploadProgress > 0 && <Progress value={uploadProgress} className="mt-2 h-1" />}
                         {proofFile && <p className="text-xs text-muted-foreground mt-1">New file selected: {proofFile.name}</p>}
                     </div>
-                    <DialogFooter>
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Saving...' : 'Save Delivery'}
-                        </Button>
+                    <DialogFooter className="flex-row justify-between w-full pt-4">
+                        <div>
+                            {deliveryToEdit && (
+                                <AlertDialogTrigger asChild>
+                                    <Button type="button" variant="destructive" disabled={isSubmitting || isDeleting}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting || isDeleting}>Cancel</Button>
+                            <Button type="submit" disabled={isSubmitting || isDeleting}>
+                                {isSubmitting ? 'Saving...' : (deliveryToEdit ? 'Save Changes' : 'Create Delivery')}
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </form>
             </DialogContent>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the delivery record with Tracking # {deliveryToEdit?.id}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteDelivery} disabled={isDeleting}>
+                        {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
         </Dialog>
+        </AlertDialog>
     );
 }
+    
