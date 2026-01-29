@@ -151,15 +151,15 @@ export default function SanitationReportPage() {
                 const linkSnap = await getDoc(linkRef);
 
                 if (!linkSnap.exists()) {
-                    throw new Error("This report link is invalid or has expired.");
+                    throw new Error("This report link is invalid or has been disabled.");
                 }
 
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
-
-                if (!createdAt || !(createdAt instanceof Timestamp)) {
-                    // This makes old links without a timestamp invalid.
-                    throw new Error("This report link is invalid or has expired.");
+                
+                // A more robust check for a Firestore Timestamp-like object
+                if (!createdAt || typeof createdAt.toDate !== 'function') {
+                    throw new Error("This report link is invalid or has expired (invalid creation date).");
                 }
 
                 const expiryDate = addDays(createdAt.toDate(), 7);
@@ -465,5 +465,3 @@ export default function SanitationReportPage() {
         </main>
     );
 }
-
-    
