@@ -212,18 +212,6 @@ export default function DashboardPage() {
     }
   };
   const closeDialog = (dialog: keyof typeof dialogState) => setDialogState((prev) => ({ ...prev, [dialog]: false }));
-
-  const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
-    if (!firestore) return;
-    const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-    const newNotification: Partial<Notification> = {
-        ...notification,
-        userId,
-        date: serverTimestamp(),
-        isRead: false
-    };
-    await addDoc(notificationsCol, newNotification);
-  };
   
   const handleOneClickRefill = useCallback(async () => {
     if (hasPendingRefill) {
@@ -249,15 +237,8 @@ export default function DashboardPage() {
 
     try {
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-      const newDocRef = await addDoc(refillRequestsCollection, newRequestData);
+      await addDoc(refillRequestsCollection, newRequestData);
       
-      await createNotification(authUser.uid, {
-        type: 'delivery',
-        title: 'Refill Request Sent',
-        description: 'Your ASAP refill request has been sent to the admin for processing.',
-        data: { requestId: newDocRef.id },
-      });
-
       toast({
         title: 'Refill Request Sent!',
         description: `Thank you, ${user.name}! We've received your ASAP refill request. You can track its progress.`,
@@ -331,15 +312,8 @@ export default function DashboardPage() {
 
     try {
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-      const newDocRef = await addDoc(refillRequestsCollection, newRequestData);
+      await addDoc(refillRequestsCollection, newRequestData);
       
-      await createNotification(authUser.uid, {
-        type: 'delivery',
-        title: 'Refill Request Sent',
-        description: `Request for ${containers} containers on ${date.toLocaleDateString()} sent.`,
-        data: { requestId: newDocRef.id },
-      });
-
       toast({
         title: 'Refill Request Sent!',
         description: `Thank you, ${user.name}! You can track the progress of your request.`,
@@ -513,12 +487,23 @@ export default function DashboardPage() {
                                     <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="contain" data-ai-hint={stationOKImage.imageHint} />
                                 </div>
                             )}
-                            <div className="space-y-2 text-center md:text-left">
+                            <div className="space-y-4 text-center md:text-left">
                                 <h3 className="font-semibold">All Systems Operational</h3>
                                 <p className="text-sm text-muted-foreground">
                                     Hi {userFirstName}, your assigned station, <span className="font-semibold">{waterStation?.name || 'N/A'}</span>, is fully operational.
                                     All systems are running smoothly, ensuring your water is safe, clean, and delivered on time. Thank you for your trust in River Business!
                                 </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        closeDialog('partnerNotice');
+                                        openDialog('compliance');
+                                    }}
+                                >
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                    See latest lab result
+                                </Button>
                             </div>
                         </div>
                     )}
