@@ -556,6 +556,7 @@ export default function DashboardLayout({
           <Button variant="outline" size="icon" className="sm:hidden rounded-full" onClick={handleComplianceClick}>
               <ShieldCheck className="h-4 w-4" />
           </Button>
+           <Separator orientation="vertical" className="h-8 mx-2 hidden sm:block" />
           <MyAccountDialog
             user={user}
             authUser={authUser}
