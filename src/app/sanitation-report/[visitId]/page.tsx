@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { useFirestore } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { SanitationVisit, AppUser, DispenserReport, SanitationChecklistItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { createClientNotification } from '@/lib/notifications';
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
@@ -118,6 +119,7 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
 export default function SanitationReportPage() {
     const { visitId: linkId } = useParams();
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -211,7 +213,7 @@ export default function SanitationReportPage() {
     
     
     const handleSubmitReport = async () => {
-        if (!firestore || !linkId || !visitData) return;
+        if (!firestore || !linkId || !visitData || !auth?.currentUser) return;
 
         if (!isReportFullyComplete) {
             toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all fields are complete." });
@@ -237,8 +239,34 @@ export default function SanitationReportPage() {
             };
 
             await updateDoc(visitRef, updateData);
+            
+            const adminId = auth.currentUser.uid;
+            if(visitData.scheduledDate) {
+                 const scheduledDate = new Date(visitData.scheduledDate).toLocaleDateString('en-US', {
+                    month: 'long', day: 'numeric', year: 'numeric'
+                 });
 
-            toast({ title: "Report Submitted!", description: "The sanitation report has been successfully saved." });
+                // User Notification
+                await createClientNotification(firestore, userId, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Completed',
+                    description: `Your sanitation report for ${scheduledDate} is complete. You can view the results now.`,
+                    data: { visitId: visitId }
+                });
+                
+                // Admin Notification
+                if (clientData) {
+                    await createClientNotification(firestore, adminId, {
+                        type: 'sanitation',
+                        title: `Visit for ${clientData.businessName}: Completed`,
+                        description: `The sanitation visit on ${scheduledDate} is now completed.`,
+                        data: { userId: userId, visitId: visitId }
+                    });
+                }
+            }
+
+
+            toast({ title: "Report Submitted!", description: "The sanitation report has been successfully saved and notifications have been sent." });
         } catch (error) {
             console.error("Error submitting report:", error);
             toast({ variant: 'destructive', title: "Submission Failed", description: "There was an error saving the report." });
