@@ -487,7 +487,7 @@ export default function DashboardPage() {
                     {waterStation?.status === 'Under Maintenance' ? (
                         <div className="space-y-4">
                             {stationOKImage && (
-                                <div className="relative h-40 w-full overflow-hidden rounded-lg">
+                                <div className="relative h-60 w-full overflow-hidden rounded-lg">
                                      <Image src={stationOKImage.imageUrl} alt="Water station under maintenance" layout="fill" objectFit="contain" className="opacity-50 grayscale" data-ai-hint="water station" />
                                 </div>
                             )}
@@ -509,7 +509,7 @@ export default function DashboardPage() {
                     ) : (
                         <div className="grid md:grid-cols-2 gap-6 items-center">
                             {stationOKImage && (
-                                <div className="relative h-40 w-full overflow-hidden rounded-lg">
+                                <div className="relative h-60 w-full overflow-hidden rounded-lg">
                                     <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="contain" data-ai-hint={stationOKImage.imageHint} />
                                 </div>
                             )}
