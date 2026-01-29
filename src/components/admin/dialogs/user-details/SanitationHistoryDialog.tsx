@@ -1,31 +1,38 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Share2, Signature, Hourglass, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Share2, Signature, Hourglass, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useFirestore } from '@/firebase';
+import { doc, writeBatch } from 'firebase/firestore';
 
 interface SanitationHistoryDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     visit: SanitationVisit | null;
+    isAdmin?: boolean;
 }
 
-export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: SanitationHistoryDialogProps) {
+export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }: SanitationHistoryDialogProps) {
     const { toast } = useToast();
+    const firestore = useFirestore();
     const [isSharing, setIsSharing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
             setIsSharing(false);
+            setIsDeleting(false);
         }
     }, [isOpen]);
 
@@ -50,6 +57,38 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                 .finally(() => {
                     setIsSharing(false);
                 });
+        }
+    };
+
+    const handleDeleteVisit = async () => {
+        if (!firestore || !visit) return;
+        setIsDeleting(true);
+        try {
+            const batch = writeBatch(firestore);
+
+            // Delete the visit document
+            const visitRef = doc(firestore, 'users', visit.userId, 'sanitationVisits', visit.id);
+            batch.delete(visitRef);
+
+            // Find and delete the public link
+            if (visit.shareableLink) {
+                const linkId = visit.shareableLink.split('/').pop();
+                if (linkId) {
+                    const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
+                    batch.delete(linkRef);
+                }
+            }
+            
+            await batch.commit();
+
+            toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
+            onOpenChange(false);
+
+        } catch (error) {
+            console.error("Error deleting visit:", error);
+            toast({ variant: 'destructive', title: "Delete Failed", description: "There was an error while deleting the visit." });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -147,14 +186,37 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit }: Sanitat
                     </div>
                 </ScrollArea>
                 <DialogFooter className="justify-between">
-                     {visit?.shareableLink ? (
-                        <Button variant="outline" onClick={handleShare} disabled={isSharing}>
-                            {isSharing ? <Hourglass className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
-                            {isSharing ? 'Copying...' : 'Share Report'}
-                        </Button>
-                    ) : (
-                        <div /> 
-                    )}
+                     <div className="flex gap-2">
+                         {visit?.shareableLink && (
+                            <Button variant="outline" onClick={handleShare} disabled={isSharing}>
+                                {isSharing ? <Hourglass className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
+                                {isSharing ? 'Copying...' : 'Share Report'}
+                            </Button>
+                        )}
+                        {isAdmin && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" disabled={isDeleting}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action will permanently delete this sanitation visit and its associated public link. This cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteVisit}>
+                                            {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
                     <DialogClose asChild>
                         <Button>Close</Button>
                     </DialogClose>
