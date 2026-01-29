@@ -20,7 +20,7 @@ interface SanitationHistoryDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     visit: SanitationVisit | null;
-    isAdmin?: boolean;
+    isAdmin: boolean;
 }
 
 export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }: SanitationHistoryDialogProps) {
@@ -185,8 +185,8 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
                         )}
                     </div>
                 </ScrollArea>
-                <DialogFooter className="justify-between">
-                     <div className="flex gap-2">
+                <DialogFooter className="flex-row justify-between items-center">
+                    <div className="flex gap-2">
                          {visit?.shareableLink && (
                             <Button variant="outline" onClick={handleShare} disabled={isSharing}>
                                 {isSharing ? <Hourglass className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
@@ -218,7 +218,7 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
                         )}
                     </div>
                     <DialogClose asChild>
-                        <Button>Close</Button>
+                        <Button variant="outline">Close</Button>
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>
