@@ -1,26 +1,34 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Payment } from '@/lib/types';
+import { Payment, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc, deleteField, DocumentReference } from 'firebase/firestore';
 import { CheckCircle, X } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth, useFirestore } from '@/firebase';
+import { createClientNotification } from '@/lib/notifications';
+
 
 interface PaymentReviewDialogProps {
     isOpen: boolean;
     onOpenChange: (isOpen: boolean) => void;
     paymentToReview: Payment | null;
     userDocRef: DocumentReference | null;
+    user?: AppUser | null;
 }
 
-export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, userDocRef }: PaymentReviewDialogProps) {
+export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, userDocRef, user }: PaymentReviewDialogProps) {
     const { toast } = useToast();
     const [rejectionReason, setRejectionReason] = useState('');
     const [showRejectionInput, setShowRejectionInput] = useState(false);
+    const auth = useAuth();
+    const firestore = useFirestore();
+
 
     useEffect(() => {
         if (!isOpen) {
@@ -31,7 +39,7 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
     }, [isOpen]);
 
     const handleUpdatePaymentStatus = async (newStatus: 'Paid' | 'Upcoming') => {
-        if (!userDocRef || !paymentToReview) return;
+        if (!userDocRef || !paymentToReview || !firestore || !auth?.currentUser || !user) return;
 
         if (newStatus === 'Upcoming' && !rejectionReason.trim()) {
             toast({
@@ -49,6 +57,36 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                 status: newStatus,
                 rejectionReason: newStatus === 'Upcoming' ? rejectionReason : deleteField(),
             });
+
+            const adminId = auth.currentUser.uid;
+            
+            if (newStatus === 'Paid') {
+                await createClientNotification(firestore, user.id, {
+                    type: 'payment',
+                    title: 'Payment Confirmed',
+                    description: `Your payment for invoice ${paymentToReview.id} has been confirmed. Thank you!`,
+                    data: { paymentId: paymentToReview.id }
+                });
+                await createClientNotification(firestore, adminId, {
+                    type: 'payment',
+                    title: 'Payment Approved',
+                    description: `You approved a payment of ₱${paymentToReview.amount.toFixed(2)} from ${user.businessName}.`,
+                    data: { userId: user.id, paymentId: paymentToReview.id }
+                });
+            } else { // Rejected
+                await createClientNotification(firestore, user.id, {
+                    type: 'payment',
+                    title: 'Payment Action Required',
+                    description: `Your payment for invoice ${paymentToReview.id} requires attention. Reason: ${rejectionReason}.`,
+                    data: { paymentId: paymentToReview.id }
+                });
+                await createClientNotification(firestore, adminId, {
+                    type: 'payment',
+                    title: 'Payment Rejected',
+                    description: `You rejected a payment from ${user.businessName}. Reason: ${rejectionReason}.`,
+                    data: { userId: user.id, paymentId: paymentToReview.id }
+                });
+            }
 
             toast({
                 title: `Payment ${newStatus === 'Paid' ? 'Approved' : 'Rejected'}`,

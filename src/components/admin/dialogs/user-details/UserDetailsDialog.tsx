@@ -1,5 +1,9 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,7 +17,6 @@ import { uploadFileWithProgress } from '@/lib/storage-utils';
 
 import { OverviewTab } from './OverviewTab';
 import { DeliveriesTab } from './DeliveriesTab';
-import { BranchDeliveriesTab } from './BranchDeliveriesTab';
 import { BillingTab } from './BillingTab';
 import { SanitationTab } from './SanitationTab';
 import { CreateDeliveryDialog } from './CreateDeliveryDialog';
@@ -200,9 +203,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             <TabsList>
                                 <TabsTrigger value="overview">Overview</TabsTrigger>
                                 <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-                                {user.accountType === 'Parent' && (
-                                    <TabsTrigger value="branch-deliveries">Branch Deliveries</TabsTrigger>
-                                )}
                                 <TabsTrigger value="billing">Billing</TabsTrigger>
                                 <TabsTrigger value="sanitation">Sanitation</TabsTrigger>
                             </TabsList>
@@ -231,15 +231,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetProofToViewUrl={setProofToViewUrl}
                                 />
                             </TabsContent>
-                             {user.accountType === 'Parent' && (
-                                <TabsContent value="branch-deliveries" className="py-6">
-                                    <BranchDeliveriesTab
-                                        user={user}
-                                        onSetProofToViewUrl={setProofToViewUrl}
-                                        allUsers={allUsers}
-                                    />
-                                </TabsContent>
-                            )}
                             <TabsContent value="billing" className="py-6">
                                 <BillingTab
                                     user={user}
@@ -278,6 +269,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 onOpenChange={setIsPaymentReviewOpen}
                 paymentToReview={paymentToReview}
                 userDocRef={userDocRef}
+                user={user}
             />
             <ManualChargeDialog
                 isOpen={isManualChargeOpen}
@@ -314,5 +306,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             />
         </>
     );
+}
 
     

@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, FileText } from 'lucide-react';
 import Image from 'next/image';
+import { createClientNotification } from '@/lib/notifications';
 
 const deliverySchema = z.object({
     id: z.string().min(1, "Tracking # is required."),
@@ -71,11 +72,12 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
         setIsSubmitting(true);
 
         const userDocRef = doc(firestore, 'users', user.id);
+        const { id: deliveryId, ...restOfValues } = values;
+        const isUpdate = !!deliveryToEdit;
+        const statusChanged = isUpdate && deliveryToEdit.status !== values.status;
 
         try {
-            const { id: deliveryId, ...restOfValues } = values;
-
-            if (!deliveryToEdit) {
+            if (!isUpdate) {
                 const newDocRef = doc(userDocRef, 'deliveries', deliveryId);
                 const docSnap = await getDoc(newDocRef);
                 if (docSnap.exists()) {
@@ -96,6 +98,10 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 userId: user.id,
                 date: values.date.toISOString(),
             };
+            
+            if (user.accountType === 'Branch' && user.parentId) {
+                deliveryData.parentId = user.parentId;
+            }
 
             if (proofFile) {
                 setUploadProgress(0);
@@ -107,7 +113,39 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
 
             await setDoc(deliveryRef, deliveryData, { merge: true });
 
-            toast({ title: deliveryToEdit ? "Delivery Updated" : "Delivery Created" });
+            const adminId = auth.currentUser.uid;
+
+            if (statusChanged) {
+                // Send UPDATE notifications
+                await createClientNotification(firestore, user.id, {
+                    type: 'delivery',
+                    title: `Delivery ${values.status}`,
+                    description: `Your delivery of ${values.volumeContainers} containers is now ${values.status}.`,
+                    data: { deliveryId: deliveryId }
+                });
+                await createClientNotification(firestore, adminId, {
+                    type: 'delivery',
+                    title: 'Delivery Status Updated',
+                    description: `Delivery for ${user.businessName} is now ${values.status}.`,
+                    data: { userId: user.id, deliveryId: deliveryId }
+                });
+            } else if (!isUpdate) {
+                // Send CREATE notifications
+                 await createClientNotification(firestore, user.id, {
+                    type: 'delivery',
+                    title: 'Delivery Scheduled',
+                    description: `A new delivery of ${values.volumeContainers} containers has been scheduled.`,
+                    data: { deliveryId },
+                });
+                 await createClientNotification(firestore, adminId, {
+                    type: 'delivery',
+                    title: `Delivery Created`,
+                    description: `A delivery for ${user.businessName} (${user.accountType || 'Single'}) has been scheduled.`,
+                    data: { deliveryId, userId: user.id },
+                });
+            }
+
+            toast({ title: isUpdate ? "Delivery Updated" : "Delivery Created" });
             onOpenChange(false);
 
         } catch (error) {
