@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,13 +13,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { AppUser } from '@/lib/types';
-import { useFirestore } from '@/firebase';
+import { AppUser, SanitationVisit } from '@/lib/types';
+import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle } from 'lucide-react';
+import { createClientNotification } from '@/lib/notifications';
+import { DocumentReference } from 'firebase/firestore';
 
 const dispenserReportSchema = z.object({
     dispenserId: z.string(),
@@ -57,11 +59,14 @@ interface CreateSanitationDialogProps {
     onOpenChange: (isOpen: boolean) => void;
     userDocRef: DocumentReference | null;
     user: AppUser;
+    visitToEdit: SanitationVisit | null;
+    setVisitToEdit: (visit: SanitationVisit | null) => void;
 }
 
-export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user }: CreateSanitationDialogProps) {
+export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user, visitToEdit, setVisitToEdit }: CreateSanitationDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const auth = useAuth();
 
     const sanitationVisitForm = useForm<SanitationVisitFormValues>({
         resolver: zodResolver(sanitationVisitSchema),
@@ -76,34 +81,94 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user 
     });
     const { fields, append, remove } = useFieldArray({ control: sanitationVisitForm.control, name: "dispenserReports" });
 
+    useEffect(() => {
+        if (isOpen) {
+            if (visitToEdit) {
+                sanitationVisitForm.reset({
+                    ...visitToEdit,
+                    scheduledDate: new Date(visitToEdit.scheduledDate),
+                });
+            } else {
+                sanitationVisitForm.reset({
+                    status: 'Scheduled',
+                    assignedTo: '',
+                    scheduledDate: new Date(),
+                    dispenserReports: [{
+                        dispenserId: `disp-${Date.now()}`,
+                        dispenserName: 'Main Unit',
+                        checklist: defaultChecklist,
+                        dispenserCode: ''
+                    }]
+                });
+            }
+        } else {
+            setVisitToEdit(null);
+        }
+    }, [isOpen, visitToEdit, sanitationVisitForm, setVisitToEdit]);
+
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
-        if (!userDocRef || !firestore) return;
-        const visitsCol = collection(userDocRef, 'sanitationVisits');
-        const newVisitRef = doc(visitsCol);
-        const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
+        if (!userDocRef || !firestore || !auth?.currentUser) return;
+        const isUpdate = !!visitToEdit;
+        const adminId = auth.currentUser.uid;
+        const scheduledDate = values.scheduledDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-        const visitData = {
-            ...values,
-            id: newVisitRef.id,
-            userId: user.id,
-            scheduledDate: values.scheduledDate.toISOString(),
-            shareableLink: `${window.location.origin}/sanitation-report/${linkRef.id}`
-        };
+        try {
+            if (isUpdate) {
+                const visitRef = doc(userDocRef, 'sanitationVisits', visitToEdit.id);
+                const visitData = { ...values, scheduledDate: values.scheduledDate.toISOString() };
+                await updateDoc(visitRef, visitData);
 
-        const batch = writeBatch(firestore);
-        batch.set(newVisitRef, visitData);
-        batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id });
+                await createClientNotification(firestore, user.id, {
+                    type: 'sanitation',
+                    title: `Sanitation Visit Updated`,
+                    description: `Your sanitation visit for ${scheduledDate} is now ${values.status}.`,
+                    data: { visitId: visitToEdit.id }
+                });
+                await createClientNotification(firestore, adminId, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Updated',
+                    description: `The visit for ${user.businessName} on ${scheduledDate} is now ${values.status}.`,
+                    data: { userId: user.id, visitId: visitToEdit.id }
+                });
 
-        await batch.commit();
+                toast({ title: "Sanitation Visit Updated" });
+            } else {
+                const visitsCol = collection(userDocRef, 'sanitationVisits');
+                const newVisitRef = doc(visitsCol);
+                const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
+                const visitData = { ...values, id: newVisitRef.id, userId: user.id, scheduledDate: values.scheduledDate.toISOString(), shareableLink: `${window.location.origin}/sanitation-report/${linkRef.id}` };
 
-        toast({ title: "Sanitation Visit Scheduled" });
-        onOpenChange(false);
+                const batch = writeBatch(firestore);
+                batch.set(newVisitRef, visitData);
+                batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id });
+                await batch.commit();
+
+                await createClientNotification(firestore, user.id, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A sanitation visit is scheduled for your office on ${scheduledDate}.`,
+                    data: { visitId: newVisitRef.id }
+                });
+                await createClientNotification(firestore, adminId, {
+                    type: 'sanitation',
+                    title: 'Sanitation Visit Scheduled',
+                    description: `A visit for ${user.businessName} has been scheduled for ${scheduledDate}.`,
+                    data: { userId: user.id, visitId: newVisitRef.id }
+                });
+                
+                toast({ title: "Sanitation Visit Scheduled" });
+            }
+            onOpenChange(false);
+        } catch (error) {
+            console.error("Sanitation visit submission failed:", error);
+            toast({ variant: 'destructive', title: "Operation Failed" });
+        }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
-                <DialogHeader><DialogTitle>Schedule Sanitation Visit</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle></DialogHeader>
                 <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -136,7 +201,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user 
                         <Card key={field.id}>
                             <CardHeader className="flex flex-row items-center justify-between py-4">
                                 <CardTitle className="text-base">Dispenser #{index + 1}</CardTitle>
-                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><MinusCircle className="h-4 w-4 text-destructive" /></Button>
+                                {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><MinusCircle className="h-4 w-4 text-destructive" /></Button>}
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
@@ -152,7 +217,8 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user 
                         onClick={() => append({
                             dispenserId: `disp-${Date.now()}-${fields.length}`,
                             dispenserName: `Unit #${fields.length + 1}`,
-                            checklist: defaultChecklist
+                            checklist: defaultChecklist,
+                            dispenserCode: ''
                         })}
                     >
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -161,7 +227,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user 
 
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit">Schedule Visit</Button>
+                        <Button type="submit">{visitToEdit ? 'Save Changes' : 'Schedule Visit'}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

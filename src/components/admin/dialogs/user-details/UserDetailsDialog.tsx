@@ -62,6 +62,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isManualChargeOpen, setIsManualChargeOpen] = useState(false);
     const [isTopUpOpen, setIsTopUpOpen] = useState(false);
     const [isCreateSanitationOpen, setIsCreateSanitationOpen] = useState(false);
+    const [visitToEdit, setVisitToEdit] = useState<SanitationVisit | null>(null);
     const [isSanitationHistoryOpen, setIsSanitationHistoryOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
     const [contractFile, setContractFile] = useState<File | null>(null);
@@ -248,6 +249,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetSelectedSanitationVisit={setSelectedSanitationVisit}
                                     onSetIsSanitationHistoryOpen={setIsSanitationHistoryOpen}
                                     onSetIsCreateSanitationOpen={setIsCreateSanitationOpen}
+                                    onSetVisitToEdit={setVisitToEdit}
                                />
                             </TabsContent>
                         </Tabs>
@@ -284,9 +286,14 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             />
             <CreateSanitationDialog
                 isOpen={isCreateSanitationOpen}
-                onOpenChange={setIsCreateSanitationOpen}
+                onOpenChange={(open) => {
+                    if (!open) setVisitToEdit(null);
+                    setIsCreateSanitationOpen(open);
+                }}
                 userDocRef={userDocRef}
                 user={user}
+                visitToEdit={visitToEdit}
+                setVisitToEdit={setVisitToEdit}
             />
             <SanitationHistoryDialog
                 isOpen={isSanitationHistoryOpen}
@@ -307,5 +314,3 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         </>
     );
 }
-
-    

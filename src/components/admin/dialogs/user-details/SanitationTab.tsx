@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,18 +26,25 @@ interface SanitationTabProps {
     onSetSelectedSanitationVisit: (visit: SanitationVisit | null) => void;
     onSetIsSanitationHistoryOpen: (isOpen: boolean) => void;
     onSetIsCreateSanitationOpen: (isOpen: boolean) => void;
+    onSetVisitToEdit: (visit: SanitationVisit | null) => void;
 }
 
 export function SanitationTab({
     sanitationVisitsData,
     onSetSelectedSanitationVisit,
     onSetIsSanitationHistoryOpen,
-    onSetIsCreateSanitationOpen
+    onSetIsCreateSanitationOpen,
+    onSetVisitToEdit
 }: SanitationTabProps) {
 
     const handleViewReport = (visit: SanitationVisit) => {
         onSetSelectedSanitationVisit(visit);
         onSetIsSanitationHistoryOpen(true);
+    };
+
+    const handleEditVisit = (visit: SanitationVisit) => {
+        onSetVisitToEdit(visit);
+        onSetIsCreateSanitationOpen(true);
     };
 
     return (
@@ -46,7 +54,7 @@ export function SanitationTab({
                     <CardTitle>Sanitation Schedule</CardTitle>
                     <CardDescription>Manage office sanitation visits.</CardDescription>
                 </div>
-                <Button onClick={() => onSetIsCreateSanitationOpen(true)}>
+                <Button onClick={() => { onSetVisitToEdit(null); onSetIsCreateSanitationOpen(true); }}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Schedule Visit
                 </Button>
             </CardHeader>
@@ -68,7 +76,7 @@ export function SanitationTab({
                                     <Button variant="ghost" size="sm" onClick={() => handleViewReport(visit)}>
                                         <Eye className="h-4 w-4" />
                                     </Button>
-                                     <Button variant="ghost" size="sm" onClick={() => {}}>
+                                     <Button variant="ghost" size="sm" onClick={() => handleEditVisit(visit)}>
                                         <Edit className="h-4 w-4" />
                                     </Button>
                                 </TableCell>
@@ -102,7 +110,7 @@ export function SanitationTab({
                                      <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewReport(visit)}>
                                         <Eye className="mr-2 h-4 w-4" /> View Report
                                     </Button>
-                                    <Button variant="secondary" size="sm" className="w-full" onClick={() => {}}>
+                                    <Button variant="secondary" size="sm" className="w-full" onClick={() => handleEditVisit(visit)}>
                                         <Edit className="mr-2 h-4 w-4" /> Edit Visit
                                     </Button>
                                 </div>
