@@ -484,7 +484,7 @@ export default function DashboardLayout({
               </DialogContent>
           </Dialog>
           <Button asChild variant="outline" size="icon" className="relative rounded-full">
-            <Link href="/dashboard/documentation">
+            <Link href="/documentation" target="_blank">
               <FileText className="h-4 w-4" />
             </Link>
           </Button>
