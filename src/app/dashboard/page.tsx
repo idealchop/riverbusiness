@@ -469,7 +469,7 @@ export default function DashboardPage() {
             activeRefillRequest={activeRefillRequest}
         />
         <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {waterStation?.status === 'Under Maintenance' ? (
