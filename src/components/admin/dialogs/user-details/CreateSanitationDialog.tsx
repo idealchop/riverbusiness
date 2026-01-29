@@ -16,7 +16,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { AppUser, SanitationVisit } from '@/lib/types';
 import { useAuth, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle } from 'lucide-react';
@@ -145,7 +145,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
 
                 const batch = writeBatch(firestore);
                 batch.set(newVisitRef, visitData);
-                batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id });
+                batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id, createdAt: serverTimestamp() });
                 await batch.commit();
                 
                 toast({ title: "Sanitation Visit Scheduled" });
@@ -243,3 +243,5 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
         </Dialog>
     );
 }
+
+    

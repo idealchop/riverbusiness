@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth, useFirestore } from '@/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import type { SanitationVisit, AppUser, DispenserReport, SanitationChecklistItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { format } from 'date-fns';
+import { format, addDays, isAfter } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -154,7 +154,18 @@ export default function SanitationReportPage() {
                     throw new Error("This report link is invalid or has expired.");
                 }
 
-                const { userId, visitId } = linkSnap.data();
+                const linkData = linkSnap.data();
+                const { userId, visitId, createdAt } = linkData;
+
+                if (!createdAt || !(createdAt instanceof Timestamp)) {
+                    // This makes old links without a timestamp invalid.
+                    throw new Error("This report link is invalid or has expired.");
+                }
+
+                const expiryDate = addDays(createdAt.toDate(), 7);
+                if (isAfter(new Date(), expiryDate)) {
+                    throw new Error("This report link has expired. It was valid for 7 days.");
+                }
                 
                 const visitRef = doc(firestore, 'users', userId, 'sanitationVisits', visitId);
                 const visitSnap = await getDoc(visitRef);
@@ -454,3 +465,5 @@ export default function SanitationReportPage() {
         </main>
     );
 }
+
+    

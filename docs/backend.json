@@ -15,7 +15,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "For fixed plans, this represents the user's current liter balance/rollover. For Parent/Prepaid accounts, this field is not used as balance is derived from top-up credits." },
+        "totalConsumptionLiters": { "type": "number", "description": "This field is deprecated for Parent/Prepaid accounts. For fixed plans, this represents rollover. For Parent accounts, balance is derived from topUpBalanceCredits." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
         "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
@@ -103,7 +103,7 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for fixed plans. Deprecated for prepaid/parent account types." },
+        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for fixed plans. Deprecated for prepaid/parent." },
         "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
@@ -137,11 +137,9 @@
         "id": { "type": "string", "description": "Unique identifier for the station." },
         "name": { "type": "string", "description": "Name of the station." },
         "location": { "type": "string", "description": "Location of the station." },
-        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." },
-        "status": { "type": "string", "enum": ["Operational", "Under Maintenance"], "description": "The operational status of the station." },
-        "statusMessage": { "type": "string", "description": "An optional message regarding the station's status (e.g., maintenance details)." }
+        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." }
       },
-      "required": ["id", "name", "location", "status"]
+      "required": ["id", "name", "location"]
     },
     "Delivery": {
       "title": "Delivery",
@@ -261,9 +259,10 @@
         "properties": {
             "id": { "type": "string" },
             "userId": { "type": "string" },
-            "visitId": { "type": "string" }
+            "visitId": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the link was created, used for expiration." }
         },
-        "required": ["userId", "visitId"]
+        "required": ["userId", "visitId", "createdAt"]
     },
     "Schedule": {
       "title": "Schedule",
@@ -398,5 +397,7 @@
     }
   }
 }
+
+    
 
     
