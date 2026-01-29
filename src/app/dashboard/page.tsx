@@ -510,11 +510,11 @@ export default function DashboardPage() {
                 </div>
                 <DialogFooter className="flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-4 border-t">
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="secondary" className="flex-1" onClick={() => { closeDialog('partnerNotice'); window.dispatchEvent(new CustomEvent('open-live-support')) }}>
+                        <Button className="flex-1" onClick={() => { closeDialog('partnerNotice'); window.dispatchEvent(new CustomEvent('open-live-support')) }}>
                             <Wrench className="mr-2 h-4 w-4" />
                             Request New Dispenser
                         </Button>
-                        <Button variant="secondary" className="flex-1" onClick={() => { closeDialog('partnerNotice'); window.dispatchEvent(new CustomEvent('open-live-support')) }}>
+                        <Button className="flex-1" onClick={() => { closeDialog('partnerNotice'); window.dispatchEvent(new CustomEvent('open-live-support')) }}>
                             <Building className="mr-2 h-4 w-4" />
                             Request New Station
                         </Button>
