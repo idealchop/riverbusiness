@@ -576,6 +576,7 @@ export default function DashboardLayout({
                   </Avatar>
                 <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{user?.businessName}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
             </div>
