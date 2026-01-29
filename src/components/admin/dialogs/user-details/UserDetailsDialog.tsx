@@ -62,7 +62,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isManualChargeOpen, setIsManualChargeOpen] = useState(false);
     const [isTopUpOpen, setIsTopUpOpen] = useState(false);
     const [isCreateSanitationOpen, setIsCreateSanitationOpen] = useState(false);
-    const [visitToEdit, setVisitToEdit] = useState<SanitationVisit | null>(null);
     const [isSanitationHistoryOpen, setIsSanitationHistoryOpen] = useState(false);
     const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
     const [contractFile, setContractFile] = useState<File | null>(null);
@@ -72,6 +71,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
     const [isYearlyConsumptionOpen, setIsYearlyConsumptionOpen] = useState(false);
+    const [visitToEdit, setVisitToEdit] = useState<SanitationVisit | null>(null);
+
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
