@@ -1,4 +1,3 @@
-
 // This file can be used to define types that are shared between your client and functions.
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -25,23 +24,10 @@ export interface Delivery {
   adminNotes?: string;
 }
 
-export type RefillRequestStatus = 'Requested' | 'In Production' | 'Out for Delivery' | 'Completed' | 'Cancelled';
-
-export interface StatusHistoryEntry {
-    status: RefillRequestStatus;
-    timestamp: FieldValue | Timestamp;
-}
-
-export interface RefillRequest {
+export interface ManualCharge {
   id: string;
-  userId: string;
-  userName: string;
-  businessName: string;
-  clientId: string;
-  requestedAt: FieldValue | Timestamp;
-  status: RefillRequestStatus;
-  statusHistory?: StatusHistoryEntry[];
-  volumeContainers?: number;
-  requestedDate?: string;
+  description: string;
+  amount: number;
+  dateAdded: FieldValue | Timestamp;
 }
     
