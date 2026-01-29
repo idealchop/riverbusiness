@@ -1,6 +1,7 @@
 
 
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -11,6 +12,7 @@ export interface ConsumptionRecord {
 export interface Delivery {
   id: string;
   userId: string;
+  parentId?: string;
   date: string;
   volumeContainers: number;
   status: 'Delivered' | 'In Transit' | 'Pending';
@@ -63,6 +65,8 @@ export interface WaterStation {
   name: string;
   location: string;
   partnershipAgreementUrl?: string;
+  status: 'Operational' | 'Under Maintenance';
+  statusMessage?: string;
 }
 
 export type Permission = 
@@ -75,6 +79,13 @@ export type Permission =
 
 export type AccountType = 'Single' | 'Parent' | 'Branch';
 
+export interface ManualCharge {
+  id: string;
+  description: string;
+  amount: number;
+  dateAdded: FieldValue | Timestamp;
+}
+
 export interface AppUser {
     id: string; // This is the Firebase Auth UID
     clientId?: string; // This is the manually entered client ID
@@ -84,7 +95,8 @@ export interface AppUser {
     businessName: string;
     address?: string;
     contactNumber?: string;
-    totalConsumptionLiters: number;
+    // For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated.
+    totalConsumptionLiters: number; 
     accountStatus: 'Active' | 'Inactive';
     lastLogin: string;
     permissions?: Permission[];
@@ -103,10 +115,13 @@ export interface AppUser {
         dispenserQuantity?: number;
         dispenserPrice?: number;
         dispenserPaymentType?: 'Monthly' | 'One-Time';
+        sanitationPrice?: number;
+        sanitationPaymentType?: 'Monthly' | 'One-Time';
         deliveryFrequency?: string;
         deliveryDay?: string;
         deliveryTime?: string;
         autoRefillEnabled?: boolean;
+        lastMonthRollover?: number;
     };
     currentContractUrl?: string;
     photoURL?: string;
@@ -126,6 +141,7 @@ export interface AppUser {
     accountType?: AccountType;
     parentId?: string;
     topUpBalanceCredits?: number;
+    pendingCharges?: ManualCharge[];
 }
 
 export interface LoginLog {
@@ -155,6 +171,7 @@ export interface Payment {
   status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review' | 'Covered by Parent Account';
   proofOfPaymentUrl?: string;
   rejectionReason?: string;
+  manualCharges?: ManualCharge[];
 }
 
 export type ImagePlaceholder = {
@@ -240,13 +257,18 @@ export interface TopUpRequest {
   id: string;
   userId: string;
   amount: number;
-  status: 'Pending Review' | 'Approved' | 'Rejected';
+  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
   requestedAt: FieldValue | Timestamp;
-  proofOfPaymentUrl: string;
+  proofOfPaymentUrl?: string;
   rejectionReason?: string;
 }
     
 
     
+
+    
+
+    
+
 
     

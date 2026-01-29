@@ -128,8 +128,8 @@ async function generateInvoiceForUser(
     monthsToBill: number = 1,
     isFirstInvoice: boolean
 ) {
-    // Skip admins or users without a plan
-    if (user.role === 'Admin' || !user.plan) {
+    // Skip admins, users without a plan, or branch accounts
+    if (user.role === 'Admin' || !user.plan || user.accountType === 'Branch') {
         return;
     }
 
@@ -259,3 +259,5 @@ async function generateInvoiceForUser(
     
     return batch.commit();
 }
+
+    
