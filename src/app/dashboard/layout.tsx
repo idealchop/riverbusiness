@@ -483,30 +483,11 @@ export default function DashboardLayout({
                 </div>
               </DialogContent>
           </Dialog>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="relative rounded-full"
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Documentation & Resources</DialogTitle>
-                <DialogDescription>
-                  This feature is coming soon. Here you will find helpful guides and resources for using the platform.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                    <Button>OK</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button asChild variant="outline" size="icon" className="relative rounded-full">
+            <Link href="/dashboard/documentation">
+              <FileText className="h-4 w-4" />
+            </Link>
+          </Button>
           <Popover onOpenChange={handleNotificationOpenChange}>
               <PopoverTrigger asChild>
               <Button
