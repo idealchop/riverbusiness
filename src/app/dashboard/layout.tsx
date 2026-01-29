@@ -109,7 +109,7 @@ export default function DashboardLayout({
   const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
   const paymentOptions: PaymentOption[] = useMemo(() => [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09989811596' } },
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
       { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
       { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
       { name: 'Credit Card', qr: cardQr }
@@ -119,7 +119,7 @@ export default function DashboardLayout({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
   const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
-
+  const [isLiveSupportOpen, setIsLiveSupportOpen] = useState(false);
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = React.useState(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState('');
   const [feedbackRating, setFeedbackRating] = React.useState(0);
@@ -152,6 +152,14 @@ export default function DashboardLayout({
     window.addEventListener('open-my-account', handleOpenMyAccount);
     return () => {
         window.removeEventListener('open-my-account', handleOpenMyAccount);
+    };
+  }, []);
+  
+  useEffect(() => {
+    const handleOpenLiveSupport = () => setIsLiveSupportOpen(true);
+    window.addEventListener('open-live-support', handleOpenLiveSupport);
+    return () => {
+        window.removeEventListener('open-live-support', handleOpenLiveSupport);
     };
   }, []);
 
@@ -403,7 +411,8 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
-          <Dialog onOpenChange={(open) => {
+          <Dialog open={isLiveSupportOpen} onOpenChange={(open) => {
+              setIsLiveSupportOpen(open)
               if (!open && user?.hasUnreadAdminMessages && userDocRef) {
                   updateDoc(userDocRef, { hasUnreadAdminMessages: false });
               }
