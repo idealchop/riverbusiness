@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -125,6 +125,19 @@ export default function SanitationReportPage() {
     const [clientData, setClientData] = useState<AppUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('');
+    
+    const isChecklistComplete = useMemo(() => {
+        if (!visitData?.dispenserReports || visitData.dispenserReports.length === 0) {
+            return true;
+        }
+        return visitData.dispenserReports.every(report => 
+            report.checklist && report.checklist.every(item => item.checked || (item.remarks && item.remarks.trim() !== ''))
+        );
+    }, [visitData]);
+
+    const allSignaturesCompleted = !!(visitData?.officerSignature && visitData?.clientSignature && visitData?.clientRepName && visitData.clientRepName.trim() !== '');
+
+    const isReportFullyComplete = allSignaturesCompleted && isChecklistComplete;
 
     useEffect(() => {
         if (!firestore || !linkId) return;
@@ -200,8 +213,8 @@ export default function SanitationReportPage() {
     const handleSubmitReport = async () => {
         if (!firestore || !linkId || !visitData) return;
 
-        if (!visitData.officerSignature || !visitData.clientSignature || !visitData.clientRepName) {
-            toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all signatures and names are provided." });
+        if (!isReportFullyComplete) {
+            toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all fields are complete." });
             return;
         }
 
@@ -269,8 +282,6 @@ export default function SanitationReportPage() {
             </main>
          )
     }
-
-    const allSignaturesCompleted = visitData?.officerSignature && visitData?.clientSignature && visitData?.clientRepName;
 
     return (
         <main className="min-h-screen w-full bg-muted p-4 sm:p-8">
@@ -389,14 +400,24 @@ export default function SanitationReportPage() {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="inline-block"> {/* Wrapper needed for disabled button tooltip */}
-                                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !allSignaturesCompleted}>
+                                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !isReportFullyComplete}>
                                         <Save className="mr-2 h-4 w-4" />
                                         {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
                                     </Button>
                                 </div>
                             </TooltipTrigger>
-                            {!allSignaturesCompleted && (
-                                <TooltipContent><p>Requires signatures from both officer and client, and the client representative's name.</p></TooltipContent>
+                            {!isReportFullyComplete && (
+                                <TooltipContent>
+                                    <div className="space-y-1">
+                                        <p className="font-medium">Cannot submit yet. Missing items:</p>
+                                        <ul className="list-disc pl-4 text-xs text-muted-foreground">
+                                            {!isChecklistComplete && <li>All checklist items must be checked or have remarks.</li>}
+                                            {!(visitData?.officerSignature) && <li>Officer signature.</li>}
+                                            {!(visitData?.clientSignature) && <li>Client signature.</li>}
+                                            {!(visitData?.clientRepName && visitData.clientRepName.trim() !== '') && <li>Client representative's name.</li>}
+                                        </ul>
+                                    </div>
+                                </TooltipContent>
                             )}
                         </Tooltip>
                     </TooltipProvider>
