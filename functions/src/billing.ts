@@ -40,8 +40,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         const userRef = userDoc.ref;
         let user = userDoc.data();
         
-        // Skip admins
-        if (user.role === 'Admin') continue;
+        // Skip admins and branch accounts
+        if (user.role === 'Admin' || user.accountType === 'Branch') continue;
 
         let billingPeriod: string;
         let billingCycleStart: Date;
