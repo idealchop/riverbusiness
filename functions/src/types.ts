@@ -24,4 +24,23 @@ export interface Delivery {
   adminNotes?: string;
 }
 
+export type RefillRequestStatus = 'Requested' | 'In Production' | 'Out for Delivery' | 'Completed' | 'Cancelled';
+
+export interface StatusHistoryEntry {
+    status: RefillRequestStatus;
+    timestamp: FieldValue | Timestamp;
+}
+
+export interface RefillRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  businessName: string;
+  clientId: string;
+  requestedAt: FieldValue | Timestamp;
+  status: RefillRequestStatus;
+  statusHistory?: StatusHistoryEntry[];
+  volumeContainers?: number;
+  requestedDate?: string;
+}
     

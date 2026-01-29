@@ -211,18 +211,6 @@ export default function DashboardPage() {
     }
   };
   const closeDialog = (dialog: keyof typeof dialogState) => setDialogState((prev) => ({ ...prev, [dialog]: false }));
-
-  const createNotification = async (userId: string, notification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) => {
-    if (!firestore) return;
-    const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-    const newNotification: Partial<Notification> = {
-        ...notification,
-        userId,
-        date: serverTimestamp(),
-        isRead: false
-    };
-    await addDoc(notificationsCol, newNotification);
-  };
   
   const handleOneClickRefill = useCallback(async () => {
     if (hasPendingRefill) {
@@ -243,20 +231,13 @@ export default function DashboardPage() {
       clientId: user.clientId || '',
       requestedAt: serverTimestamp(),
       status: 'Requested',
-      statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+      statusHistory: [{ status: 'Requested', timestamp: Timestamp.now() }],
     };
 
     try {
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-      const newDocRef = await addDoc(refillRequestsCollection, newRequestData);
+      await addDoc(refillRequestsCollection, newRequestData);
       
-      await createNotification(authUser.uid, {
-        type: 'delivery',
-        title: 'Refill Request Sent',
-        description: 'Your ASAP refill request has been sent to the admin for processing.',
-        data: { requestId: newDocRef.id },
-      });
-
       toast({
         title: 'Refill Request Sent!',
         description: `Thank you, ${user.name}! We've received your ASAP refill request. You can track its progress.`,
@@ -323,22 +304,15 @@ export default function DashboardPage() {
       clientId: user.clientId || '',
       requestedAt: serverTimestamp(),
       status: 'Requested',
-      statusHistory: [{ status: 'Requested', timestamp: new Date().toISOString() as any }],
+      statusHistory: [{ status: 'Requested', timestamp: Timestamp.now() }],
       volumeContainers: containers,
       requestedDate: date.toISOString(),
     };
 
     try {
       const refillRequestsCollection = collection(firestore, 'users', authUser.uid, 'refillRequests');
-      const newDocRef = await addDoc(refillRequestsCollection, newRequestData);
+      await addDoc(refillRequestsCollection, newRequestData);
       
-      await createNotification(authUser.uid, {
-        type: 'delivery',
-        title: 'Refill Request Sent',
-        description: `Request for ${containers} containers on ${date.toLocaleDateString()} sent.`,
-        data: { requestId: newDocRef.id },
-      });
-
       toast({
         title: 'Refill Request Sent!',
         description: `Thank you, ${user.name}! You can track the progress of your request.`,

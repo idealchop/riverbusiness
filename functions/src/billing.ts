@@ -191,13 +191,25 @@ async function generateInvoiceForUser(
         }
         
         // This is the starting balance for the NEW month, which begins today.
-        // It's an increment to add to any existing balance from manual adjustments.
+        // It's the new monthly allocation plus any rollover from the previous period.
         const creditsForNewMonth = monthlyAllocation + newRollover;
 
+        // Set the user's balance for the new month. This is not an increment.
         batch.update(userRef, {
-            totalConsumptionLiters: admin.firestore.FieldValue.increment(creditsForNewMonth),
+            totalConsumptionLiters: creditsForNewMonth,
             'customPlanDetails.lastMonthRollover': newRollover,
         });
+
+        // Also create a notification for the credit refresh
+         const creditRefreshNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+            type: 'general',
+            title: 'Monthly Credits Refreshed',
+            description: `Your monthly balance has been updated with ${creditsForNewMonth.toLocaleString()} liters.`,
+            data: { newBalance: creditsForNewMonth }
+        };
+        const creditRefreshMeta = { ...creditRefreshNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+        batch.set(notificationsRef.doc(), creditRefreshMeta);
+
     }
     
     // Add one-time fees to the very first invoice

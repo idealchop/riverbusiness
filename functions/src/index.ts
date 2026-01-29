@@ -6,7 +6,7 @@ import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/f
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
-import type { Notification, Delivery } from './types';
+import type { Notification, Delivery, RefillRequest } from './types';
 
 
 // Import all exports from billing.ts
@@ -48,13 +48,18 @@ export async function createNotification(userId: string, notificationData: Omit<
     logger.warn("User ID is missing, cannot create notification.");
     return;
   }
-  const notificationWithMeta = {
-    ...notificationData,
-    userId: userId,
-    date: FieldValue.serverTimestamp(),
-    isRead: false,
-  };
-  await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
+  try {
+    const notificationWithMeta = {
+        ...notificationData,
+        userId: userId,
+        date: FieldValue.serverTimestamp(),
+        isRead: false,
+    };
+    await db.collection('users').doc(userId).collection('notifications').add(notificationWithMeta);
+    logger.info(`Notification created for user ${userId}: ${notificationData.title}`);
+  } catch (error) {
+      logger.error(`Failed to create notification for user ${userId}`, error);
+  }
 }
 
 
@@ -188,6 +193,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
  * Cloud Function to create a notification when a delivery is updated.
  */
 export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+  try {
     if (!event.data) return;
 
     const before = event.data.before.data();
@@ -228,12 +234,16 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
             data: { userId, deliveryId: event.params.deliveryId }
         });
     }
+  } catch (error) {
+      logger.error(`Error in ondeliveryupdate for event ID ${event.id}:`, error);
+  }
 });
 
 /**
- * Cloud Function to create notifications when a new payment document is created.
+ * Cloud Function to notify admin when a user submits a payment for review.
  */
 export const onpaymentcreate = onDocumentCreated("users/{userId}/payments/{paymentId}", async (event) => {
+  try {
     if (!event.data) return;
 
     const userId = event.params.userId;
@@ -259,22 +269,23 @@ export const onpaymentcreate = onDocumentCreated("users/{userId}/payments/{payme
         };
         await createNotification(adminId, adminNotification);
     }
+  } catch (error) {
+      logger.error(`Error in onpaymentcreate for event ID ${event.id}:`, error);
+  }
 });
 
 
 /**
- * Cloud Function to create notifications when a payment status is updated by an admin.
+ * Cloud Function to notify users and admin when a payment status is updated.
  */
 export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{paymentId}", async (event) => {
+  try {
     if (!event.data) return;
 
     const before = event.data.before.data();
     const after = event.data.after.data();
 
-    // Only notify if the status has changed.
-    if (before.status === after.status) {
-        return;
-    }
+    if (before.status === after.status) return;
 
     const userId = event.params.userId;
     const payment = after;
@@ -290,61 +301,33 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
         return;
     }
 
-    // Admin approves payment
     if (before.status === 'Pending Review' && after.status === 'Paid') {
-        userNotification = {
-            type: 'payment',
-            title: 'Payment Confirmed',
-            description: `Your payment for invoice ${payment.id} has been confirmed. Thank you!`,
-            data: { paymentId: payment.id }
-        };
-        adminNotification = {
-            type: 'payment',
-            title: 'Payment Approved',
-            description: `You approved a payment of ₱${payment.amount.toFixed(2)} from ${userData.businessName}.`,
-            data: { userId, paymentId: payment.id }
-        };
+        userNotification = { type: 'payment', title: 'Payment Confirmed', description: `Your payment for invoice ${payment.id} has been confirmed. Thank you!`, data: { paymentId: payment.id }};
+        adminNotification = { type: 'payment', title: 'Payment Approved', description: `You approved a payment of ₱${payment.amount.toFixed(2)} from ${userData.businessName}.`, data: { userId, paymentId: payment.id }};
     } 
-    // Admin rejects payment
     else if (before.status === 'Pending Review' && after.status === 'Upcoming') {
-        userNotification = {
-            type: 'payment',
-            title: 'Payment Action Required',
-            description: `Your payment for invoice ${payment.id} requires attention. Reason: ${payment.rejectionReason || 'Please contact support.'}`,
-            data: { paymentId: payment.id }
-        };
-         adminNotification = {
-            type: 'payment',
-            title: 'Payment Rejected',
-            description: `You rejected a payment from ${userData.businessName}. Reason: ${payment.rejectionReason || 'Not specified'}.`,
-            data: { userId, paymentId: payment.id }
-        };
+        userNotification = { type: 'payment', title: 'Payment Action Required', description: `Your payment for invoice ${payment.id} requires attention. Reason: ${payment.rejectionReason || 'Please contact support.'}`, data: { paymentId: payment.id }};
+        adminNotification = { type: 'payment', title: 'Payment Rejected', description: `You rejected a payment from ${userData.businessName}. Reason: ${payment.rejectionReason || 'Not specified'}.`, data: { userId, paymentId: payment.id }};
     }
-    // User submits payment for review
     else if ((before.status === 'Upcoming' || before.status === 'Overdue') && after.status === 'Pending Review') {
-         adminNotification = {
-            type: 'payment',
-            title: 'Payment for Review',
-            description: `${userData.businessName} has submitted a proof of payment.`,
-            data: { userId, paymentId: payment.id }
-        };
+         adminNotification = { type: 'payment', title: 'Payment for Review', description: `${userData.businessName} has submitted a proof of payment.`, data: { userId, paymentId: payment.id }};
     }
     
     const promises = [];
-    if (userNotification) {
-        promises.push(createNotification(userId, userNotification));
-    }
-    if (adminNotification && adminId) {
-        promises.push(createNotification(adminId, adminNotification));
-    }
+    if (userNotification) promises.push(createNotification(userId, userNotification));
+    if (adminNotification && adminId) promises.push(createNotification(adminId, adminNotification));
     await Promise.all(promises);
+
+  } catch(error) {
+     logger.error(`Error in onpaymentupdate for event ID ${event.id}:`, error);
+  }
 });
 
-
 /**
- * Cloud Function to handle user-submitted top-up requests.
+ * Cloud Function to notify admin on user-submitted top-up requests.
  */
 export const ontopuprequestcreate = onDocumentCreated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+  try {
     if (!event.data) return;
 
     const userId = event.params.userId;
@@ -365,22 +348,23 @@ export const ontopuprequestcreate = onDocumentCreated("users/{userId}/topUpReque
             data: { userId, requestId }
         });
     }
+  } catch (error) {
+     logger.error(`Error in ontopuprequestcreate for event ID ${event.id}:`, error);
+  }
 });
 
 
 /**
- * Cloud Function to handle admin updates to top-up requests.
+ * Cloud Function to handle admin updates to top-up requests and notify users.
  */
 export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+  try {
     if (!event.data) return;
 
     const before = event.data.before.data();
     const after = event.data.after.data();
 
-    // Only notify if the status has changed from 'Pending Review'.
-    if (before.status !== 'Pending Review' || before.status === after.status) {
-        return;
-    }
+    if (before.status !== 'Pending Review' || before.status === after.status) return;
 
     const userId = event.params.userId;
     const requestData = after;
@@ -395,55 +379,115 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
 
     let userNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
     let adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
+    const promises: Promise<any>[] = [];
 
     if (after.status === 'Approved') {
-        userNotification = {
-            type: 'top-up',
-            title: 'Top-Up Successful',
-            description: `Your top-up of ₱${requestData.amount.toLocaleString()} has been approved and added to your balance.`,
-            data: { requestId: event.params.requestId }
-        };
-        adminNotification = {
-            type: 'top-up',
-            title: 'Top-Up Approved',
-            description: `You approved a ₱${requestData.amount.toLocaleString()} top-up for ${userData.businessName}.`,
-            data: { userId, requestId: event.params.requestId }
-        };
+        userNotification = { type: 'top-up', title: 'Top-Up Successful', description: `Your top-up of ₱${requestData.amount.toLocaleString()} has been approved.`, data: { requestId: event.params.requestId }};
+        adminNotification = { type: 'top-up', title: 'Top-Up Approved', description: `You approved a ₱${requestData.amount.toLocaleString()} top-up for ${userData.businessName}.`, data: { userId, requestId: event.params.requestId }};
         
-        // Also increment the parent's balance
-        await db.collection('users').doc(userId).update({
+        promises.push(db.collection('users').doc(userId).update({
             topUpBalanceCredits: increment(requestData.amount)
-        });
+        }));
 
     } else if (after.status === 'Rejected') {
-        userNotification = {
-            type: 'top-up',
-            title: 'Top-Up Rejected',
-            description: `Your top-up request was rejected. Reason: ${requestData.rejectionReason || 'Not specified'}.`,
-            data: { requestId: event.params.requestId }
-        };
-         adminNotification = {
-            type: 'top-up',
-            title: 'Top-Up Rejected',
-            description: `You rejected a top-up request from ${userData.businessName}.`,
-            data: { userId, requestId: event.params.requestId }
-        };
+        userNotification = { type: 'top-up', title: 'Top-Up Rejected', description: `Your top-up request was rejected. Reason: ${requestData.rejectionReason || 'Not specified'}.`, data: { requestId: event.params.requestId }};
+        adminNotification = { type: 'top-up', title: 'Top-Up Rejected', description: `You rejected a top-up request from ${userData.businessName}.`, data: { userId, requestId: event.params.requestId }};
     }
 
-    const promises = [];
-    if (userNotification) {
-        promises.push(createNotification(userId, userNotification));
-    }
-    if (adminNotification && adminId) {
-        promises.push(createNotification(adminId, adminNotification));
-    }
+    if (userNotification) promises.push(createNotification(userId, userNotification));
+    if (adminNotification && adminId) promises.push(createNotification(adminId, adminNotification));
     await Promise.all(promises);
+
+  } catch(error) {
+     logger.error(`Error in ontopuprequestupdate for event ID ${event.id}:`, error);
+  }
 });
+
+
+/**
+ * Cloud Function to notify user/admin on refill request creation.
+ */
+export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillRequests/{requestId}", async (event) => {
+  try {
+    if (!event.data) return;
+
+    const userId = event.params.userId;
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData) return;
+
+    // Notify user
+    await createNotification(userId, {
+        type: 'delivery',
+        title: 'Refill Request Received',
+        description: 'We have received your refill request and will process it shortly.',
+        data: { requestId: event.params.requestId },
+    });
+
+    // Notify admin
+    const adminId = await getAdminId();
+    if (adminId) {
+        await createNotification(adminId, {
+            type: 'delivery',
+            title: 'New Refill Request',
+            description: `${userData.businessName} has submitted a new refill request.`,
+            data: { userId, requestId: event.params.requestId },
+        });
+    }
+  } catch (error) {
+      logger.error(`Error in onrefillrequestcreate for event ID ${event.id}:`, error);
+  }
+});
+
+
+/**
+ * Cloud Function to notify user/admin on refill request status updates.
+ */
+export const onrefillrequestupdate = onDocumentUpdated("users/{userId}/refillRequests/{requestId}", async (event) => {
+  try {
+    if (!event.data) return;
+    const before = event.data.before.data() as RefillRequest;
+    const after = event.data.after.data() as RefillRequest;
+
+    if (before.status === after.status) return;
+
+    const userId = event.params.userId;
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    
+    if (!userData) return;
+
+    // Notify user
+    await createNotification(userId, {
+        type: 'delivery',
+        title: `Refill Status: ${after.status}`,
+        description: `Your refill request is now ${after.status}.`,
+        data: { requestId: event.params.requestId },
+    });
+    
+    // Notify admin
+    const adminId = await getAdminId();
+    if (adminId) {
+        await createNotification(adminId, {
+            type: 'delivery',
+            title: 'Refill Status Updated',
+            description: `Request for ${userData.businessName} is now ${after.status}.`,
+            data: { userId, requestId: event.params.requestId },
+        });
+    }
+
+  } catch (error) {
+      logger.error(`Error in onrefillrequestupdate for event ID ${event.id}:`, error);
+  }
+});
+
 
 /**
  * Cloud Function to send notifications for sanitation visit creations.
  */
 export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+  try {
     if (!event.data) return;
     const userId = event.params.userId;
     const visit = event.data.data();
@@ -472,18 +516,22 @@ export const onsanitationvisitcreate = onDocumentCreated("users/{userId}/sanitat
             data: { userId, visitId: event.params.visitId }
         });
     }
+  } catch (error) {
+    logger.error(`Error in onsanitationvisitcreate for event ID ${event.id}:`, error);
+  }
 });
 
 /**
  * Cloud Function to send notifications for sanitation visit updates.
  */
 export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitationVisits/{visitId}", async (event) => {
+  try {
     if (!event.data) return;
     const userId = event.params.userId;
     const before = event.data.before.data();
     const after = event.data.after.data();
 
-    if (before.status === after.status) return; // No change, no notification
+    if (before.status === after.status) return;
 
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
@@ -492,7 +540,6 @@ export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitat
         month: 'long', day: 'numeric', year: 'numeric'
     });
 
-    // Notify user
     await createNotification(userId, {
         type: 'sanitation',
         title: `Sanitation Visit: ${after.status}`,
@@ -500,7 +547,6 @@ export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitat
         data: { visitId: event.params.visitId }
     });
     
-    // Notify admin
     const adminId = await getAdminId();
     if(adminId && userData) {
         await createNotification(adminId, {
@@ -510,12 +556,17 @@ export const onsanitationvisitupdate = onDocumentUpdated("users/{userId}/sanitat
             data: { userId, visitId: event.params.visitId }
         });
     }
+  } catch(error) {
+     logger.error(`Error in onsanitationvisitupdate for event ID ${event.id}:`, error);
+  }
 });
+
 
 /**
  * Cloud Function to notify admin on user profile changes.
  */
 export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) => {
+  try {
     if (!event.data) return;
 
     const before = event.data.before.data();
@@ -523,9 +574,8 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
     const userId = event.params.userId;
     const adminId = await getAdminId();
     
-    if (!adminId || userId === adminId) return; // Don't notify admin about their own changes.
+    if (!adminId || userId === adminId) return; 
 
-    // Notify on plan change request
     if (!before.pendingPlan && after.pendingPlan) {
         await createNotification(adminId, {
             type: 'general',
@@ -535,7 +585,6 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
         });
     }
 
-    // You can add more checks here for other fields like auto-refill, account info, etc.
     if (before.customPlanDetails?.autoRefillEnabled !== after.customPlanDetails?.autoRefillEnabled) {
          await createNotification(adminId, {
             type: 'general',
@@ -544,6 +593,9 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
             data: { userId: userId }
         });
     }
+  } catch(error) {
+      logger.error(`Error in onuserupdate for event ID ${event.id}:`, error);
+  }
 });
 
 
@@ -583,40 +635,6 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         return;
     }
 
-    // Handle user contract uploads by admin
-    if (filePath.startsWith("userContracts/")) {
-        const parts = filePath.split("/");
-        const userId = parts[1];
-        logger.log(`Contract received for user: ${userId}. Client will handle database update.`);
-        return;
-    }
-    
-    // Handle admin-uploaded proofs of delivery
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/proofs_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/proofs_for/{userId}/{filename}
-        const deliveryId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("deliveries").doc(deliveryId).update({
-            proofOfDeliveryUrl: url,
-        });
-        logger.log(`Updated proof for delivery: ${deliveryId} for user: ${userId} by admin.`);
-        return;
-    }
-    
-    // Handle admin-uploaded sanitation reports
-    if (filePath.startsWith("admin_uploads/") && filePath.includes("/sanitation_for/")) {
-        const parts = filePath.split('/');
-        const userId = parts[3]; // admin_uploads/{adminId}/sanitation_for/{userId}/{filename}
-        const visitId = path.basename(filePath).split('-')[0];
-        const url = await getPublicUrl();
-        await db.collection("users").doc(userId).collection("sanitationVisits").doc(visitId).update({
-            reportUrl: url,
-        });
-        logger.log(`Updated report for sanitation visit: ${visitId} for user: ${userId} by admin.`);
-        return;
-    }
-
     // Handle user-uploaded proofs of payment
     if (filePath.startsWith("users/") && filePath.includes("/payments/") && customMetadata?.paymentId) {
         const { userId, paymentId } = customMetadata;
@@ -634,33 +652,40 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
             status: "Pending Review",
         }, { merge: true });
 
-        logger.log(`Updated proof for payment: ${paymentId} for user: ${userId}`);
-        
-        // This will trigger onpaymentcreate or onpaymentupdate which handles notifications
+        // This will trigger onpaymentupdate, which handles notifications
         return;
     }
     
-    if (filePath.startsWith("stations/")) {
+    // Handle compliance report uploads
+    if (filePath.startsWith("stations/") && filePath.includes("/compliance/")) {
         const parts = filePath.split("/");
         const stationId = parts[1];
-        const docType = parts[2];
+        const reportKey = path.basename(filePath).split('-')[0];
         const url = await getPublicUrl();
 
-        if (docType === "agreement") {
-            await db.collection("waterStations").doc(stationId).update({
-                partnershipAgreementUrl: url,
-            });
-            logger.log(`Updated partnership agreement for station: ${stationId}`);
-        } else if (docType === "compliance") {
-            const reportKey = path.basename(filePath).split('-')[0];
-            
-            const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportKey);
+        const reportRef = db.collection("waterStations").doc(stationId).collection("complianceReports").doc(reportKey);
+        await reportRef.update({ reportUrl: url });
+        logger.log(`Updated compliance report URL for report '${reportKey}' for station: ${stationId}`);
 
-            await reportRef.update({ reportUrl: url });
-            logger.log(`Updated compliance report URL for report '${reportKey}' for station: ${stationId}`);
+        // Notify all users assigned to this station
+        const usersSnapshot = await db.collection('users').where('assignedWaterStationId', '==', stationId).get();
+        if (!usersSnapshot.empty) {
+            const stationDoc = await db.collection('waterStations').doc(stationId).get();
+            const stationName = stationDoc.data()?.name || 'your assigned station';
+            const notificationPromises = usersSnapshot.docs.map(userDoc => 
+                createNotification(userDoc.id, {
+                    type: 'compliance',
+                    title: 'New Compliance Report',
+                    description: `A new water quality report is available for ${stationName}.`,
+                    data: { stationId }
+                })
+            );
+            await Promise.all(notificationPromises);
+            logger.log(`Sent compliance notifications to ${usersSnapshot.size} users for station ${stationId}.`);
         }
         return;
     }
+
 
     logger.log(`File path ${filePath} did not match any handler.`);
 
