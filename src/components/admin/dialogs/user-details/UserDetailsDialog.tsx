@@ -14,6 +14,7 @@ import { AppUser, Delivery, WaterStation, Payment, SanitationVisit, RefillReques
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, getYear, getMonth } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { createClientNotification } from '@/lib/notifications';
 
 import { OverviewTab } from './OverviewTab';
 import { DeliveriesTab } from './DeliveriesTab';
@@ -169,7 +170,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     };
 
     const handleContractUpload = async () => {
-        if (!contractFile || !auth?.currentUser || !storage || !userDocRef) return;
+        if (!contractFile || !auth?.currentUser || !storage || !userDocRef || !firestore) return;
         setIsUploadingContract(true);
         setUploadProgress(0);
         const filePath = `userContracts/${user.id}/${Date.now()}-${contractFile.name}`;
@@ -183,6 +184,21 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             });
             
             toast({ title: "Contract Uploaded", description: "The user's contract has been updated." });
+            
+            if (auth.currentUser) {
+                await createClientNotification(firestore, user.id, {
+                    type: 'general',
+                    title: 'New Contract Uploaded',
+                    description: 'A new contract has been added to your account by an admin.',
+                    data: { userId: user.id }
+                });
+                await createClientNotification(firestore, auth.currentUser.uid, {
+                    type: 'general',
+                    title: 'Contract Added',
+                    description: `You have successfully added a contract for ${user.businessName}.`,
+                    data: { userId: user.id }
+                });
+            }
 
         } catch (error) {
             console.error("Contract upload failed:", error)
@@ -258,7 +274,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                 <BillingTab
                                     user={user}
                                     userPaymentsData={userPaymentsData}
-                                    topUpRequestsData={topUpRequestsData}
                                     currentMonthInvoice={currentMonthInvoice}
                                     onSetIsManualChargeOpen={setIsManualChargeOpen}
                                     onSetIsTopUpOpen={setIsTopUpOpen}
@@ -306,7 +321,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 onOpenChange={setIsTopUpOpen}
                 userDocRef={userDocRef}
                 user={user}
-                topUpToReview={paymentToReview as unknown as TopUpRequest}
             />
             <CreateSanitationDialog
                 isOpen={isCreateSanitationOpen}
