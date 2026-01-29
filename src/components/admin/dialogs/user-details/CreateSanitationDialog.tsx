@@ -1,11 +1,11 @@
-
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, PlusCircle, MinusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, MinusCircle, Trash2 } from 'lucide-react';
 import { DocumentReference } from 'firebase/firestore';
 import { createClientNotification } from '@/lib/notifications';
 
@@ -67,6 +67,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
     const { toast } = useToast();
     const firestore = useFirestore();
     const auth = useAuth();
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const sanitationVisitForm = useForm<SanitationVisitFormValues>({
         resolver: zodResolver(sanitationVisitSchema),
@@ -173,75 +174,132 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
             toast({ variant: 'destructive', title: "Operation Failed" });
         }
     };
+    
+    const handleDeleteVisit = async () => {
+        if (!firestore || !visitToEdit) return;
+        setIsDeleting(true);
+        try {
+            const batch = writeBatch(firestore);
+
+            // Delete the visit document
+            const visitRef = doc(firestore, 'users', visitToEdit.userId, 'sanitationVisits', visitToEdit.id);
+            batch.delete(visitRef);
+
+            // Find and delete the public link
+            if (visitToEdit.shareableLink) {
+                const linkId = visitToEdit.shareableLink.split('/').pop();
+                if (linkId) {
+                    const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
+                    batch.delete(linkRef);
+                }
+            }
+            
+            await batch.commit();
+
+            toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
+            onOpenChange(false);
+
+        } catch (error) {
+            console.error("Error deleting visit:", error);
+            toast({ variant: 'destructive', title: "Delete Failed", description: "There was an error while deleting the visit." });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
-                <DialogHeader><DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle></DialogHeader>
-                <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label>Scheduled Date</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !sanitationVisitForm.watch('scheduledDate') && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{sanitationVisitForm.watch('scheduledDate') ? format(sanitationVisitForm.watch('scheduledDate'), "PPP") : <span>Pick a date</span>}</Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={sanitationVisitForm.watch('scheduledDate')} onSelect={(date) => sanitationVisitForm.setValue('scheduledDate', date as Date)} initialFocus /></PopoverContent>
-                            </Popover>
+        <AlertDialog>
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader><DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle></DialogHeader>
+                    <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>Scheduled Date</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !sanitationVisitForm.watch('scheduledDate') && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{sanitationVisitForm.watch('scheduledDate') ? format(sanitationVisitForm.watch('scheduledDate'), "PPP") : <span>Pick a date</span>}</Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={sanitationVisitForm.watch('scheduledDate')} onSelect={(date) => sanitationVisitForm.setValue('scheduledDate', date as Date)} initialFocus /></PopoverContent>
+                                </Popover>
+                            </div>
+                            <div>
+                                <Label>Status</Label>
+                                <Select onValueChange={(value) => sanitationVisitForm.setValue('status', value as any)} defaultValue={sanitationVisitForm.getValues('status')}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div>
-                            <Label>Status</Label>
-                            <Select onValueChange={(value) => sanitationVisitForm.setValue('status', value as any)} defaultValue={sanitationVisitForm.getValues('status')}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                    <SelectItem value="Completed">Completed</SelectItem>
-                                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label>Assigned To</Label>
+                            <Input {...sanitationVisitForm.register('assignedTo')} />
                         </div>
-                    </div>
-                    <div>
-                        <Label>Assigned To</Label>
-                        <Input {...sanitationVisitForm.register('assignedTo')} />
-                    </div>
 
-                    {fields.map((field, index) => (
-                        <Card key={field.id}>
-                            <CardHeader className="flex flex-row items-center justify-between py-4">
-                                <CardTitle className="text-base">Dispenser #{index + 1}</CardTitle>
-                                {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><MinusCircle className="h-4 w-4 text-destructive" /></Button>}
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserName`)} placeholder="Dispenser Name (e.g., Lobby)" />
-                                    <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserCode`)} placeholder="Dispenser Code (Optional)" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => append({
-                            dispenserId: `disp-${Date.now()}-${fields.length}`,
-                            dispenserName: `Unit #${fields.length + 1}`,
-                            checklist: defaultChecklist,
-                            dispenserCode: ''
-                        })}
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Another Dispenser
-                    </Button>
-
-                    <DialogFooter className="pt-4">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit">{visitToEdit ? 'Save Changes' : 'Schedule Visit'}</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        {fields.map((field, index) => (
+                            <Card key={field.id}>
+                                <CardHeader className="flex flex-row items-center justify-between py-4">
+                                    <CardTitle className="text-base">Dispenser #{index + 1}</CardTitle>
+                                    {fields.length > 1 && <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><MinusCircle className="h-4 w-4 text-destructive" /></Button>}
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserName`)} placeholder="Dispenser Name (e.g., Lobby)" />
+                                        <Input {...sanitationVisitForm.register(`dispenserReports.${index}.dispenserCode`)} placeholder="Dispenser Code (Optional)" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => append({
+                                dispenserId: `disp-${Date.now()}-${fields.length}`,
+                                dispenserName: `Unit #${fields.length + 1}`,
+                                checklist: defaultChecklist,
+                                dispenserCode: ''
+                            })}
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Another Dispenser
+                        </Button>
+                        <DialogFooter className="pt-4 flex-row justify-between w-full">
+                           <div>
+                                {visitToEdit && (
+                                    <AlertDialogTrigger asChild>
+                                        <Button type="button" variant="destructive" disabled={isDeleting}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete Visit
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                                <Button type="submit">{visitToEdit ? 'Save Changes' : 'Schedule Visit'}</Button>
+                            </div>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete this sanitation visit and its associated public link. This cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteVisit} disabled={isDeleting}>
+                        {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }
-
-    
