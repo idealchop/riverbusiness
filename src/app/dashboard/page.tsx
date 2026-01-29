@@ -469,7 +469,7 @@ export default function DashboardPage() {
             activeRefillRequest={activeRefillRequest}
         />
         <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {waterStation?.status === 'Under Maintenance' ? (
@@ -507,17 +507,19 @@ export default function DashboardPage() {
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-4 text-center">
+                        <div className="grid md:grid-cols-2 gap-6 items-center">
                             {stationOKImage && (
                                 <div className="relative h-40 w-full overflow-hidden rounded-lg">
                                     <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="contain" data-ai-hint={stationOKImage.imageHint} />
                                 </div>
                             )}
-                            <h3 className="font-semibold">All Systems Operational</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Hi {userFirstName}, your assigned station, <span className="font-semibold">{waterStation?.name || 'N/A'}</span>, is fully operational.
-                                All systems are running smoothly, ensuring your water is safe, clean, and delivered on time. Thank you for your trust in River Business!
-                            </p>
+                            <div className="space-y-2 text-center md:text-left">
+                                <h3 className="font-semibold">All Systems Operational</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Hi {userFirstName}, your assigned station, <span className="font-semibold">{waterStation?.name || 'N/A'}</span>, is fully operational.
+                                    All systems are running smoothly, ensuring your water is safe, clean, and delivered on time. Thank you for your trust in River Business!
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>
