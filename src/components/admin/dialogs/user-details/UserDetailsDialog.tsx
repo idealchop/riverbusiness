@@ -86,14 +86,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const topUpRequestsQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [userDocRef]);
     const { data: topUpRequestsData } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
-     useEffect(() => {
-        const handleOpenChangePlan = () => setIsChangePlanOpen(true);
-        window.addEventListener('admin-open-change-plan-dialog', handleOpenChangePlan);
-        return () => {
-            window.removeEventListener('admin-open-change-plan-dialog', handleOpenChangePlan);
-        };
-    }, []);
-
     const consumedLitersThisMonth = useMemo(() => {
         if (!userDeliveriesData) return 0;
         const now = new Date();
