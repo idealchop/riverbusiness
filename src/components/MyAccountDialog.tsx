@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -158,6 +159,632 @@ const includedFeatures = [
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
+const toSafeDate = (timestamp: any): Date | null => {
+  if (!timestamp) return null;
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate();
+  }
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+  if (typeof timestamp === 'object' && 'seconds' in timestamp) {
+    return new Date(timestamp.seconds * 1000);
+  }
+  return null;
+};
+
+
+// Refactored Tab Components
+const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveChanges, isEditingDetails, setIsEditingDetails, handleFileSelect, handleProfilePhotoDelete, isPending, copyToClipboard }) => (
+  <Card>
+    <CardContent className="pt-6 space-y-6">
+      <div className="flex items-center gap-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="relative group cursor-pointer">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
+                <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
+              </Avatar>
+              {(isPending) && (
+                  <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                      <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
+                  </div>
+              )}
+              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Label htmlFor="photo-upload-input-user" className="w-full cursor-pointer">
+                <Upload className="mr-2 h-4 w-4" /> Upload new photo
+              </Label>
+            </DropdownMenuItem>
+            {displayPhoto && (
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" /> Remove photo
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
+        <div className="space-y-1">
+          <h4 className="font-semibold">{user.name}</h4>
+          <p className="text-sm text-muted-foreground">Update your account details.</p>
+        </div>
+      </div>
+      <Separator />
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h4 className="font-semibold">Your Details</h4>
+          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                <Label htmlFor="fullName" className="text-right">Full Name</Label>
+                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!isEditingDetails} />
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                <Label htmlFor="email" className="text-right">Login Email</Label>
+                <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
+                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!isEditingDetails} />
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                <Label htmlFor="businessName" className="text-right">Business Name</Label>
+                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} disabled={!isEditingDetails}/>
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                <Label htmlFor="address" className="text-right">Address</Label>
+                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!isEditingDetails}/>
+            </div>
+            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
+                <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
+                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!isEditingDetails}/>
+            </div>
+        </div>
+        {isEditingDetails && (
+            <div className="flex justify-end gap-2 mt-4">
+                <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user}) }}>Cancel</Button>
+                <Button onClick={handleSaveChanges}>Save Changes</Button>
+            </div>
+        )}
+      </div>
+      <Separator />
+      <div>
+        <h4 className="font-semibold mb-4">Security</h4>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+          <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
+        </div>
+      </div>
+      <Separator />
+      <div>
+          <h4 className="font-semibold mb-4">Account Identifiers</h4>
+          <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                  <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
+                  <div className="flex items-center gap-2">
+                      <Input id="uid" value={user.id} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(user.id, 'User ID')}>
+                          <Copy className="h-4 w-4" />
+                      </Button>
+                  </div>
+              </div>
+              <div className="flex items-center justify-between">
+                  <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
+                  <div className="flex items-center gap-2">
+                      <Input id="clientId" value={user.clientId || 'N/A'} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user.clientId && copyToClipboard(user.clientId, 'Client ID')} disabled={!user.clientId}>
+                          <Copy className="h-4 w-4" />
+                      </Button>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen }) => (
+    <div className="space-y-6">
+    <Card>
+      <CardContent className="p-0">
+        {planImage && (
+            <div className="relative h-48 w-full">
+                <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
+            </div>
+        )}
+        <div className="p-6">
+          <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
+          {user.plan?.isConsumptionBased ? (
+              <p className="text-lg font-bold text-foreground">
+                  P{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
+              </p>
+          ) : (
+              <p className="text-lg font-bold text-foreground">
+                  P{user.plan?.price.toLocaleString()}/month
+              </p>
+          )}
+          <Separator className="my-4" />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            {user.plan?.isConsumptionBased ? (
+              <div className="sm:col-span-2">
+                <h4 className="font-semibold mb-2">Plan Details</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li><strong>Billing:</strong> Pay based on consumption.</li>
+                  <li>
+                    <strong>Deliveries:</strong> Automated, On-demand, or request refills as needed.
+                    {(user.customPlanDetails?.autoRefillEnabled && user.customPlanDetails?.deliveryDay) && 
+                      <span className="text-xs block pl-4 text-primary"> - Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}.</span>
+                    }
+                  </li>
+                </ul>
+              </div>
+            ) : (
+              <div>
+                  <h4 className="font-semibold mb-2">Water Plan</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
+                    <li><strong>Bonus Liters:</strong> {user.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
+                  </ul>
+              </div>
+            )}
+
+            {user.customPlanDetails && (
+              <div>
+                  <h4 className="font-semibold mb-2">Equipment</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                          <Package className="h-4 w-4"/>
+                          <span>
+                              {user.customPlanDetails.gallonQuantity || 0} Containers 
+                              ({user.customPlanDetails.gallonPrice && user.customPlanDetails.gallonPrice > 0 ? `P${user.customPlanDetails.gallonPrice}${user.customPlanDetails.gallonPaymentType === 'Monthly' ? '/mo' : ' (Rental Fee - One-Time)'}` : 'Free'})
+                          </span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                          <Package className="h-4 w-4"/>
+                          <span>
+                              {user.customPlanDetails.dispenserQuantity || 0} Dispensers 
+                              ({user.customPlanDetails.dispenserPrice && user.customPlanDetails.dispenserPrice > 0 ? `P${user.customPlanDetails.dispenserPrice}${user.customPlanDetails.dispenserPaymentType === 'Monthly' ? '/mo' : ' (Rental Fee - One-Time)'}` : 'Free'})
+                          </span>
+                      </li>
+                  </ul>
+              </div>
+             )}
+
+            <div className="sm:col-span-2">
+              <h4 className="font-semibold mb-2">Delivery Schedule</h4>
+              <p className="text-muted-foreground">
+                {user.customPlanDetails?.deliveryFrequency} on {user.customPlanDetails?.deliveryDay} at {user.customPlanDetails?.deliveryTime}
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+     <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {user.currentContractUrl ? (
+                <Button variant="outline" asChild>
+                    <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
+                        <FileText className="mr-2 h-4 w-4" />
+                        View Contract
+                    </a>
+                </Button>
+            ) : (
+                <Button variant="outline" disabled>
+                    <FileX className="mr-2 h-4 w-4" />
+                    No Contract
+                </Button>
+            )}
+            <Button variant="outline" onClick={() => {
+              dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true});
+            }}>
+                <Repeat className="mr-2 h-4 w-4" />
+                Change Plan
+            </Button>
+            {user.accountType === 'Parent' ? (
+              <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
+                <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
+              </Button>
+            ) : (
+              <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download SOA
+              </Button>
+            )}
+          </div>
+        </CardContent>
+    </Card>
+     <Card>
+          <CardContent className="p-6 space-y-4">
+              <div>
+                  <h3 className="font-semibold">Included in Every Plan</h3>
+                  <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  {includedFeatures.map((feature, index) => {
+                      const Icon = feature.icon;
+                      return (
+                          <div key={index} className="flex items-start gap-3">
+                              <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                              <div>
+                                  <h4 className="font-medium text-sm">{feature.title}</h4>
+                                  <p className="text-xs text-muted-foreground">{feature.description}</p>
+                              </div>
+                          </div>
+                      );
+                  })}
+              </div>
+          </CardContent>
+      </Card>
+  </div>
+);
+
+const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages, isPayday }) => (
+    <div className="space-y-4">
+    {user.accountType === 'Branch' && (
+        <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
+            <Info className="h-5 w-5 shrink-0" />
+            <p>Your invoices are covered by your parent account. This history is for your records.</p>
+        </div>
+    )}
+    {/* Desktop Table View */}
+    <div className="hidden md:block">
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {paymentsLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={`skel-inv-${i}`}>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                            <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                        </TableRow>
+                    ))
+                ) : paginatedInvoices.length > 0 ? (
+                    paginatedInvoices.map((invoice) => {
+                        if (!invoice) return null;
+                        const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
+                        return (
+                        <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
+                            <TableCell>
+                                <div className="font-medium">{invoice.description}</div>
+                                <div className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</div>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={isCurrentEst ? 'default' : 'secondary'} className={cn(
+                                    'text-xs',
+                                    invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
+                                    isCurrentEst ? 'bg-blue-100 text-blue-800' :
+                                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                    invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                )}>
+                                    {invoice.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <div className="flex flex-col items-end">
+                                <span>P{invoice.amount.toFixed(2)}</span>
+                                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                            </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {invoice.status === 'Covered by Parent Account' ? (
+                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                ) : isCurrentEst ? (
+                                    isPayday ? (
+                                        <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
+                                    )
+                                ) : invoice.status === 'Paid' ? (
+                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
+                                    <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                ) : (
+                                    <span className="text-xs text-muted-foreground">{invoice.status}</span>
+                                )}
+                            </TableCell>
+                        </TableRow>
+                    )})
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
+                            No invoices found.
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+        </Table>
+    </div>
+
+    {/* Mobile Card View */}
+    <div className="space-y-4 md:hidden">
+        {paymentsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+            <Card key={`skel-inv-mob-${i}`}>
+                <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                    <div><Skeleton className="h-5 w-24 mb-1" /><Skeleton className="h-4 w-20" /></div>
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-9 w-full" />
+                </CardContent>
+            </Card>
+            ))
+        ) : paginatedInvoices.length > 0 ? (
+            paginatedInvoices.map((invoice) => {
+                if (!invoice) return null;
+                const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
+                return (
+                <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
+                    <CardContent className="p-4 space-y-3">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="font-semibold">{invoice.description}</p>
+                                <p className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</p>
+                            </div>
+                            <Badge className={cn('whitespace-nowrap px-2 py-1 text-xs font-medium',
+                                invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
+                                isCurrentEst ? 'bg-blue-100 text-blue-800' :
+                                invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                                invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
+                                invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                            )}>{invoice.status}</Badge>
+                        </div>
+                        <div className="flex justify-between items-baseline pt-1">
+                            <p className="text-lg font-bold">P{invoice.amount.toFixed(2)}</p>
+                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                        </div>
+                        <div className="pt-2">
+                            {invoice.status === 'Covered by Parent Account' ? (
+                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                            ) : isCurrentEst ? (
+                                isPayday ? (
+                                    <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
+                                )
+                            ) : (invoice.status === 'Paid') ? (
+                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                            ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
+                                <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            )})
+        ) : (
+           <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
+        )}
+    </div>
+    <div className="flex items-center justify-end space-x-2 pt-4">
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
+            disabled={invoiceCurrentPage === 1}
+        >
+            Previous
+        </Button>
+        <span className="text-sm text-muted-foreground">
+            Page {invoiceCurrentPage} of {totalInvoicePages > 0 ? totalInvoicePages : 1}
+        </span>
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
+            disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
+        >
+            Next
+        </Button>
+    </div>
+  </div>
+);
+
+const TransactionsTab = ({ user, availableLiters, totalBranchConsumptionLiters, paginatedTransactions, transactionCurrentPage, setTransactionCurrentPage, totalTransactionPages }) => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+              <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+              </CardContent>
+          </Card>
+           <Card>
+              <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <p className="text-2xl font-bold">{availableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                  <p className="text-xs text-muted-foreground">Consumed: {(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
+              </CardContent>
+          </Card>
+      </div>
+      <div className="space-y-4">
+          {!paginatedTransactions ? (
+            <p className="text-center py-10 text-muted-foreground">Loading...</p>
+          ) : paginatedTransactions.length === 0 ? (
+            <p className="text-center py-10 text-muted-foreground">No transactions yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {paginatedTransactions.map(tx => (
+                <Card key={tx.id}>
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-sm">{tx.description}</p>
+                        <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
+                      </div>
+                      <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' ? 'bg-green-100 text-green-800' : '')}>
+                        {tx.type === 'Debit' ? 'Deducted' : tx.type}
+                      </Badge>
+                    </div>
+                    <p className={cn("text-lg font-bold text-right", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
+                      {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+        {(paginatedTransactions?.length || 0) > 0 && (
+          <div className="flex items-center justify-end space-x-2 pt-4">
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={transactionCurrentPage === 1}
+              >
+                  Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                  Page {transactionCurrentPage} of {totalTransactionPages > 0 ? totalTransactionPages : 1}
+              </span>
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
+                  disabled={transactionCurrentPage === totalTransactionPages || totalTransactionPages === 0}
+              >
+                  Next
+              </Button>
+          </div>
+        )}
+   </div>
+);
+
+const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+           <div>
+             <CardTitle>Top-Up History</CardTitle>
+             <CardDescription>
+                A log of all credit top-ups for your parent account.
+             </CardDescription>
+           </div>
+           <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
+              <Plus className="mr-2 h-4 w-4" /> Top-Up
+           </Button>
+       </CardHeader>
+        <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Amount (PHP)</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {topUpRequests && topUpRequests.length > 0 ? (
+                        topUpRequests.map(req => {
+                            const asPayment: Payment = {
+                                id: req.id,
+                                date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
+                                description: `Top-Up Request`,
+                                amount: req.amount,
+                                status: req.status as any, // Cast because statuses don't perfectly align
+                                proofOfPaymentUrl: req.proofOfPaymentUrl,
+                            };
+                            return (
+                                <TableRow key={req.id}>
+                                    <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
+                                    <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={
+                                          req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
+                                          req.status === 'Pending Review' ? 'secondary' :
+                                          'destructive'
+                                        } className={cn(
+                                            (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
+                                        )}>
+                                            {req.status}
+                                        </Badge>
+                                    </TableCell>
+                                     <TableCell className="text-right">
+                                        <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)} disabled={!req.proofOfPaymentUrl}>
+                                            View Receipt
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={4} className="text-center">No top-up requests yet.</TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </CardContent>
+    </Card>
+);
+
+const BranchesTab = ({ branchUsers }) => (
+    <Card>
+      <CardHeader>
+          <CardTitle>Linked Branch Accounts</CardTitle>
+          <CardDescription>These accounts consume from your central credit balance.</CardDescription>
+      </CardHeader>
+      <CardContent>
+           <Table>
+              <TableHeader>
+                  <TableRow>
+                      <TableHead>Client ID</TableHead>
+                      <TableHead>Business Name</TableHead>
+                      <TableHead>Contact Person</TableHead>
+                  </TableRow>
+              </TableHeader>
+              <TableBody>
+                  {branchUsers && branchUsers.length > 0 ? (
+                      branchUsers.map(branch => (
+                          <TableRow key={branch.id}>
+                              <TableCell>{branch.clientId}</TableCell>
+                              <TableCell>{branch.businessName}</TableCell>
+                              <TableCell>{branch.name}</TableCell>
+                          </TableRow>
+                      ))
+                  ) : (
+                      <TableRow><TableCell colSpan={3} className="text-center">No branches linked to this parent account.</TableCell></TableRow>
+                  )}
+              </TableBody>
+          </Table>
+      </CardContent>
+    </Card>
+);
 
 interface MyAccountDialogProps {
   user: AppUser | null;
@@ -201,23 +828,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
   const isPayday = isToday(startOfMonth(new Date()));
-
-  const toSafeDate = (timestamp: any): Date | null => {
-    if (!timestamp) return null;
-    if (timestamp instanceof Timestamp) {
-      return timestamp.toDate();
-    }
-    if (typeof timestamp === 'string') {
-      const date = new Date(timestamp);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-    }
-    if (typeof timestamp === 'object' && 'seconds' in timestamp) {
-      return new Date(timestamp.seconds * 1000);
-    }
-    return null;
-  };
 
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -831,604 +1441,66 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     })}
                 </TabsList>
                 <TabsContent value="accounts" className="py-4">
-                  <Card>
-                    <CardContent className="pt-6 space-y-6">
-                      <div className="flex items-center gap-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <div className="relative group cursor-pointer">
-                              <Avatar className="h-20 w-20">
-                                <AvatarImage src={displayPhoto ?? undefined} alt={user.name || ''} />
-                                <AvatarFallback className="text-3xl">{user.name?.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              {(isPending || uploadProgress > 0) && (
-                                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                                    {uploadProgress < 100 ? (
-                                        <Progress value={uploadProgress} className="h-1 w-16" />
-                                    ) : (
-                                        <div className="h-6 w-6 border-2 border-dashed rounded-full animate-spin border-white"></div>
-                                    )}
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Pencil className="h-6 w-6 text-white" />
-                              </div>
-                            </div>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <DropdownMenuLabel>Profile Photo</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                              <Label htmlFor="photo-upload-input-user" className="w-full cursor-pointer">
-                                <Upload className="mr-2 h-4 w-4" /> Upload new photo
-                              </Label>
-                            </DropdownMenuItem>
-                            {displayPhoto && (
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" /> Remove photo
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Input id="photo-upload-input-user" type="file" accept="image/*" className="hidden" onChange={handleFileSelect} disabled={isPending} />
-                        <div className="space-y-1">
-                          <h4 className="font-semibold">{user.name}</h4>
-                          <p className="text-sm text-muted-foreground">Update your account details.</p>
-                        </div>
-                      </div>
-                      <Separator />
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="font-semibold">Your Details</h4>
-                          {!isEditingDetails && <Button variant="outline" size="sm" onClick={() => setIsEditingDetails(true)}><Edit className="mr-2 h-4 w-4" />Edit Details</Button>}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                <Label htmlFor="fullName" className="text-right">Full Name</Label>
-                                <Input id="fullName" name="name" value={state.editableFormData.name || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'name', value: e.target.value}})} disabled={!isEditingDetails} />
-                            </div>
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                <Label htmlFor="email" className="text-right">Login Email</Label>
-                                <Input id="email" name="email" type="email" value={state.editableFormData.email || ''} disabled={true} />
-                            </div>
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                <Label htmlFor="businessEmail" className="text-right">Business Email</Label>
-                                <Input id="businessEmail" name="businessEmail" type="email" value={state.editableFormData.businessEmail || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessEmail', value: e.target.value}})} disabled={!isEditingDetails} />
-                            </div>
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                <Label htmlFor="businessName" className="text-right">Business Name</Label>
-                                <Input id="businessName" name="businessName" value={state.editableFormData.businessName || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'businessName', value: e.target.value}})} disabled={!isEditingDetails}/>
-                            </div>
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                <Label htmlFor="address" className="text-right">Address</Label>
-                                <Input id="address" name="address" value={state.editableFormData.address || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'address', value: e.target.value}})} disabled={!isEditingDetails}/>
-                            </div>
-                            <div className="grid grid-cols-[100px_1fr] items-center gap-4">
-                                <Label htmlFor="contactNumber" className="text-right">Contact Number</Label>
-                                <Input id="contactNumber" name="contactNumber" type="tel" value={state.editableFormData.contactNumber || ''} onChange={(e) => dispatch({type: 'UPDATE_FORM_DATA', payload: {name: 'contactNumber', value: e.target.value}})} disabled={!isEditingDetails}/>
-                            </div>
-                        </div>
-                        {isEditingDetails && (
-                            <div className="flex justify-end gap-2 mt-4">
-                                <Button variant="secondary" onClick={() => { setIsEditingDetails(false); dispatch({type: 'SET_FORM_DATA', payload: user}) }}>Cancel</Button>
-                                <Button onClick={handleSaveChanges}>Save Changes</Button>
-                            </div>
-                        )}
-                      </div>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold mb-4">Security</h4>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
-                          <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
-                        </div>
-                      </div>
-                      <Separator />
-                        <div>
-                            <h4 className="font-semibold mb-4">Account Identifiers</h4>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="uid" className="text-muted-foreground">User ID (UID)</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Input id="uid" value={user.id} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => copyToClipboard(user.id, 'User ID')}>
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="clientId" className="text-muted-foreground">Client ID</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Input id="clientId" value={user.clientId || 'N/A'} readOnly className="font-mono text-xs h-8 bg-muted border-0"/>
-                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => user.clientId && copyToClipboard(user.clientId, 'Client ID')} disabled={!user.clientId}>
-                                            <Copy className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                  </Card>
+                  <AccountTab 
+                    user={user} 
+                    authUser={authUser} 
+                    displayPhoto={displayPhoto}
+                    state={state} 
+                    dispatch={dispatch} 
+                    handleSaveChanges={handleSaveChanges} 
+                    isEditingDetails={isEditingDetails}
+                    setIsEditingDetails={setIsEditingDetails}
+                    handleFileSelect={handleFileSelect}
+                    handleProfilePhotoDelete={handleProfilePhotoDelete}
+                    isPending={isPending}
+                    copyToClipboard={copyToClipboard}
+                  />
                 </TabsContent>
                 <TabsContent value="plan" className="py-4 space-y-6">
-                  <Card>
-                    <CardContent className="p-0">
-                      {planImage && (
-                          <div className="relative h-48 w-full">
-                              <Image src={planImage.imageUrl} alt={user.clientType || 'Plan Image'} fill style={{ objectFit: 'cover' }} data-ai-hint={planImage.imageHint} />
-                          </div>
-                      )}
-                      <div className="p-6">
-                        <h3 className="text-xl font-bold">{user.plan?.name} ({user.clientType})</h3>
-                        {user.plan?.isConsumptionBased ? (
-                            <p className="text-lg font-bold text-foreground">
-                                P{user.plan.price.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1})}/liter
-                            </p>
-                        ) : (
-                            <p className="text-lg font-bold text-foreground">
-                                P{user.plan?.price.toLocaleString()}/month
-                            </p>
-                        )}
-                        <Separator className="my-4" />
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                          {user.plan?.isConsumptionBased ? (
-                            <div className="sm:col-span-2">
-                              <h4 className="font-semibold mb-2">Plan Details</h4>
-                              <ul className="space-y-1 text-muted-foreground">
-                                <li><strong>Billing:</strong> Pay based on consumption.</li>
-                                <li>
-                                  <strong>Deliveries:</strong> Automated, On-demand, or request refills as needed.
-                                  {(user.customPlanDetails?.autoRefillEnabled && user.customPlanDetails?.deliveryDay) && 
-                                    <span className="text-xs block pl-4 text-primary"> - Auto-refill scheduled for {user.customPlanDetails.deliveryDay} at {user.customPlanDetails.deliveryTime}.</span>
-                                  }
-                                </li>
-                              </ul>
-                            </div>
-                          ) : (
-                            <div>
-                                <h4 className="font-semibold mb-2">Water Plan</h4>
-                                <ul className="space-y-1 text-muted-foreground">
-                                  <li><strong>Liters/Month:</strong> {user.customPlanDetails?.litersPerMonth?.toLocaleString() || 0} L</li>
-                                  <li><strong>Bonus Liters:</strong> {user.customPlanDetails?.bonusLiters?.toLocaleString() || 0} L</li>
-                                </ul>
-                            </div>
-                          )}
-
-                          {user.customPlanDetails && (
-                            <div>
-                                <h4 className="font-semibold mb-2">Equipment</h4>
-                                <ul className="space-y-1 text-muted-foreground">
-                                    <li className="flex items-center gap-2">
-                                        <Package className="h-4 w-4"/>
-                                        <span>
-                                            {user.customPlanDetails.gallonQuantity || 0} Containers 
-                                            ({user.customPlanDetails.gallonPrice && user.customPlanDetails.gallonPrice > 0 ? `P${user.customPlanDetails.gallonPrice}${user.customPlanDetails.gallonPaymentType === 'Monthly' ? '/mo' : ' (Rental Fee - One-Time)'}` : 'Free'})
-                                        </span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Package className="h-4 w-4"/>
-                                        <span>
-                                            {user.customPlanDetails.dispenserQuantity || 0} Dispensers 
-                                            ({user.customPlanDetails.dispenserPrice && user.customPlanDetails.dispenserPrice > 0 ? `P${user.customPlanDetails.dispenserPrice}${user.customPlanDetails.dispenserPaymentType === 'Monthly' ? '/mo' : ' (Rental Fee - One-Time)'}` : 'Free'})
-                                        </span>
-                                    </li>
-                                </ul>
-                            </div>
-                           )}
-
-                          <div className="sm:col-span-2">
-                            <h4 className="font-semibold mb-2">Delivery Schedule</h4>
-                            <p className="text-muted-foreground">
-                              {user.customPlanDetails?.deliveryFrequency} on {user.customPlanDetails?.deliveryDay} at {user.customPlanDetails?.deliveryTime}
-                            </p>
-                          </div>
-
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                   <Card>
-                      <CardContent className="p-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {user.currentContractUrl ? (
-                              <Button variant="outline" asChild>
-                                  <a href={user.currentContractUrl} target="_blank" rel="noopener noreferrer">
-                                      <FileText className="mr-2 h-4 w-4" />
-                                      View Contract
-                                  </a>
-                              </Button>
-                          ) : (
-                              <Button variant="outline" disabled>
-                                  <FileX className="mr-2 h-4 w-4" />
-                                  No Contract
-                              </Button>
-                          )}
-                          <Button variant="outline" onClick={() => {
-                            dispatch({type: 'SET_CHANGE_PLAN_DIALOG', payload: true});
-                          }}>
-                              <Repeat className="mr-2 h-4 w-4" />
-                              Change Plan
-                          </Button>
-                          {user.accountType === 'Parent' ? (
-                            <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
-                              <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
-                            </Button>
-                          ) : (
-                            <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download SOA
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                  </Card>
-                   <Card>
-                        <CardContent className="p-6 space-y-4">
-                            <div>
-                                <h3 className="font-semibold">Included in Every Plan</h3>
-                                <p className="text-sm text-muted-foreground">All subscription plans include full access to our growing network of partner perks.</p>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                {includedFeatures.map((feature, index) => {
-                                    const Icon = feature.icon;
-                                    return (
-                                        <div key={index} className="flex items-start gap-3">
-                                            <Icon className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                                            <div>
-                                                <h4 className="font-medium text-sm">{feature.title}</h4>
-                                                <p className="text-xs text-muted-foreground">{feature.description}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </CardContent>
-                    </Card>
+                  <PlanTab 
+                    user={user}
+                    planImage={planImage}
+                    dispatch={dispatch}
+                    setIsSoaDialogOpen={setIsSoaDialogOpen}
+                  />
                 </TabsContent>
                  <TabsContent value="invoices" className="py-4 space-y-4">
-                    {user.accountType === 'Branch' && (
-                        <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
-                            <Info className="h-5 w-5 shrink-0" />
-                            <p>Your invoices are covered by your parent account. This history is for your records.</p>
-                        </div>
-                    )}
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Amount</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {paymentsLoading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
-                                        <TableRow key={`skel-inv-${i}`}>
-                                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                            <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                                            <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : paginatedInvoices.length > 0 ? (
-                                    paginatedInvoices.map((invoice) => {
-                                        if (!invoice) return null;
-                                        const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
-                                        return (
-                                        <TableRow key={invoice.id} className={cn(isCurrentEst && "bg-muted/50 font-semibold")}>
-                                            <TableCell>
-                                                <div className="font-medium">{invoice.description}</div>
-                                                <div className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant={isCurrentEst ? 'default' : 'secondary'} className={cn(
-                                                    'text-xs',
-                                                    invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
-                                                    isCurrentEst ? 'bg-blue-100 text-blue-800' :
-                                                    invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                                    invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                                    invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                                )}>
-                                                    {invoice.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                            <div className="flex flex-col items-end">
-                                                <span>P{invoice.amount.toFixed(2)}</span>
-                                                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
-                                            </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {invoice.status === 'Covered by Parent Account' ? (
-                                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                                ) : isCurrentEst ? (
-                                                    isPayday ? (
-                                                        <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                                    ) : (
-                                                        <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
-                                                    )
-                                                ) : invoice.status === 'Paid' ? (
-                                                    <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                                ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
-                                                    <Button size="sm" variant="outline" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">{invoice.status}</span>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    )})
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
-                                            No invoices found.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    {/* Mobile Card View */}
-                    <div className="space-y-4 md:hidden">
-                        {paymentsLoading ? (
-                            Array.from({ length: 3 }).map((_, i) => (
-                            <Card key={`skel-inv-mob-${i}`}>
-                                <CardContent className="p-4 space-y-3">
-                                <div className="flex justify-between items-start">
-                                    <div><Skeleton className="h-5 w-24 mb-1" /><Skeleton className="h-4 w-20" /></div>
-                                    <Skeleton className="h-6 w-24 rounded-full" />
-                                </div>
-                                <Skeleton className="h-5 w-16" />
-                                <Skeleton className="h-9 w-full" />
-                                </CardContent>
-                            </Card>
-                            ))
-                        ) : paginatedInvoices.length > 0 ? (
-                            paginatedInvoices.map((invoice) => {
-                                if (!invoice) return null;
-                                const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
-                                return (
-                                <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
-                                    <CardContent className="p-4 space-y-3">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="font-semibold">{invoice.description}</p>
-                                                <p className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</p>
-                                            </div>
-                                            <Badge className={cn('whitespace-nowrap px-2 py-1 text-xs font-medium',
-                                                invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
-                                                isCurrentEst ? 'bg-blue-100 text-blue-800' :
-                                                invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
-                                                invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
-                                                invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            )}>{invoice.status}</Badge>
-                                        </div>
-                                        <div className="flex justify-between items-baseline pt-1">
-                                            <p className="text-lg font-bold">P{invoice.amount.toFixed(2)}</p>
-                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
-                                        </div>
-                                        <div className="pt-2">
-                                            {invoice.status === 'Covered by Parent Account' ? (
-                                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                            ) : isCurrentEst ? (
-                                                isPayday ? (
-                                                    <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                                ) : (
-                                                    <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
-                                                )
-                                            ) : (invoice.status === 'Paid') ? (
-                                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                            ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
-                                                <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )})
-                        ) : (
-                           <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
-                        )}
-                    </div>
-                    <div className="flex items-center justify-end space-x-2 pt-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={invoiceCurrentPage === 1}
-                        >
-                            Previous
-                        </Button>
-                        <span className="text-sm text-muted-foreground">
-                            Page {invoiceCurrentPage} of {totalInvoicePages > 0 ? totalInvoicePages : 1}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
-                            disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </TabsContent>
+                  <InvoicesTab
+                    user={user}
+                    paymentsLoading={paymentsLoading}
+                    paginatedInvoices={paginatedInvoices}
+                    showCurrentMonthInvoice={showCurrentMonthInvoice}
+                    currentMonthInvoice={currentMonthInvoice}
+                    getInvoiceDisplayDate={getInvoiceDisplayDate}
+                    handleViewBreakdown={handleViewBreakdown}
+                    onPayNow={onPayNow}
+                    handleViewInvoice={handleViewInvoice}
+                    invoiceCurrentPage={invoiceCurrentPage}
+                    setInvoiceCurrentPage={setInvoiceCurrentPage}
+                    totalInvoicePages={totalInvoicePages}
+                    isPayday={isPayday}
+                  />
+                 </TabsContent>
                  <TabsContent value="transactions" className="py-4 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                            </CardContent>
-                        </Card>
-                         <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-2xl font-bold">{availableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
-                                <p className="text-xs text-muted-foreground">Consumed: {(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
-                            </CardContent>
-                        </Card>
-                    </div>
-                    <div className="space-y-4">
-                        {!transactions ? (
-                          <p className="text-center py-10 text-muted-foreground">Loading...</p>
-                        ) : paginatedTransactions.length === 0 ? (
-                          <p className="text-center py-10 text-muted-foreground">No transactions yet.</p>
-                        ) : (
-                          <div className="space-y-3">
-                            {paginatedTransactions.map(tx => (
-                              <Card key={tx.id}>
-                                <CardContent className="p-4 space-y-2">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <p className="font-semibold text-sm">{tx.description}</p>
-                                      <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
-                                    </div>
-                                    <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' ? 'bg-green-100 text-green-800' : '')}>
-                                      {tx.type === 'Debit' ? 'Deducted' : tx.type}
-                                    </Badge>
-                                  </div>
-                                  <p className={cn("text-lg font-bold text-right", tx.type === 'Credit' ? 'text-green-600' : 'text-red-600')}>
-                                    {tx.type === 'Credit' ? '+' : '-'}{`₱${(tx.amountCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
-                                  </p>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {(transactions?.length || 0) > 0 && (
-                        <div className="flex items-center justify-end space-x-2 pt-4">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setTransactionCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={transactionCurrentPage === 1}
-                            >
-                                Previous
-                            </Button>
-                            <span className="text-sm text-muted-foreground">
-                                Page {transactionCurrentPage} of {totalTransactionPages > 0 ? totalTransactionPages : 1}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setTransactionCurrentPage(p => Math.min(totalTransactionPages, p + 1))}
-                                disabled={transactionCurrentPage === totalTransactionPages || totalTransactionPages === 0}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                      )}
+                    <TransactionsTab 
+                      user={user} 
+                      availableLiters={availableLiters}
+                      totalBranchConsumptionLiters={totalBranchConsumptionLiters}
+                      paginatedTransactions={paginatedTransactions}
+                      transactionCurrentPage={transactionCurrentPage}
+                      setTransactionCurrentPage={setTransactionCurrentPage}
+                      totalTransactionPages={totalTransactionPages}
+                    />
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                           <div>
-                             <CardTitle>Top-Up History</CardTitle>
-                             <CardDescription>
-                                A log of all credit top-ups for your parent account.
-                             </CardDescription>
-                           </div>
-                           <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
-                              <Plus className="mr-2 h-4 w-4" /> Top-Up
-                           </Button>
-                       </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Amount (PHP)</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {topUpRequests && topUpRequests.length > 0 ? (
-                                        topUpRequests.map(req => {
-                                            const asPayment: Payment = {
-                                                id: req.id,
-                                                date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
-                                                description: `Top-Up Request`,
-                                                amount: req.amount,
-                                                status: req.status as any, // Cast because statuses don't perfectly align
-                                                proofOfPaymentUrl: req.proofOfPaymentUrl,
-                                            };
-                                            return (
-                                                <TableRow key={req.id}>
-                                                    <TableCell>{toSafeDate(req.requestedAt) ? format(toSafeDate(req.requestedAt)!, 'PP') : 'N/A'}</TableCell>
-                                                    <TableCell>₱{req.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={
-                                                          req.status === 'Approved' || req.status === 'Approved (Initial Balance)' ? 'default' :
-                                                          req.status === 'Pending Review' ? 'secondary' :
-                                                          'destructive'
-                                                        } className={cn(
-                                                            (req.status === 'Approved' || req.status === 'Approved (Initial Balance)') && 'bg-green-100 text-green-800'
-                                                        )}>
-                                                            {req.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                     <TableCell className="text-right">
-                                                        <Button size="sm" variant="outline" onClick={() => handleViewInvoice(asPayment)} disabled={!req.proofOfPaymentUrl}>
-                                                            View Receipt
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )
-                                        })
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={4} className="text-center">No top-up requests yet.</TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                    <TopUpsTab
+                      topUpRequests={topUpRequests}
+                      dispatch={dispatch}
+                      handleViewInvoice={handleViewInvoice}
+                    />
                  </TabsContent>
                  <TabsContent value="branches" className="py-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Linked Branch Accounts</CardTitle>
-                            <CardDescription>These accounts consume from your central credit balance.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Client ID</TableHead>
-                                        <TableHead>Business Name</TableHead>
-                                        <TableHead>Contact Person</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {branchUsers && branchUsers.length > 0 ? (
-                                        branchUsers.map(branch => (
-                                            <TableRow key={branch.id}>
-                                                <TableCell>{branch.clientId}</TableCell>
-                                                <TableCell>{branch.businessName}</TableCell>
-                                                <TableCell>{branch.name}</TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center">No branches linked to this parent account.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                    <BranchesTab branchUsers={branchUsers} />
                 </TabsContent>
               </Tabs>
             </div>
