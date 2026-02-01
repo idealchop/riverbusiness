@@ -758,11 +758,16 @@ export default function DashboardLayout({
                         <div className="space-y-4">
                              <h4 className="font-semibold">Upload Proof of Payment</h4>
                              <p className="text-sm text-muted-foreground">
-                                After paying, please upload a screenshot of your receipt. Your payment will be marked as "Pending Review" until our collection team verifies it.
+                                Please upload your proof of payment.
                              </p>
-                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <div className="space-y-1.5">
                                 <Label htmlFor="payment-proof">Receipt Screenshot</Label>
+                                <div className="flex items-center gap-2">
                                 <Input id="payment-proof" type="file" onChange={handleProofFileChange} disabled={isSubmittingProof} />
+                                <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmittingProof} className="shrink-0">
+                                    {isSubmittingProof ? 'Uploading...' : 'Submit Proof'}
+                                </Button>
+                                </div>
                             </div>
                             {paymentProofPreview && (
                                 <div className="flex items-center gap-2 text-sm">
@@ -774,9 +779,6 @@ export default function DashboardLayout({
                             {uploadProgress > 0 && (
                                 <Progress value={uploadProgress} className="mt-2 h-2.5" />
                             )}
-                            <Button onClick={handleProofUpload} disabled={!paymentProofFile || isSubmittingProof}>
-                                {isSubmittingProof ? 'Uploading...' : 'Submit Proof'}
-                            </Button>
                         </div>
                     </div>
                 </ScrollArea>
