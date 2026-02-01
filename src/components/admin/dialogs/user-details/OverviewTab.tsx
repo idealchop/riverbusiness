@@ -153,7 +153,10 @@ export function OverviewTab({
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>Plan & Station</CardTitle>
+                                    <div>
+                                        <CardTitle>Plan &amp; Station</CardTitle>
+                                        <CardDescription>Manage the client's subscription.</CardDescription>
+                                    </div>
                                     <Button variant="outline" size="sm" onClick={() => onSetIsChangePlanOpen(true)}>
                                         <Edit className="mr-2 h-4 w-4" /> Change Plan
                                     </Button>
