@@ -1,5 +1,4 @@
 
-
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -80,7 +79,7 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], sanitationVis
   if (dateRange?.from) {
       period = format(dateRange.from, 'PP');
       if (dateRange.to) {
-          period += ` to ${format(dateRange.to, 'PP')}`;
+          period += ` to ${format(dateRange.to!, 'PP')}`;
       }
   }
   doc.setFont('helvetica', 'bold');
@@ -168,7 +167,13 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], sanitationVis
   });
 
   if(filteredSanitation.length > 0) {
-    lastY += 20;
+    if (lastY > pageHeight - 100) {
+        doc.addPage();
+        drawFooter({pageNumber: (doc as any).internal.getNumberOfPages()});
+        lastY = 40;
+    } else {
+        lastY += 20;
+    }
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -305,11 +310,16 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
         let tableFinalY = finalY;
         if (body.length > 0) {
+            if (tableFinalY > pageHeight - 150) { 
+                doc.addPage();
+                drawHeader();
+                tableFinalY = 100;
+            }
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
             doc.text(title, margin, tableFinalY);
-            tableFinalY += 15;
+            tableFinalY += 20;
 
             doc.autoTable({
                 head: head,
@@ -319,6 +329,12 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
                 headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
                 bodyStyles: { fontSize: 8, cellPadding: 4 },
                 margin: { left: margin, right: margin },
+                didDrawPage: (data) => {
+                  // Only draw footer on pages after the first one, since first page footer is drawn at the end.
+                  if (data.pageNumber > 1) {
+                    drawPdfFooter(data.pageNumber);
+                  }
+                }
             });
             tableFinalY = (doc as any).lastAutoTable.finalY;
         }
@@ -329,7 +345,13 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
      if (user.customPlanDetails) {
         const { gallonQuantity, dispenserQuantity, litersPerMonth, gallonPaymentType, dispenserPaymentType } = user.customPlanDetails;
         let equipmentBody: string[][] = [];
-        if(litersPerMonth && litersPerMonth > 0) equipmentBody.push(['Purchased Liters', `${litersPerMonth.toLocaleString()} L/month`]);
+        if(user.plan?.name) equipmentBody.push(['Current Plan', user.plan.name]);
+        if(user.plan?.isConsumptionBased) {
+            equipmentBody.push(['Pricing', `P${user.plan.price}/liter (Consumption-based)`]);
+        } else {
+            equipmentBody.push(['Pricing', `P${user.plan.price}/month (Fixed)`]);
+        }
+        if(litersPerMonth && litersPerMonth > 0) equipmentBody.push(['Base Liters/Month', `${litersPerMonth.toLocaleString()} L`]);
         if (gallonQuantity && gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity} (${gallonPaymentType})`]);
         if (dispenserQuantity && dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity} (${dispenserPaymentType})`]);
         
@@ -369,14 +391,14 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     if (hasSanitation || hasCompliance) {
         lastY = renderTable('Sanitation Visits', 
           [["Scheduled Date", "Status", "Quality Officer"]],
-          hasSanitation ? sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]) : [['No visits for this period.']],
+          hasSanitation ? sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]) : [['No visits recorded.']],
           lastY
         );
         lastY += 20;
         
         lastY = renderTable('Water Quality Compliance',
           [["Report Name", "Date", "Status"]],
-          hasCompliance ? complianceReports.map(r => [r.name, r.date ? format((r.date as any).toDate(), 'PP') : 'N/A', r.status]) : [['No reports for this period.']],
+          hasCompliance ? complianceReports.map(r => [r.name, r.date ? format((r.date as any).toDate(), 'PP') : 'N/A', r.status]) : [['No reports recorded.']],
           lastY
         );
         lastY += 20;
@@ -393,26 +415,12 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     if (totalAmount && totalAmount > 0) {
         const summaryX = pageWidth - margin - 220; 
         
-        const subtotal = totalAmount;
-        const tax = totalAmount * 0.12;
-        const grandTotal = subtotal;
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(80);
-        doc.text('Subtotal:', summaryX, lastY);
-        doc.text(`P ${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right' });
-        
-        doc.text('VAT (12%):', summaryX, lastY + 15);
-        doc.text(`P ${tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 15, { align: 'right' });
-
-        doc.setLineWidth(0.5);
-        doc.line(summaryX - 5, lastY + 28, pageWidth - margin, lastY + 28);
+        const grandTotal = totalAmount;
 
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(0);
-        doc.text('Total Amount Due:', summaryX, lastY + 42);
+        doc.text('Total Billed Amount:', summaryX, lastY + 42);
         doc.text(`P ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 42, { align: 'right' });
         
         lastY += 62;
@@ -583,5 +591,3 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     // --- SAVE PDF ---
     doc.save(`Invoice_${invoice.id}.pdf`);
 };
-
-

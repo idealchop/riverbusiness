@@ -37,7 +37,7 @@ import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
 import { Progress } from './ui/progress';
 import { Skeleton } from './ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from './ui/badge';
 
 
 // State Management with useReducer
@@ -45,7 +45,6 @@ type State = {
   isPasswordDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
   isChangePlanDialogOpen: boolean;
-  isSoaDialogOpen: boolean;
   isInvoiceDetailOpen: boolean;
   isBreakdownDialogOpen: boolean;
   isTopUpDialogOpen: boolean;
@@ -68,7 +67,6 @@ type Action =
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
-  | { type: 'SET_SOA_DIALOG'; payload: boolean }
   | { type: 'SET_INVOICE_DETAIL_DIALOG'; payload: boolean }
   | { type: 'SET_BREAKDOWN_DIALOG'; payload: boolean }
   | { type: 'SET_TOPUP_DIALOG'; payload: boolean }
@@ -87,7 +85,6 @@ const initialState: State = {
   isPasswordDialogOpen: false,
   isPhotoPreviewOpen: false,
   isChangePlanDialogOpen: false,
-  isSoaDialogOpen: false,
   isInvoiceDetailOpen: false,
   isBreakdownDialogOpen: false,
   isTopUpDialogOpen: false,
@@ -110,7 +107,6 @@ function reducer(state: State, action: Action): State {
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
-    case 'SET_SOA_DIALOG': return { ...state, isSoaDialogOpen: action.payload };
     case 'SET_INVOICE_DETAIL_DIALOG': return { ...state, isInvoiceDetailOpen: action.payload };
     case 'SET_BREAKDOWN_DIALOG': return { ...state, isBreakdownDialogOpen: action.payload };
     case 'SET_TOPUP_DIALOG': return { ...state, isTopUpDialogOpen: action.payload };
@@ -182,7 +178,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPending, startTransition] = useTransition();
   const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [soaMonth, setSoaMonth] = useState<string>('');
   const [topUpAmount, setTopUpAmount] = useState<number | ''>('');
   const [topUpProof, setTopUpProof] = useState<File | null>(null);
   const [isSubmittingTopUp, setIsSubmittingTopUp] = useState(false);
@@ -223,13 +218,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return null;
   };
 
-  const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? collection(firestore, 'users', user.id, 'deliveries') : null, [firestore, user]);
+  const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
-  const sanitationVisitsQuery = useMemoFirebase(() => (firestore && authUser) ? collection(firestore, 'users', authUser.uid, 'sanitationVisits') : null, [firestore, authUser]);
+  const sanitationVisitsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'sanitationVisits'), orderBy('scheduledDate', 'desc')) : null, [firestore, authUser]);
   const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
-  const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports') : null, [firestore, user?.assignedWaterStationId]);
+  const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? query(collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports'), orderBy('date', 'desc')) : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
   const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
@@ -419,45 +414,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                pendingChargeTotal;
     }, [breakdownDetails]);
 
-  const availableMonths = useMemo(() => {
-    const months: {value: string, label: string}[] = [];
-    const now = new Date();
-    for (let i=0; i < 6; i++) {
-        const monthDate = subMonths(now, i);
-        months.push({
-            value: format(monthDate, 'yyyy-MM'),
-            label: format(monthDate, 'MMMM yyyy')
-        });
-    }
-    return months;
-  }, []);
-
-  const isSoaReady = useMemo(() => {
-    if (!soaMonth) return false;
-    const today = endOfDay(new Date());
-    const endOfSelectedMonth = endOfMonth(new Date(soaMonth + '-02T00:00:00'));
-    return isAfter(today, endOfSelectedMonth);
-  }, [soaMonth]);
-
-  const soaNotReadyMessage = useMemo(() => {
-    if (isSoaReady || !soaMonth || !user) return null;
-        
-    const monthLabel = format(new Date(soaMonth + '-02T00:00:00'), 'MMMM yyyy');
-    const userName = user.name.split(' ')[0] || 'there';
-
-    return (
-        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-            <h4 className="font-semibold text-blue-800">Report Availability</h4>
-            <p className="text-sm text-blue-700 mt-1">
-                Hi {userName}, your SOA for {monthLabel} will be available for download at the end of the month.
-            </p>
-            <p className="text-xs text-blue-600 mt-2">
-                Stay hydrated and enjoy the convenience with River Business!
-            </p>
-        </div>
-    );
-  }, [isSoaReady, soaMonth, user]);
-
   const showCurrentMonthInvoice = useMemo(() => {
     if (!currentMonthInvoice) return false;
     return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
@@ -525,12 +481,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       dispatch({ type: 'SET_FORM_DATA', payload: user });
     }
   }, [user]);
-
-  useEffect(() => {
-    if(availableMonths.length > 0 && !soaMonth) {
-      setSoaMonth(availableMonths[0].value);
-    }
-  }, [availableMonths, soaMonth]);
 
   const literConversionRate = useMemo(() => {
     if (user?.accountType === 'Parent' && user?.plan?.price > 0) {
@@ -692,53 +642,27 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       toast({ variant: 'destructive', title: 'Error', description: 'User data or deliveries not available.' });
       return;
     }
-    if (!soaMonth) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please select a month to download.' });
-        return;
-    }
-
-    const [year, month] = soaMonth.split('-').map(Number);
-    const selectedMonthDate = new Date(year, month - 1, 2);
-    const dateRangeForPDF = { from: startOfMonth(selectedMonthDate), to: endOfMonth(selectedMonthDate) };
-    const soaTitleMonth = format(dateRangeForPDF.from, 'MMMM yyyy');
     
-    const monthlyDeliveries = deliveries.filter(d => isWithinInterval(new Date(d.date), dateRangeForPDF));
-    const monthlySanitation = sanitationVisits?.filter(v => isWithinInterval(new Date(v.scheduledDate), dateRangeForPDF)) || [];
-    const monthlyCompliance = complianceReports?.filter(r => r.date && isWithinInterval((r.date as any).toDate(), dateRangeForPDF)) || [];
+    const billingPeriod = 'Full History';
+    const allSanitation = sanitationVisits || [];
+    const allCompliance = complianceReports || [];
+    const allPayments = paymentHistory || [];
 
-    const consumedLitersThisMonth = monthlyDeliveries.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
-    
-    let totalAmount = 0;
-    
-    let monthlyEquipmentCost = 0;
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-        monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
-    }
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-        monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
-    }
-
-    if (user.plan?.isConsumptionBased) {
-        totalAmount = consumedLitersThisMonth * (user.plan.price || 0) + monthlyEquipmentCost;
-    } else {
-        totalAmount = (user.plan?.price || 0) + monthlyEquipmentCost;
-    }
+    const totalInvoicedAmount = allPayments.reduce((sum, inv) => sum + inv.amount, 0);
 
     generateMonthlySOA({
       user,
-      deliveries: monthlyDeliveries,
-      sanitationVisits: monthlySanitation,
-      complianceReports: monthlyCompliance,
-      totalAmount,
-      billingPeriod: soaTitleMonth,
+      deliveries: deliveries || [],
+      sanitationVisits: allSanitation,
+      complianceReports: allCompliance,
+      totalAmount: totalInvoicedAmount,
+      billingPeriod,
     });
 
     toast({
       title: 'Download Started',
-      description: `Your Statement of Account for ${soaTitleMonth} is being generated.`,
+      description: `Your full Statement of Account is being generated.`,
     });
-    
-    dispatch({type: 'SET_SOA_DIALOG', payload: false});
   };
 
   const handleViewInvoice = (invoice: Payment) => {
@@ -1066,7 +990,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
                             </Button>
                           ) : (
-                            <Button variant="default" onClick={() => dispatch({type: 'SET_SOA_DIALOG', payload: true})}>
+                            <Button variant="default" onClick={handleDownloadMonthlySOA}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download SOA
                             </Button>
@@ -1814,40 +1738,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                   </DialogFooter>
                 </ScrollArea>
             )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Download SOA Dialog */}
-      <Dialog open={state.isSoaDialogOpen} onOpenChange={(isOpen) => dispatch({ type: 'SET_SOA_DIALOG', payload: isOpen })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Download Statement of Account</DialogTitle>
-            <DialogDescription>
-              Select the month for which you'd like to download the SOA.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="grid gap-2">
-                <Label htmlFor="soa-month">Month</Label>
-                <Select value={soaMonth} onValueChange={setSoaMonth}>
-                    <SelectTrigger id="soa-month">
-                        <SelectValue placeholder="Select an available month..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableMonths.length > 0 ? availableMonths.map(month => (
-                            <SelectItem key={month.value} value={month.value}>
-                                {month.label}
-                            </SelectItem>
-                        )) : <SelectItem value="no-data" disabled>No reports available yet</SelectItem>}
-                    </SelectContent>
-                </Select>
-            </div>
-            {soaNotReadyMessage}
-          </div>
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleDownloadMonthlySOA} disabled={!isSoaReady}>Download SOA</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       
