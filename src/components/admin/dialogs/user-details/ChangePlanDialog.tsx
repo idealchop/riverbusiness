@@ -113,7 +113,7 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
                 ...values.customPlanDetails,
             };
     
-            const updatePayload: Partial<AppUser> = {
+            const updatePayload: any = {
                 clientType: values.clientType,
                 isPrepaid: values.isPrepaid,
                 plan: {
@@ -143,7 +143,7 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
     
             updatePayload.customPlanDetails = newCustomDetails;
             
-            await updateDoc(userDocRef, updatePayload as { [x: string]: any; });
+            await updateDoc(userDocRef, updatePayload);
     
             toast({ title: "Plan Updated", description: `${user.businessName}'s plan has been changed.` });
             onOpenChange(false);
@@ -167,7 +167,7 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
                         <FormField control={form.control} name="clientType" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Plan Type</FormLabel>
-                                <FormControl><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">{clientTypes.map(type => { const image = PlaceHolderImages.find(p => p.id === type.imageId); return (<Card key={type.name} onClick={() => field.onChange(type.name)} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>{image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}<CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></Card>)})}</div></FormControl>
+                                <FormControl><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">{clientTypes.map(type => { const image = PlaceHolderImages.find(p => p.id === type.imageId); return (<Card key={type.name} onClick={() => field.onChange(type.name)} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>{image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}<CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></CardHeader></Card>)})}</div></FormControl>
                                 <FormMessage />
                             </FormItem>)}/>
 
