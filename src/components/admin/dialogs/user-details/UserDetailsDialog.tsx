@@ -304,7 +304,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 isOpen={isManualChargeOpen}
                 onOpenChange={setIsManualChargeOpen}
                 userDocRef={userDocRef}
-            />
+                />
             <TopUpDialog
                 isOpen={isTopUpOpen}
                 onOpenChange={setIsTopUpOpen}
