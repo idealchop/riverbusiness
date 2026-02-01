@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore } from '@/firebase';
-import { collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, serverTimestamp, writeBatch, increment } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans, clientTypes } from '@/lib/plans';
 import Image from 'next/image';
@@ -159,7 +159,11 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                  delete profileData.customPlanDetails.pricePerLiter;
             }
 
-            if (parentId) profileData.parentId = parentId;
+            if (parentId) {
+                profileData.parentId = parentId;
+                const parentRef = doc(firestore, 'users', parentId);
+                batch.update(parentRef, { 'customPlanDetails.branchCount': increment(1) });
+            }
             
             batch.set(unclaimedProfileRef, profileData);
             
