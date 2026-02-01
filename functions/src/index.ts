@@ -112,8 +112,8 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         // Create a batch to perform multiple writes atomically
         const batch = db.batch();
         
-        // 1. Copy delivery to parent's subcollection
-        const parentDeliveryRef = parentRef.collection('deliveries').doc(deliveryId);
+        // 1. Copy delivery to parent's 'branchDeliveries' subcollection
+        const parentDeliveryRef = parentRef.collection('branchDeliveries').doc(deliveryId);
         batch.set(parentDeliveryRef, { ...delivery, parentId: userData.parentId });
 
         if (deliveryCost > 0) {
@@ -210,9 +210,9 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
 
     // If it's a branch delivery, update the copy in the parent's collection as well
     if (after.parentId) {
-        const parentDeliveryRef = db.collection('users').doc(after.parentId).collection('deliveries').doc(event.params.deliveryId);
+        const parentDeliveryRef = db.collection('users').doc(after.parentId).collection('branchDeliveries').doc(event.params.deliveryId);
         await parentDeliveryRef.update({ status: after.status }).catch(err => {
-            logger.error(`Failed to update delivery copy for parent ${after.parentId}:`, err);
+            logger.error(`Failed to update branch delivery copy for parent ${after.parentId}:`, err);
         });
     }
 
