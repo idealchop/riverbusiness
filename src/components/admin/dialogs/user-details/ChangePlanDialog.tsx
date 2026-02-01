@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -66,8 +65,8 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
         const plans = {
             'Family': familyPlans, 'SME': smePlans, 'Commercial': commercialPlans, 'Corporate': corporatePlans, 'Enterprise': enterprisePlans,
         }[type] || [];
-        const customPlanExists = !plans.some(p => p.isConsumptionBased === false && p.name.includes('Custom'));
-        const customConsumptionPlanExists = !plans.some(p => p.isConsumptionBased === true && p.name.includes('Flow'));
+        const customPlanExists = !plans.some(p => !p.isConsumptionBased && p.name.includes('Custom'));
+        const customConsumptionPlanExists = !plans.some(p => p.isConsumptionBased && p.name.includes('Flow'));
         
         let allPlans = [...plans];
         if (customPlanExists) {
@@ -99,7 +98,7 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
             }
         });
         return () => subscription.unsubscribe();
-    }, [form]);
+    }, [form, getPlansForType]);
 
     const handlePlanUpdate = async (values: PlanChangeFormValues) => {
         if (!firestore || !user) return;
@@ -168,7 +167,7 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
                         <FormField control={form.control} name="clientType" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Plan Type</FormLabel>
-                                <FormControl><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">{clientTypes.map(type => { const image = PlaceHolderImages.find(p => p.id === type.imageId); return (<Card key={type.name} onClick={() => field.onChange(type.name)} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>{image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}<CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></CardHeader></Card>)})}</div></FormControl>
+                                <FormControl><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">{clientTypes.map(type => { const image = PlaceHolderImages.find(p => p.id === type.imageId); return (<Card key={type.name} onClick={() => field.onChange(type.name)} className={cn("cursor-pointer flex flex-col", field.value === type.name && "border-2 border-primary")}>{image && <div className="relative h-20 w-full"><Image src={image.imageUrl} alt={type.name} fill style={{objectFit:"cover"}} className="rounded-t-lg" data-ai-hint={image.imageHint} /></div>}<CardHeader className="p-3 flex-1"><CardTitle className="text-sm">{type.name}</CardTitle><CardDescription className="text-xs">{type.description}</CardDescription></Card>)})}</div></FormControl>
                                 <FormMessage />
                             </FormItem>)}/>
 

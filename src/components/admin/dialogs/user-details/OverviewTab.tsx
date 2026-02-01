@@ -13,6 +13,7 @@ import { FileText, Eye, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { format } from 'date-fns';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -101,7 +102,7 @@ export function OverviewTab({
                                 </CardHeader>
                                 <CardContent className="space-y-4 flex-1">
                                     <div>
-                                        <Label className="text-sm text-muted-foreground">Estimated Bill</Label>
+                                        <Label className="text-xs text-muted-foreground">Estimated Cost for {format(new Date(), 'MMMM')}</Label>
                                         <p className="text-2xl font-bold">₱{currentMonthInvoice?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</p>
                                     </div>
                                     <div className="border-t pt-4 grid grid-cols-2 gap-4">
