@@ -201,7 +201,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
-                <DialogContent className="sm:max-w-4xl h-full sm:max-h-[90vh] flex flex-col p-0">
+                <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col p-0">
                     <DialogHeader className="p-6 pb-4">
                         <DialogTitle>User Account Management</DialogTitle>
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
@@ -282,7 +282,9 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
                         </Button>
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>
+                            Close
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
