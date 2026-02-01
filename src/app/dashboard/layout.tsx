@@ -18,7 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { Payment, ImagePlaceholder, AppUser, Notification as NotificationType, ChatMessage } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, updateDoc, writeBatch, Timestamp, query, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, collection, updateDoc, writeBatch, Timestamp, query, orderBy, serverTimestamp, addDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
