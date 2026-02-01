@@ -282,9 +282,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
                         </Button>
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>
-                            Close
-                        </Button>
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     </div>
                 </DialogContent>
             </Dialog>
