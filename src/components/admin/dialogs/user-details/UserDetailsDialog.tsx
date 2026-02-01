@@ -206,7 +206,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogTitle>User Account Management</DialogTitle>
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
-                    <ScrollArea className="flex-1 min-h-0 px-6">
+                    
+                    <ScrollArea className="flex-1 px-6">
                         <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
                              <TabsList>
                                 {isParent ? (
@@ -278,12 +279,14 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
+                    
                     <div className="border-t p-4 flex justify-between items-center bg-background">
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
                         </Button>
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     </div>
+
                 </DialogContent>
             </Dialog>
 
