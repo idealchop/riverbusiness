@@ -105,29 +105,46 @@ export function ChangePlanDialog({ isOpen, onOpenChange, user }: ChangePlanDialo
         setIsSubmitting(true);
         
         const userDocRef = doc(firestore, 'users', user.id);
-
+    
         try {
+            const newIsConsumptionBased = values.plan.isConsumptionBased || false;
+            const newCustomDetails = {
+                ...user.customPlanDetails,
+                ...values.customPlanDetails,
+            };
+    
             const updatePayload: Partial<AppUser> = {
                 clientType: values.clientType,
                 isPrepaid: values.isPrepaid,
                 plan: {
                     name: values.plan.name,
                     price: values.planPrice,
-                    isConsumptionBased: values.plan.isConsumptionBased || false,
-                },
-                customPlanDetails: {
-                    ...user.customPlanDetails, // preserve existing details like delivery schedule
-                    litersPerMonth: values.customPlanDetails?.litersPerMonth || 0,
-                    bonusLiters: values.customPlanDetails?.bonusLiters || 0,
-                    pricePerLiter: values.customPlanDetails?.pricePerLiter || 0,
+                    isConsumptionBased: newIsConsumptionBased,
                 },
                 // Reset pending plan changes if any
                 pendingPlan: deleteField(),
                 planChangeEffectiveDate: deleteField(),
             };
+    
+            if (newIsConsumptionBased) {
+                // If switching TO consumption plan, reset liter balance.
+                updatePayload.totalConsumptionLiters = 0;
+                delete newCustomDetails.litersPerMonth;
+                delete newCustomDetails.bonusLiters;
+                newCustomDetails.lastMonthRollover = 0;
+            } else {
+                // If switching TO a fixed plan, set the initial balance.
+                const newLiters = newCustomDetails.litersPerMonth || 0;
+                const newBonus = newCustomDetails.bonusLiters || 0;
+                updatePayload.totalConsumptionLiters = newLiters + newBonus;
+                // When an admin makes an immediate change, rollover from a previous plan doesn't apply.
+                newCustomDetails.lastMonthRollover = 0; 
+            }
+    
+            updatePayload.customPlanDetails = newCustomDetails;
             
-            await updateDoc(userDocRef, updatePayload);
-
+            await updateDoc(userDocRef, updatePayload as { [x: string]: any; });
+    
             toast({ title: "Plan Updated", description: `${user.businessName}'s plan has been changed.` });
             onOpenChange(false);
         } catch (error) {
