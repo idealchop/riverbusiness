@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, UserCheck, BarChart3 } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, UserCheck, BarChart3, HelpCircle } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -216,59 +216,33 @@ export function StatCards({
                 </CardContent>
             </Card>
         </>
-      ) : isFlowPlan || isBranchAccount || isPrepaidPlan ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 col-span-1 md:col-span-2 lg:col-span-3">
-          <Card className="flex flex-col lg:col-span-2 col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                {isBranchAccount
-                  ? `Consumed this Month (${user?.businessName})`
-                  : isParentAccount
-                  ? 'Remaining Liter Credits'
-                  : isFlowPlan
-                  ? 'Estimated Cost This Month'
-                  : `Available Liters`}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-2xl md:text-3xl font-bold mb-2">
-                {isBranchAccount
-                    ? `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
-                    : (isPrepaidPlan) 
-                    ? `${(user?.totalConsumptionLiters || 0).toLocaleString()} L`
-                    : isParentAccount
-                    ? `${parentRemainingLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L`
-                    : `₱${consumptionDetails.estimatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                }
-              </p>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  {isBranchAccount
-                    ? <span>Total usage this period</span>
-                    : (isPrepaidPlan)
-                    ? <span>Consumed this period:</span>
-                    : isParentAccount 
-                    ? <span>Total Consumed by Branches:</span>
-                    : <span>Water consumption cost:</span>
-                  }
-                  <span>
-                    {isParentAccount 
-                      ? `${(totalBranchConsumptionLiters ?? 0).toLocaleString()} L`
-                      : `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
-                    }
-                    </span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="pt-0">
-                {isBranchAccount ? (
-                     <p className="text-xs text-muted-foreground">Consumption is deducted from your parent account's balance.</p>
-                ) : (isPrepaidPlan || isParentAccount) ? (
-                     <p className="text-xs text-muted-foreground">This is your account's water credit balance.</p>
-                ) : (
-                    <p className="text-xs text-muted-foreground">Equipment rental fees will be added to your final bill.</p>
-                )}
-            </CardFooter>
+      ) : isFlowPlan ? (
+        <>
+          <Card className="flex flex-col col-span-1 md:col-span-2">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                      <Droplets className="h-5 w-5 text-primary" />
+                      {user?.plan?.name || 'Consumption Plan'}
+                  </CardTitle>
+                  <CardDescription>
+                      Your bill is based on your water usage at a rate of <strong>₱{(user?.plan?.price || 0).toFixed(2)} per liter</strong>.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 grid grid-cols-2 gap-6 items-center">
+                  <div>
+                      <Label className="text-xs">Consumed This Month</Label>
+                      <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
+                  </div>
+                  <div>
+                      <Label className="text-xs">Estimated Cost (Water Only)</Label>
+                      <p className="text-3xl font-bold">
+                      ₱{consumptionDetails.estimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      </p>
+                  </div>
+              </CardContent>
+              <CardFooter>
+                  <p className="text-xs text-muted-foreground">Equipment rental fees will be added to your final monthly bill.</p>
+              </CardFooter>
           </Card>
           <Card className="col-span-1">
             <CardHeader className="pb-2">
@@ -311,13 +285,95 @@ export function StatCards({
               </div>
             </CardContent>
           </Card>
-        </div>
+        </>
+      ) : isBranchAccount || isPrepaidPlan ? (
+        <>
+            <Card className="flex flex-col col-span-1 md:col-span-2">
+                <CardHeader className="pb-2">
+                <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
+                    {isBranchAccount
+                    ? `Consumed this Month (${user?.businessName})`
+                    : `Available Liters`}
+                </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1">
+                <p className="text-2xl md:text-3xl font-bold mb-2">
+                    {isBranchAccount
+                        ? `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
+                        : `${(user?.totalConsumptionLiters || 0).toLocaleString()} L`
+                    }
+                </p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                    <div className="flex justify-between">
+                    {isBranchAccount
+                    ? <span>Total usage this period</span>
+                    : <span>Consumed this period:</span>
+                    }
+                    <span>
+                        {`${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`}
+                    </span>
+                    </div>
+                </div>
+                </CardContent>
+                <CardFooter className="pt-0">
+                    {isBranchAccount ? (
+                        <p className="text-xs text-muted-foreground">Consumption is deducted from your parent account's balance.</p>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">This is your account's water credit balance.</p>
+                    )}
+                </CardFooter>
+            </Card>
+            <Card className="col-span-1">
+                <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="auto-refill-other" className="font-bold text-base">Auto Refill</Label>
+                    <Switch id="auto-refill-other" checked={autoRefill} onCheckedChange={onSwitchChange} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                    {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
+                </p>
+                <div className="border-t pt-3 space-y-2">
+                    {autoRefill ? (
+                    <div className="grid sm:grid-cols-2 gap-2 items-center">
+                        <div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
+                        <p className="font-semibold text-sm">{nextRefillDay !== 'Not set' ? `Next ${nextRefillDay}` : 'Not set'}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Delivery</p>
+                        <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="w-full mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Customize
+                        </Button>
+                    </div>
+                    ) : (
+                    <div className="flex flex-col gap-2 items-center text-center">
+                        <p className="text-xs text-muted-foreground sm:text-sm">
+                            Need water sooner? Schedule a one-time delivery with an exact date and quantity.
+                        </p>
+                        <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <span className="sm:hidden">Schedule</span>
+                        <span className="hidden sm:inline">Schedule Refill</span>
+                        </Button>
+                    </div>
+                    )}
+                </div>
+                </CardContent>
+            </Card>
+        </>
       ) : (
         <>
           <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
                 Available Liters
+                <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={onSaveLitersClick}>
+                  <HelpCircle className="mr-1 h-3 w-3" /> What is this?
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
