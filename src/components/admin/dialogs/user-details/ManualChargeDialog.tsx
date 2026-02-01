@@ -14,7 +14,7 @@ import { useFirestore } from '@/firebase';
 
 const manualChargeSchema = z.object({
     description: z.string().min(1, "Description is required."),
-    amount: z.coerce.number().min(0.01, "Amount must be positive."),
+    amount: z.coerce.number().min(0, "Amount cannot be negative."),
 });
 type ManualChargeFormValues = z.infer<typeof manualChargeSchema>;
 
