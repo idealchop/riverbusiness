@@ -1,6 +1,6 @@
 
 'use client';
-import React, from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -14,11 +14,10 @@ import { Button } from "@/components/ui/button";
 import { FileText, ShieldCheck, User } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import type { Payment, ImagePlaceholder, AppUser, Notification as NotificationType, ChatMessage } from '@/lib/types';
+import type { AppUser, Notification as NotificationType, ChatMessage, Payment } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, updateDoc, writeBatch, Timestamp, query, orderBy, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, collection, updateDoc, serverTimestamp, addDoc, query, orderBy } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { clientTypes } from '@/lib/plans';
@@ -72,7 +71,7 @@ export default function DashboardLayout({
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
   const [initialAccountDialogTab, setInitialAccountDialogTab] = React.useState<string | undefined>(undefined);
   
-  React.useEffect(() => {
+  useEffect(() => {
     const handleOpenMyAccount = (event: Event) => {
         const customEvent = event as CustomEvent;
         if (customEvent.detail?.tab) {
@@ -89,15 +88,28 @@ export default function DashboardLayout({
     };
   }, []);
   
-  React.useEffect(() => {
+  useEffect(() => {
     const handleOpenLiveSupport = () => setIsLiveSupportOpen(true);
+    const handleOpenPaymentDialog = (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const invoiceId = customEvent.detail?.invoiceId;
+        if (invoiceId) {
+            const invoice = paymentHistoryFromDb?.find(p => p.id === invoiceId);
+            if (invoice) {
+                handlePayNow(invoice);
+            }
+        }
+    };
+
     window.addEventListener('open-live-support', handleOpenLiveSupport);
+    window.addEventListener('open-payment-dialog', handleOpenPaymentDialog);
     return () => {
         window.removeEventListener('open-live-support', handleOpenLiveSupport);
+        window.removeEventListener('open-payment-dialog', handleOpenPaymentDialog);
     };
-  }, []);
+  }, [paymentHistoryFromDb]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isUserLoading) return;
   
     if (!authUser) {
@@ -110,7 +122,7 @@ export default function DashboardLayout({
     }
   }, [authUser, user, isUserLoading, isUserDocLoading, router]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!userDocRef || !auth || !auth.currentUser) return;
 
     const handleVisibilityChange = async () => {
@@ -174,9 +186,11 @@ export default function DashboardLayout({
   const handleNotificationClick = (notification: NotificationType) => {
       if (!notification.data) return;
       let eventName: string | null = null;
+      let eventDetail: any = {};
       switch (notification.type) {
           case 'payment':
               eventName = 'open-payment-dialog';
+              eventDetail = { invoiceId: notification.data.paymentId };
               break;
           case 'delivery':
               eventName = 'open-delivery-history';
@@ -187,7 +201,7 @@ export default function DashboardLayout({
                break;
       }
       if (eventName) {
-          window.dispatchEvent(new CustomEvent(eventName, { detail: notification.data }));
+          window.dispatchEvent(new CustomEvent(eventName, { detail: eventDetail }));
       }
   }
 
@@ -210,7 +224,7 @@ export default function DashboardLayout({
                 isOpen={isLiveSupportOpen}
                 onOpenChange={setIsLiveSupportOpen}
                 user={user}
-                chatMessages={chatMessages}
+                chatMessages={chatMessages || []}
                 onMessageSubmit={handleMessageSubmit}
             />
             
@@ -258,11 +272,7 @@ export default function DashboardLayout({
 
           <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
             <div className="container mx-auto">
-              {React.cloneElement(children as React.ReactElement, {
-                handleOneClickRefill: () => {},
-                isRefillRequesting: false,
-                hasPendingRefill: false
-              })}
+              {children}
             </div>
           </main>
 

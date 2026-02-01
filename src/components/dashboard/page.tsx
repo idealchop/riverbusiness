@@ -385,6 +385,8 @@ export default function DashboardPage() {
             isOpen={dialogState.deliveryHistory}
             onOpenChange={() => closeDialog('deliveryHistory')}
             deliveries={deliveries}
+            sanitationVisits={sanitationVisits || []}
+            complianceReports={complianceReports || []}
             user={user}
             onViewProof={setSelectedProofUrl}
             isParent={isParent}
