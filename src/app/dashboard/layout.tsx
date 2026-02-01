@@ -109,9 +109,9 @@ export default function DashboardLayout({
   const cardQr = PlaceHolderImages.find((p) => p.id === 'card-payment-qr');
 
   const paymentOptions: PaymentOption[] = useMemo(() => [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09557750188' } },
       { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
-      { name: 'PayMaya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+      { name: 'Maya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
       { name: 'Credit Card', qr: cardQr }
   ], [gcashQr, bankQr, paymayaQr, cardQr]);
   
