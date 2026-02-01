@@ -39,7 +39,6 @@ interface OverviewTabProps {
     onContractFileChange: (file: File | null) => void;
     onContractUpload: () => void;
     onSetIsYearlyConsumptionOpen: (isOpen: boolean) => void;
-    onSetIsChangePlanOpen: (isOpen: boolean) => void;
 }
 
 export function OverviewTab({
@@ -56,7 +55,6 @@ export function OverviewTab({
     onContractFileChange,
     onContractUpload,
     onSetIsYearlyConsumptionOpen,
-    onSetIsChangePlanOpen,
 }: OverviewTabProps) {
 
     const planDetails = user.customPlanDetails || {};
@@ -151,11 +149,8 @@ export function OverviewTab({
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between">
+                                <CardHeader>
                                     <CardTitle>Plan &amp; Station</CardTitle>
-                                    <Button variant="outline" size="sm" onClick={() => onSetIsChangePlanOpen(true)}>
-                                        <Edit className="mr-2 h-4 w-4" /> Change Plan
-                                    </Button>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div>

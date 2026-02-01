@@ -29,6 +29,7 @@ import { YearlyConsumptionDialog } from './YearlyConsumptionDialog';
 import { BranchDeliveriesTab } from './BranchDeliveriesTab';
 import { ChangePlanDialog } from './ChangePlanDialog';
 import { createClientNotification } from '@/lib/notifications';
+import { Edit } from 'lucide-react';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -239,7 +240,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
-                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
@@ -279,7 +279,10 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <DialogFooter className="border-t pt-4 -mb-2 -mx-6 px-6 pb-4">
+                    <DialogFooter className="border-t pt-4 flex justify-between w-full">
+                        <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
+                            <Edit className="mr-2 h-4 w-4" /> Change Plan
+                        </Button>
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
