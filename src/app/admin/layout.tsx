@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -91,7 +92,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-muted/40">
       <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
         <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg">
             <div className="flex items-center">
@@ -191,8 +192,8 @@ export default function AdminLayout({
           </Button>
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-4 sm:p-6">
-        <div className="container mx-auto">
+      <main className="flex-1 p-4 sm:p-6">
+        <div className="container mx-auto max-w-7xl">
             {children}
         </div>
       </main>
