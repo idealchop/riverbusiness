@@ -30,7 +30,7 @@ import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMont
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign, Droplets, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
-import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans } from '@/lib/plans';
+import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans, clientTypes } from '@/lib/plans';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { generateMonthlySOA, generateInvoicePDF } from '@/lib/pdf-generator';
 import { Logo } from '@/components/icons';
@@ -1127,7 +1127,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                 <div className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</div>
                                             </TableCell>
                                             <TableCell>
-                                                <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                                <Badge variant={isCurrentEst ? 'default' : 'secondary'} className={cn(
+                                                    'text-xs',
                                                     invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
                                                     isCurrentEst ? 'bg-blue-100 text-blue-800' :
                                                     invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
@@ -1136,7 +1137,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                                     'bg-gray-100 text-gray-800'
                                                 )}>
                                                     {invoice.status}
-                                                </span>
+                                                </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
                                             <div className="flex flex-col items-end">
@@ -1177,19 +1178,17 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     {/* Mobile Card View */}
                     <div className="space-y-4 md:hidden">
                         {paymentsLoading ? (
-                             Array.from({ length: 3 }).map((_, i) => (
-                                <Card key={`skel-inv-mob-${i}`}>
-                                    <CardContent className="p-4 space-y-3">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <Skeleton className="h-5 w-24 mb-1" />
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-                                            <Skeleton className="h-6 w-24 rounded-full" />
-                                        </div>
-                                        <Skeleton className="h-9 w-full" />
-                                    </CardContent>
-                                </Card>
+                            Array.from({ length: 3 }).map((_, i) => (
+                            <Card key={`skel-inv-mob-${i}`}>
+                                <CardContent className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div><Skeleton className="h-5 w-24 mb-1" /><Skeleton className="h-4 w-20" /></div>
+                                    <Skeleton className="h-6 w-24 rounded-full" />
+                                </div>
+                                <Skeleton className="h-5 w-16" />
+                                <Skeleton className="h-9 w-full" />
+                                </CardContent>
+                            </Card>
                             ))
                         ) : paginatedInvoices.length > 0 ? (
                             paginatedInvoices.map((invoice) => {
@@ -1197,38 +1196,40 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                 const isCurrentEst = showCurrentMonthInvoice && invoice.id === currentMonthInvoice?.id;
                                 return (
                                 <Card key={invoice.id} className={cn(isCurrentEst && "bg-muted/50")}>
-                                    <CardContent className="p-4 space-y-2">
+                                    <CardContent className="p-4 space-y-3">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <p className="font-semibold">{invoice.description}</p>
                                                 <p className="text-xs text-muted-foreground">{getInvoiceDisplayDate(invoice)}</p>
-                                                <p className="text-sm">P{invoice.amount.toFixed(2)}</p>
-                                                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
                                             </div>
-                                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium',
+                                            <Badge className={cn('whitespace-nowrap px-2 py-1 text-xs font-medium',
                                                 invoice.status === 'Covered by Parent Account' ? 'bg-purple-100 text-purple-800' :
                                                 isCurrentEst ? 'bg-blue-100 text-blue-800' :
                                                 invoice.status === 'Paid' ? 'bg-green-100 text-green-800' :
                                                 invoice.status === 'Overdue' ? 'bg-red-100 text-red-800' :
                                                 invoice.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
                                                 'bg-gray-100 text-gray-800'
-                                            )}>
-                                                {invoice.status}
-                                            </span>
+                                            )}>{invoice.status}</Badge>
                                         </div>
-                                        {invoice.status === 'Covered by Parent Account' ? (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                        ) : isCurrentEst ? (
-                                            isPayday ? (
-                                                <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                            ) : (
-                                                <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
-                                            )
-                                        ) : (invoice.status === 'Paid') ? (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
-                                        ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
-                                            <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                        )}
+                                        <div className="flex justify-between items-baseline pt-1">
+                                            <p className="text-lg font-bold">P{invoice.amount.toFixed(2)}</p>
+                                            <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => handleViewBreakdown(invoice)}>View details</Button>
+                                        </div>
+                                        <div className="pt-2">
+                                            {invoice.status === 'Covered by Parent Account' ? (
+                                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                            ) : isCurrentEst ? (
+                                                isPayday ? (
+                                                    <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                                ) : (
+                                                    <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
+                                                )
+                                            ) : (invoice.status === 'Paid') ? (
+                                                <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
+                                            ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
+                                                <Button size="sm" variant="outline" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
+                                            )}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             )})
