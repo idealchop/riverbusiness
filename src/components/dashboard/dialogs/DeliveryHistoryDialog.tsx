@@ -9,14 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { Delivery, AppUser, SanitationVisit } from '@/lib/types';
+import { Delivery, AppUser, SanitationVisit, ComplianceReport } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { History, Calendar as CalendarIcon, Download, PackageCheck, Truck, Package, Eye } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { generateSOA } from '@/lib/pdf-generator';
+import { generateMonthlySOA } from '@/lib/pdf-generator';
 import { useToast } from '@/hooks/use-toast';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -26,13 +26,14 @@ interface DeliveryHistoryDialogProps {
   onOpenChange: (open: boolean) => void;
   deliveries: Delivery[] | null;
   sanitationVisits: SanitationVisit[] | null;
+  complianceReports: ComplianceReport[] | null;
   user: AppUser | null;
   onViewProof: (url: string | null) => void;
   isParent?: boolean;
   branches?: AppUser[] | null;
 }
 
-export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanitationVisits, user, onViewProof, isParent = false, branches = [] }: DeliveryHistoryDialogProps) {
+export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanitationVisits, complianceReports, user, onViewProof, isParent = false, branches = [] }: DeliveryHistoryDialogProps) {
   const [deliveryDateRange, setDeliveryDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
@@ -89,8 +90,22 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
       });
       return;
     }
+
+    let period = 'All Time';
+    if (deliveryDateRange?.from) {
+        period = format(deliveryDateRange.from, 'PP');
+        if (deliveryDateRange.to) {
+            period += ` to ${format(deliveryDateRange.to!, 'PP')}`;
+        }
+    }
     
-    generateSOA(user, filteredDeliveries, sanitationVisits || [], deliveryDateRange);
+    generateMonthlySOA({
+      user,
+      deliveries: filteredDeliveries,
+      sanitationVisits: sanitationVisits || [],
+      complianceReports: complianceReports || [],
+      billingPeriod: period
+    });
 
     toast({
       title: 'Download Started',
