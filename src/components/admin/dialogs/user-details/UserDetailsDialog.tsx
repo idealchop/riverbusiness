@@ -260,6 +260,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
+                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">

@@ -39,6 +39,7 @@ interface OverviewTabProps {
     onContractFileChange: (file: File | null) => void;
     onContractUpload: () => void;
     onSetIsYearlyConsumptionOpen: (isOpen: boolean) => void;
+    onSetIsChangePlanOpen: (isOpen: boolean) => void;
 }
 
 export function OverviewTab({
@@ -55,6 +56,7 @@ export function OverviewTab({
     onContractFileChange,
     onContractUpload,
     onSetIsYearlyConsumptionOpen,
+    onSetIsChangePlanOpen,
 }: OverviewTabProps) {
 
     const planDetails = user.customPlanDetails || {};
@@ -151,7 +153,7 @@ export function OverviewTab({
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <CardTitle>Plan &amp; Station</CardTitle>
-                                    <Button variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('admin-open-change-plan-dialog'))}>
+                                    <Button variant="outline" size="sm" onClick={() => onSetIsChangePlanOpen(true)}>
                                         <Edit className="mr-2 h-4 w-4" /> Change Plan
                                     </Button>
                                 </CardHeader>
