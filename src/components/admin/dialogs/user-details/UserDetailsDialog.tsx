@@ -27,6 +27,7 @@ import { SanitationHistoryDialog } from './SanitationHistoryDialog';
 import { ProofViewerDialog } from './ProofViewerDialog';
 import { YearlyConsumptionDialog } from './YearlyConsumptionDialog';
 import { BranchDeliveriesTab } from './BranchDeliveriesTab';
+import { ChangePlanDialog } from './ChangePlanDialog';
 import { createClientNotification } from '@/lib/notifications';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -73,6 +74,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [isPaymentReviewOpen, setIsPaymentReviewOpen] = useState(false);
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
     const [isYearlyConsumptionOpen, setIsYearlyConsumptionOpen] = useState(false);
+    const [isChangePlanOpen, setIsChangePlanOpen] = useState(false);
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -250,6 +252,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
+                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
@@ -345,6 +348,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 isOpen={isYearlyConsumptionOpen}
                 onOpenChange={setIsYearlyConsumptionOpen}
                 deliveries={userDeliveriesData}
+                user={user}
+            />
+            <ChangePlanDialog
+                isOpen={isChangePlanOpen}
+                onOpenChange={setIsChangePlanOpen}
                 user={user}
             />
         </>

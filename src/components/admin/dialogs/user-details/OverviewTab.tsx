@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -39,6 +39,7 @@ interface OverviewTabProps {
     onContractFileChange: (file: File | null) => void;
     onContractUpload: () => void;
     onSetIsYearlyConsumptionOpen: (isOpen: boolean) => void;
+    onSetIsChangePlanOpen: (isOpen: boolean) => void;
 }
 
 export function OverviewTab({
@@ -55,6 +56,7 @@ export function OverviewTab({
     onContractFileChange,
     onContractUpload,
     onSetIsYearlyConsumptionOpen,
+    onSetIsChangePlanOpen,
 }: OverviewTabProps) {
 
     const planDetails = user.customPlanDetails || {};
@@ -149,8 +151,11 @@ export function OverviewTab({
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
                             <Card>
-                                <CardHeader>
+                                <CardHeader className="flex flex-row items-center justify-between">
                                     <CardTitle>Plan & Station</CardTitle>
+                                    <Button variant="outline" size="sm" onClick={() => onSetIsChangePlanOpen(true)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Change Plan
+                                    </Button>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div>
