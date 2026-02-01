@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -386,6 +387,7 @@ export default function DashboardPage() {
             isOpen={dialogState.deliveryHistory}
             onOpenChange={() => closeDialog('deliveryHistory')}
             deliveries={deliveries}
+            sanitationVisits={sanitationVisits}
             user={user}
             onViewProof={setSelectedProofUrl}
             isParent={isParent}
@@ -443,7 +445,7 @@ export default function DashboardPage() {
             activeRefillRequest={activeRefillRequest}
         />
         <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         {waterStation?.status === 'Under Maintenance' ? (
@@ -461,7 +463,7 @@ export default function DashboardPage() {
                     {waterStation?.status === 'Under Maintenance' ? (
                         <div className="space-y-4">
                             {stationOKImage && (
-                                <div className="relative h-60 w-full overflow-hidden rounded-lg">
+                                <div className="relative h-40 w-full overflow-hidden rounded-lg">
                                      <Image src={stationOKImage.imageUrl} alt="Water station under maintenance" layout="fill" objectFit="contain" className="opacity-50 grayscale" data-ai-hint="water station" />
                                 </div>
                             )}
@@ -481,46 +483,23 @@ export default function DashboardPage() {
                             </p>
                         </div>
                     ) : (
-                        <div className="grid md:grid-cols-2 gap-6 items-center">
+                        <div className="space-y-4 text-center">
                             {stationOKImage && (
-                                <div className="relative h-60 w-full overflow-hidden rounded-lg">
+                                <div className="relative h-40 w-full overflow-hidden rounded-lg">
                                     <Image src={stationOKImage.imageUrl} alt="Water station operating normally" layout="fill" objectFit="contain" data-ai-hint={stationOKImage.imageHint} />
                                 </div>
                             )}
-                            <div className="space-y-4 text-center md:text-left">
-                                <h3 className="font-semibold">All Systems Operational</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Hi {userFirstName}, your assigned station, <span className="font-semibold">{waterStation?.name || 'N/A'}</span>, is fully operational.
-                                    All systems are running smoothly, ensuring your water is safe, clean, and delivered on time. Thank you for your trust in River Business!
-                                </p>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                        closeDialog('partnerNotice');
-                                        openDialog('compliance');
-                                    }}
-                                >
-                                    <ShieldCheck className="mr-2 h-4 w-4" />
-                                    See latest lab result
-                                </Button>
-                            </div>
+                            <h3 className="font-semibold">All Systems Operational</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Hi {userFirstName}, your assigned station, <span className="font-semibold">{waterStation?.name || 'N/A'}</span>, is fully operational.
+                                All systems are running smoothly, ensuring your water is safe, clean, and delivered on time. Thank you for your trust in River Business!
+                            </p>
                         </div>
                     )}
                 </div>
-                <DialogFooter className="flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-4 border-t">
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <Button className="flex-1" onClick={() => { closeDialog('partnerNotice'); window.dispatchEvent(new CustomEvent('open-live-support')) }}>
-                            <Wrench className="mr-2 h-4 w-4" />
-                            Request New Dispenser
-                        </Button>
-                        <Button className="flex-1" onClick={() => { closeDialog('partnerNotice'); window.dispatchEvent(new CustomEvent('open-live-support')) }}>
-                            <Building className="mr-2 h-4 w-4" />
-                            Request New Station
-                        </Button>
-                    </div>
+                <DialogFooter>
                     <DialogClose asChild>
-                        <Button variant="outline" className="w-full sm:w-auto">Close</Button>
+                        <Button variant="outline">Close</Button>
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>

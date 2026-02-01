@@ -15,7 +15,7 @@ declare module 'jspdf' {
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: DateRange) => {
+export const generateSOA = (user: AppUser, deliveries: Delivery[], sanitationVisits: SanitationVisit[], dateRange?: DateRange) => {
   const doc = new jsPDF();
   const primaryColor = [21, 99, 145]; // A corporate blue
   const accentColor = [240, 249, 255]; // A very light blue for backgrounds
@@ -111,13 +111,31 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
   const totalLiters = containerToLiter(totalContainers);
   
   // Add a summary row to the table body
-  const summaryRow = [
-      { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-      { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
-      { content: totalLiters.toLocaleString(), styles: { fontStyle: 'bold' } },
-      { content: '', styles: {} },
-  ];
-  tableRows.push(summaryRow as any);
+  if (deliveries.length > 0) {
+    const summaryRow = [
+        { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
+        { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
+        { content: totalLiters.toLocaleString(), styles: { fontStyle: 'bold' } },
+        { content: '', styles: {} },
+    ];
+    tableRows.push(summaryRow as any);
+  }
+
+
+  const drawFooter = (data: any) => {
+    doc.setLineWidth(0.2);
+    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+    
+    doc.setFontSize(8);
+    
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text('River Tech Inc.: Turn Essential Needs Into Automatic Experience.', 14, pageHeight - 12);
+    
+    doc.setTextColor(150);
+    doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 12, { align: 'right' });
+  };
 
 
   doc.autoTable({
@@ -137,24 +155,40 @@ export const generateSOA = (user: AppUser, deliveries: Delivery[], dateRange?: D
     alternateRowStyles: {
         fillColor: accentColor,
     },
-    didDrawPage: (data) => {
-        // Footer on every page
-        doc.setLineWidth(0.2);
-        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-        
-        doc.setFontSize(8);
-        
-        // Branding Message
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.setFont('helvetica', 'bold');
-        doc.text('River Tech Inc.: Turn Essential Needs Into Automatic Experience.', 14, pageHeight - 12);
-        
-        // Page Number
-        doc.setTextColor(150);
-        doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 12, { align: 'right' });
-    }
+    didDrawPage: drawFooter
   });
+
+  let lastY = (doc as any).lastAutoTable.finalY;
+
+  // Sanitation Visits Table
+  const filteredSanitation = (sanitationVisits || []).filter(visit => {
+    if (!dateRange?.from) return true;
+    const visitDate = new Date(visit.scheduledDate);
+    return isWithinInterval(visitDate, { start: dateRange.from, end: dateRange.to || dateRange.from });
+  });
+
+  if(filteredSanitation.length > 0) {
+    lastY += 20;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Sanitation Visits', 14, lastY);
+    lastY += 15;
+
+    const sanitationBody = filteredSanitation.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]);
+
+    doc.autoTable({
+      head: [["Scheduled Date", "Status", "Quality Officer"]],
+      body: sanitationBody,
+      startY: lastY,
+      theme: 'grid',
+      headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
+      styles: { cellPadding: 2.5, fontSize: 9 },
+      alternateRowStyles: { fillColor: accentColor },
+      didDrawPage: drawFooter,
+    });
+  }
 
 
   // 5. Save PDF
@@ -203,7 +237,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     };
 
     // --- FOOTER ---
-    const drawFooter = (pageNumber: number) => {
+    const drawPdfFooter = (pageNumber: number) => {
       doc.setLineWidth(0.5);
       doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
@@ -399,7 +433,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     const totalPages = (doc as any).internal.getNumberOfPages();
     for(let i=1; i <= totalPages; i++) {
         doc.setPage(i);
-        drawFooter(i);
+        drawPdfFooter(i);
     }
     
     // --- SAVE PDF ---
@@ -549,4 +583,5 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     // --- SAVE PDF ---
     doc.save(`Invoice_${invoice.id}.pdf`);
 };
+
 

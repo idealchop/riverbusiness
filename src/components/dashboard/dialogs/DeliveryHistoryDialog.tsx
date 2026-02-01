@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import { Delivery, AppUser } from '@/lib/types';
+import { Delivery, AppUser, SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { History, Calendar as CalendarIcon, Download, PackageCheck, Truck, Package, Eye } from 'lucide-react';
@@ -24,13 +25,14 @@ interface DeliveryHistoryDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   deliveries: Delivery[] | null;
+  sanitationVisits: SanitationVisit[] | null;
   user: AppUser | null;
   onViewProof: (url: string | null) => void;
   isParent?: boolean;
   branches?: AppUser[] | null;
 }
 
-export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, onViewProof, isParent = false, branches = [] }: DeliveryHistoryDialogProps) {
+export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanitationVisits, user, onViewProof, isParent = false, branches = [] }: DeliveryHistoryDialogProps) {
   const [deliveryDateRange, setDeliveryDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
@@ -88,7 +90,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, user, 
       return;
     }
     
-    generateSOA(user, filteredDeliveries, deliveryDateRange);
+    generateSOA(user, filteredDeliveries, sanitationVisits || [], deliveryDateRange);
 
     toast({
       title: 'Download Started',
