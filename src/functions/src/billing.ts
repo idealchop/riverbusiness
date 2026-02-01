@@ -82,28 +82,50 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
             if (isToday(effectiveDate)) {
                 console.log(`Activating new plan for user ${userDoc.id}.`);
                 
-                // Always generate the invoice for the PREVIOUS period using the OLD plan
-                promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice));
-                
-                // Then, update the user's plan
-                const planUpdatePromise = userRef.update({
-                    plan: user.pendingPlan,
-                    isPrepaid: user.pendingPlan.isPrepaid || false,
-                    customPlanDetails: user.pendingPlan.isConsumptionBased ? { autoRefillEnabled: true } : user.customPlanDetails,
-                    pendingPlan: admin.firestore.FieldValue.delete(),
-                    planChangeEffectiveDate: admin.firestore.FieldValue.delete(),
-                }).then(() => {
-                     // Send notification *after* plan has been successfully updated
-                    return createNotification(userDoc.id, {
-                        type: 'general',
-                        title: 'Plan Updated',
-                        description: `Your new plan, ${user.pendingPlan.name}, is now active.`,
-                        data: { newPlan: user.pendingPlan.name }
-                    });
-                });
+                // Chain the promises to ensure sequential execution for this user
+                const processPlanChange = generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice)
+                    .then(() => {
+                        console.log(`Invoice for old plan generated for ${userDoc.id}. Now updating to new plan.`);
+                        
+                        const newPlanIsConsumption = user.pendingPlan.isConsumptionBased || false;
 
-                promises.push(planUpdatePromise);
-                console.log(`Plan for user ${userDoc.id} updated to ${user.pendingPlan.name}.`);
+                        // Preserve existing custom details, especially delivery schedule
+                        const newCustomDetails = { ...user.customPlanDetails, ...(user.pendingPlan.customPlanDetails || {}) };
+                        
+                        const updateData: any = {
+                            plan: user.pendingPlan,
+                            isPrepaid: user.pendingPlan.isPrepaid || false,
+                            customPlanDetails: newCustomDetails,
+                            pendingPlan: admin.firestore.FieldValue.delete(),
+                            planChangeEffectiveDate: admin.firestore.FieldValue.delete(),
+                        };
+
+                        if (newPlanIsConsumption) {
+                            // When switching to a consumption plan, the running liter balance is forfeited and reset.
+                            updateData.totalConsumptionLiters = 0;
+                            // Also clear out fixed-plan specific fields from custom details
+                            delete newCustomDetails.litersPerMonth;
+                            delete newCustomDetails.bonusLiters;
+                            newCustomDetails.lastMonthRollover = 0;
+                        }
+
+                        return userRef.update(updateData);
+                    })
+                    .then(() => {
+                        console.log(`Plan for user ${userDoc.id} updated to ${user.pendingPlan.name}.`);
+                        return createNotification(userDoc.id, {
+                            type: 'general',
+                            title: 'Plan Updated',
+                            description: `Your new plan, '${user.pendingPlan.name}', is now active.`,
+                            data: { newPlan: user.pendingPlan.name }
+                        });
+                    })
+                    .catch(error => {
+                        console.error(`Failed to process plan change for user ${userDoc.id}:`, error);
+                        // Optionally, notify admin of failure
+                    });
+
+                promises.push(processPlanChange);
                 continue; 
             }
         }
@@ -177,7 +199,8 @@ async function generateInvoiceForUser(
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         
-        const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
+        // Correctly include the previous month's rollover in the period's total allocation
+        const totalAllocationForPeriod = (monthlyAllocation * monthsToBill) + (user.customPlanDetails?.lastMonthRollover || 0);
         const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
         if (newRollover > 0) {
