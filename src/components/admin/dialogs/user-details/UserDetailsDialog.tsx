@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -170,6 +171,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         toast({ title: "Station Assigned" });
     };
 
+    const handleAssignParent = async (parentId: string) => {
+        if (!userDocRef) return;
+        await updateDoc(userDocRef, { parentId: parentId });
+        toast({ title: "Parent Account Assigned" });
+    };
+
     const handleContractUpload = async () => {
         if (!contractFile || !auth?.currentUser || !storage || !userDocRef) return;
         setIsUploadingContract(true);
@@ -239,6 +246,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
+                                    onAssignParent={handleAssignParent}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
@@ -278,12 +286,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <DialogFooter className="border-t p-4 flex justify-between items-center bg-background">
+                    <div className="border-t p-4 flex justify-between items-center bg-background">
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
                         </Button>
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 

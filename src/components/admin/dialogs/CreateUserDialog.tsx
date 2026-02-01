@@ -56,6 +56,14 @@ const newUserSchema = z.object({
     accountType: z.enum(['Single', 'Parent', 'Branch']).default('Single'),
     parentId: z.string().optional(),
     customPlanDetails: planDetailsSchema.optional(),
+  }).refine(data => {
+    if (data.accountType === 'Branch') {
+      return !!data.parentId;
+    }
+    return true;
+  }, {
+      message: "A parent account must be selected for a branch.",
+      path: ["parentId"],
   });
   
 type NewUserFormValues = z.infer<typeof newUserSchema>;
@@ -327,7 +335,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                         <DialogFooter>
                            <DialogClose asChild><Button type="button" variant="ghost">Close</Button></DialogClose>
                             {formStep > 0 && <Button type="button" variant="outline" onClick={() => setFormStep(p => p - 1)}>Back</Button>}
-                            {formStep === 0 ? <Button type="button" onClick={async () => { const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail', 'accountType']); if (isValid) setFormStep(1); }}>Next</Button> : <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>}
+                            {formStep === 0 ? <Button type="button" onClick={async () => { const isValid = await newUserForm.trigger(['clientId', 'name', 'businessName', 'address', 'contactNumber', 'businessEmail', 'accountType', 'parentId']); if (isValid) setFormStep(1); }}>Next</Button> : <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating Profile..." : "Create Unclaimed Profile"}</Button>}
                         </DialogFooter>
                     </form>
                 </Form>

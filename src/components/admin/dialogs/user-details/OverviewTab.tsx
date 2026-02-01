@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -40,6 +41,7 @@ interface OverviewTabProps {
     onContractFileChange: (file: File | null) => void;
     onContractUpload: () => void;
     onSetIsYearlyConsumptionOpen: (isOpen: boolean) => void;
+    onAssignParent: (parentId: string) => void;
 }
 
 export function OverviewTab({
@@ -56,6 +58,7 @@ export function OverviewTab({
     onContractFileChange,
     onContractUpload,
     onSetIsYearlyConsumptionOpen,
+    onAssignParent,
 }: OverviewTabProps) {
 
     const planDetails = user.customPlanDetails || {};
@@ -91,7 +94,27 @@ export function OverviewTab({
                                         <div><span className="font-medium text-muted-foreground">Email:</span> {user.email}</div>
                                         <div><span className="font-medium text-muted-foreground">Contact:</span> {user.contactNumber}</div>
                                         <div><span className="font-medium text-muted-foreground">Address:</span> {user.address}</div>
-                                        {user.accountType === 'Branch' && user.parentId && <div><span className="font-medium text-muted-foreground">Parent Account:</span> {allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</div>}
+                                        {user.accountType === 'Branch' && (
+                                            <div>
+                                                <Label className="font-medium text-muted-foreground">Parent Account</Label>
+                                                {user.parentId ? (
+                                                    <p className="font-semibold">{allUsers.find(u => u.id === user.parentId)?.businessName || 'N/A'}</p>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Select onValueChange={onAssignParent}>
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Assign a Parent Account..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {allUsers.filter(u => u.accountType === 'Parent').map(parent => (
+                                                                    <SelectItem key={parent.id} value={parent.id}>{parent.businessName} ({parent.clientId})</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
