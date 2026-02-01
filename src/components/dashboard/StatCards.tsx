@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -10,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, UserCheck, BarChart3, HelpCircle } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
-import { startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -234,7 +233,7 @@ export function StatCards({
                       <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
                   </div>
                   <div>
-                      <Label className="text-xs">Estimated Cost (Water Only)</Label>
+                      <Label className="text-xs">Estimated Cost for {format(new Date(), 'MMMM')}</Label>
                       <p className="text-3xl font-bold">
                       ₱{consumptionDetails.estimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2})}
                       </p>
