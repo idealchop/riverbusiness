@@ -758,7 +758,7 @@ export default function DashboardLayout({
                         <div className="space-y-4">
                              <h4 className="font-semibold">Upload Proof of Payment</h4>
                              <p className="text-sm text-muted-foreground">
-                                After paying, please upload a screenshot of your receipt. Your payment will be marked as "Pending Review" until our collection team verifies it.
+                                Please upload your proof of payment.
                              </p>
                             <div className="grid w-full max-w-sm items-center gap-1.5">
                                 <Label htmlFor="payment-proof">Receipt Screenshot</Label>
