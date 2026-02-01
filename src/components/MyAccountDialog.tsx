@@ -330,7 +330,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
 
     const breakdownDetails = useMemo(() => {
-        const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, isCurrent: false, isFirstInvoice: false, manualCharges: [], pendingCharges: [] };
+        const emptyDetails = { planCost: 0, gallonCost: 0, dispenserCost: 0, consumptionCost: 0, consumedLiters: 0, consumedContainers: 0, isCurrent: false, isFirstInvoice: false, manualCharges: [], pendingCharges: [] };
         if (!user || !state.invoiceForBreakdown || !deliveries) {
             return emptyDetails;
         }
@@ -352,6 +352,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         let planCost = 0;
         let consumptionCost = 0;
         let consumedLiters = 0;
+        let consumedContainers = 0;
         let gallonCost = 0;
         let dispenserCost = 0;
 
@@ -373,6 +374,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             const dDate = toSafeDate(d.date);
             return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
         });
+        consumedContainers = deliveriesInPeriod.reduce((sum, d) => sum + d.volumeContainers, 0);
         consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
         
         if (user.plan?.isConsumptionBased) {
@@ -398,6 +400,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             dispenserCost,
             consumptionCost,
             consumedLiters,
+            consumedContainers,
             isCurrent,
             isFirstInvoice,
             manualCharges,
@@ -1464,7 +1467,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                 )}
                  {breakdownDetails.consumptionCost > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Water Consumption ({breakdownDetails.consumedLiters.toLocaleString()} L)</span>
+                    <span className="text-muted-foreground">Water Consumption ({breakdownDetails.consumedLiters.toLocaleString()} L / {breakdownDetails.consumedContainers.toLocaleString()} Containers)</span>
                     <span className="font-medium">P{breakdownDetails.consumptionCost.toFixed(2)}</span>
                   </div>
                 )}
