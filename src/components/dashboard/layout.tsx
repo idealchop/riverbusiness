@@ -119,7 +119,7 @@ export default function DashboardLayout({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
   const [selectedInvoice, setSelectedInvoice] = React.useState<Payment | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<PaymentOption | null>(null);
-
+  const [isLiveSupportOpen, setIsLiveSupportOpen] = useState(false);
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = React.useState(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState('');
   const [feedbackRating, setFeedbackRating] = React.useState(0);
@@ -152,6 +152,14 @@ export default function DashboardLayout({
     window.addEventListener('open-my-account', handleOpenMyAccount);
     return () => {
         window.removeEventListener('open-my-account', handleOpenMyAccount);
+    };
+  }, []);
+  
+  useEffect(() => {
+    const handleOpenLiveSupport = () => setIsLiveSupportOpen(true);
+    window.addEventListener('open-live-support', handleOpenLiveSupport);
+    return () => {
+        window.removeEventListener('open-live-support', handleOpenLiveSupport);
     };
   }, []);
 
@@ -403,7 +411,8 @@ export default function DashboardLayout({
             </div>
           </Link>
           <div className="flex-1" />
-          <Dialog onOpenChange={(open) => {
+          <Dialog open={isLiveSupportOpen} onOpenChange={(open) => {
+              setIsLiveSupportOpen(open)
               if (!open && user?.hasUnreadAdminMessages && userDocRef) {
                   updateDoc(userDocRef, { hasUnreadAdminMessages: false });
               }
@@ -474,6 +483,11 @@ export default function DashboardLayout({
                 </div>
               </DialogContent>
           </Dialog>
+          <Button asChild variant="outline" size="icon" className="relative rounded-full">
+            <Link href="/documentation" target="_blank">
+              <FileText className="h-4 w-4" />
+            </Link>
+          </Button>
           <Popover onOpenChange={handleNotificationOpenChange}>
               <PopoverTrigger asChild>
               <Button
@@ -547,6 +561,7 @@ export default function DashboardLayout({
           <Button variant="outline" size="icon" className="sm:hidden rounded-full" onClick={handleComplianceClick}>
               <ShieldCheck className="h-4 w-4" />
           </Button>
+           <Separator orientation="vertical" className="h-8 mx-2 hidden sm:block" />
           <MyAccountDialog
             user={user}
             authUser={authUser}
@@ -567,6 +582,7 @@ export default function DashboardLayout({
                   </Avatar>
                 <div className="hidden sm:flex flex-col items-start">
                   <p className="font-semibold text-sm">{user?.businessName}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
             </div>
