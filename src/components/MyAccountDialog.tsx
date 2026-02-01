@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -195,6 +194,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
   const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 5;
+  const [isSoaDialogOpen, setIsSoaDialogOpen] = useState(false);
+  const [selectedSoaPeriod, setSelectedSoaPeriod] = useState('full');
   
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
@@ -637,32 +638,98 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     });
   };
 
+  const soaDateOptions = useMemo(() => {
+    if (!user?.createdAt) return [];
+    
+    const options: { label: string; value: string }[] = [];
+    const now = new Date();
+    let startDate = toSafeDate(user.createdAt);
+
+    if (!startDate || isNaN(startDate.getTime())) {
+        startDate = startOfMonth(now);
+    }
+    
+    let currentDate = startOfMonth(now);
+    
+    // Add months from current back to signup month
+    while (isAfter(currentDate, startDate) || isSameDay(currentDate, startDate)) {
+        options.push({
+            label: format(currentDate, 'MMMM yyyy'),
+            value: format(currentDate, 'yyyy-MM'),
+        });
+        currentDate = subMonths(currentDate, 1);
+    }
+    
+    // Insert special period for Dec 2025 - Jan 2026
+    options.push({ label: 'December 2025 - January 2026', value: '2025-12_2026-01' });
+
+    // Add Full History option at the start
+    options.unshift({ label: 'Full History', value: 'full' });
+
+    // Remove duplicates
+    const uniqueValues = new Set();
+    return options.filter(option => {
+        if (uniqueValues.has(option.value)) {
+            return false;
+        }
+        uniqueValues.add(option.value);
+        return true;
+    });
+  }, [user?.createdAt]);
+
+
   const handleDownloadMonthlySOA = () => {
-    if (!user || !deliveries) {
-      toast({ variant: 'destructive', title: 'Error', description: 'User data or deliveries not available.' });
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'User data not available.' });
       return;
     }
     
-    const billingPeriod = 'Full History';
-    const allSanitation = sanitationVisits || [];
-    const allCompliance = complianceReports || [];
-    const allPayments = paymentHistory || [];
+    let filteredDeliveries = deliveries || [];
+    let filteredSanitation = sanitationVisits || [];
+    let billingPeriod = 'Full History';
+    
+    if (selectedSoaPeriod !== 'full') {
+        let cycleStart, cycleEnd;
+        if (selectedSoaPeriod === '2025-12_2026-01') {
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = endOfMonth(new Date(2026, 0, 1));
+            billingPeriod = 'December 2025 - January 2026';
+        } else {
+            const [year, month] = selectedSoaPeriod.split('-').map(Number);
+            const date = new Date(year, month - 1);
+            cycleStart = startOfMonth(date);
+            cycleEnd = endOfMonth(date);
+            billingPeriod = format(date, 'MMMM yyyy');
+        }
 
-    const totalInvoicedAmount = allPayments.reduce((sum, inv) => sum + inv.amount, 0);
+        filteredDeliveries = (deliveries || []).filter(d => {
+            const dDate = toSafeDate(d.date);
+            return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
+        });
+        
+        filteredSanitation = (sanitationVisits || []).filter(v => {
+            const vDate = toSafeDate(v.scheduledDate);
+            return vDate ? isWithinInterval(vDate, { start: cycleStart, end: cycleEnd }) : false;
+        });
+    }
+    
+    const totalInvoicedAmount = (paymentHistory || []).reduce((sum, inv) => sum + inv.amount, 0);
 
     generateMonthlySOA({
       user,
-      deliveries: deliveries || [],
-      sanitationVisits: allSanitation,
-      complianceReports: allCompliance,
+      deliveries: filteredDeliveries,
+      sanitationVisits: filteredSanitation,
+      complianceReports: complianceReports || [],
       totalAmount: totalInvoicedAmount,
       billingPeriod,
     });
-
+    
     toast({
       title: 'Download Started',
-      description: `Your full Statement of Account is being generated.`,
+      description: `Your Statement of Account for ${billingPeriod} is being generated.`,
     });
+    
+    setIsSoaDialogOpen(false);
   };
 
   const handleViewInvoice = (invoice: Payment) => {
@@ -990,7 +1057,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                               <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
                             </Button>
                           ) : (
-                            <Button variant="default" onClick={handleDownloadMonthlySOA}>
+                            <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
                                 <Download className="mr-2 h-4 w-4" />
                                 Download SOA
                             </Button>
@@ -1793,6 +1860,34 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
               {isSubmittingTopUp ? "Submitting..." : "Submit for Review"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Download SOA Dialog */}
+      <Dialog open={isSoaDialogOpen} onOpenChange={setIsSoaDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Download Statement of Account</DialogTitle>
+                <DialogDescription>Select the billing period you would like to generate a statement for.</DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Select value={selectedSoaPeriod} onValueChange={setSelectedSoaPeriod}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a period..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {soaDateOptions.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsSoaDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleDownloadMonthlySOA}>Download</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
 

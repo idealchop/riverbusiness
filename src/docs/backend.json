@@ -23,6 +23,8 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the user was created." },
         "onboardingComplete": { "type": "boolean", "description": "Flag indicating if user has completed onboarding." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
+        "isPrepaid": { "type": "boolean", "description": "Indicates if the user is on a prepaid (credit-based) plan." },
+        "lastBilledDate": { "type": "string", "format": "date-time", "description": "Timestamp of the last time a monthly invoice was generated for this user."},
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
         "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
@@ -108,6 +110,7 @@
         "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
+        "isPrepaid": { "type": "boolean", "description": "Indicates if the user is on a prepaid (credit-based) plan." },
         "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
         "parentId": { "type": "string" },
@@ -259,9 +262,10 @@
         "properties": {
             "id": { "type": "string" },
             "userId": { "type": "string" },
-            "visitId": { "type": "string" }
+            "visitId": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the link was created, used for expiration." }
         },
-        "required": ["userId", "visitId"]
+        "required": ["userId", "visitId", "createdAt"]
     },
     "Schedule": {
       "title": "Schedule",
@@ -398,4 +402,3 @@
 }
 
     
-

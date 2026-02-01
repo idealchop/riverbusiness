@@ -3,6 +3,7 @@
 
 
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -104,6 +105,7 @@ export interface AppUser {
     role: 'Admin' | 'User';
     assignedWaterStationId?: string;
     createdAt: any;
+    lastBilledDate?: any;
     onboardingComplete?: boolean;
     plan?: any;
     clientType?: string | null;

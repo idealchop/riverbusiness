@@ -3,7 +3,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth, startOfYear } from 'date-fns';
 import { createNotification } from './index';
-import type { Notification } from './types'; 
+import type { Notification, ManualCharge } from './types'; 
 
 const db = admin.firestore();
 
@@ -88,6 +88,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                 // Then, update the user's plan
                 const planUpdatePromise = userRef.update({
                     plan: user.pendingPlan,
+                    isPrepaid: user.pendingPlan.isPrepaid || false,
                     customPlanDetails: user.pendingPlan.isConsumptionBased ? { autoRefillEnabled: true } : user.customPlanDetails,
                     pendingPlan: admin.firestore.FieldValue.delete(),
                     planChangeEffectiveDate: admin.firestore.FieldValue.delete(),
@@ -137,6 +138,8 @@ async function generateInvoiceForUser(
     const notificationsRef = userRef.collection('notifications');
     const deliveriesRef = userRef.collection('deliveries');
     const batch = db.batch();
+    const userUpdatePayload: {[key: string]: any} = {};
+
 
     let amount = 0;
     let description = '';
@@ -174,7 +177,6 @@ async function generateInvoiceForUser(
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         
-        // This is the new rollover, calculated from the period that just ended.
         const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
         const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
@@ -190,17 +192,11 @@ async function generateInvoiceForUser(
             console.log(`Generated rollover notification for user ${userRef.id} for ${newRollover} liters.`);
         }
         
-        // This is the starting balance for the NEW month, which begins today.
-        // It's the new monthly allocation plus any rollover from the previous period.
         const creditsForNewMonth = monthlyAllocation + newRollover;
 
-        // Set the user's balance for the new month. This is not an increment.
-        batch.update(userRef, {
-            totalConsumptionLiters: creditsForNewMonth,
-            'customPlanDetails.lastMonthRollover': newRollover,
-        });
+        userUpdatePayload.totalConsumptionLiters = creditsForNewMonth;
+        userUpdatePayload['customPlanDetails.lastMonthRollover'] = newRollover;
 
-        // Also create a notification for the credit refresh
          const creditRefreshNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
             type: 'general',
             title: 'Monthly Credits Refreshed',
@@ -215,17 +211,21 @@ async function generateInvoiceForUser(
     // Add one-time fees to the very first invoice
     if (isFirstInvoice && user.customPlanDetails) {
         let oneTimeFee = 0;
-        if (user.customPlanDetails.gallonPaymentType === 'One-Time') {
-            oneTimeFee += user.customPlanDetails.gallonPrice || 0;
-        }
-        if (user.customPlanDetails.dispenserPaymentType === 'One-Time') {
-            oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
-        }
-
+        if (user.customPlanDetails.gallonPaymentType === 'One-Time') oneTimeFee += user.customPlanDetails.gallonPrice || 0;
+        if (user.customPlanDetails.dispenserPaymentType === 'One-Time') oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
         if (oneTimeFee > 0) {
             amount += oneTimeFee;
             description += ` + One-Time Fees`;
         }
+    }
+    
+    // Add pending manual charges to the invoice
+    const pendingCharges: ManualCharge[] = user.pendingCharges || [];
+    const pendingChargesTotal = pendingCharges.reduce((sum: number, charge: ManualCharge) => sum + charge.amount, 0);
+    if (pendingChargesTotal > 0) {
+        amount += pendingChargesTotal;
+        description += ` + Manual Charges`;
+        userUpdatePayload.pendingCharges = admin.firestore.FieldValue.delete();
     }
 
 
@@ -239,6 +239,7 @@ async function generateInvoiceForUser(
             description: description,
             amount: amount,
             status: 'Upcoming',
+            manualCharges: pendingCharges, // Store the included charges
         };
         console.log(`Generating invoice ${invoiceId} for user ${userRef.id} for amount ${amount}.`);
 
@@ -253,11 +254,13 @@ async function generateInvoiceForUser(
         batch.set(notificationsRef.doc(), notificationWithMeta);
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
         
-        // Mark that the user has been billed
-        batch.update(userRef, { lastBilledDate: admin.firestore.FieldValue.serverTimestamp() });
+        userUpdatePayload.lastBilledDate = admin.firestore.FieldValue.serverTimestamp();
+    }
+    
+    // Commit all updates for the user at once
+    if (Object.keys(userUpdatePayload).length > 0) {
+        batch.update(userRef, userUpdatePayload);
     }
     
     return batch.commit();
 }
-
-    
