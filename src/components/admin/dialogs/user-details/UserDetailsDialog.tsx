@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -206,7 +206,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         <DialogTitle>User Account Management</DialogTitle>
                         <DialogDescription>View user details and perform administrative actions.</DialogDescription>
                     </DialogHeader>
-                    
                     <ScrollArea className="flex-1 px-6">
                         <Tabs defaultValue={initialTab || (isParent ? 'branch-deliveries' : 'overview')}>
                              <TabsList>
@@ -279,7 +278,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    
                     <div className="border-t p-4 flex justify-between items-center bg-background">
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
