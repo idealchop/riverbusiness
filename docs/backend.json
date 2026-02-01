@@ -43,7 +43,8 @@
             "deliveryDay": { "type": "string" },
             "deliveryTime": { "type": "string" },
             "autoRefillEnabled": { "type": "boolean" },
-            "lastMonthRollover": { "type": "number" }
+            "lastMonthRollover": { "type": "number" },
+            "branchCount": { "type": "number" }
           }
         },
         "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
@@ -424,4 +425,5 @@
     
 
     
+
 

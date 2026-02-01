@@ -1,4 +1,5 @@
 
+
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -268,9 +269,12 @@ export interface TopUpRequest {
   rejectionReason?: string;
 }
     
-export interface PublicSanitationLink {
-    id: string;
-    userId: string;
-    visitId: string;
-    createdAt: FieldValue | Timestamp;
-}
+
+    
+
+    
+
+    
+
+
+    
