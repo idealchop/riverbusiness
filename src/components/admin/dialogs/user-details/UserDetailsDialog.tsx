@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -279,7 +278,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <DialogFooter className="border-t pt-4 flex justify-between w-full">
+                    <DialogFooter className="border-t p-4 flex justify-between">
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
                         </Button>
