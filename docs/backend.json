@@ -24,7 +24,28 @@
         "onboardingComplete": { "type": "boolean", "description": "Flag indicating if user has completed onboarding." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "isPrepaid": { "type": "boolean", "description": "Indicates if the user is on a prepaid (credit-based) plan." },
-        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
+        "lastBilledDate": { "type": "string", "format": "date-time", "description": "Timestamp of the last time a monthly invoice was generated for this user."},
+        "customPlanDetails": {
+          "type": "object",
+          "description": "Details for a user's custom plan.",
+          "properties": {
+            "litersPerMonth": { "type": "number" },
+            "bonusLiters": { "type": "number" },
+            "gallonQuantity": { "type": "number" },
+            "gallonPrice": { "type": "number" },
+            "gallonPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
+            "dispenserQuantity": { "type": "number" },
+            "dispenserPrice": { "type": "number" },
+            "dispenserPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
+            "sanitationPrice": { "type": "number" },
+            "sanitationPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
+            "deliveryFrequency": { "type": "string" },
+            "deliveryDay": { "type": "string" },
+            "deliveryTime": { "type": "string" },
+            "autoRefillEnabled": { "type": "boolean" },
+            "lastMonthRollover": { "type": "number" }
+          }
+        },
         "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
         "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
         "contractStatus": { "type": "string", "description": "Status of the user's contract." },
@@ -403,3 +424,4 @@
     
 
     
+

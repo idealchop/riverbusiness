@@ -129,7 +129,7 @@ async function generateInvoiceForUser(
     monthsToBill: number = 1,
     isFirstInvoice: boolean
 ) {
-    // Skip admins, users without a plan, or branch accounts
+    // Skip admins, users without a plan, branch accounts, or prepaid users
     if (user.role === 'Admin' || !user.plan || user.accountType === 'Branch' || user.isPrepaid) {
         return;
     }
@@ -177,7 +177,7 @@ async function generateInvoiceForUser(
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
         
-        const totalAllocationForPeriod = monthlyAllocation * monthsToBill;
+        const totalAllocationForPeriod = (monthlyAllocation * monthsToBill) + (user.customPlanDetails?.lastMonthRollover || 0);
         const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
         if (newRollover > 0) {
