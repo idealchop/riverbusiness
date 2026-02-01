@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -107,12 +101,17 @@ export interface AppUser {
     createdAt: any;
     lastBilledDate?: any;
     onboardingComplete?: boolean;
-    plan?: any;
+    plan?: {
+        name: string;
+        price: number;
+        isConsumptionBased: boolean;
+    };
     clientType?: string | null;
     isPrepaid?: boolean;
     customPlanDetails?: {
         litersPerMonth?: number;
         bonusLiters?: number;
+        pricePerLiter?: number;
         gallonQuantity?: number;
         gallonPrice?: number;
         gallonPaymentType?: 'Monthly' | 'One-Time';
@@ -126,6 +125,7 @@ export interface AppUser {
         deliveryTime?: string;
         autoRefillEnabled?: boolean;
         lastMonthRollover?: number;
+        branchCount?: number;
     };
     currentContractUrl?: string;
     photoURL?: string;
@@ -267,17 +267,9 @@ export interface TopUpRequest {
   rejectionReason?: string;
 }
     
-
-    
 export interface PublicSanitationLink {
     id: string;
     userId: string;
     visitId: string;
     createdAt: FieldValue | Timestamp;
 }
-    
-
-    
-
-
-    

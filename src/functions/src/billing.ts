@@ -84,18 +84,22 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                 
                 // Chain the promises to ensure sequential execution for this user
                 const processPlanChange = generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice)
-                    .then(() => {
-                        console.log(`Invoice for old plan generated for ${userDoc.id}. Now updating to new plan.`);
+                    .then(() => userRef.get()) // Re-fetch the user document to get fresh data
+                    .then((updatedUserSnap) => {
+                        if (!updatedUserSnap.exists()) throw new Error(`User ${userDoc.id} not found after invoice generation.`);
+                        const updatedUser = updatedUserSnap.data()!;
+                        const pendingPlan = updatedUser.pendingPlan; // use fresh pending plan
                         
-                        const newPlanIsConsumption = user.pendingPlan.isConsumptionBased || false;
+                        console.log(`Invoice for old plan generated for ${userDoc.id}. Now updating to new plan: ${pendingPlan.name}.`);
+                        
+                        const newPlanIsConsumption = pendingPlan.isConsumptionBased || false;
 
-                        // Preserve existing custom details, especially delivery schedule
-                        const newCustomDetails = { ...user.customPlanDetails, ...(user.pendingPlan.customPlanDetails || {}) };
+                        // Preserve existing custom details, especially delivery schedule, but allow pending plan to override
+                        const newCustomDetails = { ...updatedUser.customPlanDetails, ...(pendingPlan.customPlanDetails || {}) };
                         
                         const updateData: any = {
-                            plan: user.pendingPlan,
-                            isPrepaid: user.pendingPlan.isPrepaid || false,
-                            customPlanDetails: newCustomDetails,
+                            plan: pendingPlan,
+                            isPrepaid: pendingPlan.isPrepaid || false,
                             pendingPlan: admin.firestore.FieldValue.delete(),
                             planChangeEffectiveDate: admin.firestore.FieldValue.delete(),
                         };
@@ -107,17 +111,24 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                             delete newCustomDetails.litersPerMonth;
                             delete newCustomDetails.bonusLiters;
                             newCustomDetails.lastMonthRollover = 0;
+                        } else {
+                            // When switching TO a fixed plan, reset rollover to 0 but set new monthly balance
+                            const newLiters = newCustomDetails.litersPerMonth || 0;
+                            const newBonus = newCustomDetails.bonusLiters || 0;
+                            updateData.totalConsumptionLiters = newLiters + newBonus;
+                            newCustomDetails.lastMonthRollover = 0;
                         }
+                        updateData.customPlanDetails = newCustomDetails;
 
-                        return userRef.update(updateData);
+                        return userRef.update(updateData).then(() => pendingPlan); // Pass pendingPlan to the next .then
                     })
-                    .then(() => {
-                        console.log(`Plan for user ${userDoc.id} updated to ${user.pendingPlan.name}.`);
+                    .then((activatedPlan) => {
+                        console.log(`Plan for user ${userDoc.id} updated to ${activatedPlan.name}.`);
                         return createNotification(userDoc.id, {
                             type: 'general',
                             title: 'Plan Updated',
-                            description: `Your new plan, '${user.pendingPlan.name}', is now active.`,
-                            data: { newPlan: user.pendingPlan.name }
+                            description: `Your new plan, '${activatedPlan.name}', is now active.`,
+                            data: { newPlan: activatedPlan.name }
                         });
                     })
                     .catch(error => {
