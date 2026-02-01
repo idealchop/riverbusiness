@@ -367,6 +367,10 @@
       "schema": { "$ref": "#/entities/Delivery" },
       "description": "Subcollection for a user's delivery records."
     },
+    "/users/{userId}/branchDeliveries/{deliveryId}": {
+      "schema": { "$ref": "#/entities/Delivery" },
+      "description": "For Parent accounts, this is a subcollection containing copies of all deliveries made to their linked Branch accounts."
+    },
     "/users/{userId}/payments/{paymentId}": {
       "schema": { "$ref": "#/entities/Payment" },
       "description": "Subcollection for a user's payment history."
@@ -427,3 +431,6 @@
     
 
 
+
+
+    

@@ -38,7 +38,7 @@ export function BranchDeliveriesTab({
 
     const parentDeliveriesQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
-        return query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc'));
+        return query(collection(firestore, 'users', user.id, 'branchDeliveries'), orderBy('date', 'desc'));
     }, [firestore, user]);
 
     const { data: branchDeliveriesData, isLoading: deliveriesLoading } = useCollection<Delivery>(parentDeliveriesQuery);
@@ -166,3 +166,5 @@ export function BranchDeliveriesTab({
         </Card>
     );
 }
+
+    
