@@ -278,7 +278,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <DialogFooter className="border-t p-4 flex justify-between">
+                    <DialogFooter className="border-t p-4 flex justify-between items-center w-full">
                         <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
                             <Edit className="mr-2 h-4 w-4" /> Change Plan
                         </Button>
