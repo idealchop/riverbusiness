@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -286,7 +286,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                         </Button>
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     </div>
-
                 </DialogContent>
             </Dialog>
 
