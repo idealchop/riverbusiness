@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -86,6 +85,14 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const { data: sanitationVisitsData } = useCollection<SanitationVisit>(sanitationVisitsQuery);
     const topUpRequestsQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [userDocRef]);
     const { data: topUpRequestsData } = useCollection<TopUpRequest>(topUpRequestsQuery);
+
+     useEffect(() => {
+        const handleOpenChangePlan = () => setIsChangePlanOpen(true);
+        window.addEventListener('admin-open-change-plan-dialog', handleOpenChangePlan);
+        return () => {
+            window.removeEventListener('admin-open-change-plan-dialog', handleOpenChangePlan);
+        };
+    }, []);
 
     const consumedLitersThisMonth = useMemo(() => {
         if (!userDeliveriesData) return 0;
@@ -253,7 +260,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractFileChange={setContractFile}
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
-                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
