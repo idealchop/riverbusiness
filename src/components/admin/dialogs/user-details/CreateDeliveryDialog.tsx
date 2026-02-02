@@ -17,13 +17,11 @@ import { Progress } from '@/components/ui/progress';
 import { AppUser, Delivery } from '@/lib/types';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, FileText, Trash2 } from 'lucide-react';
-import Image from 'next/image';
-import { createClientNotification } from '@/lib/notifications';
 
 const deliverySchema = z.object({
     id: z.string().min(1, "Tracking # is required."),
@@ -73,14 +71,13 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
         if (!firestore || !auth?.currentUser || !storage) return;
         setIsSubmitting(true);
 
-        const userDocRef = doc(firestore, 'users', user.id);
         const { id: deliveryId, ...restOfValues } = values;
         const isUpdate = !!deliveryToEdit;
-        const statusChanged = isUpdate && deliveryToEdit.status !== values.status;
-
+        const isBranch = user.accountType === 'Branch' && user.parentId;
+        
         try {
-            if (!isUpdate) {
-                const newDocRef = doc(userDocRef, 'deliveries', deliveryId);
+             if (!isUpdate) {
+                const newDocRef = doc(firestore, 'users', user.id, 'deliveries', deliveryId);
                 const docSnap = await getDoc(newDocRef);
                 if (docSnap.exists()) {
                     toast({
@@ -93,15 +90,14 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 }
             }
 
-            const deliveryRef = doc(userDocRef, 'deliveries', deliveryId);
             const deliveryData: Partial<Delivery> = {
                 ...restOfValues,
                 id: deliveryId,
                 userId: user.id,
                 date: values.date.toISOString(),
             };
-            
-            if (user.accountType === 'Branch' && user.parentId) {
+
+            if (isBranch) {
                 deliveryData.parentId = user.parentId;
             }
 
@@ -113,38 +109,18 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 toast({ title: 'Proof upload complete.' });
             }
 
-            await setDoc(deliveryRef, deliveryData, { merge: true });
+            const batch = writeBatch(firestore);
+            
+            const branchDeliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryId);
+            batch.set(branchDeliveryRef, deliveryData, { merge: true });
 
-            const adminId = auth.currentUser.uid;
-
-            if (statusChanged) {
-                await createClientNotification(firestore, user.id, {
-                    type: 'delivery',
-                    title: `Delivery ${values.status}`,
-                    description: `Your delivery of ${values.volumeContainers} containers is now ${values.status}.`,
-                    data: { deliveryId: deliveryId }
-                });
-                await createClientNotification(firestore, adminId, {
-                    type: 'delivery',
-                    title: 'Delivery Status Updated',
-                    description: `Delivery for ${user.businessName} is now ${values.status}.`,
-                    data: { userId: user.id, deliveryId: deliveryId }
-                });
-            } else if (!isUpdate) {
-                 await createClientNotification(firestore, user.id, {
-                    type: 'delivery',
-                    title: 'Delivery Scheduled',
-                    description: `A new delivery of ${values.volumeContainers} containers has been scheduled.`,
-                    data: { deliveryId },
-                });
-                 await createClientNotification(firestore, adminId, {
-                    type: 'delivery',
-                    title: `Delivery Created`,
-                    description: `A delivery for ${user.businessName} (${user.accountType || 'Single'}) has been scheduled.`,
-                    data: { deliveryId, userId: user.id },
-                });
+            if (isBranch) {
+                const parentDeliveryRef = doc(firestore, 'users', user.parentId!, 'branchDeliveries', deliveryId);
+                batch.set(parentDeliveryRef, deliveryData, { merge: true });
             }
-
+            
+            await batch.commit();
+            
             toast({ title: isUpdate ? "Delivery Updated" : "Delivery Created" });
             onOpenChange(false);
 
@@ -280,4 +256,3 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
         </AlertDialog>
     );
 }
-    
