@@ -398,16 +398,10 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen }) => (
                 <Repeat className="mr-2 h-4 w-4" />
                 Change Plan
             </Button>
-            {user.accountType === 'Parent' ? (
-              <Button variant="default" onClick={() => dispatch({type: 'SET_TOPUP_DIALOG', payload: true})}>
-                <Plus className="mr-2 h-4 w-4" /> Top-Up Balance
-              </Button>
-            ) : (
-              <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download SOA
-              </Button>
-            )}
+            <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
+                <Download className="mr-2 h-4 w-4" />
+                Download SOA
+            </Button>
           </div>
         </CardContent>
     </Card>
