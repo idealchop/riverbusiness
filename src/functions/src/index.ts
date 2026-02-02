@@ -65,179 +65,162 @@ export async function createNotification(userId: string, notificationData: Omit<
 
 /**
  * Cloud Function to create a notification when a delivery is first created.
+ * For Branch accounts, it copies the delivery to the Parent account.
  */
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
-  try {
+    logger.info(`ondeliverycreate triggered for path: ${event.data?.ref.path}`);
     if (!event.data) {
-      logger.info("No data in event, exiting function.");
-      return;
+        logger.warn("No data in event, exiting function.");
+        return;
     }
 
-    const userId = event.params.userId;
+    const branchUserId = event.params.userId;
     const deliveryId = event.params.deliveryId;
-    const delivery = event.data.data() as Delivery;
-    logger.info(`Processing delivery ${deliveryId} for user ${userId}.`);
+    const deliveryData = event.data.data() as Delivery;
 
-    const userDoc = await db.collection("users").doc(userId).get();
-    const userData = userDoc.data();
+    try {
+        const branchUserDoc = await db.collection("users").doc(branchUserId).get();
+        if (!branchUserDoc.exists) {
+            logger.error(`Branch user document not found for userId: ${branchUserId}.`);
+            return;
+        }
+        const branchUserData = branchUserDoc.data()!;
 
-    if (!userData) {
-      logger.error(`User document not found for userId: ${userId}. Cannot process delivery notifications.`);
-      return;
-    }
+        // Check if the user is a Branch account with a linked Parent
+        if (branchUserData.accountType === 'Branch' && branchUserData.parentId) {
+            const parentId = branchUserData.parentId;
+            logger.info(`Delivery for branch ${branchUserId}. Parent is ${parentId}.`);
 
-    const adminId = await getAdminId();
-    let adminNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> | null = null;
-    const notificationsToSend: Promise<void>[] = [];
+            const parentRef = db.collection('users').doc(parentId);
+            const parentDoc = await parentRef.get();
 
-    // Always create notification for the user receiving the delivery
-    notificationsToSend.push(createNotification(userId, {
-      type: 'delivery',
-      title: 'Delivery Scheduled',
-      description: `A new delivery of ${delivery.volumeContainers} containers has been scheduled.`,
-      data: { deliveryId },
-    }));
+            if (!parentDoc.exists()) {
+                logger.error(`Parent user ${parentId} not found for branch ${branchUserId}.`);
+                return;
+            }
 
-    // Logic for different account types
-    if (userData.accountType === 'Branch' && userData.parentId) {
-      const parentRef = db.collection('users').doc(userData.parentId);
-      const parentDoc = await parentRef.get();
-      const parentData = parentDoc.data();
+            // --- Primary Logic: Copy delivery record ---
+            // This is the most critical part. It must succeed.
+            const parentDeliveryRef = parentRef.collection('branchDeliveries').doc(deliveryId);
+            const deliveryDataForParent = { ...deliveryData, parentId: parentId };
+            await parentDeliveryRef.set(deliveryDataForParent);
+            logger.info(`Successfully copied delivery ${deliveryId} to parent ${parentId}'s branchDeliveries.`);
 
-      if (parentData) {
-        const litersDelivered = containerToLiter(delivery.volumeContainers);
-        const pricePerLiter = parentData.plan?.price || 0;
-        const deliveryCost = litersDelivered * pricePerLiter;
+            // --- Secondary Logic: Billing & Notifications (in separate try/catch) ---
+            try {
+                const parentData = parentDoc.data()!;
+                const litersDelivered = containerToLiter(deliveryData.volumeContainers);
+                const pricePerLiter = parentData.plan?.price || 0;
+                const deliveryCost = litersDelivered * pricePerLiter;
 
-        // Create a batch to perform multiple writes atomically
-        const batch = db.batch();
-        
-        // 1. Copy delivery to parent's 'branchDeliveries' subcollection
-        const parentDeliveryRef = parentRef.collection('branchDeliveries').doc(deliveryId);
-        batch.set(parentDeliveryRef, { ...delivery, parentId: userData.parentId });
+                if (deliveryCost > 0) {
+                    const billingBatch = db.batch();
+                    billingBatch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
+                    
+                    const transactionRef = parentRef.collection('transactions').doc();
+                    billingBatch.set(transactionRef, {
+                        id: transactionRef.id,
+                        date: deliveryData.date,
+                        type: 'Debit',
+                        amountCredits: deliveryCost,
+                        description: `Delivery to ${branchUserData.businessName} (${litersDelivered.toFixed(1)}L)`,
+                        branchId: branchUserId,
+                        branchName: branchUserData.businessName,
+                    });
+                    await billingBatch.commit();
+                    logger.info(`Billing processed for delivery ${deliveryId}. Cost: ${deliveryCost}`);
+                }
 
-        if (deliveryCost > 0) {
-            // 2. Debit parent's credit balance
-            batch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
-            
-            // 3. Log the transaction on the parent account
-            const transactionRef = parentRef.collection('transactions').doc();
-            batch.set(transactionRef, {
-                id: transactionRef.id,
-                date: delivery.date,
-                type: 'Debit',
-                amountCredits: deliveryCost,
-                description: `Delivery to ${userData.businessName} (${litersDelivered.toFixed(1)}L)`,
-                branchId: userId,
-                branchName: userData.businessName
-            });
+                // Notify Parent
+                createNotification(parentId, {
+                    type: 'delivery',
+                    title: 'Branch Consumption',
+                    description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${branchUserData.businessName}.`,
+                    data: { deliveryId: deliveryId, branchUserId: branchUserId },
+                });
+            } catch (billingError) {
+                logger.error(`Secondary logic (billing/notifications) failed for delivery ${deliveryId}, but record was copied. Error:`, billingError);
+            }
+        } else {
+             // Logic for Single/Prepaid accounts
+             logger.info(`Delivery for a non-branch user ${branchUserId}.`);
+             if (branchUserData.accountType === 'Single' && !branchUserData.isPrepaid && !branchUserData.plan?.isConsumptionBased) {
+                const litersDelivered = containerToLiter(deliveryData.volumeContainers);
+                await db.collection('users').doc(branchUserId).update({
+                    totalConsumptionLiters: increment(-litersDelivered)
+                });
+                logger.info(`Decremented liter balance for fixed-plan user ${branchUserId}.`);
+            }
         }
         
-        // Commit the batch
-        await batch.commit();
-
-        // Schedule Parent Notification
-        if (deliveryCost > 0) {
-          notificationsToSend.push(createNotification(userData.parentId, {
+        // Notify the user who received the delivery
+        createNotification(branchUserId, {
             type: 'delivery',
-            title: 'Branch Consumption',
-            description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${userData.businessName}.`,
-            data: { deliveryId, branchUserId: userId },
-          }));
-        }
-        
-        // Prepare Admin Notification for Branch Delivery
-        adminNotification = {
-          type: 'delivery',
-          title: 'Branch Delivery Created',
-          description: `Delivery for ${userData.businessName} (Branch) scheduled, covered by ${parentData.businessName}.`,
-          data: { deliveryId, userId },
-        };
-      } else {
-         logger.error(`Parent user ${userData.parentId} not found for branch ${userId}.`);
-      }
-    } else { // Single or Parent account delivery
-      if (userData.accountType === 'Single' && !userData.plan?.isConsumptionBased) {
-        // Decrement liter balance for fixed-plan single users
-        const litersDelivered = containerToLiter(delivery.volumeContainers);
-        await db.collection('users').doc(userId).update({
-          totalConsumptionLiters: increment(-litersDelivered)
+            title: 'Delivery Scheduled',
+            description: `A new delivery of ${deliveryData.volumeContainers} containers has been scheduled.`,
+            data: { deliveryId: deliveryId },
         });
-      }
-      
-      // Prepare Admin Notification for Single/Parent Delivery
-      adminNotification = {
-        type: 'delivery',
-        title: `Delivery Created`,
-        description: `A delivery for ${userData.businessName} (${userData.accountType || 'Single'}) has been scheduled.`,
-        data: { deliveryId, userId },
-      };
-    }
-    
-    // Schedule admin notification if it was prepared
-    if (adminId && adminNotification) {
-      notificationsToSend.push(createNotification(adminId, adminNotification));
-    }
-    
-    // Await all scheduled notifications
-    await Promise.all(notificationsToSend);
-    logger.info(`Successfully processed notifications for delivery ${deliveryId}.`);
 
-  } catch (error) {
-    logger.error(`Error in ondeliverycreate for event ID ${event.id}:`, error);
-  }
+    } catch (error) {
+        logger.error(`CRITICAL ERROR in ondeliverycreate for ${event.data.ref.path}:`, error);
+    }
 });
 
 
 /**
- * Cloud Function to create a notification when a delivery is updated.
+ * Cloud Function to update the delivery copy in the parent's record when a branch delivery is updated.
  */
 export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{deliveryId}", async (event) => {
-  try {
+    logger.info(`ondeliveryupdate triggered for path: ${event.data?.after.ref.path}`);
     if (!event.data) return;
 
     const before = event.data.before.data();
     const after = event.data.after.data() as Delivery;
 
-    // Only notify if the status has changed.
+    // Only proceed if the status has actually changed.
     if (before.status === after.status) {
+        logger.info('Status has not changed. Exiting function.');
         return;
     }
     
-    const userId = event.params.userId;
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
+    const branchUserId = event.params.userId;
+    const deliveryId = event.params.deliveryId;
 
-    // If it's a branch delivery, update the copy in the parent's collection as well
-    if (after.parentId) {
-        const parentDeliveryRef = db.collection('users').doc(after.parentId).collection('branchDeliveries').doc(event.params.deliveryId);
-        await parentDeliveryRef.update({ status: after.status }).catch(err => {
-            logger.error(`Failed to update branch delivery copy for parent ${after.parentId}:`, err);
-        });
-    }
+    try {
+        const branchUserDoc = await db.collection('users').doc(branchUserId).get();
+        if (!branchUserDoc.exists()) {
+            logger.error(`Branch user document not found for userId: ${branchUserId}.`);
+            return;
+        }
+        const branchUserData = branchUserDoc.data()!;
 
-    // Notify User
-    await createNotification(userId, {
-        type: 'delivery',
-        title: `Delivery ${after.status}`,
-        description: `Your delivery of ${after.volumeContainers} containers is now ${after.status}.`,
-        data: { deliveryId: event.params.deliveryId }
-    });
-    
-    // Notify Admin
-    const adminId = await getAdminId();
-    if (adminId && userData) {
-        await createNotification(adminId, {
+        // Check if the updated delivery belongs to a branch and has a parent.
+        if (branchUserData.accountType === 'Branch' && branchUserData.parentId) {
+            const parentId = branchUserData.parentId;
+            logger.info(`Updating status for branch delivery. Parent is ${parentId}.`);
+            
+            const parentDeliveryRef = db.collection('users').doc(parentId).collection('branchDeliveries').doc(deliveryId);
+            
+            // Update only the status field on the copied record.
+            await parentDeliveryRef.update({ status: after.status });
+            logger.info(`Successfully updated status to "${after.status}" on parent's copy of delivery ${deliveryId}.`);
+        } else {
+             logger.info(`Delivery update for non-branch user ${branchUserId}. No parent copy to update.`);
+        }
+        
+        // Always notify the user whose delivery status was updated.
+        await createNotification(branchUserId, {
             type: 'delivery',
-            title: 'Delivery Status Updated',
-            description: `Delivery for ${userData.businessName} is now ${after.status}.`,
-            data: { userId, deliveryId: event.params.deliveryId }
+            title: `Delivery ${after.status}`,
+            description: `Your delivery of ${after.volumeContainers} containers is now ${after.status}.`,
+            data: { deliveryId: deliveryId }
         });
+
+    } catch (error) {
+        logger.error(`CRITICAL ERROR in ondeliveryupdate for ${event.data.after.ref.path}:`, error);
     }
-  } catch (error) {
-      logger.error(`Error in ondeliveryupdate for event ID ${event.id}:`, error);
-  }
 });
+
 
 /**
  * Cloud Function to notify admin when a user submits a payment for review.
