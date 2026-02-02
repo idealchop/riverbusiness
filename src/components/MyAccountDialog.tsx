@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -23,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup, setDoc, writeBatch } from 'firebase/firestore';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ManualCharge } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
@@ -429,7 +430,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
   </div>
 );
 
-const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages, isPayday }) => (
+const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }) => (
     <div className="space-y-4">
     {user.accountType === 'Branch' && (
         <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
@@ -491,11 +492,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMont
                                 {invoice.status === 'Covered by Parent Account' ? (
                                     <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                 ) : isCurrentEst ? (
-                                    isPayday ? (
-                                        <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground">Payment starts on the 1st</span>
-                                    )
+                                    <Button size="sm" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                                 ) : invoice.status === 'Paid' ? (
                                     <Button size="sm" variant="outline" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                                 ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') ? (
@@ -561,11 +558,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMont
                             {invoice.status === 'Covered by Parent Account' ? (
                                 <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                             ) : isCurrentEst ? (
-                                isPayday ? (
-                                    <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
-                                ) : (
-                                    <div className="text-xs text-muted-foreground text-center pt-2">Payment starts on the 1st</div>
-                                )
+                                <Button size="sm" className="w-full" onClick={() => onPayNow(invoice)}>Pay Now</Button>
                             ) : (invoice.status === 'Paid') ? (
                                 <Button size="sm" variant="outline" className="w-full" onClick={() => handleViewInvoice(invoice)}>View Invoice</Button>
                             ) : (invoice.status === 'Upcoming' || invoice.status === 'Overdue') && (
@@ -787,7 +780,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const gcashQr = PlaceHolderImages.find((p) => p.id === 'gcash-qr-payment');
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
-  const isPayday = isToday(startOfMonth(new Date()));
 
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
@@ -1481,7 +1473,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     invoiceCurrentPage={invoiceCurrentPage}
                     setInvoiceCurrentPage={setInvoiceCurrentPage}
                     totalInvoicePages={totalInvoicePages}
-                    isPayday={isPayday}
                   />
                  </TabsContent>
                  <TabsContent value="transactions" className="py-4 space-y-4">
@@ -1978,3 +1969,4 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
+
