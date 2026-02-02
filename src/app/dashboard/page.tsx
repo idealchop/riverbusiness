@@ -37,10 +37,12 @@ export default function DashboardPage() {
 
   const isParent = user?.accountType === 'Parent';
 
-  const deliveriesQuery = useMemoFirebase(
-    () => (firestore && user ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null),
-    [firestore, user]
-  );
+  const deliveriesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    const collectionName = user.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
+    return query(collection(firestore, 'users', user.id, collectionName), orderBy('date', 'desc'));
+  }, [firestore, user]);
+
   const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
   const stationDocRef = useMemoFirebase(
