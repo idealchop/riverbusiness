@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -7,10 +6,44 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Delivery, AppUser } from '@/lib/types';
-import { format, subDays, startOfMonth, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { format, subDays, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { History, Users } from 'lucide-react';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+// Custom Tooltip component
+const CustomTooltip = ({ active, payload, label, isParent }: { active?: boolean, payload?: any[], label?: string, isParent?: boolean }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        const totalLiters = data.value || 0;
+        const totalContainers = data.containers || 0;
+        const branchBreakdown = data.branchBreakdown || {};
+
+        const tooltipLabel = data.name;
+
+        return (
+            <div className="p-2 text-xs bg-background border rounded-lg shadow-lg min-w-[150px]">
+                <p className="font-bold mb-1">{tooltipLabel}</p>
+                <p className="text-sm text-primary font-semibold">{`${totalLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L`} <span className="text-muted-foreground font-normal">/ {`${totalContainers.toLocaleString()} Containers`}</span></p>
+                {isParent && Object.keys(branchBreakdown).length > 0 && (
+                    <div className="mt-2 pt-2 border-t">
+                        <p className="text-xs font-bold mb-1">Breakdown by Branch:</p>
+                        <ul className="space-y-0.5">
+                            {Object.entries(branchBreakdown).map(([branchName, branchData]: [string, any]) => (
+                                <li key={branchName} className="flex justify-between items-center">
+                                    <span>{branchName}:</span>
+                                    <span className="font-medium">{branchData.liters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        );
+    }
+    return null;
+};
+
 
 interface ConsumptionAnalyticsProps {
   deliveries: Delivery[] | null;
@@ -22,6 +55,14 @@ interface ConsumptionAnalyticsProps {
 export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = false, branches = [] }: ConsumptionAnalyticsProps) {
   const [analyticsFilter, setAnalyticsFilter] = useState<'weekly' | 'monthly' | 'yearly' | '2025'>('monthly');
 
+  const branchIdToNameMap = useMemo(() => {
+    if (!branches) return {};
+    return branches.reduce((acc, branch) => {
+        acc[branch.id] = branch.businessName;
+        return acc;
+    }, {} as Record<string, string>);
+  }, [branches]);
+  
   const consumptionChartData = useMemo(() => {
     const sourceDeliveries = deliveries || [];
     
@@ -58,19 +99,28 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
 
     if (analyticsFilter === 'weekly') {
       const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
-      return last7Days.map((date, index) => {
+      return last7Days.map((date) => {
           const deliveriesOnDay = filteredDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
           const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
           const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
+          const branchBreakdown: { [key: string]: { liters: number; containers: number } } = {};
+          if (isParent) {
+            deliveriesOnDay.forEach(d => {
+              const branchName = branchIdToNameMap[d.userId] || `Unknown (${d.userId.substring(0,5)})`;
+              if (!branchBreakdown[branchName]) branchBreakdown[branchName] = { liters: 0, containers: 0 };
+              branchBreakdown[branchName].liters += containerToLiter(d.volumeContainers);
+              branchBreakdown[branchName].containers += d.volumeContainers;
+            });
+          }
           return {
-              name: `${format(date, 'EEE')}-${index}`,
+              name: format(date, 'MMM d'),
               displayName: format(date, 'EEE').charAt(0),
               value: totalLiters,
               containers: totalContainers,
+              branchBreakdown,
           };
       });
     } else if (analyticsFilter === 'monthly') {
-        const firstDay = startOfMonth(now);
         const weeksInMonth = getWeekOfMonth(endOfMonth(now));
 
         const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
@@ -78,35 +128,55 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
           displayName: `W${i + 1}`,
           value: 0,
           containers: 0,
+          branchBreakdown: {} as { [key: string]: { liters: number; containers: number } },
         }));
 
         filteredDeliveries.forEach(d => {
           const deliveryDate = new Date(d.date);
           const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
           if(weeklyData[weekOfMonth]) {
-              weeklyData[weekOfMonth].value += containerToLiter(d.volumeContainers);
+              const liters = containerToLiter(d.volumeContainers);
+              weeklyData[weekOfMonth].value += liters;
               weeklyData[weekOfMonth].containers += d.volumeContainers;
+              if (isParent) {
+                const branchName = branchIdToNameMap[d.userId] || `Unknown (${d.userId.substring(0,5)})`;
+                if (!weeklyData[weekOfMonth].branchBreakdown[branchName]) {
+                  weeklyData[weekOfMonth].branchBreakdown[branchName] = { liters: 0, containers: 0 };
+                }
+                weeklyData[weekOfMonth].branchBreakdown[branchName].liters += liters;
+                weeklyData[weekOfMonth].branchBreakdown[branchName].containers += d.volumeContainers;
+              }
           }
         });
         return weeklyData;
     } else { // yearly or 2025
         const year = analyticsFilter === '2025' ? 2025 : getYear(now);
         const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-            name: format(new Date(year, i), 'MMM'),
+            name: format(new Date(year, i), 'MMMM'),
             displayName: format(new Date(year, i), 'MMM'),
             value: 0,
             containers: 0,
+            branchBreakdown: {} as { [key: string]: { liters: number; containers: number } },
         }));
 
         filteredDeliveries.forEach(d => {
             const deliveryDate = new Date(d.date);
             const month = getMonth(deliveryDate);
-            monthlyData[month].value += containerToLiter(d.volumeContainers);
+            const liters = containerToLiter(d.volumeContainers);
+            monthlyData[month].value += liters;
             monthlyData[month].containers += d.volumeContainers;
+            if (isParent) {
+              const branchName = branchIdToNameMap[d.userId] || `Unknown (${d.userId.substring(0,5)})`;
+              if (!monthlyData[month].branchBreakdown[branchName]) {
+                monthlyData[month].branchBreakdown[branchName] = { liters: 0, containers: 0 };
+              }
+              monthlyData[month].branchBreakdown[branchName].liters += liters;
+              monthlyData[month].branchBreakdown[branchName].containers += d.volumeContainers;
+            }
         });
         return monthlyData;
     }
-  }, [deliveries, analyticsFilter]);
+  }, [deliveries, analyticsFilter, isParent, branchIdToNameMap]);
 
   const cardTitle = isParent ? 'Branch Consumption' : 'Consumption Analytics';
   const cardDescription = isParent ? 'Monitor total water usage across all your branches over time.' : 'A look at your water usage over time.';
@@ -159,16 +229,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                 />
                 <Tooltip
                     cursor={{ fill: 'hsla(var(--accent))' }}
-                    contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: 'var(--radius)',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number, name, props) => {
-                        const containers = props.payload.containers || 0;
-                        return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, isParent ? 'Total Consumption' : 'Consumption'];
-                    }}
+                    content={<CustomTooltip isParent={isParent} />}
                 />
                 <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
             </BarChart>
