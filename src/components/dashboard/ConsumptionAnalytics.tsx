@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -101,14 +102,14 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
       const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
       return last7Days.map((date) => {
           const deliveriesOnDay = filteredDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-          const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+          const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + (d.liters || 0), 0);
           const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
           const branchBreakdown: { [key: string]: { liters: number; containers: number } } = {};
           if (isParent) {
             deliveriesOnDay.forEach(d => {
               const branchName = branchIdToNameMap[d.userId] || `Unknown (${d.userId.substring(0,5)})`;
               if (!branchBreakdown[branchName]) branchBreakdown[branchName] = { liters: 0, containers: 0 };
-              branchBreakdown[branchName].liters += containerToLiter(d.volumeContainers);
+              branchBreakdown[branchName].liters += (d.liters || 0);
               branchBreakdown[branchName].containers += d.volumeContainers;
             });
           }
@@ -135,7 +136,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
           const deliveryDate = new Date(d.date);
           const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
           if(weeklyData[weekOfMonth]) {
-              const liters = containerToLiter(d.volumeContainers);
+              const liters = d.liters || 0;
               weeklyData[weekOfMonth].value += liters;
               weeklyData[weekOfMonth].containers += d.volumeContainers;
               if (isParent) {
@@ -162,7 +163,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         filteredDeliveries.forEach(d => {
             const deliveryDate = new Date(d.date);
             const month = getMonth(deliveryDate);
-            const liters = containerToLiter(d.volumeContainers);
+            const liters = d.liters || 0;
             monthlyData[month].value += liters;
             monthlyData[month].containers += d.volumeContainers;
             if (isParent) {

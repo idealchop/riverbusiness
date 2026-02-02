@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -66,7 +67,7 @@ export function StatCards({
         const deliveryDate = new Date(d.date);
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
-    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters || containerToLiter(d.volumeContainers)), 0);
         
     let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
