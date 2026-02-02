@@ -2,8 +2,10 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment } from '@/lib/types';
+import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment, Transaction } from '@/lib/types';
 import type { DateRange } from 'react-day-picker';
+import { Timestamp } from 'firebase/firestore';
+
 
 // Extend jsPDF with the autoTable method
 declare module 'jspdf' {
@@ -13,6 +15,14 @@ declare module 'jspdf' {
 }
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+const toSafeDate = (timestamp: any): Date => {
+    if (!timestamp) return new Date(0); // Return a very old date for null/undefined values
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+    return new Date(timestamp);
+};
+
 
 export const generateSOA = (user: AppUser, deliveries: Delivery[], sanitationVisits: SanitationVisit[], dateRange?: DateRange) => {
   const doc = new jsPDF();
@@ -208,9 +218,10 @@ interface MonthlySOAProps {
     totalAmount?: number;
     billingPeriod: string;
     branches?: AppUser[] | null;
+    transactions?: Transaction[] | null;
 }
 
-export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches }: MonthlySOAProps) => {
+export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches, transactions }: MonthlySOAProps) => {
     const doc = new jsPDF('p', 'pt'); // Using points for finer control
     const primaryColor = [21, 99, 145];
     const pageHeight = doc.internal.pageSize.height;
@@ -343,10 +354,10 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         return tableFinalY;
     };
     
-     // --- Equipment Details ---
+     // --- Subscription Details ---
      if (user.customPlanDetails) {
         const { gallonQuantity, dispenserQuantity, litersPerMonth, gallonPaymentType, dispenserPaymentType } = user.customPlanDetails;
-        let equipmentBody: string[][] = [];
+        let equipmentBody: any[] = [];
         if(user.plan?.name) equipmentBody.push(['Current Plan', user.plan.name]);
         if(user.plan?.isConsumptionBased) {
             equipmentBody.push(['Pricing', `P${user.plan.price}/liter (Consumption-based)`]);
@@ -361,6 +372,37 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
             lastY = renderTable('Subscription Details', [['Item', 'Details']], equipmentBody, lastY);
             lastY += 20;
         }
+    }
+
+    // --- PARENT ACCOUNT SPECIFIC SECTIONS ---
+    if (isParent && transactions) {
+        const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
+        const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + t.amountCredits, 0);
+        const finalBalance = user.topUpBalanceCredits || 0;
+
+        const summaryBody = [
+            ['Total Credits (Top-Ups)', `P ${totalCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}`],
+            ['Total Debits (Branch Consumption)', `P ${totalDebits.toLocaleString(undefined, {minimumFractionDigits: 2})}`],
+            ['Final Balance', `P ${finalBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`]
+        ];
+        
+        lastY = renderTable('Financial Summary', [['Description', 'Amount']], summaryBody, lastY);
+        lastY += 20;
+
+        const transactionBody = transactions.map(t => {
+            const dateVal = toSafeDate(t.date);
+            const amountText = t.type === 'Credit' 
+                ? `+ P ${t.amountCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}` 
+                : `- P ${t.amountCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            return [
+                format(dateVal, 'PP'),
+                t.description,
+                amountText
+            ];
+        });
+        
+        lastY = renderTable('Transaction History', [['Date', 'Description', 'Amount']], transactionBody, lastY);
+        lastY += 20;
     }
 
 
@@ -395,6 +437,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: '', styles: {fillColor: [230, 242, 255] } },
+          ...(isParent ? [{ content: '', styles: {fillColor: [230, 242, 255] } }] : []),
         ];
         deliveryBody.push(summaryRow as any);
     }
@@ -430,7 +473,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }
     
     // --- FINANCIAL SUMMARY ---
-    if (totalAmount && totalAmount > 0) {
+    if (!isParent && totalAmount && totalAmount > 0) {
         const summaryX = pageWidth - margin - 220; 
         
         const grandTotal = totalAmount;
@@ -445,7 +488,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }
     
     // Saved Liters for fixed plans
-    if (user && !user.plan?.isConsumptionBased && user.customPlanDetails) {
+    if (user && !isParent && !user.plan?.isConsumptionBased && user.customPlanDetails) {
         const totalMonthlyAllocation = (user.customPlanDetails.litersPerMonth || 0) + (user.customPlanDetails.bonusLiters || 0);
         const savedLiters = totalMonthlyAllocation - totalLitersConsumed;
         if (savedLiters > 0) {

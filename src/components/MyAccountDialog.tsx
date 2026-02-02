@@ -297,7 +297,7 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
   </Card>
 );
 
-const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen }) => (
+const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) => (
     <div className="space-y-6">
     <Card>
       <CardContent className="p-0">
@@ -398,7 +398,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen }) => (
                 <Repeat className="mr-2 h-4 w-4" />
                 Change Plan
             </Button>
-            <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
+             <Button variant="default" onClick={() => setIsSoaDialogOpen(true)}>
                 <Download className="mr-2 h-4 w-4" />
                 Download SOA
             </Button>
@@ -1326,6 +1326,8 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       complianceReports: complianceReports || [],
       totalAmount: totalInvoicedAmount,
       billingPeriod,
+      branches: branchUsers,
+      transactions: transactions,
     });
     
     toast({
@@ -1456,6 +1458,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     planImage={planImage}
                     dispatch={dispatch}
                     setIsSoaDialogOpen={setIsSoaDialogOpen}
+                    isParent={isParent}
                   />
                 </TabsContent>
                  <TabsContent value="invoices" className="py-4 space-y-4">
