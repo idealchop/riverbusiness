@@ -7,12 +7,13 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, UserCheck, BarChart3, HelpCircle } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, UserCheck, BarChart3, HelpCircle, Wallet } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -180,11 +181,16 @@ export function StatCards({
         <>
             <Card>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4"/>Available Liters</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl md:text-4xl font-bold mb-1">{parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
-                    <p className="text-xs text-muted-foreground">Derived from your ₱{parentCalculatedBalances.displayedCreditBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}.</p>
+                    <p className={cn("text-2xl md:text-4xl font-bold mb-1", parentCalculatedBalances.displayedCreditBalance < 0 && "text-destructive")}>
+                        {parentCalculatedBalances.displayedCreditBalance < 0 ? '-' : ''}
+                        ₱{Math.abs(parentCalculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Equals approx. {parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L available
+                    </p>
                 </CardContent>
             </Card>
             <Card onClick={onConsumptionHistoryClick} className="cursor-pointer hover:border-primary">

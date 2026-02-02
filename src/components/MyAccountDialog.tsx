@@ -604,7 +604,10 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
                   <CardTitle className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-2xl font-bold">₱{(calculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                  <p className={cn("text-2xl font-bold", calculatedBalances.displayedCreditBalance < 0 && "text-destructive")}>
+                    {calculatedBalances.displayedCreditBalance < 0 ? '-' : ''}
+                    ₱{Math.abs(calculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                  </p>
               </CardContent>
           </Card>
            <Card>
@@ -782,6 +785,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const bankQr = PlaceHolderImages.find((p) => p.id === 'bpi-qr-payment');
   const paymayaQr = PlaceHolderImages.find((p) => p.id === 'maya-qr-payment');
 
+  const paymentOptions: PaymentOption[] = [
+      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
+      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
+      { name: 'Maya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
+  ];
+
   const deliveriesQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'deliveries'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: deliveries, isLoading: deliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
@@ -804,12 +813,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   
   const branchUsersQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users'), where('parentId', '==', user.id)) : null, [firestore, user]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
-
-  const paymentOptions: PaymentOption[] = [
-      { name: 'GCash', qr: gcashQr, details: { accountName: 'Jamie Camille Liongson', accountNumber: '09989811596' } },
-      { name: 'BPI', qr: bankQr, details: { accountName: 'Jimboy Regalado', accountNumber: '3489145013' } },
-      { name: 'Maya', qr: paymayaQr, details: { accountName: 'Jimboy Regalado', accountNumber: '09557750188' } },
-  ];
 
   const currentMonthInvoice = useMemo(() => {
     if (!user || deliveriesLoading) return null;
