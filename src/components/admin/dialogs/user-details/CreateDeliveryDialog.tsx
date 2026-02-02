@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -93,8 +92,8 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 }
             }
 
-            const liters = containerToLiter(values.volumeContainers);
             const pricePerLiter = user.plan?.price || 0;
+            const liters = containerToLiter(values.volumeContainers);
             const amount = liters * pricePerLiter;
 
             const deliveryData: Partial<Delivery> = {
@@ -117,18 +116,9 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 deliveryData.proofOfDeliveryUrl = downloadURL;
                 toast({ title: 'Proof upload complete.' });
             }
-
-            const batch = writeBatch(firestore);
             
-            const branchDeliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryId);
-            batch.set(branchDeliveryRef, deliveryData, { merge: true });
-
-            if (isBranch) {
-                const parentDeliveryRef = doc(firestore, 'users', user.parentId!, 'branchDeliveries', deliveryId);
-                batch.set(parentDeliveryRef, deliveryData, { merge: true });
-            }
-            
-            await batch.commit();
+            const deliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryId);
+            await setDoc(deliveryRef, deliveryData, { merge: true });
             
             toast({ title: isUpdate ? "Delivery Updated" : "Delivery Created" });
             onOpenChange(false);
