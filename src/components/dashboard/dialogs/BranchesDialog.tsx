@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppUser } from '@/lib/types';
-import { UserCheck } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface BranchesDialogProps {
   isOpen: boolean;
@@ -25,18 +25,18 @@ export function BranchesDialog({ isOpen, onOpenChange, branchUsers }: BranchesDi
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserCheck /> Linked Branch Accounts
+            <MapPin /> Managed Locations
           </DialogTitle>
           <DialogDescription>
-            These accounts consume from your central credit balance.
+            A list of all business locations linked to this parent account.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 max-h-[60vh] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Client ID</TableHead>
-                <TableHead>Business Name</TableHead>
+                <TableHead>Location ID</TableHead>
+                <TableHead>Location Name</TableHead>
                 <TableHead>Contact Person</TableHead>
               </TableRow>
             </TableHeader>
@@ -52,7 +52,7 @@ export function BranchesDialog({ isOpen, onOpenChange, branchUsers }: BranchesDi
               ) : (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center h-24">
-                    No branches linked to this parent account.
+                    No locations linked to this parent account.
                   </TableCell>
                 </TableRow>
               )}
