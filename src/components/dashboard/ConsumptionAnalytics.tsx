@@ -165,7 +165,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
       <CardContent className="h-80">
         <ResponsiveContainer width="100%" height="100%">
             {isParent ? (
-                <BarChart data={consumptionChartData} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
+                <BarChart data={consumptionChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis 
                         dataKey="displayName" 
@@ -173,9 +173,6 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                         fontSize={10} 
                         tickLine={false} 
                         axisLine={false}
-                        angle={-45}
-                        textAnchor="end"
-                        interval={0}
                     />
                     <YAxis 
                         type="number" 
