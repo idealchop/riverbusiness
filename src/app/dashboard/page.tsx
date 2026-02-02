@@ -104,7 +104,7 @@ export default function DashboardPage() {
       return deliveryDate ? isWithinInterval(deliveryDate, { start, end }) : false;
     });
 
-    return monthlyDeliveries.reduce((total, delivery) => total + (delivery.liters || containerToLiter(delivery.volumeContainers)), 0);
+    return monthlyDeliveries.reduce((total, delivery) => total + (delivery.liters || 0), 0);
   }, [isParent, deliveries]);
 
   useEffect(() => {

@@ -22,6 +22,8 @@ export interface Delivery {
   status: 'Delivered' | 'In Transit' | 'Pending';
   proofOfDeliveryUrl?: string;
   adminNotes?: string;
+  liters?: number;
+  amount?: number;
 }
 
 export interface ManualCharge {

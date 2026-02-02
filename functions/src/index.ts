@@ -22,8 +22,6 @@ initializeApp();
 const db = getFirestore();
 const storage = getStorage();
 
-const containerToLiter = (containers: number) => (containers || 0) * 19.5;
-
 /**
  * Retrieves the admin user's UID.
  */
@@ -89,21 +87,13 @@ async function handleBranchDeliveryCreate(event: functions.firestore.FirestoreEv
 
     // Step 2: PROCESS BILLING.
     try {
-        const parentDoc = await parentRef.get();
-        if (!parentDoc.exists()) {
-            logger.error(`[handleBranchDeliveryCreate] Parent user ${parentId} not found during billing step.`);
-            return;
-        }
-        const parentData = parentDoc.data()!;
-        const litersDelivered = containerToLiter(deliveryData.volumeContainers);
-        const pricePerLiter = parentData.plan?.price || 0;
-        const deliveryCost = litersDelivered * pricePerLiter;
+        const deliveryCost = deliveryData.amount || 0;
 
         if (deliveryCost > 0) {
             const billingBatch = db.batch();
             billingBatch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
             const transactionRef = parentRef.collection('transactions').doc();
-            billingBatch.set(transactionRef, {
+            const newTransaction: Transaction = {
                 id: transactionRef.id,
                 date: deliveryData.date,
                 type: 'Debit',
@@ -111,7 +101,8 @@ async function handleBranchDeliveryCreate(event: functions.firestore.FirestoreEv
                 description: `Delivery to ${branchUserData.businessName}`,
                 branchId: branchUserId,
                 branchName: branchUserData.businessName,
-            });
+            };
+            billingBatch.set(transactionRef, newTransaction);
             await billingBatch.commit();
             logger.info(`[handleBranchDeliveryCreate] SUCCESS: Processed billing for parent ${parentId}. Cost: ${deliveryCost}`);
 
@@ -138,11 +129,13 @@ async function handleSingleUserDeliveryCreate(event: functions.firestore.Firesto
 
     if (userData.accountType === 'Single' && !userData.isPrepaid && !userData.plan?.isConsumptionBased) {
         try {
-            const litersDelivered = containerToLiter(deliveryData.volumeContainers);
-            await db.collection('users').doc(userId).update({
-                totalConsumptionLiters: increment(-litersDelivered)
-            });
-            logger.info(`[handleSingleUserDeliveryCreate] Decremented liter balance for fixed-plan user ${userId}.`);
+            const litersDelivered = deliveryData.liters || 0;
+            if (litersDelivered > 0) {
+                await db.collection('users').doc(userId).update({
+                    totalConsumptionLiters: increment(-litersDelivered)
+                });
+                logger.info(`[handleSingleUserDeliveryCreate] Decremented ${litersDelivered}L from balance for fixed-plan user ${userId}.`);
+            }
         } catch (e) {
             logger.error(`[handleSingleUserDeliveryCreate] Failed to decrement liters for fixed-plan user ${userId}`, e);
         }
@@ -399,13 +392,14 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
         });
 
         // 2. Create the transaction record
-        batch.set(transactionRef, {
+        const newTransaction: Transaction = {
             id: transactionRef.id,
             date: serverTimestamp(),
             type: 'Credit',
             amountCredits: requestData.amount,
             description: 'User-initiated top-up'
-        } as Transaction);
+        };
+        batch.set(transactionRef, newTransaction);
 
         promises.push(batch.commit());
 
