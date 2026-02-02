@@ -802,6 +802,9 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
+  const branchDeliveriesQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'branchDeliveries'), orderBy('date', 'desc')) : null, [firestore, user]);
+  const { data: branchDeliveries } = useCollection<Delivery>(branchDeliveriesQuery);
+
   const topUpRequestsQuery = useMemoFirebase(() => (firestore && user) ? query(collection(firestore, 'users', user.id, 'topUpRequests'), orderBy('requestedAt', 'desc')) : null, [firestore, user]);
   const { data: topUpRequests } = useCollection<TopUpRequest>(topUpRequestsQuery);
 
@@ -1015,13 +1018,38 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     const startIndex = (invoiceCurrentPage - 1) * INVOICES_PER_PAGE;
     return allInvoices.slice(startIndex, startIndex + INVOICES_PER_PAGE);
   }, [allInvoices, invoiceCurrentPage]);
+  
+  const combinedTransactions = useMemo(() => {
+    const credits = (transactions || []).map(t => ({...t, type: 'Credit' as const}));
 
-  const totalTransactionPages = Math.ceil((transactions?.length || 0) / TRANSACTIONS_PER_PAGE);
+    const debits = (branchDeliveries || []).map(delivery => ({
+      id: delivery.id,
+      date: delivery.date,
+      type: 'Debit' as const,
+      amountCredits: delivery.amount || 0,
+      description: `Delivery to ${branchUsers?.find(b => b.id === delivery.userId)?.businessName || 'Unknown Branch'}`,
+      branchId: delivery.userId,
+      branchName: branchUsers?.find(b => b.id === delivery.userId)?.businessName
+    }));
+
+    const all = [...credits, ...debits];
+
+    all.sort((a, b) => {
+      const dateA = toSafeDate(a.date);
+      const dateB = toSafeDate(b.date);
+      if (!dateA || !dateB) return 0;
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return all;
+  }, [transactions, branchDeliveries, branchUsers]);
+
+  const totalTransactionPages = Math.ceil((combinedTransactions?.length || 0) / TRANSACTIONS_PER_PAGE);
   const paginatedTransactions = useMemo(() => {
-    if (!transactions) return [];
+    if (!combinedTransactions) return [];
     const startIndex = (transactionCurrentPage - 1) * TRANSACTIONS_PER_PAGE;
-    return transactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE);
-  }, [transactions, transactionCurrentPage]);
+    return combinedTransactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE);
+  }, [combinedTransactions, transactionCurrentPage]);
 
 
   const TABS_CONFIG = useMemo(() => [
@@ -1070,19 +1098,32 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return '0';
   }, [topUpAmount, literConversionRate]);
   
+  const totalBranchConsumptionLiters = useMemo(() => {
+    if (!isParent || !deliveries) return 0;
+    const now = new Date();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
+
+    const monthlyDeliveries = deliveries.filter(delivery => {
+      const deliveryDate = toSafeDate(delivery.date);
+      return deliveryDate ? isWithinInterval(deliveryDate, { start, end }) : false;
+    });
+
+    return monthlyDeliveries.reduce((total, delivery) => total + (delivery.liters || containerToLiter(delivery.volumeContainers)), 0);
+  }, [isParent, deliveries]);
+
   const availableLiters = useMemo(() => {
     if (!isParent) return 0;
     const credits = user?.topUpBalanceCredits ?? 0;
-    const totalConsumption = (branchUsers || []).reduce((acc, branch) => acc + branch.totalConsumptionLiters, 0);
+    const pricePerLiter = user.plan.price || 1;
+    const totalPotentialLiters = credits > 0 ? credits / pricePerLiter : 0;
     
-    return totalConsumption;
-  }, [isParent, user?.topUpBalanceCredits, branchUsers]);
+    // Deduct the current month's consumption from the total potential liters.
+    const calculatedLiters = totalPotentialLiters - totalBranchConsumptionLiters;
+    
+    return calculatedLiters > 0 ? calculatedLiters : 0;
+  }, [isParent, user?.topUpBalanceCredits, user?.plan?.price, totalBranchConsumptionLiters]);
   
-  const totalBranchConsumptionLiters = useMemo(() => {
-    if (!isParent || !deliveries) return 0;
-    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
-  }, [isParent, deliveries]);
-
   const tabsGridClass = useMemo(() => {
     const numTabs = TABS_CONFIG.length;
     if (numTabs <= 4) return `grid-cols-${numTabs}`;
