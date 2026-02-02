@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { AppUser } from '@/lib/types';
 import { MapPin } from 'lucide-react';
@@ -32,7 +33,8 @@ export function BranchesDialog({ isOpen, onOpenChange, branchUsers }: BranchesDi
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 max-h-[60vh] overflow-y-auto">
-          <Table>
+          {/* Desktop Table View */}
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Location ID</TableHead>
@@ -58,6 +60,30 @@ export function BranchesDialog({ isOpen, onOpenChange, branchUsers }: BranchesDi
               )}
             </TableBody>
           </Table>
+
+          {/* Mobile Card View */}
+          <div className="space-y-4 md:hidden">
+             {branchUsers && branchUsers.length > 0 ? (
+                branchUsers.map(branch => (
+                    <Card key={branch.id}>
+                        <CardContent className="p-4 space-y-2">
+                             <div>
+                                <p className="font-semibold">{branch.businessName}</p>
+                                <p className="text-xs text-muted-foreground">ID: {branch.clientId}</p>
+                            </div>
+                            <div className="text-sm">
+                                <span className="font-medium text-muted-foreground">Contact: </span>
+                                <span>{branch.name}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))
+             ) : (
+                <div className="text-center text-muted-foreground py-10">
+                    <p>No locations linked to this parent account.</p>
+                </div>
+             )}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
