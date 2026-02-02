@@ -22,6 +22,8 @@ export interface Delivery {
   status: 'Delivered' | 'In Transit' | 'Pending';
   proofOfDeliveryUrl?: string;
   adminNotes?: string;
+  liters?: number;
+  amount?: number;
 }
 
 export interface ManualCharge {
@@ -30,7 +32,7 @@ export interface ManualCharge {
   amount: number;
   dateAdded: FieldValue | Timestamp;
 }
-
+    
 export interface RefillRequest {
   id: string;
   userId: string;
@@ -43,5 +45,3 @@ export interface RefillRequest {
   volumeContainers?: number;
   requestedDate?: string;
 }
-
-    

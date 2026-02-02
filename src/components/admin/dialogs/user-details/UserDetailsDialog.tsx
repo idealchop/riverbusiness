@@ -204,7 +204,13 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     };
     
     const isParent = user.accountType === 'Parent';
-    
+    const parentUser = useMemo(() => {
+        if (user.accountType === 'Branch' && user.parentId) {
+            return allUsers.find(u => u.id === user.parentId);
+        }
+        return null;
+    }, [user, allUsers]);
+
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -300,6 +306,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 onOpenChange={setIsCreateDeliveryOpen}
                 deliveryToEdit={deliveryToEdit}
                 user={user}
+                parentUser={parentUser}
             />
             <PaymentReviewDialog
                 isOpen={isPaymentReviewOpen}
@@ -355,5 +362,3 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
         </>
     );
 }
-
-    

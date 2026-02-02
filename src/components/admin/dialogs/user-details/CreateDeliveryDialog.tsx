@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -37,9 +38,12 @@ interface CreateDeliveryDialogProps {
     onOpenChange: (isOpen: boolean) => void;
     deliveryToEdit: Delivery | null;
     user: AppUser;
+    parentUser?: AppUser | null;
 }
 
-export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, user }: CreateDeliveryDialogProps) {
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, user, parentUser }: CreateDeliveryDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
     const storage = useStorage();
@@ -90,11 +94,18 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 }
             }
 
+            const liters = containerToLiter(values.volumeContainers);
+            // If it's a branch, use the parent's rate. Otherwise use the user's own rate.
+            const pricePerLiter = isBranch ? (parentUser?.plan?.price || 0) : (user.plan?.price || 0);
+            const amount = liters * pricePerLiter;
+
             const deliveryData: Partial<Delivery> = {
                 ...restOfValues,
                 id: deliveryId,
                 userId: user.id,
                 date: values.date.toISOString(),
+                liters,
+                amount,
             };
 
             if (isBranch) {
