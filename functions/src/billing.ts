@@ -9,8 +9,6 @@ const db = admin.firestore();
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-  
-
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
@@ -76,7 +74,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         }
 
         // --- Handle Pending Plan Change ---
-        if (user.pendingPlan && user.planChangeEffectiveDate) {
+        if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
             // Check if the effective date is today (the 1st of the month)
             if (isToday(effectiveDate)) {
@@ -162,8 +160,8 @@ async function generateInvoiceForUser(
     monthsToBill: number = 1,
     isFirstInvoice: boolean
 ) {
-    // Skip admins, users without a plan, or prepaid users
-    if (user.role === 'Admin' || !user.plan || user.isPrepaid) {
+    // The main loop filters out admins and prepaid accounts.
+    if (!user.plan) {
         return;
     }
 
@@ -172,7 +170,6 @@ async function generateInvoiceForUser(
     const deliveriesRef = userRef.collection('deliveries');
     const batch = db.batch();
     const userUpdatePayload: {[key: string]: any} = {};
-
 
     let amount = 0;
     let description = '';
@@ -197,13 +194,14 @@ async function generateInvoiceForUser(
     
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
+    // --- Billing Logic ---
+    // Calculate amount based on the user's plan, regardless of account type.
+    // The status of the invoice will be adjusted later if it's a branch account.
     if (user.plan.isConsumptionBased) {
-        // Consumption-based billing (Flow Plans)
         const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
         amount = consumptionCost + equipmentCostForPeriod;
         description = `Bill for ${billingPeriod}`;
-    } else {
-        // Fixed-plan billing
+    } else { // Fixed-plan billing (for Single or Branch accounts)
         const planCost = user.plan.price || 0;
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
@@ -212,7 +210,6 @@ async function generateInvoiceForUser(
         if (user.accountType !== 'Branch') {
             const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
             
-            // Correctly include the previous month's rollover in the period's total allocation
             const totalAllocationForPeriod = (monthlyAllocation * monthsToBill) + (user.customPlanDetails?.lastMonthRollover || 0);
             const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
@@ -242,7 +239,6 @@ async function generateInvoiceForUser(
             const creditRefreshMeta = { ...creditRefreshNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
             batch.set(notificationsRef.doc(), creditRefreshMeta);
         }
-
     }
     
     // Add one-time fees to the very first invoice
