@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { Delivery, AppUser } from '@/lib/types';
-import { format, subDays, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { format, subDays, getWeekOfMonth, endOfMonth, getYear, getMonth, startOfYear, endOfYear, isWithinInterval, startOfMonth } from 'date-fns';
 import { History, Users } from 'lucide-react';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
