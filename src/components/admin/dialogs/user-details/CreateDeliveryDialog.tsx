@@ -37,11 +37,12 @@ interface CreateDeliveryDialogProps {
     onOpenChange: (isOpen: boolean) => void;
     deliveryToEdit: Delivery | null;
     user: AppUser;
+    parentUser: AppUser | null;
 }
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, user }: CreateDeliveryDialogProps) {
+export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, user, parentUser }: CreateDeliveryDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
     const storage = useStorage();
@@ -92,7 +93,11 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 }
             }
 
-            const pricePerLiter = user.plan?.price || 0;
+            let pricePerLiter = user.plan?.price || 0;
+            if (isBranch && parentUser && parentUser.plan) {
+                pricePerLiter = parentUser.plan.price || 0;
+            }
+            
             const liters = containerToLiter(values.volumeContainers);
             const amount = liters * pricePerLiter;
 
@@ -117,8 +122,16 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
                 toast({ title: 'Proof upload complete.' });
             }
             
+            const batch = writeBatch(firestore);
             const deliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryId);
-            await setDoc(deliveryRef, deliveryData, { merge: true });
+            batch.set(deliveryRef, deliveryData, { merge: true });
+
+            if (isBranch && user.parentId) {
+                const parentDeliveryRef = doc(firestore, 'users', user.parentId, 'branchDeliveries', deliveryId);
+                batch.set(parentDeliveryRef, deliveryData, { merge: true });
+            }
+            
+            await batch.commit();
             
             toast({ title: isUpdate ? "Delivery Updated" : "Delivery Created" });
             onOpenChange(false);
@@ -136,9 +149,20 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
     const handleDeleteDelivery = async () => {
         if (!firestore || !deliveryToEdit || !user) return;
         setIsDeleting(true);
-        const deliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryToEdit.id);
+        const isBranch = user.accountType === 'Branch' && user.parentId;
+        
         try {
-            await deleteDoc(deliveryRef);
+            const batch = writeBatch(firestore);
+            const deliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryToEdit.id);
+            batch.delete(deliveryRef);
+
+            if (isBranch && user.parentId) {
+                const parentDeliveryRef = doc(firestore, 'users', user.parentId, 'branchDeliveries', deliveryToEdit.id);
+                batch.delete(parentDeliveryRef);
+            }
+
+            await batch.commit();
+            
             toast({ title: 'Delivery Deleted', description: 'The delivery record has been removed.' });
             onOpenChange(false);
         } catch (error) {
