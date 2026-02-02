@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 interface DashboardHeaderProps {
   greeting: string;
   userName?: string;
-  isRefillRequesting: boolean;
   onRefillRequest: () => void;
   onComplianceClick: () => void;
   hasPendingRefill: boolean;
@@ -19,7 +18,6 @@ interface DashboardHeaderProps {
 export function DashboardHeader({
   greeting,
   userName,
-  isRefillRequesting,
   onRefillRequest,
   onComplianceClick,
   hasPendingRefill,
@@ -40,7 +38,6 @@ export function DashboardHeader({
         <Button
           variant="default"
           className="w-auto h-auto px-4 py-2"
-          disabled={isRefillRequesting}
           onClick={onRefillRequest}
         >
           <BellRing className="mr-2 h-4 w-4" />
