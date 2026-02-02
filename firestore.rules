@@ -50,6 +50,12 @@ service cloud.firestore {
     match /users/{userId}/chatMessages/{messageId} {
         allow read, write: if isOwner(userId) || isAdmin();
     }
+
+    match /users/{userId}/payments/{paymentId} {
+      allow read, list: if isOwner(userId) || isAdmin() ||
+                         (request.auth != null && get(/databases/$(database)/documents/users/$(userId)).data.parentId == request.auth.uid);
+      allow write, create, update, delete: if isOwner(userId) || isAdmin();
+    }
     
     match /unclaimedProfiles/{clientId} {
       allow read, delete: if request.auth != null;
