@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { BranchesDialog } from './dialogs/BranchesDialog';
 
 interface DashboardDialogsProps {
   user: AppUser | null;
@@ -66,6 +67,7 @@ export function DashboardDialogs({
     refillStatus: false,
     welcome: false,
     partnerNotice: false,
+    branches: false,
   });
 
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
@@ -120,6 +122,7 @@ export function DashboardDialogs({
       'open-compliance': () => openDialog('compliance'),
       'open-refill-status': () => openDialog('refillStatus'),
       'open-partner-notice': () => openDialog('partnerNotice'),
+      'open-branches-dialog': () => openDialog('branches'),
       'request-asap-refill': handleOneClickRefill,
       'view-delivery-proof': (e) => setSelectedProofUrl((e as CustomEvent).detail.url),
       'view-attachment': (e) => setAttachmentToView((e as CustomEvent).detail.url),
@@ -216,6 +219,7 @@ export function DashboardDialogs({
       />
       <AttachmentViewerDialog isOpen={!!attachmentToView} onOpenChange={() => setAttachmentToView(null)} attachmentUrl={attachmentToView} />
       <RefillStatusDialog isOpen={dialogState.refillStatus} onOpenChange={() => closeDialog('refillStatus')} activeRefillRequest={activeRefillRequest} />
+      <BranchesDialog isOpen={dialogState.branches} onOpenChange={() => closeDialog('branches')} branchUsers={branchUsers} />
       <Dialog open={dialogState.partnerNotice} onOpenChange={() => closeDialog('partnerNotice')}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

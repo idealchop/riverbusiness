@@ -747,39 +747,6 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
     </Card>
 );
 
-const BranchesTab = ({ branchUsers }) => (
-    <Card>
-      <CardHeader>
-          <CardTitle>Linked Branch Accounts</CardTitle>
-          <CardDescription>These accounts consume from your central credit balance.</CardDescription>
-      </CardHeader>
-      <CardContent>
-           <Table>
-              <TableHeader>
-                  <TableRow>
-                      <TableHead>Client ID</TableHead>
-                      <TableHead>Business Name</TableHead>
-                      <TableHead>Contact Person</TableHead>
-                  </TableRow>
-              </TableHeader>
-              <TableBody>
-                  {branchUsers && branchUsers.length > 0 ? (
-                      branchUsers.map(branch => (
-                          <TableRow key={branch.id}>
-                              <TableCell>{branch.clientId}</TableCell>
-                              <TableCell>{branch.businessName}</TableCell>
-                              <TableCell>{branch.name}</TableCell>
-                          </TableRow>
-                      ))
-                  ) : (
-                      <TableRow><TableCell colSpan={3} className="text-center">No branches linked to this parent account.</TableCell></TableRow>
-                  )}
-              </TableBody>
-          </Table>
-      </CardContent>
-    </Card>
-);
-
 interface MyAccountDialogProps {
   user: AppUser | null;
   authUser: User | null;
@@ -1063,7 +1030,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     { value: 'top-ups', label: 'Top-Ups', icon: DollarSign, condition: user?.accountType === 'Parent' },
     { value: 'invoices', label: 'Invoices', icon: Receipt, condition: user?.accountType !== 'Parent' },
     { value: 'plan', label: 'Plan', icon: FileText, condition: true },
-    { value: 'branches', label: 'Branches', icon: UserCheck, condition: user?.accountType === 'Parent' },
   ].filter(tab => tab.condition), [user]);
 
   const defaultTab = useMemo(() => {
@@ -1496,9 +1462,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                       handleViewInvoice={handleViewInvoice}
                     />
                  </TabsContent>
-                 <TabsContent value="branches" className="py-4">
-                    <BranchesTab branchUsers={branchUsers} />
-                </TabsContent>
               </Tabs>
             </div>
           </ScrollArea>

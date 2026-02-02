@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -178,7 +179,7 @@ export function StatCards({
   }, [consumptionDetails.currentBalance, startingBalance]);
 
   const handleManageBranches = () => {
-    window.dispatchEvent(new CustomEvent('open-my-account', { detail: { tab: 'branches' }}));
+    window.dispatchEvent(new CustomEvent('open-branches-dialog'));
   };
 
   return (
@@ -466,6 +467,6 @@ export function StatCards({
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
-  </>
+    </>
   );
 }
