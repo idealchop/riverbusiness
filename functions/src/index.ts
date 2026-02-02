@@ -135,11 +135,15 @@ async function handleSingleUserDeliveryCreate(event: functions.firestore.Firesto
     // For fixed, non-prepaid plans, deduct from their liter balance.
     if (userData.accountType === 'Single' && !userData.isPrepaid && !userData.plan?.isConsumptionBased) {
         try {
-            const litersDelivered = deliveryData.liters || containerToLiter(deliveryData.volumeContainers);
-            await db.collection('users').doc(userId).update({
-                totalConsumptionLiters: increment(-litersDelivered)
-            });
-            logger.info(`[handleSingleUserDeliveryCreate] Decremented liter balance by ${litersDelivered} for fixed-plan user ${userId}.`);
+            const litersDelivered = deliveryData.liters || 0;
+            if (litersDelivered > 0) {
+                await db.collection('users').doc(userId).update({
+                    totalConsumptionLiters: increment(-litersDelivered)
+                });
+                logger.info(`[handleSingleUserDeliveryCreate] Decremented liter balance by ${litersDelivered} for fixed-plan user ${userId}.`);
+            } else {
+                logger.warn(`[handleSingleUserDeliveryCreate] Liter amount is 0 for delivery ${deliveryData.id}. Skipping balance deduction.`);
+            }
         } catch (e) {
             logger.error(`[handleSingleUserDeliveryCreate] Failed to decrement liters for fixed-plan user ${userId}`, e);
         }
