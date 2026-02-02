@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -173,6 +174,8 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                         fontSize={10} 
                         tickLine={false} 
                         axisLine={false}
+                        angle={0}
+                        textAnchor="middle"
                     />
                     <YAxis 
                         type="number" 
@@ -191,7 +194,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                             return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, 'Consumption'];
                         }}
                     />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="hsl(var(--primary))" />
+                    <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
                 </BarChart>
             ) : (
                 <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
