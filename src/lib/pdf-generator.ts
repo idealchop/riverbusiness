@@ -207,9 +207,10 @@ interface MonthlySOAProps {
     complianceReports: ComplianceReport[];
     totalAmount?: number;
     billingPeriod: string;
+    branches?: AppUser[] | null;
 }
 
-export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod }: MonthlySOAProps) => {
+export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches }: MonthlySOAProps) => {
     const doc = new jsPDF('p', 'pt'); // Using points for finer control
     const primaryColor = [21, 99, 145];
     const pageHeight = doc.internal.pageSize.height;
@@ -217,6 +218,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     let lastY = 0;
 
     const margin = 40;
+    const isParent = user.accountType === 'Parent';
 
     // --- HEADER ---
     const drawHeader = () => {
@@ -365,23 +367,39 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     // --- Deliveries ---
     const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
     const totalLitersConsumed = containerToLiter(totalContainers);
-    const deliveryBody = deliveries.map(d => [
-        d.id,
-        format(new Date(d.date), 'PP'),
-        d.volumeContainers,
-        containerToLiter(d.volumeContainers).toFixed(1),
-        d.status,
-    ]);
+    
+    const branchMap = (branches || []).reduce((map, branch) => {
+        if (branch.id) map[branch.id] = branch.businessName;
+        return map;
+    }, {} as Record<string, string>);
+
+    const deliveryHead = isParent
+        ? [["Ref ID", "Branch Name", "Date", "Containers", "Liters", "Status"]]
+        : [["Ref ID", "Date", "Containers", "Liters", "Status"]];
+    
+    const deliveryBody = deliveries.map(d => {
+        const row: (string | number)[] = [
+            d.id,
+            ...(isParent ? [branchMap[d.userId] || d.userId] : []),
+            format(new Date(d.date), 'PP'),
+            d.volumeContainers,
+            containerToLiter(d.volumeContainers).toFixed(1),
+            d.status,
+        ];
+        return row;
+    });
+
     if (deliveries.length > 0) {
-        const deliverySummaryRow = [
-          { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
+        const summaryRow = [
+          { content: 'Total Consumption', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: '', styles: {fillColor: [230, 242, 255] } },
         ];
-        deliveryBody.push(deliverySummaryRow as any);
+        deliveryBody.push(summaryRow as any);
     }
-    lastY = renderTable('Delivery History', [["Ref ID", "Date", "Containers", "Liters", "Status"]], deliveryBody, lastY);
+
+    lastY = renderTable('Delivery History', deliveryHead, deliveryBody, lastY);
     lastY += 20;
     
     // --- Sanitation & Compliance ---

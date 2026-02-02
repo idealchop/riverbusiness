@@ -104,7 +104,8 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
       deliveries: filteredDeliveries,
       sanitationVisits: sanitationVisits || [],
       complianceReports: complianceReports || [],
-      billingPeriod: period
+      billingPeriod: period,
+      branches: branches
     });
 
     toast({
