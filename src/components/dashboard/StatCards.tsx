@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -463,6 +464,7 @@ export function StatCards({
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
-    </>
+    </AlertDialog>
+  </>
   );
 }
