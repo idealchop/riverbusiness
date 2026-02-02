@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -17,7 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { AppUser, Delivery } from '@/lib/types';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { doc, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -126,9 +127,47 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
             const deliveryRef = doc(firestore, 'users', user.id, 'deliveries', deliveryId);
             batch.set(deliveryRef, deliveryData, { merge: true });
 
+            // --- NOTIFICATION LOGIC ---
+            // 1. Notification for the user receiving the delivery
+            const userNotifRef = doc(collection(firestore, 'users', user.id, 'notifications'));
+            batch.set(userNotifRef, {
+                type: 'delivery',
+                title: 'Delivery Scheduled',
+                description: `A new delivery of ${values.volumeContainers} containers has been scheduled.`,
+                data: { deliveryId: deliveryId },
+                date: serverTimestamp(),
+                isRead: false,
+                userId: user.id
+            });
+
+            // 2. Notification for the Admin
+            const adminNotifRef = doc(collection(firestore, 'users', auth.currentUser.uid, 'notifications'));
+            batch.set(adminNotifRef, {
+                type: 'delivery',
+                title: 'Delivery Created',
+                description: `A delivery for ${user.businessName} has been scheduled.`,
+                data: { userId: user.id, deliveryId: deliveryId },
+                date: serverTimestamp(),
+                isRead: false,
+                userId: auth.currentUser.uid
+            });
+
+            // If it's a branch, create parent-side records and notification
             if (isBranch && user.parentId) {
                 const parentDeliveryRef = doc(firestore, 'users', user.parentId, 'branchDeliveries', deliveryId);
                 batch.set(parentDeliveryRef, deliveryData, { merge: true });
+
+                // 3. Notification for the Parent account
+                const parentNotifRef = doc(collection(firestore, 'users', user.parentId, 'notifications'));
+                batch.set(parentNotifRef, {
+                    type: 'delivery',
+                    title: 'Branch Consumption',
+                    description: `₱${amount.toFixed(2)} deducted for delivery to ${user.businessName}.`,
+                    data: { deliveryId: deliveryId, branchUserId: user.id },
+                    date: serverTimestamp(),
+                    isRead: false,
+                    userId: user.parentId
+                });
             }
             
             await batch.commit();
@@ -279,3 +318,5 @@ export function CreateDeliveryDialog({ isOpen, onOpenChange, deliveryToEdit, use
         </AlertDialog>
     );
 }
+
+    

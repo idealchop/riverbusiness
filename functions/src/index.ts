@@ -1,8 +1,8 @@
-'use server';
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated, QueryDocumentSnapshot } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore, FieldValue, Timestamp, increment, serverTimestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
@@ -73,7 +73,6 @@ export const onbranchdeliverycreate = onDocumentCreated("users/{parentId}/branch
     if (!event.data) return;
 
     const parentId = event.params.parentId;
-    const deliveryId = event.params.deliveryId;
     const deliveryData = event.data.data() as Delivery;
     const branchUserId = deliveryData.userId;
 
@@ -120,62 +119,25 @@ export const onbranchdeliverycreate = onDocumentCreated("users/{parentId}/branch
             batch.set(transactionRef, newTransaction);
             await batch.commit();
             logger.info(`[onbranchdeliverycreate] SUCCESS: Processed billing for parent ${parentId}. Cost: ${deliveryCost}`);
-
-            // Notify PARENT about the deduction
-            await createNotification(parentId, {
-                type: 'delivery',
-                title: 'Branch Consumption',
-                description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${branchUserData.businessName}.`,
-                data: { deliveryId: deliveryId, branchUserId: branchUserId },
-            });
         }
     } catch (billingError) {
-        logger.error(`[onbranchdeliverycreate] CRITICAL: Billing/notification logic failed for parent ${parentId}. Error:`, billingError);
+        logger.error(`[onbranchdeliverycreate] CRITICAL: Billing logic failed for parent ${parentId}. Error:`, billingError);
     }
 });
 
 
 /**
- * Handles notifications for all users and consumption logic for Single accounts upon delivery creation.
+ * Handles consumption logic for Single accounts upon delivery creation.
+ * Notifications are now handled on the frontend.
  */
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     logger.info(`[ondeliverycreate] Triggered for: ${event.data?.ref.path}`);
     if (!event.data) return;
 
     const userId = event.params.userId;
-    const deliveryId = event.params.deliveryId;
     const deliveryData = event.data.data() as Delivery;
 
-    // 1. Notify the user receiving the delivery
-    try {
-        await createNotification(userId, {
-            type: 'delivery',
-            title: 'Delivery Scheduled',
-            description: `A new delivery of ${deliveryData.volumeContainers} containers has been scheduled.`,
-            data: { deliveryId: deliveryId },
-        });
-    } catch (e) {
-         logger.error(`[ondeliverycreate] Failed to create initial notification for user ${userId}`, e);
-    }
-    
-    // 2. Notify the Admin
-    const adminId = await getAdminId();
-    const userDocForAdmin = await db.collection('users').doc(userId).get();
-    if (adminId && userDocForAdmin.exists) {
-        const userDataForAdmin = userDocForAdmin.data()!;
-        try {
-            await createNotification(adminId, {
-                type: 'delivery',
-                title: 'Delivery Created',
-                description: `A delivery for ${userDataForAdmin.businessName} has been scheduled.`,
-                data: { userId: userId, deliveryId: deliveryId },
-            });
-        } catch(e) {
-            logger.error(`[ondeliverycreate] Failed to create notification for admin`, e);
-        }
-    }
-    
-    // 3. Handle consumption logic for Single (non-prepaid, fixed-plan) accounts
+    // Handle consumption logic for Single (non-prepaid, fixed-plan) accounts
     const userDoc = await db.collection("users").doc(userId).get();
     if (!userDoc.exists) {
         logger.error(`[ondeliverycreate] User document ${userId} not found.`);
@@ -433,7 +395,7 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
         // 2. Create the transaction record
         const newTransaction: Transaction = {
             id: transactionRef.id,
-            date: serverTimestamp(),
+            date: FieldValue.serverTimestamp(),
             type: 'Credit',
             amountCredits: requestData.amount,
             description: 'User-initiated top-up'
@@ -782,3 +744,5 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
     logger.error(`Failed to process upload for ${filePath}.`, error);
   }
 });
+
+    
