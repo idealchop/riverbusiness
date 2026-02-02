@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -189,7 +190,10 @@ export function StatCards({
                         ₱{Math.abs(parentCalculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                        Equals approx. {parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L available
+                        Equals approx.{' '}
+                        <span className={cn(parentCalculatedBalances.displayedAvailableLiters < 0 && "text-destructive font-semibold")}>
+                           {parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L
+                        </span> available
                     </p>
                 </CardContent>
             </Card>

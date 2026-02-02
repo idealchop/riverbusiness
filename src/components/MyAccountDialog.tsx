@@ -615,7 +615,9 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
                   <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-2xl font-bold">{calculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                  <p className={cn("text-2xl font-bold", calculatedBalances.displayedAvailableLiters < 0 && "text-destructive")}>
+                    {calculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L
+                  </p>
                   <p className="text-xs text-muted-foreground">Consumed: {calculatedBalances.totalDebitLiters.toLocaleString(undefined, {maximumFractionDigits: 1})} L</p>
               </CardContent>
           </Card>
@@ -1047,27 +1049,21 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   }, [combinedTransactions, transactionCurrentPage]);
   
   const calculatedBalances = useMemo(() => {
-    if (!isParent) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalDebitLiters: 0 };
+    if (!isParent || !user) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalDebitLiters: 0 };
     
-    const totalCredits = (transactions || [])
-        .filter(t => t.type === 'Credit')
-        .reduce((sum, t) => sum + t.amountCredits, 0);
-
-    const totalDebitAmount = (branchDeliveries || [])
-        .reduce((sum, d) => sum + (d.amount || 0), 0);
-        
-    const totalDebitLiters = (branchDeliveries || [])
-        .reduce((sum, d) => sum + (d.liters || 0), 0);
+    const totalCredits = (transactions || []).filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
+    const pricePerLiter = user.plan?.price || 1;
+    const totalPotentialLiters = totalCredits > 0 ? totalCredits / pricePerLiter : 0;
+    
+    const totalDebitLiters = (branchDeliveries || []).reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
+    const totalDebitAmount = (branchDeliveries || []).reduce((sum, d) => sum + (d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * pricePerLiter), 0);
 
     const displayedCreditBalance = totalCredits - totalDebitAmount;
-    
-    const pricePerLiter = user?.plan?.price || 1;
-    const totalPotentialLiters = totalCredits > 0 ? totalCredits / pricePerLiter : 0;
     const displayedAvailableLiters = totalPotentialLiters - totalDebitLiters;
 
     return {
       displayedCreditBalance,
-      displayedAvailableLiters: displayedAvailableLiters > 0 ? displayedAvailableLiters : 0,
+      displayedAvailableLiters: displayedAvailableLiters,
       totalDebitLiters
     };
 

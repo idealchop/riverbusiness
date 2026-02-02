@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -124,7 +125,7 @@ export default function DashboardPage() {
 
     return {
       displayedCreditBalance,
-      displayedAvailableLiters: displayedAvailableLiters > 0 ? displayedAvailableLiters : 0,
+      displayedAvailableLiters: displayedAvailableLiters,
       totalConsumptionLiters: totalConsumptionLiters
     };
 
