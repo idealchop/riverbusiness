@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -187,7 +186,7 @@ export function StatCards({
         <>
             <Card>
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4"/>Remaining Liter Credits</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4"/>Available Liters</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-2xl md:text-4xl font-bold mb-1">{parentRemainingLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
@@ -199,7 +198,7 @@ export function StatCards({
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl md:text-3xl font-bold mb-1">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
+                    <p className="text-2xl md:text-3xl font-bold mb-1">{totalBranchConsumptionLiters.toLocaleString()} L</p>
                     <p className="text-xs text-muted-foreground">For the current month</p>
                 </CardContent>
                  <CardFooter>
@@ -464,7 +463,6 @@ export function StatCards({
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
