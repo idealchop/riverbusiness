@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -57,7 +56,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
     });
 
     if (isParent) {
-      const branchConsumption: { [key: string]: { name: string; value: number } } = {};
+      const branchConsumption: { [key: string]: { name: string; value: number; containers: number } } = {};
       const branchIdToName = (branches || []).reduce((acc, branch) => {
         acc[branch.id] = branch.businessName;
         return acc;
@@ -65,13 +64,14 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
 
       // Initialize all branches with 0 consumption
       Object.keys(branchIdToName).forEach(branchId => {
-        branchConsumption[branchId] = { name: branchIdToName[branchId], value: 0 };
+        branchConsumption[branchId] = { name: branchIdToName[branchId], value: 0, containers: 0 };
       });
 
       filteredDeliveries.forEach(delivery => {
         // delivery.userId is the ID of the branch that received the delivery
         if (delivery.userId && branchConsumption[delivery.userId]) {
           branchConsumption[delivery.userId].value += containerToLiter(delivery.volumeContainers);
+          branchConsumption[delivery.userId].containers += delivery.volumeContainers;
         }
       });
 
@@ -83,10 +83,12 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         return last7Days.map((date, index) => {
             const deliveriesOnDay = filteredDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
             const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+            const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
             return {
                 name: `${format(date, 'EEE')}-${index}`,
                 displayName: format(date, 'EEE').charAt(0),
-                value: totalLiters
+                value: totalLiters,
+                containers: totalContainers,
             };
         });
       } else if (analyticsFilter === 'monthly') {
@@ -96,7 +98,8 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
           const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
             name: `Week ${i + 1}`,
             displayName: `W${i + 1}`,
-            value: 0
+            value: 0,
+            containers: 0,
           }));
 
           filteredDeliveries.forEach(d => {
@@ -104,6 +107,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
             const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
             if(weeklyData[weekOfMonth]) {
                 weeklyData[weekOfMonth].value += containerToLiter(d.volumeContainers);
+                weeklyData[weekOfMonth].containers += d.volumeContainers;
             }
           });
           return weeklyData;
@@ -112,13 +116,15 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
           const monthlyData = Array.from({ length: 12 }, (_, i) => ({
               name: format(new Date(year, i), 'MMM'),
               displayName: format(new Date(year, i), 'MMM'),
-              value: 0
+              value: 0,
+              containers: 0,
           }));
 
           filteredDeliveries.forEach(d => {
               const deliveryDate = new Date(d.date);
               const month = getMonth(deliveryDate);
               monthlyData[month].value += containerToLiter(d.volumeContainers);
+              monthlyData[month].containers += d.volumeContainers;
           });
           return monthlyData;
       }
@@ -167,9 +173,12 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                         cursor={{ fill: 'hsla(var(--accent))' }}
                         contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' }}
                         labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        formatter={(value: number) => [`${value.toLocaleString()} Liters`, 'Consumption']}
+                        formatter={(value: number, name, props) => {
+                            const containers = props.payload.containers || 0;
+                            return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, 'Consumption'];
+                        }}
                     />
-                    <Bar dataKey="value" layout="vertical" radius={[0, 8, 8, 0]} fill="hsl(var(--primary))" />
+                    <Bar dataKey="value" radius={[0, 8, 8, 0]} fill="hsl(var(--primary))" />
                 </BarChart>
             ) : (
                 <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -182,14 +191,17 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                     />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                     <Tooltip
-                    cursor={{ fill: 'hsla(var(--accent))' }}
-                    contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: 'var(--radius)',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number, name, props) => [`${value.toLocaleString()} Liters`, 'Consumption']}
+                        cursor={{ fill: 'hsla(var(--accent))' }}
+                        contentStyle={{
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 'var(--radius)',
+                        }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number, name, props) => {
+                            const containers = props.payload.containers || 0;
+                            return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, 'Consumption'];
+                        }}
                     />
                     <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
                 </BarChart>
