@@ -9,8 +9,6 @@ const db = admin.firestore();
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-  
-
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
@@ -40,8 +38,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         const userRef = userDoc.ref;
         let user = userDoc.data();
         
-        // Skip admins, branch accounts, and prepaid accounts
-        if (user.role === 'Admin' || user.accountType === 'Branch' || user.isPrepaid) continue;
+        // Skip admins and prepaid accounts. Process Branch accounts to generate invoices.
+        if (user.role === 'Admin' || user.isPrepaid) continue;
 
         let billingPeriod: string;
         let billingCycleStart: Date;
@@ -76,7 +74,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         }
 
         // --- Handle Pending Plan Change ---
-        if (user.pendingPlan && user.planChangeEffectiveDate) {
+        if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
             // Check if the effective date is today (the 1st of the month)
             if (isToday(effectiveDate)) {
@@ -162,8 +160,8 @@ async function generateInvoiceForUser(
     monthsToBill: number = 1,
     isFirstInvoice: boolean
 ) {
-    // Skip admins, users without a plan, branch accounts, or prepaid users
-    if (user.role === 'Admin' || !user.plan || user.accountType === 'Branch' || user.isPrepaid) {
+    // The main loop filters out admins and prepaid accounts.
+    if (!user.plan) {
         return;
     }
 
@@ -172,7 +170,6 @@ async function generateInvoiceForUser(
     const deliveriesRef = userRef.collection('deliveries');
     const batch = db.batch();
     const userUpdatePayload: {[key: string]: any} = {};
-
 
     let amount = 0;
     let description = '';
@@ -197,20 +194,31 @@ async function generateInvoiceForUser(
     
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
-    if (user.plan.isConsumptionBased) {
-        // Consumption-based billing (Flow Plans)
+    // --- Billing Logic ---
+    if (user.accountType === 'Branch' && user.parentId) {
+        let pricePerLiter = 0;
+        try {
+            const parentDoc = await db.collection('users').doc(user.parentId).get();
+            if (parentDoc.exists()) {
+                pricePerLiter = parentDoc.data()?.plan?.price || 0;
+            }
+        } catch (e) {
+            console.error(`Could not fetch parent ${user.parentId} for branch ${userRef.id}`, e);
+        }
+        const consumptionCost = consumedLitersInPeriod * pricePerLiter;
+        amount = consumptionCost + equipmentCostForPeriod;
+        description = `Consumption for ${billingPeriod}`;
+    }
+    else if (user.plan.isConsumptionBased) {
         const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
         amount = consumptionCost + equipmentCostForPeriod;
         description = `Bill for ${billingPeriod}`;
-    } else {
-        // Fixed-plan billing
+    } else { // Single, Fixed-plan account
         const planCost = user.plan.price || 0;
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
 
         const monthlyAllocation = (user.customPlanDetails?.litersPerMonth || 0) + (user.customPlanDetails?.bonusLiters || 0);
-        
-        // Correctly include the previous month's rollover in the period's total allocation
         const totalAllocationForPeriod = (monthlyAllocation * monthsToBill) + (user.customPlanDetails?.lastMonthRollover || 0);
         const newRollover = Math.max(0, totalAllocationForPeriod - consumedLitersInPeriod);
 
@@ -227,11 +235,10 @@ async function generateInvoiceForUser(
         }
         
         const creditsForNewMonth = monthlyAllocation + newRollover;
-
         userUpdatePayload.totalConsumptionLiters = creditsForNewMonth;
         userUpdatePayload['customPlanDetails.lastMonthRollover'] = newRollover;
 
-         const creditRefreshNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
+        const creditRefreshNotification: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'> = {
             type: 'general',
             title: 'Monthly Credits Refreshed',
             description: `Your monthly balance has been updated with ${creditsForNewMonth.toLocaleString()} liters.`,
@@ -239,7 +246,6 @@ async function generateInvoiceForUser(
         };
         const creditRefreshMeta = { ...creditRefreshNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
         batch.set(notificationsRef.doc(), creditRefreshMeta);
-
     }
     
     // Add one-time fees to the very first invoice
@@ -272,7 +278,7 @@ async function generateInvoiceForUser(
             date: admin.firestore.Timestamp.fromDate(startOfMonth(new Date())),
             description: description,
             amount: amount,
-            status: 'Upcoming',
+            status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
             manualCharges: pendingCharges, // Store the included charges
         };
         console.log(`Generating invoice ${invoiceId} for user ${userRef.id} for amount ${amount}.`);
@@ -283,9 +289,13 @@ async function generateInvoiceForUser(
             description: `Your invoice for ${billingPeriod} (₱${amount.toFixed(2)}) is available.`,
             data: { paymentId: invoiceId }
         };
+        
+        // Don't send a notification to a branch account for an invoice they don't pay.
+        if (user.accountType !== 'Branch') {
+            const notificationWithMeta = { ...invoiceNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
+            batch.set(notificationsRef.doc(), notificationWithMeta);
+        }
 
-        const notificationWithMeta = { ...invoiceNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
-        batch.set(notificationsRef.doc(), notificationWithMeta);
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
         
         userUpdatePayload.lastBilledDate = admin.firestore.FieldValue.serverTimestamp();
