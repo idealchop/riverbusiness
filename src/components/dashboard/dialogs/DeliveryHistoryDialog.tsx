@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -168,7 +167,7 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                     <TableHead>Ref ID</TableHead>
                     {isParent && <TableHead>Branch Name</TableHead>}
                     <TableHead>Date</TableHead>
-                    <TableHead>Liters / Containers</TableHead>
+                    <TableHead>Volume</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Attachment</TableHead>
                 </TableRow>
@@ -180,10 +179,13 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                     const containers = delivery.volumeContainers || 0;
                     return (
                     <TableRow key={delivery.id}>
-                        <TableCell>{delivery.id}</TableCell>
+                        <TableCell className="font-mono text-xs">{delivery.id}</TableCell>
                         {isParent && <TableCell>{branchMap[delivery.userId] || delivery.userId}</TableCell>}
                         <TableCell>{format(getSortableDate(delivery.date), 'PP')}</TableCell>
-                        <TableCell>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L / {containers} containers</TableCell>
+                        <TableCell>
+                          <div>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L</div>
+                          <div className="text-xs text-muted-foreground">{containers} containers</div>
+                        </TableCell>
                         <TableCell>
                         <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
                         </TableCell>
@@ -221,10 +223,9 @@ export function DeliveryHistoryDialog({ isOpen, onOpenChange, deliveries, sanita
                         </div>
                         <Badge variant={statusInfo.variant} className={cn('text-xs', statusInfo.variant === 'default' && 'bg-green-100 text-green-800', statusInfo.variant === 'secondary' && 'bg-blue-100 text-blue-800', statusInfo.variant === 'outline' && 'bg-yellow-100 text-yellow-800')}>{statusInfo.label}</Badge>
                         </div>
-                        <div className="text-sm">
-                        <p>
-                            <strong>Volume:</strong> {liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L ({containers} containers)
-                        </p>
+                        <div className="text-sm border-t pt-3 mt-3">
+                          <p className="font-semibold text-muted-foreground text-xs">Volume</p>
+                          <p>{liters.toLocaleString(undefined, { maximumFractionDigits: 0 })}L ({containers} containers)</p>
                         </div>
                         {delivery.proofOfDeliveryUrl && (
                         <Button variant="outline" size="sm" className="w-full" onClick={() => onViewProof(delivery.proofOfDeliveryUrl || null)}>
