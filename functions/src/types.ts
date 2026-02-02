@@ -30,4 +30,16 @@ export interface ManualCharge {
   amount: number;
   dateAdded: FieldValue | Timestamp;
 }
-    
+
+export interface RefillRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  businessName: string;
+  clientId: string;
+  requestedAt: FieldValue | Timestamp;
+  status: 'Requested' | 'In Production' | 'Out for Delivery' | 'Completed' | 'Cancelled';
+  statusHistory?: any[]; // Simplified for functions
+  volumeContainers?: number;
+  requestedDate?: string;
+}
