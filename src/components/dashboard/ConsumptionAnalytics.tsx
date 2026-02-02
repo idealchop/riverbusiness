@@ -75,7 +75,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         }
       });
 
-      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name.substring(0, 20) }));
+      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name.substring(0, 15) }));
 
     } else {
        if (analyticsFilter === 'weekly') {
@@ -165,10 +165,26 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
       <CardContent className="h-80">
         <ResponsiveContainer width="100%" height="100%">
             {isParent ? (
-                <BarChart layout="vertical" data={consumptionChartData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis type="category" dataKey="displayName" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} width={100} />
+                <BarChart data={consumptionChartData} margin={{ top: 10, right: 30, left: 0, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                        dataKey="displayName" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        angle={-45}
+                        textAnchor="end"
+                        interval={0}
+                    />
+                    <YAxis 
+                        type="number" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        tickFormatter={(value) => `${(value as number).toLocaleString()}`}
+                    />
                     <Tooltip
                         cursor={{ fill: 'hsla(var(--accent))' }}
                         contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' }}
@@ -178,7 +194,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                             return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, 'Consumption'];
                         }}
                     />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]} fill="hsl(var(--primary))" />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="hsl(var(--primary))" />
                 </BarChart>
             ) : (
                 <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -189,7 +205,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                     tickLine={false} 
                     axisLine={false} 
                     />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${(value as number).toLocaleString()}`} />
                     <Tooltip
                         cursor={{ fill: 'hsla(var(--accent))' }}
                         contentStyle={{
