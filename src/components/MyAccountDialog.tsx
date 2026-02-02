@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -604,7 +603,7 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMont
   </div>
 );
 
-const TransactionsTab = ({ user, availableLiters, totalBranchConsumptionLiters, paginatedTransactions, transactionCurrentPage, setTransactionCurrentPage, totalTransactionPages }) => (
+const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTransactionCurrentPage, totalTransactionPages, calculatedBalances }) => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
@@ -612,7 +611,7 @@ const TransactionsTab = ({ user, availableLiters, totalBranchConsumptionLiters, 
                   <CardTitle className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                  <p className="text-2xl font-bold">₱{(calculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
               </CardContent>
           </Card>
            <Card>
@@ -620,8 +619,8 @@ const TransactionsTab = ({ user, availableLiters, totalBranchConsumptionLiters, 
                   <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
               </CardHeader>
               <CardContent>
-                  <p className="text-2xl font-bold">{availableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
-                  <p className="text-xs text-muted-foreground">Consumed: {(totalBranchConsumptionLiters || 0).toLocaleString()} L</p>
+                  <p className="text-2xl font-bold">{calculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                  <p className="text-xs text-muted-foreground">Consumed: {calculatedBalances.totalDebitLiters.toLocaleString(undefined, {maximumFractionDigits: 1})} L</p>
               </CardContent>
           </Card>
       </div>
@@ -1050,7 +1049,33 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     const startIndex = (transactionCurrentPage - 1) * TRANSACTIONS_PER_PAGE;
     return combinedTransactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE);
   }, [combinedTransactions, transactionCurrentPage]);
+  
+  const calculatedBalances = useMemo(() => {
+    if (!isParent) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalDebitLiters: 0 };
+    
+    const totalCredits = (transactions || [])
+        .filter(t => t.type === 'Credit')
+        .reduce((sum, t) => sum + t.amountCredits, 0);
 
+    const totalDebitAmount = (branchDeliveries || [])
+        .reduce((sum, d) => sum + (d.amount || 0), 0);
+        
+    const totalDebitLiters = (branchDeliveries || [])
+        .reduce((sum, d) => sum + (d.liters || 0), 0);
+
+    const displayedCreditBalance = totalCredits - totalDebitAmount;
+    
+    const pricePerLiter = user?.plan?.price || 1;
+    const totalPotentialLiters = totalCredits > 0 ? totalCredits / pricePerLiter : 0;
+    const displayedAvailableLiters = totalPotentialLiters - totalDebitLiters;
+
+    return {
+      displayedCreditBalance,
+      displayedAvailableLiters: displayedAvailableLiters > 0 ? displayedAvailableLiters : 0,
+      totalDebitLiters
+    };
+
+  }, [isParent, transactions, branchDeliveries, user]);
 
   const TABS_CONFIG = useMemo(() => [
     { value: 'accounts', label: 'Accounts', icon: UserIcon, condition: true },
@@ -1097,32 +1122,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
     return '0';
   }, [topUpAmount, literConversionRate]);
-  
-  const totalBranchConsumptionLiters = useMemo(() => {
-    if (!isParent || !deliveries) return 0;
-    const now = new Date();
-    const start = startOfMonth(now);
-    const end = endOfMonth(now);
-
-    const monthlyDeliveries = deliveries.filter(delivery => {
-      const deliveryDate = toSafeDate(delivery.date);
-      return deliveryDate ? isWithinInterval(deliveryDate, { start, end }) : false;
-    });
-
-    return monthlyDeliveries.reduce((total, delivery) => total + (delivery.liters || containerToLiter(delivery.volumeContainers)), 0);
-  }, [isParent, deliveries]);
-
-  const availableLiters = useMemo(() => {
-    if (!isParent) return 0;
-    const credits = user?.topUpBalanceCredits ?? 0;
-    const pricePerLiter = user.plan.price || 1;
-    const totalPotentialLiters = credits > 0 ? credits / pricePerLiter : 0;
-    
-    // Deduct the current month's consumption from the total potential liters.
-    const calculatedLiters = totalPotentialLiters - totalBranchConsumptionLiters;
-    
-    return calculatedLiters > 0 ? calculatedLiters : 0;
-  }, [isParent, user?.topUpBalanceCredits, user?.plan?.price, totalBranchConsumptionLiters]);
   
   const tabsGridClass = useMemo(() => {
     const numTabs = TABS_CONFIG.length;
@@ -1487,13 +1486,11 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                  </TabsContent>
                  <TabsContent value="transactions" className="py-4 space-y-4">
                     <TransactionsTab 
-                      user={user} 
-                      availableLiters={availableLiters}
-                      totalBranchConsumptionLiters={totalBranchConsumptionLiters}
                       paginatedTransactions={paginatedTransactions}
                       transactionCurrentPage={transactionCurrentPage}
                       setTransactionCurrentPage={setTransactionCurrentPage}
                       totalTransactionPages={totalTransactionPages}
+                      calculatedBalances={calculatedBalances}
                     />
                  </TabsContent>
                  <TabsContent value="top-ups" className="py-4 space-y-4">

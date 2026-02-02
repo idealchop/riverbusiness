@@ -10,7 +10,7 @@ import {
 } from '@/firebase';
 import { doc, collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, isWithinInterval, getYear, getMonth, subMonths } from 'date-fns';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest } from '@/lib/types';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, Transaction } from '@/lib/types';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -56,6 +56,12 @@ export default function DashboardPage() {
 
   const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
 
+  const transactionsQuery = useMemoFirebase(() => {
+    if (!firestore || !isParent || !user?.id) return null;
+    return query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc'));
+  }, [firestore, isParent, user?.id]);
+  const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+
   const stationDocRef = useMemoFirebase(
     () => (firestore && user?.assignedWaterStationId ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null),
     [firestore, user]
@@ -92,20 +98,32 @@ export default function DashboardPage() {
   }, [firestore, isParent, user?.id]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
   
-  const totalBranchConsumptionLiters = useMemo(() => {
-    if (!isParent || !deliveries) return 0;
+  const parentCalculatedBalances = useMemo(() => {
+    if (!isParent) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalConsumptionLiters: 0 };
     
-    const now = new Date();
-    const start = startOfMonth(now);
-    const end = endOfMonth(now);
+    const totalCredits = (transactions || [])
+        .filter(t => t.type === 'Credit')
+        .reduce((sum, t) => sum + t.amountCredits, 0);
 
-    const monthlyDeliveries = deliveries.filter(delivery => {
-      const deliveryDate = toSafeDate(delivery.date);
-      return deliveryDate ? isWithinInterval(deliveryDate, { start, end }) : false;
-    });
+    const totalDebitAmount = (deliveries || [])
+        .reduce((sum, d) => sum + (d.amount || 0), 0);
+        
+    const totalConsumptionLiters = (deliveries || [])
+        .reduce((sum, d) => sum + (d.liters || 0), 0);
 
-    return monthlyDeliveries.reduce((total, delivery) => total + (delivery.liters || 0), 0);
-  }, [isParent, deliveries]);
+    const displayedCreditBalance = totalCredits - totalDebitAmount;
+    
+    const pricePerLiter = user?.plan?.price || 1;
+    const totalPotentialLiters = totalCredits > 0 ? totalCredits / pricePerLiter : 0;
+    const displayedAvailableLiters = totalPotentialLiters - totalConsumptionLiters;
+
+    return {
+      displayedCreditBalance,
+      displayedAvailableLiters: displayedAvailableLiters > 0 ? displayedAvailableLiters : 0,
+      totalConsumptionLiters: totalConsumptionLiters
+    };
+
+  }, [isParent, transactions, deliveries, user]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -138,7 +156,7 @@ export default function DashboardPage() {
         <StatCards
             user={user}
             deliveries={deliveries}
-            totalBranchConsumptionLiters={totalBranchConsumptionLiters}
+            parentCalculatedBalances={parentCalculatedBalances}
             onConsumptionHistoryClick={() => handleDispatchDialogEvent('open-consumption-history')}
             onSaveLitersClick={() => handleDispatchDialogEvent('open-save-liters')}
             onUpdateScheduleClick={() => handleDispatchDialogEvent('open-update-schedule')}

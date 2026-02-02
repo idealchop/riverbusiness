@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -20,7 +19,11 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 interface StatCardsProps {
   user: AppUser | null;
   deliveries: Delivery[] | null;
-  totalBranchConsumptionLiters: number;
+  parentCalculatedBalances: {
+      displayedCreditBalance: number;
+      displayedAvailableLiters: number;
+      totalConsumptionLiters: number;
+  };
   onConsumptionHistoryClick: () => void;
   onSaveLitersClick: () => void;
   onUpdateScheduleClick: () => void;
@@ -30,7 +33,7 @@ interface StatCardsProps {
 export function StatCards({
   user,
   deliveries,
-  totalBranchConsumptionLiters,
+  parentCalculatedBalances,
   onConsumptionHistoryClick,
   onSaveLitersClick,
   onUpdateScheduleClick,
@@ -152,18 +155,6 @@ export function StatCards({
   const isBranchAccount = user?.accountType === 'Branch';
   const isParentAccount = user?.accountType === 'Parent';
   const isPrepaidPlan = user?.isPrepaid;
-  
-  const parentRemainingLiters = useMemo(() => {
-    if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
-    const credits = user?.topUpBalanceCredits ?? 0;
-    const pricePerLiter = user.plan.price;
-    const totalPotentialLiters = credits > 0 ? credits / pricePerLiter : 0;
-    
-    // Deduct the current month's consumption from the total potential liters.
-    const availableLiters = totalPotentialLiters - totalBranchConsumptionLiters;
-    
-    return availableLiters > 0 ? availableLiters : 0;
-  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price, totalBranchConsumptionLiters]);
 
   const startingBalance = useMemo(() => {
     if (isFlowPlan || isBranchAccount) return 0;
@@ -192,8 +183,8 @@ export function StatCards({
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4"/>Available Liters</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl md:text-4xl font-bold mb-1">{parentRemainingLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
-                    <p className="text-xs text-muted-foreground">Derived from your ₱{(user?.topUpBalanceCredits ?? 0).toLocaleString()}.</p>
+                    <p className="text-2xl md:text-4xl font-bold mb-1">{parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, {maximumFractionDigits: 0})} L</p>
+                    <p className="text-xs text-muted-foreground">Derived from your ₱{parentCalculatedBalances.displayedCreditBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}.</p>
                 </CardContent>
             </Card>
             <Card onClick={onConsumptionHistoryClick} className="cursor-pointer hover:border-primary">
@@ -201,8 +192,8 @@ export function StatCards({
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl md:text-3xl font-bold mb-1">{totalBranchConsumptionLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L</p>
-                    <p className="text-xs text-muted-foreground">For the current month</p>
+                    <p className="text-2xl md:text-3xl font-bold mb-1">{parentCalculatedBalances.totalConsumptionLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L</p>
+                    <p className="text-xs text-muted-foreground">All-time consumption</p>
                 </CardContent>
                  <CardFooter>
                     <p className="text-xs font-medium text-primary">Click to view history</p>
