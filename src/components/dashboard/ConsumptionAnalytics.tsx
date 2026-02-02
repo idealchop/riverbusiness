@@ -56,84 +56,60 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
         return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
     });
 
-    if (isParent) {
-      const branchConsumption: { [key: string]: { name: string; value: number; containers: number } } = {};
-      const branchIdToName = (branches || []).reduce((acc, branch) => {
-        acc[branch.id] = branch.businessName;
-        return acc;
-      }, {} as Record<string, string>);
-
-      // Initialize all branches with 0 consumption
-      Object.keys(branchIdToName).forEach(branchId => {
-        branchConsumption[branchId] = { name: branchIdToName[branchId], value: 0, containers: 0 };
+    if (analyticsFilter === 'weekly') {
+      const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
+      return last7Days.map((date, index) => {
+          const deliveriesOnDay = filteredDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
+          const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+          const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
+          return {
+              name: `${format(date, 'EEE')}-${index}`,
+              displayName: format(date, 'EEE').charAt(0),
+              value: totalLiters,
+              containers: totalContainers,
+          };
       });
+    } else if (analyticsFilter === 'monthly') {
+        const firstDay = startOfMonth(now);
+        const weeksInMonth = getWeekOfMonth(endOfMonth(now));
 
-      filteredDeliveries.forEach(delivery => {
-        // delivery.userId is the ID of the branch that received the delivery
-        if (delivery.userId && branchConsumption[delivery.userId]) {
-          branchConsumption[delivery.userId].value += containerToLiter(delivery.volumeContainers);
-          branchConsumption[delivery.userId].containers += delivery.volumeContainers;
-        }
-      });
+        const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
+          name: `Week ${i + 1}`,
+          displayName: `W${i + 1}`,
+          value: 0,
+          containers: 0,
+        }));
 
-      return Object.values(branchConsumption).map(b => ({ ...b, displayName: b.name.substring(0, 15) }));
-
-    } else {
-       if (analyticsFilter === 'weekly') {
-        const last7Days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i)).reverse();
-        return last7Days.map((date, index) => {
-            const deliveriesOnDay = filteredDeliveries.filter(d => format(new Date(d.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-            const totalLiters = deliveriesOnDay.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
-            const totalContainers = deliveriesOnDay.reduce((sum, d) => sum + d.volumeContainers, 0);
-            return {
-                name: `${format(date, 'EEE')}-${index}`,
-                displayName: format(date, 'EEE').charAt(0),
-                value: totalLiters,
-                containers: totalContainers,
-            };
+        filteredDeliveries.forEach(d => {
+          const deliveryDate = new Date(d.date);
+          const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
+          if(weeklyData[weekOfMonth]) {
+              weeklyData[weekOfMonth].value += containerToLiter(d.volumeContainers);
+              weeklyData[weekOfMonth].containers += d.volumeContainers;
+          }
         });
-      } else if (analyticsFilter === 'monthly') {
-          const firstDay = startOfMonth(now);
-          const weeksInMonth = getWeekOfMonth(endOfMonth(now));
-
-          const weeklyData = Array.from({ length: weeksInMonth }, (_, i) => ({
-            name: `Week ${i + 1}`,
-            displayName: `W${i + 1}`,
+        return weeklyData;
+    } else { // yearly or 2025
+        const year = analyticsFilter === '2025' ? 2025 : getYear(now);
+        const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+            name: format(new Date(year, i), 'MMM'),
+            displayName: format(new Date(year, i), 'MMM'),
             value: 0,
             containers: 0,
-          }));
+        }));
 
-          filteredDeliveries.forEach(d => {
+        filteredDeliveries.forEach(d => {
             const deliveryDate = new Date(d.date);
-            const weekOfMonth = getWeekOfMonth(deliveryDate) -1;
-            if(weeklyData[weekOfMonth]) {
-                weeklyData[weekOfMonth].value += containerToLiter(d.volumeContainers);
-                weeklyData[weekOfMonth].containers += d.volumeContainers;
-            }
-          });
-          return weeklyData;
-      } else { // yearly or 2025
-          const year = analyticsFilter === '2025' ? 2025 : getYear(now);
-          const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-              name: format(new Date(year, i), 'MMM'),
-              displayName: format(new Date(year, i), 'MMM'),
-              value: 0,
-              containers: 0,
-          }));
-
-          filteredDeliveries.forEach(d => {
-              const deliveryDate = new Date(d.date);
-              const month = getMonth(deliveryDate);
-              monthlyData[month].value += containerToLiter(d.volumeContainers);
-              monthlyData[month].containers += d.volumeContainers;
-          });
-          return monthlyData;
-      }
+            const month = getMonth(deliveryDate);
+            monthlyData[month].value += containerToLiter(d.volumeContainers);
+            monthlyData[month].containers += d.volumeContainers;
+        });
+        return monthlyData;
     }
-  }, [deliveries, analyticsFilter, isParent, branches]);
+  }, [deliveries, analyticsFilter]);
 
   const cardTitle = isParent ? 'Branch Consumption' : 'Consumption Analytics';
-  const cardDescription = isParent ? 'Monitor water usage across all your branches.' : 'A look at your water usage over time.';
+  const cardDescription = isParent ? 'Monitor total water usage across all your branches over time.' : 'A look at your water usage over time.';
 
   return (
     <Card className="lg:col-span-2">
@@ -165,63 +141,37 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
       </CardHeader>
       <CardContent className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-            {isParent ? (
-                <BarChart data={consumptionChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis 
-                        dataKey="displayName" 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={10} 
-                        tickLine={false} 
-                        axisLine={false}
-                        angle={0}
-                        textAnchor="middle"
-                    />
-                    <YAxis 
-                        type="number" 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={12} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tickFormatter={(value) => `${(value as number).toLocaleString()}`}
-                    />
-                    <Tooltip
-                        cursor={{ fill: 'hsla(var(--accent))' }}
-                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: 'var(--radius)' }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        formatter={(value: number, name, props) => {
-                            const containers = props.payload.containers || 0;
-                            return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, 'Consumption'];
-                        }}
-                    />
-                    <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
-                </BarChart>
-            ) : (
-                <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <XAxis 
+            <BarChart data={consumptionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
                     dataKey="displayName" 
                     stroke="hsl(var(--muted-foreground))" 
                     fontSize={12} 
                     tickLine={false} 
                     axisLine={false} 
-                    />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${(value as number).toLocaleString()}`} />
-                    <Tooltip
-                        cursor={{ fill: 'hsla(var(--accent))' }}
-                        contentStyle={{
-                            backgroundColor: 'hsl(var(--background))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: 'var(--radius)',
-                        }}
-                        labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        formatter={(value: number, name, props) => {
-                            const containers = props.payload.containers || 0;
-                            return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, 'Consumption'];
-                        }}
-                    />
-                    <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
-                </BarChart>
-            )}
+                />
+                <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(value) => `${(value as number).toLocaleString()}`}
+                />
+                <Tooltip
+                    cursor={{ fill: 'hsla(var(--accent))' }}
+                    contentStyle={{
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 'var(--radius)',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number, name, props) => {
+                        const containers = props.payload.containers || 0;
+                        return [`${value.toLocaleString()} L / ${containers.toLocaleString()} Containers`, isParent ? 'Total Consumption' : 'Consumption'];
+                    }}
+                />
+                <Bar dataKey="value" radius={[16, 16, 0, 0]} fill="hsl(var(--primary))" />
+            </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
