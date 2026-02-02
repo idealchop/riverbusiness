@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -63,10 +62,7 @@ export function StatCards({
     const cycleEnd = endOfMonth(now);
     const monthsToBill = 1;
     
-    const deliveriesThisCycle = deliveries.filter(d => {
-        const deliveryDate = new Date(d.date);
-        return isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd });
-    });
+    const deliveriesThisCycle = deliveries.filter(d => isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd }));
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters || containerToLiter(d.volumeContainers)), 0);
         
     let monthlyEquipmentCost = 0;
@@ -161,11 +157,12 @@ export function StatCards({
     const credits = user?.topUpBalanceCredits ?? 0;
     const pricePerLiter = user.plan.price;
     const totalPotentialLiters = credits > 0 ? credits / pricePerLiter : 0;
-    // The user wants to see the consumption deducted from the total potential.
-    // This is a UI-only calculation.
-    const availableLiters = totalPotentialLiters;
+    
+    // Deduct the current month's consumption from the total potential liters.
+    const availableLiters = totalPotentialLiters - totalBranchConsumptionLiters;
+    
     return availableLiters > 0 ? availableLiters : 0;
-  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price]);
+  }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price, totalBranchConsumptionLiters]);
 
   const startingBalance = useMemo(() => {
     if (isFlowPlan || isBranchAccount) return 0;
@@ -203,7 +200,7 @@ export function StatCards({
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl md:text-3xl font-bold mb-1">{totalBranchConsumptionLiters.toLocaleString()} L</p>
+                    <p className="text-2xl md:text-3xl font-bold mb-1">{totalBranchConsumptionLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L</p>
                     <p className="text-xs text-muted-foreground">For the current month</p>
                 </CardContent>
                  <CardFooter>

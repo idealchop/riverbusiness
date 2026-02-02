@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -9,7 +8,8 @@ import {
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { format, startOfMonth, endOfMonth, isWithinInterval, getYear, getMonth, subMonths } from 'date-fns';
 import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest } from '@/lib/types';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -22,6 +22,17 @@ import { DashboardDialogs } from '@/components/dashboard/DashboardDialogs';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+const toSafeDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Timestamp) return timestamp.toDate();
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) return date;
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) return new Date(timestamp.seconds * 1000);
+    return null;
+};
 
 export default function DashboardPage() {
   const firestore = useFirestore();
@@ -83,7 +94,17 @@ export default function DashboardPage() {
   
   const totalBranchConsumptionLiters = useMemo(() => {
     if (!isParent || !deliveries) return 0;
-    return deliveries.reduce((total, delivery) => total + (delivery.liters || containerToLiter(delivery.volumeContainers)), 0);
+    
+    const now = new Date();
+    const start = startOfMonth(now);
+    const end = endOfMonth(now);
+
+    const monthlyDeliveries = deliveries.filter(delivery => {
+      const deliveryDate = toSafeDate(delivery.date);
+      return deliveryDate ? isWithinInterval(deliveryDate, { start, end }) : false;
+    });
+
+    return monthlyDeliveries.reduce((total, delivery) => total + (delivery.liters || containerToLiter(delivery.volumeContainers)), 0);
   }, [isParent, deliveries]);
 
   useEffect(() => {
