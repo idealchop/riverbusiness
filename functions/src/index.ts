@@ -6,7 +6,7 @@ import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/f
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
-import type { Notification, Delivery, RefillRequest } from './types';
+import type { Notification, Delivery, RefillRequest, Transaction } from './types';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
@@ -89,9 +89,16 @@ async function handleBranchDeliveryCreate(event: functions.firestore.FirestoreEv
 
     // Step 2: PROCESS BILLING.
     try {
-        // The delivery `amount` is now pre-calculated and stored on the delivery document.
-        const deliveryCost = deliveryData.amount || 0;
-        
+        const parentDoc = await parentRef.get();
+        if (!parentDoc.exists()) {
+            logger.error(`[handleBranchDeliveryCreate] Parent user ${parentId} not found during billing step.`);
+            return;
+        }
+        const parentData = parentDoc.data()!;
+        const litersDelivered = containerToLiter(deliveryData.volumeContainers);
+        const pricePerLiter = parentData.plan?.price || 0;
+        const deliveryCost = litersDelivered * pricePerLiter;
+
         if (deliveryCost > 0) {
             const billingBatch = db.batch();
             billingBatch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
@@ -115,8 +122,6 @@ async function handleBranchDeliveryCreate(event: functions.firestore.FirestoreEv
                 description: `₱${deliveryCost.toFixed(2)} deducted for delivery to ${branchUserData.businessName}.`,
                 data: { deliveryId: deliveryId, branchUserId: branchUserId },
             });
-        } else {
-            logger.warn(`[handleBranchDeliveryCreate] Delivery amount is 0 for delivery ${deliveryId}. This might be an error or a free delivery. Skipping balance deduction.`);
         }
     } catch (billingError) {
         logger.error(`[handleBranchDeliveryCreate] CRITICAL: Billing/notification logic failed for parent ${parentId}. Error:`, billingError);
@@ -131,18 +136,13 @@ async function handleSingleUserDeliveryCreate(event: functions.firestore.Firesto
 
     logger.info(`[handleSingleUserDeliveryCreate] Delivery for a non-branch user ${userId}.`);
 
-    // For fixed, non-prepaid plans, deduct from their liter balance.
     if (userData.accountType === 'Single' && !userData.isPrepaid && !userData.plan?.isConsumptionBased) {
         try {
-            const litersDelivered = deliveryData.liters || 0;
-            if (litersDelivered > 0) {
-                await db.collection('users').doc(userId).update({
-                    totalConsumptionLiters: increment(-litersDelivered)
-                });
-                logger.info(`[handleSingleUserDeliveryCreate] Decremented liter balance by ${litersDelivered} for fixed-plan user ${userId}.`);
-            } else {
-                logger.warn(`[handleSingleUserDeliveryCreate] Liter amount is 0 for delivery ${deliveryData.id}. Skipping balance deduction.`);
-            }
+            const litersDelivered = containerToLiter(deliveryData.volumeContainers);
+            await db.collection('users').doc(userId).update({
+                totalConsumptionLiters: increment(-litersDelivered)
+            });
+            logger.info(`[handleSingleUserDeliveryCreate] Decremented liter balance for fixed-plan user ${userId}.`);
         } catch (e) {
             logger.error(`[handleSingleUserDeliveryCreate] Failed to decrement liters for fixed-plan user ${userId}`, e);
         }
@@ -388,9 +388,26 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
         userNotification = { type: 'top-up', title: 'Top-Up Successful', description: `Your top-up of ₱${requestData.amount.toLocaleString()} has been approved.`, data: { requestId: event.params.requestId }};
         adminNotification = { type: 'top-up', title: 'Top-Up Approved', description: `You approved a ₱${requestData.amount.toLocaleString()} top-up for ${userData.businessName}.`, data: { userId, requestId: event.params.requestId }};
         
-        promises.push(db.collection('users').doc(userId).update({
+        const userRef = db.collection('users').doc(userId);
+        const transactionRef = userRef.collection('transactions').doc();
+        
+        const batch = db.batch();
+        
+        // 1. Update the balance
+        batch.update(userRef, {
             topUpBalanceCredits: increment(requestData.amount)
-        }));
+        });
+
+        // 2. Create the transaction record
+        batch.set(transactionRef, {
+            id: transactionRef.id,
+            date: serverTimestamp(),
+            type: 'Credit',
+            amountCredits: requestData.amount,
+            description: 'User-initiated top-up'
+        } as Transaction);
+
+        promises.push(batch.commit());
 
     } else if (after.status === 'Rejected') {
         userNotification = { type: 'top-up', title: 'Top-Up Rejected', description: `Your top-up request was rejected. Reason: ${requestData.rejectionReason || 'Not specified'}.`, data: { requestId: event.params.requestId }};

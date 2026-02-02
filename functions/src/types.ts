@@ -22,8 +22,6 @@ export interface Delivery {
   status: 'Delivered' | 'In Transit' | 'Pending';
   proofOfDeliveryUrl?: string;
   adminNotes?: string;
-  liters?: number;
-  amount?: number;
 }
 
 export interface ManualCharge {
@@ -44,4 +42,14 @@ export interface RefillRequest {
   statusHistory?: any[]; // Simplified for functions
   volumeContainers?: number;
   requestedDate?: string;
+}
+
+export interface Transaction {
+    id: string;
+    date: FieldValue | Timestamp;
+    type: 'Credit' | 'Debit';
+    amountCredits: number;
+    description: string;
+    branchId?: string;
+    branchName?: string;
 }
