@@ -631,6 +631,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
                       <div>
                         <p className="font-semibold text-sm">{tx.description}</p>
                         <p className="text-xs text-muted-foreground">{toSafeDate(tx.date) ? format(toSafeDate(tx.date)!, 'PP') : 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground font-mono">ID: {tx.id}</p>
                       </div>
                       <Badge variant={tx.type === 'Credit' ? 'default' : 'secondary'} className={cn('text-xs', tx.type === 'Credit' ? 'bg-green-100 text-green-800' : '')}>
                         {tx.type === 'Debit' ? 'Deducted' : tx.type}
@@ -1969,4 +1970,3 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     </AlertDialog>
   );
 }
-
