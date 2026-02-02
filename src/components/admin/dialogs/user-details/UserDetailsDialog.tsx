@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -97,7 +96,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             const deliveryDate = toSafeDate(d.date);
             return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
         });
-        return deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+        return deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
     }, [userDeliveriesData]);
     
     const consumptionComparison = useMemo(() => {
@@ -112,7 +111,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 const deliveryDate = toSafeDate(d.date);
                 return deliveryDate ? isWithinInterval(deliveryDate, { start: lastMonthStart, end: lastMonthEnd }) : false;
             })
-            .reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+            .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
     
         if (consumedLitersLastMonth === 0) {
             return { percentageChange: consumedLitersThisMonth > 0 ? 100 : 0, changeType: consumedLitersThisMonth > 0 ? 'increase' : 'same' };
@@ -164,6 +163,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
             status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
         };
     }, [user, userDeliveriesData, consumedLitersThisMonth]);
+
+    const parentUser = useMemo(() => {
+        if (!user.parentId || !allUsers) return null;
+        return allUsers.find(u => u.id === user.parentId) || null;
+    }, [user.parentId, allUsers]);
 
     const handleAssignStation = async (stationId: string) => {
         if (!userDocRef) return;
@@ -300,6 +304,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 onOpenChange={setIsCreateDeliveryOpen}
                 deliveryToEdit={deliveryToEdit}
                 user={user}
+                parentUser={parentUser}
             />
             <PaymentReviewDialog
                 isOpen={isPaymentReviewOpen}

@@ -67,7 +67,7 @@ export function StatCards({
     const monthsToBill = 1;
     
     const deliveriesThisCycle = deliveries.filter(d => isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd }));
-    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters || containerToLiter(d.volumeContainers)), 0);
+    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
         
     let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -9,8 +8,9 @@ import {
   useUser,
   useMemoFirebase,
 } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
-import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest } from '@/lib/types';
+import { doc, collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { format, startOfMonth, endOfMonth, isWithinInterval, getYear, getMonth, subMonths } from 'date-fns';
+import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, Transaction } from '@/lib/types';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
@@ -22,6 +22,17 @@ import { DashboardDialogs } from '@/components/dashboard/DashboardDialogs';
 
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+const toSafeDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Timestamp) return timestamp.toDate();
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) return date;
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) return new Date(timestamp.seconds * 1000);
+    return null;
+};
 
 export default function DashboardPage() {
   const firestore = useFirestore();
@@ -44,6 +55,12 @@ export default function DashboardPage() {
   }, [firestore, user]);
 
   const { data: deliveries, isLoading: areDeliveriesLoading } = useCollection<Delivery>(deliveriesQuery);
+
+  const transactionsQuery = useMemoFirebase(() => {
+    if (!firestore || !isParent || !user?.id) return null;
+    return query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc'));
+  }, [firestore, isParent, user?.id]);
+  const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
   const stationDocRef = useMemoFirebase(
     () => (firestore && user?.assignedWaterStationId ? doc(firestore, 'waterStations', user.assignedWaterStationId) : null),
@@ -81,10 +98,37 @@ export default function DashboardPage() {
   }, [firestore, isParent, user?.id]);
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
   
-  const totalBranchConsumptionLiters = useMemo(() => {
-    if (!isParent || !deliveries) return 0;
-    return deliveries.reduce((total, delivery) => total + (delivery.liters || 0), 0);
-  }, [isParent, deliveries]);
+  const parentCalculatedBalances = useMemo(() => {
+    if (!isParent || !user || !deliveries) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalConsumptionLiters: 0 };
+    
+    const totalCredits = (transactions || [])
+        .filter(t => t.type === 'Credit')
+        .reduce((sum, t) => sum + t.amountCredits, 0);
+    
+    const pricePerLiter = user.plan?.price || 1;
+
+    const totalDebitAmount = (deliveries || []).reduce((sum, d) => {
+        const amount = d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * pricePerLiter;
+        return sum + amount;
+    }, 0);
+        
+    const totalConsumptionLiters = (deliveries || []).reduce((sum, d) => {
+        const liters = d.liters ?? containerToLiter(d.volumeContainers);
+        return sum + liters;
+    }, 0);
+
+    const displayedCreditBalance = totalCredits - totalDebitAmount;
+    
+    const totalPotentialLiters = totalCredits > 0 ? totalCredits / pricePerLiter : 0;
+    const displayedAvailableLiters = totalPotentialLiters - totalConsumptionLiters;
+
+    return {
+      displayedCreditBalance,
+      displayedAvailableLiters: displayedAvailableLiters > 0 ? displayedAvailableLiters : 0,
+      totalConsumptionLiters: totalConsumptionLiters
+    };
+
+  }, [isParent, transactions, deliveries, user]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -117,7 +161,7 @@ export default function DashboardPage() {
         <StatCards
             user={user}
             deliveries={deliveries}
-            totalBranchConsumptionLiters={totalBranchConsumptionLiters}
+            parentCalculatedBalances={parentCalculatedBalances}
             onConsumptionHistoryClick={() => handleDispatchDialogEvent('open-consumption-history')}
             onSaveLitersClick={() => handleDispatchDialogEvent('open-save-liters')}
             onUpdateScheduleClick={() => handleDispatchDialogEvent('open-update-schedule')}

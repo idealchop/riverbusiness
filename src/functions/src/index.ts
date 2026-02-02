@@ -1,4 +1,4 @@
-'use server';
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated, QueryDocumentSnapshot } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -6,7 +6,7 @@ import { getFirestore, FieldValue, Timestamp, increment } from "firebase-admin/f
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import * as path from 'path';
-import type { Notification, Delivery, RefillRequest } from './types';
+import type { Notification, Delivery, RefillRequest, Transaction } from './types';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
@@ -95,15 +95,14 @@ async function handleBranchDeliveryCreate(event: functions.firestore.FirestoreEv
             return;
         }
         const parentData = parentDoc.data()!;
-        const litersDelivered = containerToLiter(deliveryData.volumeContainers);
         const pricePerLiter = parentData.plan?.price || 0;
-        const deliveryCost = litersDelivered * pricePerLiter;
+        const deliveryCost = deliveryData.amount ?? (deliveryData.liters ?? containerToLiter(deliveryData.volumeContainers)) * pricePerLiter;
 
         if (deliveryCost > 0) {
             const billingBatch = db.batch();
             billingBatch.update(parentRef, { topUpBalanceCredits: increment(-deliveryCost) });
             const transactionRef = parentRef.collection('transactions').doc();
-            billingBatch.set(transactionRef, {
+            const newTransaction: Transaction = {
                 id: transactionRef.id,
                 date: deliveryData.date,
                 type: 'Debit',
@@ -111,7 +110,8 @@ async function handleBranchDeliveryCreate(event: functions.firestore.FirestoreEv
                 description: `Delivery to ${branchUserData.businessName}`,
                 branchId: branchUserId,
                 branchName: branchUserData.businessName,
-            });
+            };
+            billingBatch.set(transactionRef, newTransaction);
             await billingBatch.commit();
             logger.info(`[handleBranchDeliveryCreate] SUCCESS: Processed billing for parent ${parentId}. Cost: ${deliveryCost}`);
 
@@ -138,11 +138,13 @@ async function handleSingleUserDeliveryCreate(event: functions.firestore.Firesto
 
     if (userData.accountType === 'Single' && !userData.isPrepaid && !userData.plan?.isConsumptionBased) {
         try {
-            const litersDelivered = containerToLiter(deliveryData.volumeContainers);
-            await db.collection('users').doc(userId).update({
-                totalConsumptionLiters: increment(-litersDelivered)
-            });
-            logger.info(`[handleSingleUserDeliveryCreate] Decremented liter balance for fixed-plan user ${userId}.`);
+            const litersDelivered = deliveryData.liters ?? containerToLiter(deliveryData.volumeContainers);
+            if (litersDelivered > 0) {
+                await db.collection('users').doc(userId).update({
+                    totalConsumptionLiters: increment(-litersDelivered)
+                });
+                logger.info(`[handleSingleUserDeliveryCreate] Decremented ${litersDelivered}L from balance for fixed-plan user ${userId}.`);
+            }
         } catch (e) {
             logger.error(`[handleSingleUserDeliveryCreate] Failed to decrement liters for fixed-plan user ${userId}`, e);
         }
@@ -388,9 +390,27 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
         userNotification = { type: 'top-up', title: 'Top-Up Successful', description: `Your top-up of ₱${requestData.amount.toLocaleString()} has been approved.`, data: { requestId: event.params.requestId }};
         adminNotification = { type: 'top-up', title: 'Top-Up Approved', description: `You approved a ₱${requestData.amount.toLocaleString()} top-up for ${userData.businessName}.`, data: { userId, requestId: event.params.requestId }};
         
-        promises.push(db.collection('users').doc(userId).update({
+        const userRef = db.collection('users').doc(userId);
+        const transactionRef = userRef.collection('transactions').doc();
+        
+        const batch = db.batch();
+        
+        // 1. Update the balance
+        batch.update(userRef, {
             topUpBalanceCredits: increment(requestData.amount)
-        }));
+        });
+
+        // 2. Create the transaction record
+        const newTransaction: Transaction = {
+            id: transactionRef.id,
+            date: FieldValue.serverTimestamp(),
+            type: 'Credit',
+            amountCredits: requestData.amount,
+            description: 'User-initiated top-up'
+        };
+        batch.set(transactionRef, newTransaction);
+
+        promises.push(batch.commit());
 
     } else if (after.status === 'Rejected') {
         userNotification = { type: 'top-up', title: 'Top-Up Rejected', description: `Your top-up request was rejected. Reason: ${requestData.rejectionReason || 'Not specified'}.`, data: { requestId: event.params.requestId }};
