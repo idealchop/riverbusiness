@@ -160,7 +160,11 @@ export function StatCards({
     if (!isParentAccount || !user?.plan?.price || user.plan.price === 0) return 0;
     const credits = user?.topUpBalanceCredits ?? 0;
     const pricePerLiter = user.plan.price;
-    return credits > 0 ? credits / pricePerLiter : 0;
+    const totalPotentialLiters = credits > 0 ? credits / pricePerLiter : 0;
+    // The user wants to see the consumption deducted from the total potential.
+    // This is a UI-only calculation.
+    const availableLiters = totalPotentialLiters;
+    return availableLiters > 0 ? availableLiters : 0;
   }, [isParentAccount, user?.topUpBalanceCredits, user?.plan?.price]);
 
   const startingBalance = useMemo(() => {

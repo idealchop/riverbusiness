@@ -83,7 +83,7 @@ export default function DashboardPage() {
   
   const totalBranchConsumptionLiters = useMemo(() => {
     if (!isParent || !deliveries) return 0;
-    return deliveries.reduce((total, delivery) => total + containerToLiter(delivery.volumeContainers), 0);
+    return deliveries.reduce((total, delivery) => total + (delivery.liters || containerToLiter(delivery.volumeContainers)), 0);
   }, [isParent, deliveries]);
 
   useEffect(() => {
