@@ -57,6 +57,7 @@ export const ondeliverycreate = onDocumentCreated({
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
+    // Always create in-app notification
     await createNotification(userId, { 
         type: 'delivery', 
         title: 'Delivery Scheduled', 
@@ -64,12 +65,13 @@ export const ondeliverycreate = onDocumentCreated({
         data: { deliveryId } 
     });
 
-    if (userData?.email) {
-        const template = getDeliveryStatusTemplate(userData.businessName, 'Scheduled', deliveryId, delivery.volumeContainers);
+    // ONLY send email if status is 'Delivered' (Completed)
+    if (userData?.email && delivery.status === 'Delivered') {
+        const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
-            text: `Delivery ${deliveryId} scheduled.`, 
+            text: `Delivery ${deliveryId} is complete.`, 
             html: template.html 
         });
     }
@@ -80,7 +82,7 @@ export const ondeliveryupdate = onDocumentUpdated({
     secrets: ["BREVO_API_KEY"]
 }, async (event) => {
     if (!event.data) return;
-    const before = event.data.before.data();
+    const before = event.data.before.data() as Delivery;
     const after = event.data.after.data() as Delivery;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
@@ -93,6 +95,7 @@ export const ondeliveryupdate = onDocumentUpdated({
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
+    // Always create in-app notification
     await createNotification(userId, { 
         type: 'delivery', 
         title: `Delivery ${after.status}`, 
@@ -100,12 +103,13 @@ export const ondeliveryupdate = onDocumentUpdated({
         data: { deliveryId } 
     });
 
-    if (userData?.email) {
-        const template = getDeliveryStatusTemplate(userData.businessName, after.status, deliveryId, after.volumeContainers);
+    // ONLY send email if status is now 'Delivered' (Completed)
+    if (userData?.email && after.status === 'Delivered') {
+        const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
-            text: `Delivery ${after.status}.`, 
+            text: `Delivery ${deliveryId} is complete.`, 
             html: template.html 
         });
     }
