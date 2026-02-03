@@ -19,7 +19,7 @@ exports.createNotification = createNotification;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
-// Initialize Firebase Admin SDK before importing other modules that might use it
+// Initialize Firebase Admin SDK before importing other modules
 (0, app_1.initializeApp)();
 const storage_2 = require("firebase-functions/v2/storage");
 const firestore_2 = require("firebase-functions/v2/firestore");
