@@ -2,7 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK first
 initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
@@ -22,7 +22,7 @@ export * from './billing';
 /**
  * Creates a notification document in a user's notification subcollection.
  */
-export async function createNotification(userId: string, notificationData: any) {
+async function createNotification(userId: string, notificationData: any) {
   if (!userId) return;
   const db = getFirestore();
   const notification = { 
