@@ -17,7 +17,8 @@ import {
     getRefillRequestTemplate,
     getInternalRefillAlertTemplate,
     getSanitationReportTemplate,
-    getComplianceAlertTemplate
+    getComplianceAlertTemplate,
+    getWelcomeUnclaimedTemplate
 } from './email';
 
 // Export all billing functions (this includes generateMonthlyInvoices)
@@ -44,6 +45,47 @@ async function createNotification(userId: string, notificationData: any) {
 }
 
 // --- TRIGGERS ---
+
+/**
+ * Triggered when a new unclaimed profile is created by an admin.
+ * Sends a welcome invitation email to the business contact.
+ */
+export const onunclaimedprofilecreate = onDocumentCreated({
+    document: "unclaimedProfiles/{clientId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const profile = event.data.data();
+    
+    // Check if we have an email to send to
+    if (!profile.businessEmail) {
+        logger.warn(`No businessEmail found for unclaimed profile: ${event.params.clientId}`);
+        return;
+    }
+
+    const planName = `${profile.clientType || ''} - ${profile.plan?.name || ''}`;
+    const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
+
+    const template = getWelcomeUnclaimedTemplate(
+        profile.businessName || profile.name || 'Valued Client',
+        profile.clientId,
+        planName,
+        profile.address || 'N/A',
+        schedule
+    );
+
+    try {
+        await sendEmail({
+            to: profile.businessEmail,
+            subject: template.subject,
+            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}. Link it at app.riverph.com to activate your dashboard.`,
+            html: template.html
+        });
+        logger.info(`Welcome email sent to ${profile.businessEmail} for client ${profile.clientId}`);
+    } catch (error) {
+        logger.error(`Failed to send welcome email to ${profile.businessEmail}`, error);
+    }
+});
 
 export const ondeliverycreate = onDocumentCreated({
     document: "users/{userId}/deliveries/{deliveryId}",

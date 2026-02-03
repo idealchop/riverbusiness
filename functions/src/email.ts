@@ -110,8 +110,9 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
             <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
           <div class="footer">
-            <p class="footer-company">River For Business | Your Operating System for Business Essentials</p>
+            <p class="footer-company">River For Business</p>
             <p class="footer-sub">
+              Your Operating System for Business Essentials<br>
               <a href="https://riverph.com">www.riverph.com</a>
             </p>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
@@ -124,6 +125,89 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
     </body>
     </html>
   `;
+}
+
+export function getWelcomeUnclaimedTemplate(
+  businessName: string,
+  clientId: string,
+  planName: string,
+  address: string,
+  schedule: string
+) {
+  const guideUrl = "https://prism-roadrunner-575.notion.site/Welcome-to-River-Philippines-2dfccd0e1c6280648d41d1eb44033f50?source=copy_link";
+  const brandColor = "#538ec2";
+
+  return {
+    subject: `Welcome to River Philippines: Your Smart Refill is Ready! 🌊`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+          <style>
+              body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f9; }
+              .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+              .header { background-color: ${brandColor}; color: #ffffff; padding: 40px 30px; text-align: center; }
+              .header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; font-weight: 800; }
+              .content { padding: 40px; background-color: #ffffff; }
+              .highlight { color: ${brandColor}; font-weight: bold; }
+              .summary-box { background-color: #f8f9fa; border-left: 4px solid ${brandColor}; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+              .summary-item { margin-bottom: 10px; font-size: 14px; }
+              .summary-label { font-weight: bold; color: #555; width: 120px; display: inline-block; }
+              .button-container { text-align: center; margin: 30px 0; }
+              .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
+              .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+              .footer { background-color: #f1f1f1; padding: 30px; font-size: 11px; color: #777; line-height: 1.4; }
+              .footer-brand { font-weight: bold; color: #333; margin-bottom: 5px; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>RIVER PHILIPPINES</h1>
+                  <p style="margin-top: 5px; font-size: 14px; opacity: 0.9;">Your Operating System for Business Essentials</p>
+              </div>
+
+              <div class="content">
+                  <p>Hello <strong>${businessName}</strong>,</p>
+                  <p>Welcome to <strong>River Philippines</strong>!</p>
+                  <p>We are honored to be your partner in hydration. By joining our community, you have chosen a service that prioritizes <span class="highlight">Premium Water Quality</span>. Your <span class="highlight">Smart Refill</span> system is now active, ensuring that your workplace is always supplied with the cleanest water without you ever having to lift a finger.</p>
+
+                  <div class="summary-box">
+                      <div class="summary-item"><span class="summary-label">Client ID:</span> <span style="font-family: monospace; font-weight: bold;">${clientId}</span></div>
+                      <div class="summary-item"><span class="summary-label">Plan:</span> ${planName}</div>
+                      <div class="summary-item"><span class="summary-label">Service Address:</span> ${address}</div>
+                      <div class="summary-item"><span class="summary-label">Smart Refill:</span> ${schedule}</div>
+                  </div>
+
+                  <h3>How to Access Your Account:</h3>
+                  <p>Go to <a href="https://app.riverph.com" class="highlight">app.riverph.com</a>, <strong>create your account</strong>, and link your <strong>Client ID</strong> to activate your dashboard. [<a href="${guideUrl}" style="color: ${brandColor}; text-decoration: underline;">See Guide</a>]</p>
+
+                  <div class="button-container">
+                      <a href="https://app.riverph.com" class="button">Activate My Dashboard</a>
+                  </div>
+
+                  <div class="commitment">
+                      <p><strong>The River Philippines Quality Commitment:</strong> We guarantee premium hydration through DOH-certified water, automated <strong>Smart Refills</strong> that ensure you never run dry, and <strong>Monthly Professional Sanitation</strong> of your equipment. Manage everything effortlessly with real-time tracking and automated <strong>Digital Records (SOA/Invoices)</strong> for seamless liquidation.</p>
+                      <p>Welcome to the future of clean, automated hydration!</p>
+                  </div>
+              </div>
+
+              <div class="footer">
+                  <div class="footer-brand">River Philippines | Your Operating System for Business Essentials</div>
+                  <div>Smart Refill • AI CRM • HR Payroll • riverph.com</div>
+                  <div style="margin: 10px 0; border-top: 1px solid #ddd; padding-top: 10px;">
+                      <strong>DISCLAIMER:</strong> This communication and any attachments are intended to be confidential, protected under the Bank Secrecy, Data Privacy (RA 10173), or Intellectual Property laws, and for the exclusive use of the addressee. If you are not the intended recipient, you are notified that disclosure, retention, dissemination, copying, alteration or distribution of this communication and/or any attachment, or any part thereof or information therein, is strictly prohibited. If you receive this communication in error, kindly notify the sender by e-mail, and delete this communication and all attachments immediately.
+                  </div>
+                  <p style="text-align: center;">© 2026 River Business. All rights reserved.</p>
+              </div>
+          </div>
+      </body>
+      </html>
+    `
+  };
 }
 
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
