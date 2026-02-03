@@ -1,5 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
+import { format } from 'date-fns';
 
 interface SendEmailOptions {
   to: string;
@@ -52,9 +53,9 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
 }
 
 /**
- * Generates the common HTML wrapper for all River Business emails.
+ * Generates the common HTML wrapper for all River Business emails with Manrope font and consistent branding.
  */
-function getEmailWrapper(content: string, preheader: string) {
+function getEmailWrapper(content: string, header: string, subheader: string = '') {
   return `
     <!DOCTYPE html>
     <html>
@@ -102,12 +103,14 @@ function getEmailWrapper(content: string, preheader: string) {
           <img src="${LOGO_URL}" alt="River Business Logo" class="logo">
         </div>
         <div class="content">
+          <h2 class="h2">${header}</h2>
+          ${subheader}
           ${content}
           <div class="btn-container">
             <a href="https://app.riverph.com" class="btn">Go to Dashboard</a>
           </div>
           <p class="support-link">
-            Questions about this? <a href="mailto:customers@riverph.com">Contact Support</a>
+            Questions? We're here to help. <a href="mailto:customers@riverph.com">Contact Support</a>
           </p>
           <hr class="footer-line" />
           <div class="footer">
@@ -116,7 +119,7 @@ function getEmailWrapper(content: string, preheader: string) {
               Turn Everyday Needs Into Automatic Experience<br>
               Manila, Philippines | <a href="https://www.riverph.com">www.riverph.com</a>
             </p>
-            <p class="automated-note">This is an automated message. Please do not reply to this email.</p>
+            <p class="automated-note">This is an automated message from River Business. Please do not reply directly to this email.</p>
           </div>
         </div>
       </div>
@@ -127,14 +130,13 @@ function getEmailWrapper(content: string, preheader: string) {
 
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
   const color = '#10b981'; // Green for Delivered
+  const subheader = `<p class="tracking-id">Tracking ID: <span>${trackingId}</span></p>`;
+  
   const content = `
-    <h2 class="h2">Delivery Completed! 💧</h2>
-    <p class="tracking-id">Tracking ID: <span>${trackingId}</span></p>
-    
-    <p class="greeting">Hi <strong>${businessName}</strong>,</p>
+    <p class="greeting">Hi <strong>${businessName}</strong>, 💧</p>
     
     <p class="body-text">
-      Stay hydrated! Your fresh water supply has been successfully delivered to your station. Our team has completed the replenishment of your units.
+      Your hydration has arrived! We've successfully replenished your water supply so your team can stay focused, healthy, and productive. Our quality team has verified this batch for safety and excellence.
     </p>
 
     <div class="status-badge">
@@ -144,7 +146,7 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
     </div>
 
     <div class="details-box">
-      <h3 class="details-title">Shipment Summary</h3>
+      <h3 class="details-title">Delivery Summary</h3>
       <div class="detail-item">
         <div class="detail-icon">📦</div>
         <div>
@@ -153,14 +155,14 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
         </div>
       </div>
       <p class="next-step">
-        <strong>Next Step:</strong> You can now view the high-resolution proof of delivery and track your updated liter balance directly in your portal.
+        <strong>What's Next:</strong> Your digital <strong>Proof of Delivery (POD)</strong> is now available for download. You can also track your real-time consumption trends in the dashboard.
       </p>
     </div>
   `;
 
   return {
     subject: `Success: Water Delivered to ${businessName} 🚚`,
-    html: getEmailWrapper(content, 'Your water has been delivered.')
+    html: getEmailWrapper(content, 'Hydration Delivered!', subheader)
   };
 }
 
@@ -169,15 +171,15 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
   const color = isPaid ? '#10b981' : '#f59e0b';
   const emoji = isPaid ? '✅' : '⏳';
   const title = isPaid ? 'Payment Confirmed' : 'Review in Progress';
+  const subheader = `<p class="tracking-id">Invoice ID: <span>${invoiceId}</span></p>`;
   
   const content = `
-    <h2 class="h2">${title} ${emoji}</h2>
-    <p class="tracking-id">Invoice ID: <span>${invoiceId}</span></p>
-    
-    <p class="greeting">Hi <strong>${businessName}</strong>,</p>
+    <p class="greeting">Hi <strong>${businessName}</strong>, ${emoji}</p>
     
     <p class="body-text">
-      ${isPaid ? "Thank you for your prompt payment! We've successfully updated your records, and your account remains in excellent standing." : "We've received your proof of payment. Our finance team is currently reviewing the details to finalize your record."}
+      ${isPaid 
+        ? "Your account is in excellent standing! We've successfully processed your payment. Thank you for choosing River Business for your corporate hydration needs—keeping your records clean and your water flowing." 
+        : "We've received your proof of payment! Our finance team is now reviewing the details. You'll receive another update once the record is finalized."}
     </p>
 
     <div class="status-badge">
@@ -187,34 +189,32 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
     </div>
 
     <div class="details-box">
-      <h3 class="details-title">Payment Details</h3>
+      <h3 class="details-title">Financial Details</h3>
       <div class="detail-item">
         <div class="detail-icon">💰</div>
         <div>
-          <p class="detail-label">Amount Paid</p>
+          <p class="detail-label">Amount Received</p>
           <p class="detail-value">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
       <p class="next-step">
-        <strong>Tip:</strong> You can download a PDF copy of your official receipt and view your full billing history anytime.
+        <strong>Value Tip:</strong> Maintaining a "Paid" status ensures uninterrupted delivery service and access to all exclusive partner perks.
       </p>
     </div>
   `;
 
   return {
     subject: `${title}: ${invoiceId} ${emoji}`,
-    html: getEmailWrapper(content, 'Payment status update.')
+    html: getEmailWrapper(content, title, subheader)
   };
 }
 
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
   const content = `
-    <h2 class="h2">Balance Boosted! 💳</h2>
-    
-    <p class="greeting">Hi <strong>${businessName}</strong>,</p>
+    <p class="greeting">Hi <strong>${businessName}</strong>, 💳</p>
     
     <p class="body-text">
-      Your top-up request has been approved! Your credits have been successfully added to your central wallet and are ready for your next delivery.
+      Your central wallet has been boosted! You're all set for your upcoming deliveries. No more manual approvals needed for every container—just pure, automated efficiency for your business.
     </p>
 
     <div class="details-box">
@@ -227,26 +227,25 @@ export function getTopUpConfirmationTemplate(businessName: string, amount: numbe
         </div>
       </div>
       <p class="next-step">
-        We'll automatically deduct from this balance for every container delivered to your branches.
+        We will automatically deduct from this balance for every container delivered to your designated branches.
       </p>
     </div>
   `;
 
   return {
     subject: `Credits Added Successfully to your Wallet 💰`,
-    html: getEmailWrapper(content, 'Your wallet has been credited.')
+    html: getEmailWrapper(content, 'Balance Boosted!')
   };
 }
 
 export function getNewInvoiceTemplate(businessName: string, invoiceId: string, amount: number, period: string) {
+  const subheader = `<p class="tracking-id">Statement ID: <span>${invoiceId}</span></p>`;
+  
   const content = `
-    <h2 class="h2">New Statement Ready 📄</h2>
-    <p class="tracking-id">Invoice ID: <span>${invoiceId}</span></p>
-    
-    <p class="greeting">Hi <strong>${businessName}</strong>,</p>
+    <p class="greeting">Hi <strong>${businessName}</strong>, 📄</p>
     
     <p class="body-text">
-      Your automated monthly statement for <strong>${period}</strong> has been generated and is now available for your review.
+      Transparency matters. Your latest water management statement for <strong>${period}</strong> is now available. Review your consumption patterns and equipment fees in one place to help you optimize your office overhead.
     </p>
 
     <div class="details-box">
@@ -259,14 +258,14 @@ export function getNewInvoiceTemplate(businessName: string, invoiceId: string, a
         </div>
       </div>
       <p class="next-step">
-        Log in to see your detailed consumption breakdown and equipment fees. You can pay instantly via GCash, Maya, or Bank Transfer.
+        Pay instantly via GCash, Maya, or Bank Transfer through our secure portal to keep your account current.
       </p>
     </div>
   `;
 
   return {
-    subject: `New Invoice Available for ${period} 📑`,
-    html: getEmailWrapper(content, 'Your monthly statement is ready.')
+    subject: `New Statement Available for ${period} 📑`,
+    html: getEmailWrapper(content, 'New Statement Ready', subheader)
   };
 }
 
@@ -274,15 +273,15 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
   const isReceived = status === 'Requested';
   const color = isReceived ? '#3b82f6' : '#10b981';
   const emoji = isReceived ? '🌊' : '🚀';
+  const subheader = `<p class="tracking-id">Request ID: <span>${requestId}</span></p>`;
   
   const content = `
-    <h2 class="h2">Refill Request ${isReceived ? 'Received' : 'Updated'} ${emoji}</h2>
-    <p class="tracking-id">Request ID: <span>${requestId}</span></p>
-    
-    <p class="greeting">Hi <strong>${businessName}</strong>,</p>
+    <p class="greeting">Hi <strong>${businessName}</strong>, ${emoji}</p>
     
     <p class="body-text">
-      ${isReceived ? "We've received your request for an extra water refill. Our fulfillment team has been alerted and is already preparing your containers." : `Your on-demand refill request is moving through our system and is currently <strong>${status}</strong>.`}
+      ${isReceived 
+        ? "We heard you! A special request for water has been logged. We're prioritizing this to make sure your office never runs dry. Our team is already preparing your containers for dispatch." 
+        : `Your on-demand refill request is moving through our system and is currently <strong>${status}</strong>.`}
     </p>
 
     <div class="status-badge">
@@ -296,7 +295,7 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
       <div class="detail-item">
         <div class="detail-icon">🚚</div>
         <div>
-          <p class="detail-label">Requested Date</p>
+          <p class="detail-label">Priority Level</p>
           <p class="detail-value">${date ? format(new Date(date), 'PP') : 'ASAP Refill'}</p>
         </div>
       </div>
@@ -308,6 +307,6 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
 
   return {
     subject: `Update: Refill Request ${requestId} ${emoji}`,
-    html: getEmailWrapper(content, 'Refill request update.')
+    html: getEmailWrapper(content, isReceived ? 'Refill Received' : 'Refill Updated', subheader)
   };
 }
