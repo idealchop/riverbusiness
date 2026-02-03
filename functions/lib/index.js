@@ -26,11 +26,6 @@ __exportStar(require("./billing"), exports);
 (0, app_1.initializeApp)();
 const db = (0, firestore_2.getFirestore)();
 const storage = (0, storage_2.getStorage)();
-const containerToLiter = (containers) => (containers || 0) * 19.5;
-async function getAdminId() {
-    const adminQuery = await db.collection('users').where('email', '==', 'admin@riverph.com').limit(1).get();
-    return !adminQuery.empty ? adminQuery.docs[0].id : null;
-}
 async function createNotification(userId, notificationData) {
     if (!userId)
         return;
@@ -111,7 +106,7 @@ exports.onrefillrequestcreate = (0, firestore_1.onDocumentCreated)("users/{userI
         await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Refill request received.`, html: template.html });
     }
 });
-exports.onfileupload = (0, storage_1.onObjectFinalized)({ cpu: "memory" }, async (event) => {
+exports.onfileupload = (0, storage_1.onObjectFinalized)({}, async (event) => {
     var _a;
     const filePath = event.data.name;
     if (!filePath || ((_a = event.data.contentType) === null || _a === void 0 ? void 0 : _a.startsWith('application/x-directory')))

@@ -38,6 +38,7 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
+const logger = __importStar(require("firebase-functions/logger"));
 const db = admin.firestore();
 const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
