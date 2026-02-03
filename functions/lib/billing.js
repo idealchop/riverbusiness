@@ -40,7 +40,7 @@ const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
 const containerToLiter = (containers) => (containers || 0) * 19.5;
-exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
+exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async () => {
     var _a;
     logger.info('Starting monthly invoice generation job.');
     const db = (0, firestore_1.getFirestore)();
@@ -57,14 +57,14 @@ exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(a
     const promises = [];
     for (const userDoc of usersSnapshot.docs) {
         const userRef = userDoc.ref;
-        let user = userDoc.data();
+        const user = userDoc.data();
         if (user.role === 'Admin' || user.isPrepaid)
             continue;
         let billingPeriod;
         let billingCycleStart;
         let billingCycleEnd;
         let monthsToBill = 1;
-        let isFirstInvoice = !user.lastBilledDate;
+        const isFirstInvoice = !user.lastBilledDate;
         if (currentYear === 2026 && currentMonth === 1) {
             if ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) {
                 billingCycleStart = new Date(2025, 11, 1);

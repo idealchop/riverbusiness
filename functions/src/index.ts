@@ -6,7 +6,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Notification, Delivery } from './types';
+import type { Delivery } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -17,7 +17,7 @@ import {
 
 export * from './billing';
 
-export async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
+export async function createNotification(userId: string, notificationData: any) {
   if (!userId) return;
   const db = getFirestore();
   const notification = { ...notificationData, userId, date: FieldValue.serverTimestamp(), isRead: false };

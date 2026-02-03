@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions';
-import { getFirestore, FieldValue, DocumentData, DocumentReference } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
@@ -79,8 +79,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 });
 
 async function generateInvoiceForUser(
-    user: DocumentData,
-    userRef: DocumentReference,
+    user: any,
+    userRef: any,
     billingPeriod: string,
     billingCycleStart: Date,
     billingCycleEnd: Date,
