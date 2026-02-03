@@ -6,8 +6,6 @@ import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
 import type { ManualCharge } from './types'; 
 
-const db = admin.firestore();
-
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 /**
@@ -15,7 +13,8 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
  * to generate invoices and handle plan changes.
  */
 export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
-    console.log('Starting monthly invoice generation job.');
+    logger.info('Starting monthly invoice generation job.');
+    const db = admin.firestore();
     
     const now = new Date();
     const currentYear = getYear(now);
@@ -23,7 +22,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 
     // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
     if (currentYear === 2026 && currentMonth === 0) {
-        console.log('Skipping invoice generation for Jan 1, 2026.');
+        logger.info('Skipping invoice generation for Jan 1, 2026.');
         return null;
     }
 
@@ -96,6 +95,7 @@ async function generateInvoiceForUser(
     isFirstInvoice: boolean
 ) {
     if (!user.plan) return;
+    const db = admin.firestore();
 
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();

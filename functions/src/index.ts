@@ -1,9 +1,13 @@
 
-import { onObjectFinalized } from "firebase-functions/v2/storage";
-import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
+import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { initializeApp } from "firebase-admin/app";
+
+// Initialize Firebase Admin SDK before importing other modules that might use it
+initializeApp();
+
+import { onObjectFinalized } from "firebase-functions/v2/storage";
+import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import type { Notification, Delivery } from './types';
 import { 
     sendEmail, 
@@ -13,14 +17,12 @@ import {
     getRefillRequestTemplate
 } from './email';
 
+// Export all billing functions
 export * from './billing';
-
-initializeApp();
-const db = getFirestore();
-const storage = getStorage();
 
 export async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
   if (!userId) return;
+  const db = getFirestore();
   const notification = { ...notificationData, userId, date: FieldValue.serverTimestamp(), isRead: false };
   await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
@@ -31,6 +33,7 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     if (!event.data) return;
     const userId = event.params.userId;
     const delivery = event.data.data() as Delivery;
+    const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
@@ -49,6 +52,7 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     if (before.status === after.status) return;
 
     const userId = event.params.userId;
+    const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
@@ -67,6 +71,7 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     if (before.status === after.status) return;
 
     const userId = event.params.userId;
+    const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
@@ -86,6 +91,7 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
     if (before.status === after.status || after.status !== 'Approved') return;
 
     const userId = event.params.userId;
+    const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
@@ -98,6 +104,7 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
 export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillRequests/{requestId}", async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
+    const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
@@ -107,10 +114,12 @@ export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillReq
     }
 });
 
-export const onfileupload = onObjectFinalized({}, async (event) => {
+export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
 
+  const storage = getStorage();
+  const db = getFirestore();
   const bucket = storage.bucket(event.data.bucket);
   const file = bucket.file(filePath);
   const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
