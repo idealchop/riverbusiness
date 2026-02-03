@@ -53,3 +53,43 @@ export interface Transaction {
     branchId?: string;
     branchName?: string;
 }
+
+export interface SanitationChecklistItem {
+    item: string;
+    checked: boolean;
+    remarks: string;
+}
+
+export interface DispenserReport {
+    dispenserId: string;
+    dispenserName: string;
+    dispenserCode?: string;
+    checklist: SanitationChecklistItem[];
+}
+
+export interface SanitationVisit {
+  id: string;
+  userId: string;
+  scheduledDate: string | Timestamp;
+  status: 'Completed' | 'Scheduled' | 'Cancelled';
+  assignedTo: string;
+  reportUrl?: string;
+  dispenserReports?: DispenserReport[];
+  shareableLink?: string;
+  officerSignature?: string;
+  clientSignature?: string;
+  clientRepName?: string;
+  officerSignatureDate?: string | Timestamp;
+  clientSignatureDate?: string | Timestamp;
+}
+
+export interface ComplianceReport {
+  id:string;
+  name: string;
+  reportType: 'DOH Bacteriological Test (Monthly)' | 'DOH Bacteriological Test (Semi-Annual)' | 'Sanitary Permit' | 'Business Permit';
+  resultId: string;
+  date: string | Timestamp;
+  status: 'Passed' | 'Failed' | 'Pending Review';
+  reportUrl?: string;
+  results?: string;
+}

@@ -36,7 +36,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
+exports.onfileupload = exports.oncompliancecreate = exports.onsanitationupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
@@ -208,6 +208,7 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+    // 1. Notify the Client
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
         await (0, email_1.sendEmail)({
@@ -215,8 +216,88 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
             subject: template.subject,
             text: `Refill request ${requestId} received.`,
             html: template.html
-        });
+        }).catch(e => logger.error("Client refill email failed", e));
     }
+    // 2. Notify the Internal Team (Jimbs and Jayvee)
+    if (userData === null || userData === void 0 ? void 0 : userData.businessName) {
+        const admins = [
+            { name: 'Jimbs', email: 'jimbs.work@gmail.com' },
+            { name: 'Jayvee', email: 'jayvee@riverph.com' }
+        ];
+        for (const admin of admins) {
+            const adminTemplate = (0, email_1.getInternalRefillAlertTemplate)(admin.name, userData.businessName, requestId, request.requestedDate);
+            await (0, email_1.sendEmail)({
+                to: admin.email,
+                subject: adminTemplate.subject,
+                text: `${userData.businessName} requested a refill.`,
+                html: adminTemplate.html
+            }).catch(e => logger.error(`Internal admin alert failed for ${admin.name}`, e));
+        }
+    }
+});
+/**
+ * Triggered when a sanitation visit is marked as Completed.
+ */
+exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
+    document: "users/{userId}/sanitationVisits/{visitId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+    if (before.status !== 'Completed' && after.status === 'Completed') {
+        logger.info(`Triggered onsanitationupdate for user: ${userId}. Status: Completed`);
+        const db = (0, firestore_1.getFirestore)();
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.data();
+        if (userData === null || userData === void 0 ? void 0 : userData.email) {
+            const dateStr = new Date(after.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr);
+            await (0, email_1.sendEmail)({
+                to: userData.email,
+                subject: template.subject,
+                text: `Your sanitation report for ${dateStr} is ready.`,
+                html: template.html
+            });
+        }
+    }
+});
+/**
+ * Triggered when a new compliance report is added to a station.
+ * Notifies all users assigned to that station.
+ */
+exports.oncompliancecreate = (0, firestore_2.onDocumentCreated)({
+    document: "waterStations/{stationId}/complianceReports/{reportId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const stationId = event.params.stationId;
+    const report = event.data.data();
+    logger.info(`Triggered oncompliancecreate for station: ${stationId}`);
+    const db = (0, firestore_1.getFirestore)();
+    const stationDoc = await db.collection("waterStations").doc(stationId).get();
+    const stationData = stationDoc.data();
+    // Find all users assigned to this station
+    const usersSnapshot = await db.collection("users").where("assignedWaterStationId", "==", stationId).get();
+    if (usersSnapshot.empty || !stationData)
+        return;
+    const emailPromises = usersSnapshot.docs.map(async (doc) => {
+        const userData = doc.data();
+        if (userData.email) {
+            const template = (0, email_1.getComplianceAlertTemplate)(userData.businessName, stationData.name, report.name);
+            return (0, email_1.sendEmail)({
+                to: userData.email,
+                subject: template.subject,
+                text: `New safety report available for ${stationData.name}.`,
+                html: template.html
+            }).catch(e => logger.error(`Compliance email failed for ${userData.businessName}`, e));
+        }
+        return null;
+    });
+    await Promise.all(emailPromises);
 });
 exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, async (event) => {
     var _a;

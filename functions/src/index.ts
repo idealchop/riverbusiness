@@ -254,7 +254,7 @@ export const onsanitationupdate = onDocumentUpdated({
         const userData = userDoc.data();
 
         if (userData?.email) {
-            const dateStr = new Date(after.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const dateStr = new Date(after.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
             await sendEmail({
                 to: userData.email,
