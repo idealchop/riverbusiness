@@ -65,13 +65,13 @@ export const ondeliverycreate = onDocumentCreated({
         data: { deliveryId } 
     });
 
-    // ONLY send email if status is 'Delivered'
+    // ONLY send email if status is 'Delivered' (Completed)
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
-            text: `Your delivery ${deliveryId} has arrived!`, 
+            text: `Your water delivery ${deliveryId} has been successfully completed!`, 
             html: template.html 
         });
     }
@@ -103,7 +103,7 @@ export const ondeliveryupdate = onDocumentUpdated({
         data: { deliveryId } 
     });
 
-    // ONLY send email if status is NOW 'Delivered'
+    // ONLY send email if status is NOW 'Delivered' (Completed)
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
         await sendEmail({ 
@@ -145,7 +145,7 @@ export const onpaymentupdate = onDocumentUpdated({
             await sendEmail({ 
                 to: userData.email, 
                 subject: template.subject, 
-                text: `Payment confirmed.`, 
+                text: `Your payment has been successfully confirmed.`, 
                 html: template.html 
             });
         }
@@ -177,7 +177,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
-            text: `Your top-up of ₱${after.amount} has been approved.`, 
+            text: `Your top-up of ₱${after.amount} has been approved and added to your wallet.`, 
             html: template.html 
         });
     }
@@ -206,7 +206,7 @@ export const onrefillrequestcreate = onDocumentCreated({
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
-            text: `Refill request ${requestId} received.`, 
+            text: `We've received your refill request ${requestId}.`, 
             html: template.html 
         });
     }
