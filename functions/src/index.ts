@@ -42,7 +42,10 @@ async function createNotification(userId: string, notificationData: any) {
 
 // --- TRIGGERS ---
 
-export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+export const ondeliverycreate = onDocumentCreated({
+    document: "users/{userId}/deliveries/{deliveryId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
@@ -72,7 +75,10 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     }
 });
 
-export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{deliveryId}", async (event) => {
+export const ondeliveryupdate = onDocumentUpdated({
+    document: "users/{userId}/deliveries/{deliveryId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data() as Delivery;
@@ -105,7 +111,10 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     }
 });
 
-export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{paymentId}", async (event) => {
+export const onpaymentupdate = onDocumentUpdated({
+    document: "users/{userId}/payments/{paymentId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data();
@@ -142,7 +151,10 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
 /**
  * Triggered when a top-up request status is updated (e.g., Approved).
  */
-export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+export const ontopuprequestupdate = onDocumentUpdated({
+    document: "users/{userId}/topUpRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data();
@@ -170,7 +182,10 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
 /**
  * Triggered when a client creates a new one-time refill request.
  */
-export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillRequests/{requestId}", async (event) => {
+export const onrefillrequestcreate = onDocumentCreated({
+    document: "users/{userId}/refillRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
     const requestId = event.params.requestId;

@@ -1,5 +1,5 @@
-import * as functions from 'firebase-functions';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
@@ -7,7 +7,16 @@ import type { ManualCharge } from './types';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async () => {
+/**
+ * A scheduled Cloud Function that runs on the 1st of every month
+ * to generate invoices and handle plan changes.
+ * Uses 2nd Gen Scheduler and mounts BREVO_API_KEY secret.
+ */
+export const generateMonthlyInvoices = onSchedule({
+    schedule: '0 0 1 * *',
+    secrets: ["BREVO_API_KEY"],
+    memory: "256MiB"
+}, async (event) => {
     logger.info('Starting monthly invoice generation job.');
     const db = getFirestore();
     
@@ -17,11 +26,11 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 
     if (currentYear === 2026 && currentMonth === 0) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
-        return null;
+        return;
     }
 
     const usersSnapshot = await db.collection('users').get();
-    if (usersSnapshot.empty) return null;
+    if (usersSnapshot.empty) return;
 
     const promises: Promise<any>[] = [];
 
@@ -75,7 +84,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
     }
 
     await Promise.all(promises);
-    return null;
+    return;
 });
 
 async function generateInvoiceForUser(

@@ -1,15 +1,6 @@
 import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
 
-const SMTP_CONFIG = {
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  auth: {
-    user: '998b0f001@smtp-brevo.com',
-    pass: process.env.BREVO_API_KEY, 
-  },
-};
-
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -17,14 +8,28 @@ interface SendEmailOptions {
   html: string;
 }
 
+/**
+ * Sends an email using the Brevo SMTP relay.
+ * The transporter is initialized inside the function to ensure the BREVO_API_KEY 
+ * secret is correctly picked up from the environment at runtime.
+ */
 export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
-  try {
-    if (!process.env.BREVO_API_KEY) {
-      logger.error('CRITICAL: BREVO_API_KEY is not set in the environment variables. Email sending aborted.');
-      return;
-    }
+  const apiKey = process.env.BREVO_API_KEY;
 
-    const transporter = nodemailer.createTransport(SMTP_CONFIG);
+  if (!apiKey) {
+    logger.error('CRITICAL: BREVO_API_KEY is not set or not mounted. Email sending aborted.');
+    throw new Error('Missing SMTP credentials.');
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      auth: {
+        user: '998b0f001@smtp-brevo.com',
+        pass: apiKey, 
+      },
+    });
     
     logger.info(`Attempting to send email to ${to} via Brevo relay...`);
 

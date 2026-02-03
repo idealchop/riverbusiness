@@ -56,7 +56,7 @@ async function sendEmail({ to, subject, text, html }) {
             return;
         }
         const transporter = nodemailer.createTransport(SMTP_CONFIG);
-        logger.info(`Sending email to ${to} via Brevo relay...`);
+        logger.info(`Attempting to send email to ${to} via Brevo relay...`);
         const info = await transporter.sendMail({
             from: '"River Business Support" <support@riverph.com>',
             to,
