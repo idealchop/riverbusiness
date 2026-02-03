@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import * as logger from "firebase-functions/logger";
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -31,7 +32,12 @@ async function createNotification(userId: string, notificationData: any) {
     date: FieldValue.serverTimestamp(), 
     isRead: false 
   };
-  await db.collection('users').doc(userId).collection('notifications').add(notification);
+  try {
+    await db.collection('users').doc(userId).collection('notifications').add(notification);
+    logger.info(`Notification created for user ${userId}: ${notificationData.title}`);
+  } catch (error) {
+    logger.error(`Failed to create notification for user ${userId}`, error);
+  }
 }
 
 // --- TRIGGERS ---
@@ -39,7 +45,11 @@ async function createNotification(userId: string, notificationData: any) {
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data) return;
     const userId = event.params.userId;
+    const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
+    
+    logger.info(`Triggered ondeliverycreate for user: ${userId}, delivery: ${deliveryId}`);
+
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
@@ -48,17 +58,20 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
         type: 'delivery', 
         title: 'Delivery Scheduled', 
         description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, 
-        data: { deliveryId: event.params.deliveryId } 
+        data: { deliveryId } 
     });
 
     if (userData?.email) {
-        const template = getDeliveryStatusTemplate(userData.businessName, 'Scheduled', event.params.deliveryId, delivery.volumeContainers);
+        logger.info(`Attempting to send delivery email to ${userData.email}`);
+        const template = getDeliveryStatusTemplate(userData.businessName, 'Scheduled', deliveryId, delivery.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
-            text: `Delivery ${event.params.deliveryId} scheduled.`, 
+            text: `Delivery ${deliveryId} scheduled.`, 
             html: template.html 
         });
+    } else {
+        logger.warn(`No email found for user ${userId}, skipping email.`);
     }
 });
 
@@ -66,9 +79,13 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data() as Delivery;
+    const userId = event.params.userId;
+    const deliveryId = event.params.deliveryId;
+
     if (before.status === after.status) return;
 
-    const userId = event.params.userId;
+    logger.info(`Triggered ondeliveryupdate for user: ${userId}, delivery: ${deliveryId}. Status: ${before.status} -> ${after.status}`);
+
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
@@ -77,11 +94,12 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
         type: 'delivery', 
         title: `Delivery ${after.status}`, 
         description: `Your delivery is now ${after.status}.`, 
-        data: { deliveryId: event.params.deliveryId } 
+        data: { deliveryId } 
     });
 
     if (userData?.email) {
-        const template = getDeliveryStatusTemplate(userData.businessName, after.status, event.params.deliveryId, after.volumeContainers);
+        logger.info(`Attempting to send delivery update email to ${userData.email}`);
+        const template = getDeliveryStatusTemplate(userData.businessName, after.status, deliveryId, after.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
             subject: template.subject, 
@@ -95,9 +113,13 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     if (!event.data) return;
     const before = event.data.before.data();
     const after = event.data.after.data();
+    const userId = event.params.userId;
+    const paymentId = event.params.paymentId;
+
     if (before.status === after.status) return;
 
-    const userId = event.params.userId;
+    logger.info(`Triggered onpaymentupdate for user: ${userId}, payment: ${paymentId}. Status: ${before.status} -> ${after.status}`);
+
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
@@ -110,6 +132,7 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
             data: { paymentId: after.id }
         });
         if (userData?.email) {
+            logger.info(`Attempting to send payment confirmation email to ${userData.email}`);
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
             await sendEmail({ 
                 to: userData.email, 
@@ -121,62 +144,28 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     }
 });
 
-export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpRequests/{requestId}", async (event) => {
-    if (!event.data) return;
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-    if (before.status === after.status || after.status !== 'Approved') return;
-
-    const userId = event.params.userId;
-    const db = getFirestore();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-
-    if (userData?.email) {
-        const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        await sendEmail({ 
-            to: userData.email, 
-            subject: template.subject, 
-            text: `Credits added.`, 
-            html: template.html 
-        });
-    }
-});
-
-export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillRequests/{requestId}", async (event) => {
-    if (!event.data) return;
-    const userId = event.params.userId;
-    const db = getFirestore();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-
-    if (userData?.email) {
-        const template = getRefillRequestTemplate(userData.businessName, 'Requested', event.params.requestId);
-        await sendEmail({ 
-            to: userData.email, 
-            subject: template.subject, 
-            text: `Refill request received.`, 
-            html: template.html 
-        });
-    }
-});
-
 export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
+
+  logger.info(`File uploaded: ${filePath}`);
 
   const storage = getStorage();
   const db = getFirestore();
   const bucket = storage.bucket(event.data.bucket);
   const file = bucket.file(filePath);
+  
+  // Create a long-lived signed URL
   const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
 
   if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
       const userId = filePath.split("/")[1];
+      logger.info(`Updating profile photo for user: ${userId}`);
       await db.collection("users").doc(userId).update({ photoURL: url });
   } else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
       const customMetadata = event.data.metadata;
       if (customMetadata?.paymentId && customMetadata?.userId) {
+          logger.info(`Updating payment proof for user: ${customMetadata.userId}, invoice: ${customMetadata.paymentId}`);
           await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ 
               proofOfPaymentUrl: url, 
               status: "Pending Review" 

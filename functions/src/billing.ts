@@ -58,7 +58,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         }
 
         if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
-            const effectiveDate = user.planChangeEffectiveDate.toDate();
+            const effectiveDate = (user.planChangeEffectiveDate as any).toDate();
             if (isToday(effectiveDate)) {
                 promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice)
                     .then(() => userRef.update({
