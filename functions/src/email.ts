@@ -20,7 +20,7 @@ interface SendEmailOptions {
 export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
   try {
     if (!process.env.BREVO_API_KEY) {
-      logger.error('CRITICAL: BREVO_API_KEY is not set in the environment variables. Email sending aborted.');
+      logger.error('CRITICAL: BREVO_API_KEY is not set. Emails will not send.');
       return;
     }
 
@@ -39,7 +39,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     logger.info(`Email sent successfully. MessageID: ${info.messageId}`);
     return info;
   } catch (error) {
-    logger.error('Nodemailer Error: Failed to dispatch email via Brevo relay.', error);
+    logger.error('Nodemailer Error:', error);
     throw error;
   }
 }
