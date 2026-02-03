@@ -7,10 +7,6 @@ import type { ManualCharge } from './types';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-/**
- * A scheduled Cloud Function that runs on the 1st of every month
- * to generate invoices and handle plan changes.
- */
 export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     logger.info('Starting monthly invoice generation job.');
     const db = getFirestore();
@@ -19,7 +15,6 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
     const currentYear = getYear(now);
     const currentMonth = getMonth(now);
 
-    // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
     if (currentYear === 2026 && currentMonth === 0) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
         return null;
@@ -42,7 +37,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         let monthsToBill = 1;
         let isFirstInvoice = !user.lastBilledDate;
 
-        if (currentYear === 2026 && currentMonth === 1) { // February 2026
+        if (currentYear === 2026 && currentMonth === 1) { 
             if (user.plan?.isConsumptionBased) {
                 billingCycleStart = new Date(2025, 11, 1);
                 billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59);
@@ -62,7 +57,6 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
             billingCycleEnd = endOfMonth(previousMonth);
         }
 
-        // Handle Pending Plan Activation
         if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
             if (isToday(effectiveDate)) {
@@ -135,7 +129,7 @@ async function generateInvoiceForUser(
     if (isFirstInvoice && user.customPlanDetails) {
         let oneTimeFee = 0;
         if (user.customPlanDetails.gallonPaymentType === 'One-Time') oneTimeFee += user.customPlanDetails.gallonPrice || 0;
-        if (user.customPlanDetails.dispenser佣PaymentType === 'One-Time') oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
+        if (user.customPlanDetails.dispenserPaymentType === 'One-Time') oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
         if (oneTimeFee > 0) {
             amount += oneTimeFee;
             description += ` + One-Time Fees`;
@@ -176,5 +170,5 @@ async function generateInvoiceForUser(
     }
     
     if (Object.keys(userUpdatePayload).length > 0) batch.update(userRef, userUpdatePayload);
-    return batch.commit();
+    await batch.commit();
 }

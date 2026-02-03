@@ -2,7 +2,6 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-// Initialize Firebase Admin SDK first
 initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
@@ -16,7 +15,6 @@ import {
     getRefillRequestTemplate
 } from './email';
 
-// Export all billing functions
 export * from './billing';
 
 export async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
@@ -25,8 +23,6 @@ export async function createNotification(userId: string, notificationData: Omit<
   const notification = { ...notificationData, userId, date: FieldValue.serverTimestamp(), isRead: false };
   await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
-
-// --- TRIGGERS ---
 
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data) return;
