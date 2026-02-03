@@ -4,7 +4,7 @@ import * as logger from 'firebase-functions/logger';
 
 /**
  * Configuration for the Brevo SMTP Relay.
- * The API Key is now retrieved from environment variables for security.
+ * The API Key is retrieved from environment variables for security.
  */
 const SMTP_CONFIG = {
   host: 'smtp-relay.brevo.com',
@@ -96,6 +96,29 @@ export function getPaymentConfirmationTemplate(businessName: string, invoiceId: 
           <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #065f46;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
         <p>Thank you for your business!</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">River Tech Inc. | customer@riverph.com</p>
+      </div>
+    `,
+  };
+}
+
+/**
+ * Template for Top-Up Confirmations
+ */
+export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
+  return {
+    subject: `Credits Added Successfully`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+        <h2 style="color: #156391;">River Business</h2>
+        <p>Hi ${businessName},</p>
+        <p>Your top-up request has been approved and credits have been added to your account.</p>
+        <div style="background-color: #f0f9ff; border: 1px solid #3b82f6; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #1e40af;">Amount Added:</p>
+          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #1e40af;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        </div>
+        <p>These credits are now available to cover your future deliveries.</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
         <p style="font-size: 12px; color: #9ca3af; text-align: center;">River Tech Inc. | customer@riverph.com</p>
       </div>

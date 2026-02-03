@@ -1,3 +1,4 @@
+
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated, QueryDocumentSnapshot } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
@@ -8,7 +9,7 @@ import * as path from 'path';
 import type { Notification, Delivery, RefillRequest, Transaction } from './types';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { sendEmail, getDeliveryStatusTemplate, getPaymentConfirmationTemplate } from './email';
+import { sendEmail, getDeliveryStatusTemplate, getPaymentConfirmationTemplate, getTopUpConfirmationTemplate } from './email';
 
 
 // Import all exports from billing.ts
@@ -451,6 +452,17 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
         batch.set(transactionRef, newTransaction);
 
         promises.push(batch.commit());
+
+        // === EMAIL NOTIFICATION ===
+        if (userData.email) {
+            const template = getTopUpConfirmationTemplate(userData.businessName, requestData.amount);
+            promises.push(sendEmail({
+                to: userData.email,
+                subject: template.subject,
+                text: `Your top-up of ₱${requestData.amount.toLocaleString()} has been approved.`,
+                html: template.html
+            }));
+        }
 
     } else if (after.status === 'Rejected') {
         userNotification = { type: 'top-up', title: 'Top-Up Rejected', description: `Your top-up request was rejected. Reason: ${requestData.rejectionReason || 'Not specified'}.`, data: { requestId: event.params.requestId }};
