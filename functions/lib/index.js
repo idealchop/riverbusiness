@@ -15,15 +15,19 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onfileupload = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
-exports.createNotification = createNotification;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
+// Initialize Firebase Admin SDK first
 (0, app_1.initializeApp)();
 const storage_2 = require("firebase-functions/v2/storage");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const email_1 = require("./email");
+// Export all billing functions
 __exportStar(require("./billing"), exports);
+/**
+ * Creates a notification document in a user's notification subcollection.
+ */
 async function createNotification(userId, notificationData) {
     if (!userId)
         return;
@@ -31,6 +35,7 @@ async function createNotification(userId, notificationData) {
     const notification = Object.assign(Object.assign({}, notificationData), { userId, date: firestore_1.FieldValue.serverTimestamp(), isRead: false });
     await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
+// --- TRIGGERS ---
 exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data)
         return;
@@ -39,10 +44,20 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/de
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-    await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId: event.params.deliveryId } });
+    await createNotification(userId, {
+        type: 'delivery',
+        title: 'Delivery Scheduled',
+        description: `Delivery of ${delivery.volumeContainers} containers scheduled.`,
+        data: { deliveryId: event.params.deliveryId }
+    });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Scheduled', event.params.deliveryId, delivery.volumeContainers);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Delivery ${event.params.deliveryId} scheduled.`, html: template.html });
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Delivery ${event.params.deliveryId} scheduled.`,
+            html: template.html
+        });
     }
 });
 exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
@@ -56,10 +71,20 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/de
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-    await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId: event.params.deliveryId } });
+    await createNotification(userId, {
+        type: 'delivery',
+        title: `Delivery ${after.status}`,
+        description: `Your delivery is now ${after.status}.`,
+        data: { deliveryId: event.params.deliveryId }
+    });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, after.status, event.params.deliveryId, after.volumeContainers);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Delivery ${after.status}.`, html: template.html });
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Delivery ${after.status}.`,
+            html: template.html
+        });
     }
 });
 exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/payments/{paymentId}", async (event) => {
@@ -74,10 +99,20 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/pay
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
     if (before.status === 'Pending Review' && after.status === 'Paid') {
-        await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
+        await createNotification(userId, {
+            type: 'payment',
+            title: 'Payment Confirmed',
+            description: `Payment for invoice ${after.id} confirmed.`,
+            data: { paymentId: after.id }
+        });
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
             const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
-            await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Payment confirmed.`, html: template.html });
+            await (0, email_1.sendEmail)({
+                to: userData.email,
+                subject: template.subject,
+                text: `Payment confirmed.`,
+                html: template.html
+            });
         }
     }
 });
@@ -94,7 +129,12 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)("users/{userId
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Credits added.`, html: template.html });
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Credits added.`,
+            html: template.html
+        });
     }
 });
 exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)("users/{userId}/refillRequests/{requestId}", async (event) => {
@@ -106,7 +146,12 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)("users/{userI
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', event.params.requestId);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Refill request received.`, html: template.html });
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Refill request received.`,
+            html: template.html
+        });
     }
 });
 exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, async (event) => {
@@ -126,7 +171,10 @@ exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, as
     else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const customMetadata = event.data.metadata;
         if ((customMetadata === null || customMetadata === void 0 ? void 0 : customMetadata.paymentId) && (customMetadata === null || customMetadata === void 0 ? void 0 : customMetadata.userId)) {
-            await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ proofOfPaymentUrl: url, status: "Pending Review" });
+            await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({
+                proofOfPaymentUrl: url,
+                status: "Pending Review"
+            });
         }
     }
 });
