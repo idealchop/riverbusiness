@@ -36,7 +36,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.oncompliancecreate = exports.onsanitationupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
+exports.onfileupload = exports.oncompliancecreate = exports.onsanitationupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = void 0;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
@@ -65,6 +65,39 @@ async function createNotification(userId, notificationData) {
     }
 }
 // --- TRIGGERS ---
+/**
+ * Triggered when a new unclaimed profile is created by an admin.
+ * Sends a welcome invitation email to the business contact.
+ */
+exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
+    document: "unclaimedProfiles/{clientId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    var _a, _b, _c;
+    if (!event.data)
+        return;
+    const profile = event.data.data();
+    // Check if we have an email to send to
+    if (!profile.businessEmail) {
+        logger.warn(`No businessEmail found for unclaimed profile: ${event.params.clientId}`);
+        return;
+    }
+    const planName = `${profile.clientType || ''} - ${((_a = profile.plan) === null || _a === void 0 ? void 0 : _a.name) || ''}`;
+    const schedule = `${((_b = profile.customPlanDetails) === null || _b === void 0 ? void 0 : _b.deliveryDay) || 'TBD'} / ${((_c = profile.customPlanDetails) === null || _c === void 0 ? void 0 : _c.deliveryFrequency) || 'TBD'}`;
+    const template = (0, email_1.getWelcomeUnclaimedTemplate)(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
+    try {
+        await (0, email_1.sendEmail)({
+            to: profile.businessEmail,
+            subject: template.subject,
+            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}. Link it at app.riverph.com to activate your dashboard.`,
+            html: template.html
+        });
+        logger.info(`Welcome email sent to ${profile.businessEmail} for client ${profile.clientId}`);
+    }
+    catch (error) {
+        logger.error(`Failed to send welcome email to ${profile.businessEmail}`, error);
+    }
+});
 exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     document: "users/{userId}/deliveries/{deliveryId}",
     secrets: ["BREVO_API_KEY"]
