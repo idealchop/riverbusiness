@@ -112,7 +112,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
           <div class="footer">
             <p class="footer-company">River For Business | Your Operating System for Business Essentials</p>
             <p class="footer-sub">
-              <a href="https://www.riverph.com">www.riverph.com</a>
+              <a href="https://riverph.com">www.riverph.com</a>
             </p>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
           </div>
