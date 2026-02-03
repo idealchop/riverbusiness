@@ -56,6 +56,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
  * Generates the common HTML wrapper for all River Philippines emails.
  */
 function getEmailWrapper(content: string, headerTitle: string, subheader: string = '') {
+  const timestamp = Date.now();
   return `
     <!DOCTYPE html>
     <html>
@@ -88,9 +89,9 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         .btn-container { text-align: center; margin-top: 30px; }
         .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
         .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
-        .footer-company { font-size: 14px; font-weight: 700; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
-        .footer-sub { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6; }
-        .footer-sub a { color: #94a3b8; text-decoration: none; font-weight: 600; }
+        .footer-company { font-size: 16px; font-weight: 700; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
+        .footer-sub { font-size: 14px; color: #94a3b8; margin: 0; line-height: 1.6; }
+        .footer-sub a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700; }
         .automated-note { font-size: 11px; color: #cbd5e1; margin-top: 24px; font-style: italic; }
         .legal-disclaimer { max-width: 600px; margin: 24px auto; padding: 0 24px; color: #94a3b8; font-size: 10px; line-height: 1.5; text-align: justify; }
       </style>
@@ -110,15 +111,11 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
             <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
           <div class="footer">
-            <p class="footer-company">The Operating System for Business Essentials</p>
-            <p class="footer-sub">Smart Refill • CRM • HR Solutions • Marketing</p>
-            <div style="margin-top: 20px;">
-              <p class="footer-company">River PH - Automated, Connected, Convenient.</p>
-              <p class="footer-sub">
-                Learn more how we innovate the Philippines<br>
-                <a href="https://riverph.com">riverph.com</a>
-              </p>
-            </div>
+            <p class="footer-company">River PH - Automated, Connected, Convenient.</p>
+            <p class="footer-sub">
+              See how we’re shaping the future of the Philippines<br>
+              <a href="https://riverph.com">riverph.com</a>
+            </p>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
           </div>
         </div>
@@ -126,6 +123,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
       <div class="legal-disclaimer">
         DISCLAIMER: This communication and any attachments are intended to be confidential, protected under the Data Privacy Act of 2012 (RA 10173), Intellectual Property laws, and other applicable Philippine statutes. It is intended for the exclusive use of the addressee. If you are not the intended recipient, you are hereby notified that any disclosure, retention, dissemination, copying, alteration, or distribution of this communication and/or any attachment, or any information therein, is strictly prohibited. If you have received this communication in error, kindly notify the sender by return e-mail and delete this communication and all attachments immediately.
       </div>
+      <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Notification ID: ${timestamp} - </div>
     </body>
     </html>
   `;
@@ -140,6 +138,7 @@ export function getWelcomeUnclaimedTemplate(
 ) {
   const guideUrl = "https://prism-roadrunner-575.notion.site/Welcome-to-River-Philippines-2dfccd0e1c6280648d41d1eb44033f50?source=copy_link";
   const brandColor = BRAND_PRIMARY;
+  const timestamp = Date.now();
 
   return {
     subject: `Welcome to River Philippines: Your Smart Refill is Ready! 🌊`,
@@ -163,8 +162,10 @@ export function getWelcomeUnclaimedTemplate(
               .button-container { text-align: center; margin: 30px 0; }
               .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
               .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
-              .footer { background-color: #f1f1f1; padding: 30px; font-size: 11px; color: #777; line-height: 1.4; }
-              .footer-brand { font-weight: bold; color: #333; margin-bottom: 5px; }
+              .footer { background-color: #f1f1f1; padding: 30px; font-size: 11px; color: #777; line-height: 1.4; text-align: center; }
+              .footer-brand { font-size: 16px; font-weight: 700; color: ${brandColor}; margin-bottom: 4px; }
+              .footer-sub { font-size: 14px; color: #94a3b8; margin: 0; line-height: 1.6; }
+              .footer-sub a { color: ${brandColor}; text-decoration: none; font-weight: 700; }
           </style>
       </head>
       <body>
@@ -200,19 +201,19 @@ export function getWelcomeUnclaimedTemplate(
               </div>
 
               <div class="footer">
-                  <div class="footer-brand">The Operating System for Business Essentials</div>
-                  <div>Smart Refill • CRM • HR Solutions • Marketing</div>
-                  
-                  <div style="margin-top: 15px; font-weight: bold; color: #333;">River PH - Automated, Connected, Convenient.</div>
-                  <div>Learn more how we innovate the Philippines</div>
-                  <div><a href="https://riverph.com" style="color: ${brandColor}; text-decoration: none;">riverph.com</a></div>
+                  <div class="footer-brand">River PH - Automated, Connected, Convenient.</div>
+                  <div class="footer-sub">
+                    See how we’re shaping the future of the Philippines<br>
+                    <a href="https://riverph.com">riverph.com</a>
+                  </div>
 
-                  <div style="margin: 15px 0; border-top: 1px solid #ddd; padding-top: 10px;">
+                  <div style="margin: 15px 0; border-top: 1px solid #ddd; padding-top: 10px; text-align: justify; font-size: 10px;">
                       <strong>DISCLAIMER:</strong> This communication and any attachments are intended to be confidential, protected under the Bank Secrecy, Data Privacy (RA 10173), or Intellectual Property laws, and for the exclusive use of the addressee. If you are not the intended recipient, you are notified that disclosure, retention, dissemination, copying, alteration or distribution of this communication and/or any attachment, or any part thereof or information therein, is strictly prohibited. If you receive this communication in error, kindly notify the sender by e-mail, and delete this communication and all attachments immediately.
                   </div>
                   <p style="text-align: center;">© 2026 River Business. All rights reserved.</p>
               </div>
           </div>
+          <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Welcome ID: ${timestamp} - </div>
       </body>
       </html>
     `
