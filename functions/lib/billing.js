@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateMonthlyInvoices = void 0;
 const functions = __importStar(require("firebase-functions"));
-const firestore_1 = require("firebase-admin/firestore");
+const admin = __importStar(require("firebase-admin"));
 const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
@@ -43,19 +43,15 @@ const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
- * Reverted to 1st Gen syntax to avoid "Upgrading from 1st Gen to 2nd Gen is not yet supported" error.
  */
-exports.generateMonthlyInvoices = functions.runWith({
-    secrets: ["BREVO_API_KEY"],
-    memory: "256MB"
-}).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
+exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     var _a;
     logger.info('Starting monthly invoice generation job.');
-    const db = (0, firestore_1.getFirestore)();
+    const db = admin.firestore();
     const now = new Date();
     const currentYear = (0, date_fns_1.getYear)(now);
     const currentMonth = (0, date_fns_1.getMonth)(now);
-    // Skip Jan 1, 2026 if necessary per previous logic
+    // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
     if (currentYear === 2026 && currentMonth === 0) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
         return null;
@@ -66,15 +62,15 @@ exports.generateMonthlyInvoices = functions.runWith({
     const promises = [];
     for (const userDoc of usersSnapshot.docs) {
         const userRef = userDoc.ref;
-        const user = userDoc.data();
+        let user = userDoc.data();
         if (user.role === 'Admin' || user.isPrepaid)
             continue;
         let billingPeriod;
         let billingCycleStart;
         let billingCycleEnd;
         let monthsToBill = 1;
-        const isFirstInvoice = !user.lastBilledDate;
-        if (currentYear === 2026 && currentMonth === 1) {
+        let isFirstInvoice = !user.lastBilledDate;
+        if (currentYear === 2026 && currentMonth === 1) { // February 2026
             if ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) {
                 billingCycleStart = new Date(2025, 11, 1);
                 billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59);
@@ -95,6 +91,7 @@ exports.generateMonthlyInvoices = functions.runWith({
             billingCycleStart = (0, date_fns_1.startOfMonth)(previousMonth);
             billingCycleEnd = (0, date_fns_1.endOfMonth)(previousMonth);
         }
+        // Handle Pending Plan Activation
         if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
             if ((0, date_fns_1.isToday)(effectiveDate)) {
@@ -102,8 +99,8 @@ exports.generateMonthlyInvoices = functions.runWith({
                     .then(() => userRef.update({
                     plan: user.pendingPlan,
                     isPrepaid: user.pendingPlan.isPrepaid || false,
-                    pendingPlan: firestore_1.FieldValue.delete(),
-                    planChangeEffectiveDate: firestore_1.FieldValue.delete(),
+                    pendingPlan: admin.firestore.FieldValue.delete(),
+                    planChangeEffectiveDate: admin.firestore.FieldValue.delete(),
                 })));
                 continue;
             }
@@ -117,7 +114,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
     var _a, _b, _c, _d, _e, _f, _g;
     if (!user.plan)
         return;
-    const db = (0, firestore_1.getFirestore)();
+    const db = admin.firestore();
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();
     const userUpdatePayload = {};
@@ -162,16 +159,16 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
     }
     const pendingCharges = user.pendingCharges || [];
     const pendingTotal = pendingCharges.reduce((sum, c) => sum + c.amount, 0);
-    if (pendingTotal > 0) {
+    if (pendingTotal !== 0) {
         amount += pendingTotal;
-        description += ` + Manual Charges`;
-        userUpdatePayload.pendingCharges = firestore_1.FieldValue.delete();
+        description += pendingTotal > 0 ? ` + Adjustments` : ` + Deductions`;
+        userUpdatePayload.pendingCharges = admin.firestore.FieldValue.delete();
     }
     if (amount > 0) {
         const invoiceId = `INV-${userRef.id.substring(0, 5)}-${billingPeriod.replace(/\s/g, '-')}`;
         const newInvoice = {
             id: invoiceId,
-            date: firestore_1.FieldValue.serverTimestamp(),
+            date: admin.firestore.FieldValue.serverTimestamp(),
             description: description,
             amount: amount,
             status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
@@ -187,10 +184,10 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             }).catch(e => logger.error("Email failed", e));
         }
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
-        userUpdatePayload.lastBilledDate = firestore_1.FieldValue.serverTimestamp();
+        userUpdatePayload.lastBilledDate = admin.firestore.FieldValue.serverTimestamp();
     }
     if (Object.keys(userUpdatePayload).length > 0)
         batch.update(userRef, userUpdatePayload);
-    await batch.commit();
+    return batch.commit();
 }
 //# sourceMappingURL=billing.js.map
