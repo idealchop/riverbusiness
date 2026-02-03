@@ -1,16 +1,17 @@
+
 import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
 
 /**
  * Configuration for the Brevo SMTP Relay.
- * Replace 'YOUR_BREVO_PASSWORD_OR_API_KEY' with the actual key once available.
+ * The API Key is now retrieved from environment variables for security.
  */
 const SMTP_CONFIG = {
   host: 'smtp-relay.brevo.com',
   port: 587,
   auth: {
     user: '998b0f001@smtp-brevo.com',
-    pass: 'YOUR_BREVO_PASSWORD_OR_API_KEY', 
+    pass: process.env.BREVO_API_KEY, 
   },
 };
 
@@ -28,6 +29,11 @@ interface SendEmailOptions {
  */
 export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
   try {
+    if (!process.env.BREVO_API_KEY) {
+      logger.warn('BREVO_API_KEY is not set. Email will not be sent.');
+      return;
+    }
+
     const info = await transporter.sendMail({
       from: '"River Business Support" <support@riverph.com>',
       to,
