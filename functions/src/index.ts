@@ -14,7 +14,8 @@ import {
     getDeliveryStatusTemplate, 
     getPaymentStatusTemplate, 
     getTopUpConfirmationTemplate,
-    getRefillRequestTemplate
+    getRefillRequestTemplate,
+    getInternalRefillAlertTemplate
 } from './email';
 
 // Export all billing functions (this includes generateMonthlyInvoices)
@@ -201,6 +202,7 @@ export const onrefillrequestcreate = onDocumentCreated({
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
+    // 1. Notify the Client
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
         await sendEmail({ 
@@ -208,7 +210,25 @@ export const onrefillrequestcreate = onDocumentCreated({
             subject: template.subject, 
             text: `Refill request ${requestId} received.`, 
             html: template.html 
-        });
+        }).catch(e => logger.error("Client refill email failed", e));
+    }
+
+    // 2. Notify the Internal Team (Jimbs and Jayvee)
+    if (userData?.businessName) {
+        const admins = [
+            { name: 'Jimbs', email: 'jimbs.work@gmail.com' },
+            { name: 'Jayvee', email: 'jayvee@riverph.com' }
+        ];
+
+        for (const admin of admins) {
+            const adminTemplate = getInternalRefillAlertTemplate(admin.name, userData.businessName, requestId, request.requestedDate);
+            await sendEmail({
+                to: admin.email,
+                subject: adminTemplate.subject,
+                text: `${userData.businessName} requested a refill.`,
+                html: adminTemplate.html
+            }).catch(e => logger.error(`Internal admin alert failed for ${admin.name}`, e));
+        }
     }
 });
 

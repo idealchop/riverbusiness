@@ -304,3 +304,41 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
     html: getEmailWrapper(content, isReceived ? 'Refill Priority Received' : 'Refill Request Updated', subheader)
   };
 }
+
+export function getInternalRefillAlertTemplate(adminName: string, businessName: string, requestId: string, date?: string) {
+  const subheader = `<p class="tracking-id">Alert for Request ID: <span>${requestId}</span></p>`;
+  
+  const content = `
+    <p class="greeting">Hey ${adminName}, 🌊</p>
+    
+    <p class="body-text">
+      Our operating system has just flagged a new priority request. <strong>${businessName}</strong> has requested an extra refill through their customer portal.
+    </p>
+
+    <div class="details-box">
+      <h3 class="details-title">Request Context</h3>
+      <div class="detail-item">
+        <div class="detail-icon">🏢</div>
+        <div>
+          <p class="detail-label">Customer Profile</p>
+          <p class="detail-value">${businessName}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-icon">📅</div>
+        <div>
+          <p class="detail-label">Fulfillment Date</p>
+          <p class="detail-value">${date ? format(new Date(date), 'PP') : 'ASAP Priority'}</p>
+        </div>
+      </div>
+      <p class="next-step">
+        Please log in to the <strong>Admin Panel</strong> immediately to coordinate this dispatch. Keeping our clients restocked is key to our automated mission.
+      </p>
+    </div>
+  `;
+
+  return {
+    subject: `🚨 Priority: New Refill Request from ${businessName}`,
+    html: getEmailWrapper(content, 'Internal Dispatch Alert', subheader)
+  };
+}
