@@ -4,7 +4,6 @@ import * as logger from 'firebase-functions/logger';
 
 /**
  * Configuration for the Brevo SMTP Relay.
- * The API Key is retrieved from environment variables for security.
  */
 const SMTP_CONFIG = {
   host: 'smtp-relay.brevo.com',
@@ -29,8 +28,8 @@ interface SendEmailOptions {
  */
 export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
   try {
-    if (!process.env.BREVO_API_KEY) {
-      logger.warn('BREVO_API_KEY is not set. Email will not be sent.');
+    if (!process.env.BREVO_API_KEY || process.env.BREVO_API_KEY === 'your_api_key_here') {
+      logger.warn('BREVO_API_KEY is not set correctly. Email will not be sent.');
       return;
     }
 
