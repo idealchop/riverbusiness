@@ -3,7 +3,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-// Initialize Firebase Admin SDK before importing other modules
+// Initialize Firebase Admin SDK before importing other modules that might use it
 initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
