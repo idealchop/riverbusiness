@@ -8,7 +8,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery } from './types';
+import type { Delivery, RefillRequest } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -62,7 +62,6 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     });
 
     if (userData?.email) {
-        logger.info(`Attempting to send delivery email to ${userData.email}`);
         const template = getDeliveryStatusTemplate(userData.businessName, 'Scheduled', deliveryId, delivery.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
@@ -70,8 +69,6 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
             text: `Delivery ${deliveryId} scheduled.`, 
             html: template.html 
         });
-    } else {
-        logger.warn(`No email found for user ${userId}, skipping email.`);
     }
 });
 
@@ -98,7 +95,6 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     });
 
     if (userData?.email) {
-        logger.info(`Attempting to send delivery update email to ${userData.email}`);
         const template = getDeliveryStatusTemplate(userData.businessName, after.status, deliveryId, after.volumeContainers);
         await sendEmail({ 
             to: userData.email, 
@@ -132,7 +128,6 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
             data: { paymentId: after.id }
         });
         if (userData?.email) {
-            logger.info(`Attempting to send payment confirmation email to ${userData.email}`);
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
             await sendEmail({ 
                 to: userData.email, 
@@ -141,6 +136,60 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
                 html: template.html 
             });
         }
+    }
+});
+
+/**
+ * Triggered when a top-up request status is updated (e.g., Approved).
+ */
+export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpRequests/{requestId}", async (event) => {
+    if (!event.data) return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+
+    if (before.status === after.status || after.status !== 'Approved') return;
+
+    logger.info(`Triggered ontopuprequestupdate for user: ${userId}. Status: Approved`);
+
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (userData?.email) {
+        const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
+        await sendEmail({ 
+            to: userData.email, 
+            subject: template.subject, 
+            text: `Your top-up of ₱${after.amount} has been approved.`, 
+            html: template.html 
+        });
+    }
+});
+
+/**
+ * Triggered when a client creates a new one-time refill request.
+ */
+export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillRequests/{requestId}", async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const requestId = event.params.requestId;
+    const request = event.data.data() as RefillRequest;
+
+    logger.info(`Triggered onrefillrequestcreate for user: ${userId}, request: ${requestId}`);
+
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (userData?.email) {
+        const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
+        await sendEmail({ 
+            to: userData.email, 
+            subject: template.subject, 
+            text: `Refill request ${requestId} received.`, 
+            html: template.html 
+        });
     }
 });
 
@@ -160,12 +209,10 @@ export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event
 
   if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
       const userId = filePath.split("/")[1];
-      logger.info(`Updating profile photo for user: ${userId}`);
       await db.collection("users").doc(userId).update({ photoURL: url });
   } else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
       const customMetadata = event.data.metadata;
       if (customMetadata?.paymentId && customMetadata?.userId) {
-          logger.info(`Updating payment proof for user: ${customMetadata.userId}, invoice: ${customMetadata.paymentId}`);
           await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ 
               proofOfPaymentUrl: url, 
               status: "Pending Review" 
