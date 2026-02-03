@@ -132,6 +132,29 @@ export function getTopUpConfirmationTemplate(businessName: string, amount: numbe
 }
 
 /**
+ * Template for New Invoices
+ */
+export function getNewInvoiceTemplate(businessName: string, invoiceId: string, amount: number, period: string) {
+  return {
+    subject: `New Invoice for ${period} - ${invoiceId}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+        <h2 style="color: #156391;">River Business</h2>
+        <p>Hi ${businessName},</p>
+        <p>Your invoice for <strong>${period}</strong> is now available.</p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #475569;">Invoice ID: <strong>${invoiceId}</strong></p>
+          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #1e293b;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">Log in to your dashboard to view the breakdown and settle your payment.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">River Tech Inc. | Turn Everyday Needs Into Automatic Experience</p>
+      </div>
+    `,
+  };
+}
+
+/**
  * Template for Refill Requests
  */
 export function getRefillRequestTemplate(businessName: string, status: string, requestId: string, date?: string) {

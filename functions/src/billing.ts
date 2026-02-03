@@ -3,6 +3,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth, startOfYear } from 'date-fns';
 import { createNotification } from './index';
+import { sendEmail, getNewInvoiceTemplate } from './email';
 import type { Notification, ManualCharge } from './types'; 
 
 const db = admin.firestore();
@@ -195,13 +196,11 @@ async function generateInvoiceForUser(
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
     // --- Billing Logic ---
-    // Calculate amount based on the user's plan, regardless of account type.
-    // The status of the invoice will be adjusted later if it's a branch account.
     if (user.plan.isConsumptionBased) {
         const consumptionCost = consumedLitersInPeriod * (user.plan.price || 0);
         amount = consumptionCost + equipmentCostForPeriod;
         description = `Bill for ${billingPeriod}`;
-    } else { // Fixed-plan billing (for Single or Branch accounts)
+    } else { // Fixed-plan billing
         const planCost = user.plan.price || 0;
         amount = planCost + equipmentCostForPeriod;
         description = `Monthly Subscription for ${billingPeriod}`;
@@ -287,6 +286,17 @@ async function generateInvoiceForUser(
         if (user.accountType !== 'Branch') {
             const notificationWithMeta = { ...invoiceNotification, date: admin.firestore.FieldValue.serverTimestamp(), isRead: false, userId: userRef.id };
             batch.set(notificationsRef.doc(), notificationWithMeta);
+
+            // Send Email Notification
+            if (user.email) {
+                const emailTemplate = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
+                sendEmail({
+                    to: user.email,
+                    subject: emailTemplate.subject,
+                    text: `Hi ${user.businessName}, your invoice for ${billingPeriod} is now available for ₱${amount.toFixed(2)}.`,
+                    html: emailTemplate.html
+                }).catch(e => console.error("Email failed for invoice", invoiceId, e));
+            }
         }
 
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
