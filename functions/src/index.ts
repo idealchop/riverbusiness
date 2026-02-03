@@ -2,6 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
+// Initialize Firebase Admin SDK
 initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
@@ -15,14 +16,25 @@ import {
     getRefillRequestTemplate
 } from './email';
 
+// Export all billing functions
 export * from './billing';
 
+/**
+ * Creates a notification document in a user's notification subcollection.
+ */
 export async function createNotification(userId: string, notificationData: any) {
   if (!userId) return;
   const db = getFirestore();
-  const notification = { ...notificationData, userId, date: FieldValue.serverTimestamp(), isRead: false };
+  const notification = { 
+    ...notificationData, 
+    userId, 
+    date: FieldValue.serverTimestamp(), 
+    isRead: false 
+  };
   await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
+
+// --- TRIGGERS ---
 
 export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data) return;
@@ -32,11 +44,21 @@ export const ondeliverycreate = onDocumentCreated("users/{userId}/deliveries/{de
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
-    await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId: event.params.deliveryId } });
+    await createNotification(userId, { 
+        type: 'delivery', 
+        title: 'Delivery Scheduled', 
+        description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, 
+        data: { deliveryId: event.params.deliveryId } 
+    });
 
     if (userData?.email) {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Scheduled', event.params.deliveryId, delivery.volumeContainers);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery ${event.params.deliveryId} scheduled.`, html: template.html });
+        await sendEmail({ 
+            to: userData.email, 
+            subject: template.subject, 
+            text: `Delivery ${event.params.deliveryId} scheduled.`, 
+            html: template.html 
+        });
     }
 });
 
@@ -51,11 +73,21 @@ export const ondeliveryupdate = onDocumentUpdated("users/{userId}/deliveries/{de
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
-    await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId: event.params.deliveryId } });
+    await createNotification(userId, { 
+        type: 'delivery', 
+        title: `Delivery ${after.status}`, 
+        description: `Your delivery is now ${after.status}.`, 
+        data: { deliveryId: event.params.deliveryId } 
+    });
 
     if (userData?.email) {
         const template = getDeliveryStatusTemplate(userData.businessName, after.status, event.params.deliveryId, after.volumeContainers);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery ${after.status}.`, html: template.html });
+        await sendEmail({ 
+            to: userData.email, 
+            subject: template.subject, 
+            text: `Delivery ${after.status}.`, 
+            html: template.html 
+        });
     }
 });
 
@@ -71,10 +103,20 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
     const userData = userDoc.data();
 
     if (before.status === 'Pending Review' && after.status === 'Paid') {
-        await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id }});
+        await createNotification(userId, { 
+            type: 'payment', 
+            title: 'Payment Confirmed', 
+            description: `Payment for invoice ${after.id} confirmed.`, 
+            data: { paymentId: after.id }
+        });
         if (userData?.email) {
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
-            await sendEmail({ to: userData.email, subject: template.subject, text: `Payment confirmed.`, html: template.html });
+            await sendEmail({ 
+                to: userData.email, 
+                subject: template.subject, 
+                text: `Payment confirmed.`, 
+                html: template.html 
+            });
         }
     }
 });
@@ -92,7 +134,12 @@ export const ontopuprequestupdate = onDocumentUpdated("users/{userId}/topUpReque
 
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Credits added.`, html: template.html });
+        await sendEmail({ 
+            to: userData.email, 
+            subject: template.subject, 
+            text: `Credits added.`, 
+            html: template.html 
+        });
     }
 });
 
@@ -105,7 +152,12 @@ export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillReq
 
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', event.params.requestId);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Refill request received.`, html: template.html });
+        await sendEmail({ 
+            to: userData.email, 
+            subject: template.subject, 
+            text: `Refill request received.`, 
+            html: template.html 
+        });
     }
 });
 
@@ -125,7 +177,10 @@ export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event
   } else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
       const customMetadata = event.data.metadata;
       if (customMetadata?.paymentId && customMetadata?.userId) {
-          await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ proofOfPaymentUrl: url, status: "Pending Review" });
+          await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ 
+              proofOfPaymentUrl: url, 
+              status: "Pending Review" 
+          });
       }
   }
 });
