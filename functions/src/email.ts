@@ -110,10 +110,15 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
             <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
           <div class="footer">
-            <p class="footer-company">River For Business | Your Operating System for Business Essentials</p>
-            <p class="footer-sub">
-              Smart Refill • AI CRM • HR Payroll • <a href="https://riverph.com">riverph.com</a>
-            </p>
+            <p class="footer-company">The Operating System for Business Essentials</p>
+            <p class="footer-sub">Smart Refill • CRM • HR Solutions • Marketing</p>
+            <div style="margin-top: 20px;">
+              <p class="footer-company">River PH - Automated, Connected, Convenient.</p>
+              <p class="footer-sub">
+                Learn more how we innovate the Philippines<br>
+                <a href="https://riverph.com">riverph.com</a>
+              </p>
+            </div>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
           </div>
         </div>
@@ -195,9 +200,14 @@ export function getWelcomeUnclaimedTemplate(
               </div>
 
               <div class="footer">
-                  <div class="footer-brand">River Philippines | Your Operating System for Business Essentials</div>
-                  <div>Smart Refill • AI CRM • HR Payroll • riverph.com</div>
-                  <div style="margin: 10px 0; border-top: 1px solid #ddd; padding-top: 10px;">
+                  <div class="footer-brand">The Operating System for Business Essentials</div>
+                  <div>Smart Refill • CRM • HR Solutions • Marketing</div>
+                  
+                  <div style="margin-top: 15px; font-weight: bold; color: #333;">River PH - Automated, Connected, Convenient.</div>
+                  <div>Learn more how we innovate the Philippines</div>
+                  <div><a href="https://riverph.com" style="color: ${brandColor}; text-decoration: none;">riverph.com</a></div>
+
+                  <div style="margin: 15px 0; border-top: 1px solid #ddd; padding-top: 10px;">
                       <strong>DISCLAIMER:</strong> This communication and any attachments are intended to be confidential, protected under the Bank Secrecy, Data Privacy (RA 10173), or Intellectual Property laws, and for the exclusive use of the addressee. If you are not the intended recipient, you are notified that disclosure, retention, dissemination, copying, alteration or distribution of this communication and/or any attachment, or any part thereof or information therein, is strictly prohibited. If you receive this communication in error, kindly notify the sender by e-mail, and delete this communication and all attachments immediately.
                   </div>
                   <p style="text-align: center;">© 2026 River Business. All rights reserved.</p>
