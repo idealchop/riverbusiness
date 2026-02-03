@@ -17,6 +17,7 @@ import {
     getRefillRequestTemplate,
     getInternalRefillAlertTemplate,
     getSanitationReportTemplate,
+    getSanitationScheduledTemplate,
     getComplianceAlertTemplate,
     getWelcomeUnclaimedTemplate
 } from './email';
@@ -273,6 +274,35 @@ export const onrefillrequestcreate = onDocumentCreated({
                 html: adminTemplate.html
             }).catch(e => logger.error(`Internal admin alert failed for ${admin.name}`, e));
         }
+    }
+});
+
+/**
+ * Triggered when a new sanitation visit is created (Scheduled).
+ */
+export const onsanitationcreate = onDocumentCreated({
+    document: "users/{userId}/sanitationVisits/{visitId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const visit = event.data.data() as SanitationVisit;
+
+    logger.info(`Triggered onsanitationcreate for user: ${userId}. Status: Scheduled`);
+    
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (userData?.email && visit.status === 'Scheduled') {
+        const dateStr = new Date(visit.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
+        await sendEmail({
+            to: userData.email,
+            subject: template.subject,
+            text: `Your office sanitation visit has been scheduled for ${dateStr}.`,
+            html: template.html
+        });
     }
 });
 
