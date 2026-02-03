@@ -36,7 +36,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
+exports.onfileupload = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = void 0;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
@@ -82,7 +82,6 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/de
         data: { deliveryId }
     });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
-        logger.info(`Attempting to send delivery email to ${userData.email}`);
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Scheduled', deliveryId, delivery.volumeContainers);
         await (0, email_1.sendEmail)({
             to: userData.email,
@@ -90,9 +89,6 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/de
             text: `Delivery ${deliveryId} scheduled.`,
             html: template.html
         });
-    }
-    else {
-        logger.warn(`No email found for user ${userId}, skipping email.`);
     }
 });
 exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
@@ -115,7 +111,6 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/de
         data: { deliveryId }
     });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
-        logger.info(`Attempting to send delivery update email to ${userData.email}`);
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, after.status, deliveryId, after.volumeContainers);
         await (0, email_1.sendEmail)({
             to: userData.email,
@@ -146,7 +141,6 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/pay
             data: { paymentId: after.id }
         });
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
-            logger.info(`Attempting to send payment confirmation email to ${userData.email}`);
             const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
             await (0, email_1.sendEmail)({
                 to: userData.email,
@@ -155,6 +149,54 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/pay
                 html: template.html
             });
         }
+    }
+});
+/**
+ * Triggered when a top-up request status is updated (e.g., Approved).
+ */
+exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/topUpRequests/{requestId}", async (event) => {
+    if (!event.data)
+        return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+    if (before.status === after.status || after.status !== 'Approved')
+        return;
+    logger.info(`Triggered ontopuprequestupdate for user: ${userId}. Status: Approved`);
+    const db = (0, firestore_1.getFirestore)();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    if (userData === null || userData === void 0 ? void 0 : userData.email) {
+        const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Your top-up of ₱${after.amount} has been approved.`,
+            html: template.html
+        });
+    }
+});
+/**
+ * Triggered when a client creates a new one-time refill request.
+ */
+exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)("users/{userId}/refillRequests/{requestId}", async (event) => {
+    if (!event.data)
+        return;
+    const userId = event.params.userId;
+    const requestId = event.params.requestId;
+    const request = event.data.data();
+    logger.info(`Triggered onrefillrequestcreate for user: ${userId}, request: ${requestId}`);
+    const db = (0, firestore_1.getFirestore)();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    if (userData === null || userData === void 0 ? void 0 : userData.email) {
+        const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Refill request ${requestId} received.`,
+            html: template.html
+        });
     }
 });
 exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, async (event) => {
@@ -171,13 +213,11 @@ exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, as
     const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
     if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
         const userId = filePath.split("/")[1];
-        logger.info(`Updating profile photo for user: ${userId}`);
         await db.collection("users").doc(userId).update({ photoURL: url });
     }
     else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
         const customMetadata = event.data.metadata;
         if ((customMetadata === null || customMetadata === void 0 ? void 0 : customMetadata.paymentId) && (customMetadata === null || customMetadata === void 0 ? void 0 : customMetadata.userId)) {
-            logger.info(`Updating payment proof for user: ${customMetadata.userId}, invoice: ${customMetadata.paymentId}`);
             await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({
                 proofOfPaymentUrl: url,
                 status: "Pending Review"
