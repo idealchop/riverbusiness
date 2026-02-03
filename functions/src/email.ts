@@ -129,17 +129,14 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
   
   const content = `
     <p class="greeting">Stay Hydrated, ${businessName}! 💧</p>
-    
     <p class="body-text">
       Great news! Your fresh water supply has been successfully replenished. Keeping your team focused, healthy, and productive is exactly why we've automated this process for you.
     </p>
-
     <div class="status-badge">
       <span class="badge" style="background-color: ${color}15; color: ${color}; border: 1.5px solid ${color};">
         ${status}
       </span>
     </div>
-
     <div class="details-box">
       <h3 class="details-title">Shipment Summary</h3>
       <div class="detail-item">
@@ -156,7 +153,7 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
   `;
 
   return {
-    subject: `Hydration Delivered: Fresh Supply Restocked for ${businessName} 🚚`,
+    subject: `Success: Water Delivered to ${businessName} 🚚`,
     html: getEmailWrapper(content, 'Fresh Water Delivered', subheader)
   };
 }
@@ -169,19 +166,16 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
   
   const content = `
     <p class="greeting">Hi ${businessName}, ${isPaid ? '✅' : '⏳'}</p>
-    
     <p class="body-text">
       ${isPaid 
         ? "Your account remains in excellent standing! We've successfully processed your payment, ensuring your automated business essentials continue to flow without interruption." 
         : "We've received your proof of payment. Our finance team is currently validating the transaction to finalize your record and update your account balance."}
     </p>
-
     <div class="status-badge">
       <span class="badge" style="background-color: ${color}15; color: ${color}; border: 1.5px solid ${color};">
         ${status}
       </span>
     </div>
-
     <div class="details-box">
       <h3 class="details-title">Financial Snapshot</h3>
       <div class="detail-item">
@@ -208,11 +202,9 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
   const content = `
     <p class="greeting">Balance Boosted, ${businessName}! 💳</p>
-    
     <p class="body-text">
       Your central wallet has been successfully topped up! You're now fully prepared for your upcoming deliveries. No more manual approvals needed for every container—just pure, automated efficiency.
     </p>
-
     <div class="details-box">
       <h3 class="details-title">Wallet Update</h3>
       <div class="detail-item">
@@ -239,11 +231,9 @@ export function getNewInvoiceTemplate(businessName: string, invoiceId: string, a
   
   const content = `
     <p class="greeting">Hi ${businessName}, 📄</p>
-    
     <p class="body-text">
       Financial transparency is the foundation of good business. Your automated monthly statement for <strong>${period}</strong> is now ready for review. Analyze your consumption and stay organized.
     </p>
-
     <div class="details-box">
       <h3 class="details-title">Statement Summary</h3>
       <div class="detail-item">
@@ -271,19 +261,16 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
   
   const content = `
     <p class="greeting">Hello ${businessName}, ${isReceived ? '🌊' : '🚀'}</p>
-    
     <p class="body-text">
       ${isReceived 
         ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never runs dry." 
         : `Your on-demand refill is currently <strong>${status}</strong>. We're working hard to get your supply back to 100%.`}
     </p>
-
     <div class="status-badge">
       <span class="badge" style="background-color: ${BRAND_PRIMARY}15; color: ${BRAND_PRIMARY}; border: 1.5px solid ${BRAND_PRIMARY};">
         ${status}
       </span>
     </div>
-
     <div class="details-box">
       <h3 class="details-title">Request Priority</h3>
       <div class="detail-item">
@@ -310,11 +297,9 @@ export function getInternalRefillAlertTemplate(adminName: string, businessName: 
   
   const content = `
     <p class="greeting">Hey ${adminName}, 🌊</p>
-    
     <p class="body-text">
       Our operating system has just flagged a new priority request. <strong>${businessName}</strong> has requested an extra refill through their customer portal.
     </p>
-
     <div class="details-box">
       <h3 class="details-title">Request Context</h3>
       <div class="detail-item">
@@ -340,5 +325,71 @@ export function getInternalRefillAlertTemplate(adminName: string, businessName: 
   return {
     subject: `🚨 Priority: New Refill Request from ${businessName}`,
     html: getEmailWrapper(content, 'Internal Dispatch Alert', subheader)
+  };
+}
+
+export function getSanitationReportTemplate(businessName: string, officerName: string, date: string) {
+  const content = `
+    <p class="greeting">Quality Certified, ${businessName}! ✨</p>
+    <p class="body-text">
+      Your office water sanitation visit is complete. Our quality officer, <strong>${officerName}</strong>, has performed a thorough cleaning and inspection of your equipment to ensure it meets our strict hygiene standards.
+    </p>
+    <div class="status-badge">
+      <span class="badge" style="background-color: #10b98115; color: #10b981; border: 1.5px solid #10b981;">
+        Sanitation Completed
+      </span>
+    </div>
+    <div class="details-box">
+      <h3 class="details-title">Service Details</h3>
+      <div class="detail-item">
+        <div class="detail-icon">📅</div>
+        <div>
+          <p class="detail-label">Service Date</p>
+          <p class="detail-value">${date}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-icon">🧑‍🔧</div>
+        <div>
+          <p class="detail-label">Quality Officer</p>
+          <p class="detail-value">${officerName}</p>
+        </div>
+      </div>
+      <p class="next-step">
+        The full sanitation checklist and digital sign-off are now available in your dashboard. Keeping your equipment clean is part of our commitment to your team's wellness.
+      </p>
+    </div>
+  `;
+
+  return {
+    subject: `Certified: Your Office Water Sanitation is Complete ✨`,
+    html: getEmailWrapper(content, 'Equipment Quality Check')
+  };
+}
+
+export function getComplianceAlertTemplate(businessName: string, stationName: string, reportName: string) {
+  const content = `
+    <p class="greeting">Transparency First, ${businessName} 🛡️</p>
+    <p class="body-text">
+      We've just updated the quality compliance documents for your assigned station, <strong>${stationName}</strong>. Ensuring you have visibility into the safety of your water is core to our Operating System.
+    </p>
+    <div class="details-box">
+      <h3 class="details-title">Newly Uploaded Report</h3>
+      <div class="detail-item">
+        <div class="detail-icon">📑</div>
+        <div>
+          <p class="detail-label">Report Type</p>
+          <p class="detail-value">${reportName}</p>
+        </div>
+      </div>
+      <p class="next-step">
+        You can now view and download the official testing results and safety permits directly from the <strong>Compliance</strong> section of your dashboard.
+      </p>
+    </div>
+  `;
+
+  return {
+    subject: `Safety Update: New Quality Report for ${stationName} 🛡️`,
+    html: getEmailWrapper(content, 'Quality Compliance Updated')
   };
 }

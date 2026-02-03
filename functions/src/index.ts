@@ -8,14 +8,16 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
     getPaymentStatusTemplate, 
     getTopUpConfirmationTemplate,
     getRefillRequestTemplate,
-    getInternalRefillAlertTemplate
+    getInternalRefillAlertTemplate,
+    getSanitationReportTemplate,
+    getComplianceAlertTemplate
 } from './email';
 
 // Export all billing functions (this includes generateMonthlyInvoices)
@@ -230,6 +232,78 @@ export const onrefillrequestcreate = onDocumentCreated({
             }).catch(e => logger.error(`Internal admin alert failed for ${admin.name}`, e));
         }
     }
+});
+
+/**
+ * Triggered when a sanitation visit is marked as Completed.
+ */
+export const onsanitationupdate = onDocumentUpdated({
+    document: "users/{userId}/sanitationVisits/{visitId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const before = event.data.before.data() as SanitationVisit;
+    const after = event.data.after.data() as SanitationVisit;
+    const userId = event.params.userId;
+
+    if (before.status !== 'Completed' && after.status === 'Completed') {
+        logger.info(`Triggered onsanitationupdate for user: ${userId}. Status: Completed`);
+        
+        const db = getFirestore();
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.data();
+
+        if (userData?.email) {
+            const dateStr = new Date(after.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
+            await sendEmail({
+                to: userData.email,
+                subject: template.subject,
+                text: `Your sanitation report for ${dateStr} is ready.`,
+                html: template.html
+            });
+        }
+    }
+});
+
+/**
+ * Triggered when a new compliance report is added to a station.
+ * Notifies all users assigned to that station.
+ */
+export const oncompliancecreate = onDocumentCreated({
+    document: "waterStations/{stationId}/complianceReports/{reportId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const stationId = event.params.stationId;
+    const report = event.data.data() as ComplianceReport;
+
+    logger.info(`Triggered oncompliancecreate for station: ${stationId}`);
+
+    const db = getFirestore();
+    const stationDoc = await db.collection("waterStations").doc(stationId).get();
+    const stationData = stationDoc.data();
+
+    // Find all users assigned to this station
+    const usersSnapshot = await db.collection("users").where("assignedWaterStationId", "==", stationId).get();
+    
+    if (usersSnapshot.empty || !stationData) return;
+
+    const emailPromises = usersSnapshot.docs.map(async (doc) => {
+        const userData = doc.data();
+        if (userData.email) {
+            const template = getComplianceAlertTemplate(userData.businessName, stationData.name, report.name);
+            return sendEmail({
+                to: userData.email,
+                subject: template.subject,
+                text: `New safety report available for ${stationData.name}.`,
+                html: template.html
+            }).catch(e => logger.error(`Compliance email failed for ${userData.businessName}`, e));
+        }
+        return null;
+    });
+
+    await Promise.all(emailPromises);
 });
 
 export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
