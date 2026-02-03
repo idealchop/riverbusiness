@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -63,7 +62,6 @@ type State = {
 };
 
 type Action =
-  | { type: 'SET_EDIT_DETAILS'; payload: boolean }
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
@@ -799,7 +797,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const sanitationVisitsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'sanitationVisits'), orderBy('scheduledDate', 'desc')) : null, [firestore, authUser]);
   const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
-  const complianceReportsQuery = useMemoFirebase( () => (firestore && user?.assignedWaterStationId) ? query(collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports'), orderBy('date', 'desc')) : null, [firestore, user?.assignedWaterStationId]);
+  const complianceReportsQuery = useMemoFirebase( ( => (firestore && user?.assignedWaterStationId) ? query(collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports'), orderBy('date', 'desc')) : null), [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
   const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
@@ -1546,18 +1544,22 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                   <div className="flex justify-between" key={`manual-${index}`}>
                     <span className="text-muted-foreground">
                       {charge.description}
-                      <span className="text-xs ml-1">(Manual Charge)</span>
+                      <span className="text-xs ml-1">({charge.amount < 0 ? 'Deduction' : 'Adjustment'})</span>
                     </span>
-                    <span className="font-medium">P{charge.amount.toFixed(2)}</span>
+                    <span className={cn("font-medium", charge.amount < 0 && "text-green-600")}>
+                        {charge.amount < 0 ? '-' : ''}P{Math.abs(charge.amount).toFixed(2)}
+                    </span>
                   </div>
                 ))}
                 {(breakdownDetails.pendingCharges || []).map((charge, index) => (
                   <div className="flex justify-between" key={`pending-${index}`}>
                     <span className="text-muted-foreground italic">
                       {charge.description}
-                      <span className="text-xs ml-1">(Pending Charge)</span>
+                      <span className="text-xs ml-1">({charge.amount < 0 ? 'Pending Deduction' : 'Pending Charge'})</span>
                     </span>
-                    <span className="font-medium italic">P{charge.amount.toFixed(2)}</span>
+                    <span className={cn("font-medium italic", charge.amount < 0 && "text-green-600")}>
+                        {charge.amount < 0 ? '-' : ''}P{Math.abs(charge.amount).toFixed(2)}
+                    </span>
                   </div>
                 ))}
                 <Separator className="my-2" />
@@ -1722,7 +1724,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             </div>
             <div className="relative">
                 <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type={state.showNewPassword ? 'text' : 'password'} value={state.newPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'new', value: e.target.value}})} />
+                <Input id="new-password" type={state.showNewPassword ? 'text' : 'password'} value={state.currentPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'new', value: e.target.value}})} />
                 <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'new'})}>
                     {state.showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
@@ -1961,7 +1963,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           </DialogHeader>
           {paymentProofPreview && (
             <div className="py-4 flex justify-center">
-              <Image src={paymentProofPreview} alt="Payment Proof Preview" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
+              <Image src={paymentProofPreview} alt="Payment Proof Preview" width={40} height={600} className="rounded-md object-contain max-h-[70vh]" />
             </div>
           )}
         </DialogContent>
