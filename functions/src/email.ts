@@ -37,7 +37,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     logger.info(`Attempting to send email to ${to} via Brevo relay...`);
 
     const info = await transporter.sendMail({
-      from: '"River Business | Customers" <customers@riverph.com>',
+      from: '"River Philippines | Customers" <customers@riverph.com>',
       to,
       subject,
       text,
@@ -156,7 +156,7 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
   `;
 
   return {
-    subject: `Hydration Delivered to ${businessName} 🚚`,
+    subject: `Hydration Delivered: Fresh Supply Restocked for ${businessName} 🚚`,
     html: getEmailWrapper(content, 'Fresh Water Delivered', subheader)
   };
 }
@@ -198,7 +198,9 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
   `;
 
   return {
-    subject: `${title}: ${invoiceId} ${isPaid ? '✅' : '⏳'}`,
+    subject: isPaid 
+      ? `Success: Your Account is in Excellent Standing ✅` 
+      : `Received: We're Validating Your Payment for ${invoiceId} ⏳`,
     html: getEmailWrapper(content, title, subheader)
   };
 }
@@ -227,7 +229,7 @@ export function getTopUpConfirmationTemplate(businessName: string, amount: numbe
   `;
 
   return {
-    subject: `Wallet Credits Added Successfully 💰`,
+    subject: `Balance Boosted: Your Wallet is Ready for Action 💰`,
     html: getEmailWrapper(content, 'Balance Updated')
   };
 }
@@ -258,7 +260,7 @@ export function getNewInvoiceTemplate(businessName: string, invoiceId: string, a
   `;
 
   return {
-    subject: `Monthly Statement Ready for ${period} 📑`,
+    subject: `Statement Available: Optimized Consumption Insights for ${period} 📑`,
     html: getEmailWrapper(content, 'New Statement Available', subheader)
   };
 }
@@ -298,7 +300,7 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
   `;
 
   return {
-    subject: `Priority Confirmed: Refill Request ${requestId} ${isReceived ? '🌊' : '🚀'}`,
+    subject: `Priority Confirmed: Your Extra Water Refill is on the Way 🚀`,
     html: getEmailWrapper(content, isReceived ? 'Refill Priority Received' : 'Refill Request Updated', subheader)
   };
 }
