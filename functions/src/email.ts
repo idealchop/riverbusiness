@@ -110,9 +110,8 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
             <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
           <div class="footer">
-            <p class="footer-company">River For Business</p>
+            <p class="footer-company">River For Business | Your Operating System for Business Essentials</p>
             <p class="footer-sub">
-              Your Operating System for Business Essentials<br>
               <a href="https://riverph.com">www.riverph.com</a>
             </p>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
@@ -135,7 +134,7 @@ export function getWelcomeUnclaimedTemplate(
   schedule: string
 ) {
   const guideUrl = "https://prism-roadrunner-575.notion.site/Welcome-to-River-Philippines-2dfccd0e1c6280648d41d1eb44033f50?source=copy_link";
-  const brandColor = "#538ec2";
+  const brandColor = BRAND_PRIMARY;
 
   return {
     subject: `Welcome to River Philippines: Your Smart Refill is Ready! 🌊`,
