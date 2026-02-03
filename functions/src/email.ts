@@ -3,14 +3,14 @@ import * as logger from 'firebase-functions/logger';
 
 /**
  * Configuration for the Brevo SMTP Relay.
- * These values should ideally be stored in Firebase Secrets.
+ * Replace 'YOUR_BREVO_PASSWORD_OR_API_KEY' with the actual key once available.
  */
 const SMTP_CONFIG = {
   host: 'smtp-relay.brevo.com',
   port: 587,
   auth: {
     user: '998b0f001@smtp-brevo.com',
-    pass: 'YOUR_BREVO_PASSWORD_OR_API_KEY', // To be replaced once provided
+    pass: 'YOUR_BREVO_PASSWORD_OR_API_KEY', 
   },
 };
 
@@ -51,6 +51,7 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
     'Delivered': '#10b981',
     'In Transit': '#3b82f6',
     'Pending': '#f59e0b',
+    'Scheduled': '#6366f1'
   };
   const color = statusColors[status] || '#3b82f6';
 
