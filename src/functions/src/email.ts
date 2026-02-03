@@ -28,7 +28,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
       host: 'smtp-relay.brevo.com',
       port: 587,
       auth: {
-        user: '998b0f001@smtp- Sib-brevo.com',
+        user: '998b0f001@smtp-brevo.com',
         pass: apiKey, 
       },
     });
@@ -36,7 +36,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     logger.info(`Attempting to send email to ${to} via Brevo relay...`);
 
     const info = await transporter.sendMail({
-      from: '"River Business" <support@riverph.com>',
+      from: '"River Business | Customers" <customers@riverph.com>',
       to,
       subject,
       text,
@@ -107,7 +107,7 @@ function getEmailWrapper(content: string, preheader: string) {
             <a href="https://app.riverph.com" class="btn">Go to Dashboard</a>
           </div>
           <p class="support-link">
-            Questions about this? <a href="mailto:support@riverph.com">Contact Support</a>
+            Questions about this? <a href="mailto:customers@riverph.com">Contact Support</a>
           </p>
           <hr class="footer-line" />
           <div class="footer">
@@ -208,7 +208,6 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
 }
 
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
-  const color = BRAND_PRIMARY;
   const content = `
     <h2 class="h2">Balance Boosted! 💳</h2>
     
