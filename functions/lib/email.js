@@ -122,6 +122,7 @@ function getEmailWrapper(content, headerTitle, subheader = '') {
         .footer-sub { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6; }
         .footer-sub a { color: #94a3b8; text-decoration: none; font-weight: 600; }
         .automated-note { font-size: 11px; color: #cbd5e1; margin-top: 24px; font-style: italic; }
+        .legal-disclaimer { max-width: 600px; margin: 24px auto; padding: 0 24px; color: #94a3b8; font-size: 10px; line-height: 1.5; text-align: justify; }
       </style>
     </head>
     <body>
@@ -139,14 +140,17 @@ function getEmailWrapper(content, headerTitle, subheader = '') {
             <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
           <div class="footer">
-            <p class="footer-company">River Philippines</p>
+            <p class="footer-company">River For Business</p>
             <p class="footer-sub">
-              Turn Everyday Needs Into Automatic Experience<br>
-              <a href="https://www.riverph.com">www.riverph.com</a> | <a href="mailto:customers@riverph.com">Contact Support</a>
+              Your Operating System for Business Essentials<br>
+              <a href="https://www.riverph.com">www.riverph.com</a>
             </p>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
           </div>
         </div>
+      </div>
+      <div class="legal-disclaimer">
+        DISCLAIMER: This communication and any attachments are intended to be confidential, protected under the Data Privacy Act of 2012 (RA 10173), Intellectual Property laws, and other applicable Philippine statutes. It is intended for the exclusive use of the addressee. If you are not the intended recipient, you are hereby notified that any disclosure, retention, dissemination, copying, alteration, or distribution of this communication and/or any attachment, or any information therein, is strictly prohibited. If you have received this communication in error, kindly notify the sender by return e-mail and delete this communication and all attachments immediately.
       </div>
     </body>
     </html>
