@@ -41,7 +41,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
       text,
       html,
     });
-    logger.info(`Email sent successfully: ${info.messageId}`);
+    logger.info(`Email sent successfully: ${info.messageId} to ${to}`);
     return info;
   } catch (error) {
     logger.error('Error sending email:', error);
@@ -81,21 +81,26 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
 }
 
 /**
- * Template for Payment Confirmations
+ * Template for Payment Status
  */
-export function getPaymentConfirmationTemplate(businessName: string, invoiceId: string, amount: number) {
+export function getPaymentStatusTemplate(businessName: string, invoiceId: string, amount: number, status: string) {
+  const isPaid = status === 'Paid';
+  const title = isPaid ? 'Payment Confirmed' : 'Payment Received (Under Review)';
+  const subMessage = isPaid 
+    ? "We've successfully confirmed your payment. Thank you!" 
+    : "We've received your proof of payment. Our team is now reviewing it.";
+
   return {
-    subject: `Payment Confirmed - ${invoiceId}`,
+    subject: `${title} - ${invoiceId}`,
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
         <h2 style="color: #156391;">River Business</h2>
         <p>Hi ${businessName},</p>
-        <p>We've successfully confirmed your payment for invoice <strong>${invoiceId}</strong>.</p>
-        <div style="background-color: #ecfdf5; border: 1px solid #10b981; padding: 16px; border-radius: 6px; margin: 20px 0;">
-          <p style="margin: 0; font-size: 14px; color: #065f46;">Amount Paid:</p>
-          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #065f46;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        <p>${subMessage}</p>
+        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #166534;">Invoice ID: <strong>${invoiceId}</strong></p>
+          <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #166534;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
-        <p>Thank you for your business!</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
         <p style="font-size: 12px; color: #9ca3af; text-align: center;">River Tech Inc. | customer@riverph.com</p>
       </div>
@@ -119,6 +124,35 @@ export function getTopUpConfirmationTemplate(businessName: string, amount: numbe
           <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #1e40af;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
         <p>These credits are now available to cover your future deliveries.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">River Tech Inc. | customer@riverph.com</p>
+      </div>
+    `,
+  };
+}
+
+/**
+ * Template for Refill Requests
+ */
+export function getRefillRequestTemplate(businessName: string, status: string, requestId: string, date?: string) {
+  const isReceived = status === 'Requested';
+  const title = isReceived ? 'Refill Request Received' : `Refill Status: ${status}`;
+  const message = isReceived 
+    ? "We've received your request for a water refill and will process it shortly."
+    : `Your refill request is now <strong>${status}</strong>.`;
+
+  return {
+    subject: title,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+        <h2 style="color: #156391;">River Business</h2>
+        <p>Hi ${businessName},</p>
+        <p>${message}</p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #475569;">Request ID: <strong>${requestId}</strong></p>
+          ${date ? `<p style="margin: 4px 0 0 0; font-size: 14px; color: #475569;">Requested for: <strong>${date}</strong></p>` : ''}
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">Thank you for choosing River Business!</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
         <p style="font-size: 12px; color: #9ca3af; text-align: center;">River Tech Inc. | customer@riverph.com</p>
       </div>

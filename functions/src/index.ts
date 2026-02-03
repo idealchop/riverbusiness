@@ -9,7 +9,13 @@ import * as path from 'path';
 import type { Notification, Delivery, RefillRequest, Transaction } from './types';
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { sendEmail, getDeliveryStatusTemplate, getPaymentConfirmationTemplate, getTopUpConfirmationTemplate } from './email';
+import { 
+    sendEmail, 
+    getDeliveryStatusTemplate, 
+    getPaymentStatusTemplate, 
+    getTopUpConfirmationTemplate,
+    getRefillRequestTemplate
+} from './email';
 
 
 // Import all exports from billing.ts
@@ -303,6 +309,17 @@ export const onpaymentcreate = onDocumentCreated("users/{userId}/payments/{payme
             data: { userId: userId, paymentId: event.params.paymentId }
         };
         await createNotification(adminId, adminNotification);
+
+        // Notify user that it's received
+        if (userData.email) {
+            const template = getPaymentStatusTemplate(userData.businessName, event.params.paymentId, payment.amount, 'Pending Review');
+            await sendEmail({
+                to: userData.email,
+                subject: template.subject,
+                text: `We have received your proof of payment for invoice ${event.params.paymentId}.`,
+                html: template.html
+            });
+        }
     }
   } catch (error) {
       logger.error(`Error in onpaymentcreate for event ID ${event.id}:`, error);
@@ -342,7 +359,7 @@ export const onpaymentupdate = onDocumentUpdated("users/{userId}/payments/{payme
         
         // === EMAIL NOTIFICATION ===
         if (userData.email) {
-            const template = getPaymentConfirmationTemplate(userData.businessName, payment.id, payment.amount);
+            const template = getPaymentStatusTemplate(userData.businessName, payment.id, payment.amount, 'Paid');
             await sendEmail({
                 to: userData.email,
                 subject: template.subject,
@@ -492,13 +509,24 @@ export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillReq
 
     if (!userData) return;
 
-    // Notify user
+    // Notify user (in-app)
     await createNotification(userId, {
         type: 'delivery',
         title: 'Refill Request Received',
         description: 'We have received your refill request and will process it shortly.',
         data: { requestId: event.params.requestId },
     });
+
+    // === EMAIL NOTIFICATION ===
+    if (userData.email) {
+        const template = getRefillRequestTemplate(userData.businessName, 'Requested', event.params.requestId);
+        await sendEmail({
+            to: userData.email,
+            subject: template.subject,
+            text: `We have received your refill request ${event.params.requestId}.`,
+            html: template.html
+        });
+    }
 
     // Notify admin
     const adminId = await getAdminId();
@@ -540,6 +568,17 @@ export const onrefillrequestupdate = onDocumentUpdated("users/{userId}/refillReq
         description: `Your refill request is now ${after.status}.`,
         data: { requestId: event.params.requestId },
     });
+
+    // === EMAIL NOTIFICATION ===
+    if (userData.email) {
+        const template = getRefillRequestTemplate(userData.businessName, after.status, event.params.requestId);
+        await sendEmail({
+            to: userData.email,
+            subject: template.subject,
+            text: `Your refill request ${event.params.requestId} is now ${after.status}.`,
+            html: template.html
+        });
+    }
     
     // Notify admin
     const adminId = await getAdminId();
@@ -758,12 +797,12 @@ export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) =
         const url = await getPublicUrl();
         const paymentRef = db.collection("users").doc(userId).collection("payments").doc(paymentId);
         
+        // This will trigger onpaymentcreate because it's a 'set' (creation/update)
         await paymentRef.set({
             proofOfPaymentUrl: url,
             status: "Pending Review",
         }, { merge: true });
 
-        // This will trigger onpaymentupdate, which handles notifications
         return;
     }
     
