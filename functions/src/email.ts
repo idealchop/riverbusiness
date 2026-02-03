@@ -9,8 +9,8 @@ interface SendEmailOptions {
   html: string;
 }
 
-const BRAND_PRIMARY = '#156391';
-const BRAND_ACCENT = '#22d3ee';
+const BRAND_PRIMARY = '#538ec2';
+const BRAND_ACCENT = '#8cb3d9';
 const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
 
 /**
@@ -37,7 +37,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     logger.info(`Attempting to send email to ${to} via Brevo relay...`);
 
     const info = await transporter.sendMail({
-      from: '"River Philippines | Customers" <customers@riverph.com>',
+      from: '"River Philippines" <customers@riverph.com>',
       to,
       subject,
       text,
@@ -86,7 +86,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         .detail-value { margin: 2px 0 0 0; font-size: 18px; font-weight: 700; color: #0f172a; }
         .next-step { padding-top: 16px; border-top: 1px dashed #cbd5e1; margin: 0; font-size: 14px; color: #475569; line-height: 1.5; }
         .btn-container { text-align: center; margin-top: 30px; }
-        .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(21, 99, 145, 0.3); }
+        .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
         .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
         .footer-company { font-size: 14px; font-weight: 700; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
         .footer-sub { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6; }
@@ -110,9 +110,8 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
             <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
           <div class="footer">
-            <p class="footer-company">River For Business</p>
+            <p class="footer-company">River For Business | Your Operating System for Business Essentials</p>
             <p class="footer-sub">
-              Your Operating System for Business Essentials<br>
               <a href="https://www.riverph.com">www.riverph.com</a>
             </p>
             <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
@@ -128,7 +127,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
 }
 
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
-  const color = '#10b981'; 
+  const color = '#10b981';
   const subheader = `<p class="tracking-id">Tracking ID: <span>${trackingId}</span></p>`;
   
   const content = `
