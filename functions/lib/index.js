@@ -19,12 +19,10 @@ exports.createNotification = createNotification;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
-// Initialize Firebase Admin SDK first
 (0, app_1.initializeApp)();
 const storage_2 = require("firebase-functions/v2/storage");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const email_1 = require("./email");
-// Export all billing functions
 __exportStar(require("./billing"), exports);
 async function createNotification(userId, notificationData) {
     if (!userId)
@@ -33,7 +31,6 @@ async function createNotification(userId, notificationData) {
     const notification = Object.assign(Object.assign({}, notificationData), { userId, date: firestore_1.FieldValue.serverTimestamp(), isRead: false });
     await db.collection('users').doc(userId).collection('notifications').add(notification);
 }
-// --- TRIGGERS ---
 exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
     if (!event.data)
         return;

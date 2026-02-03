@@ -41,9 +41,6 @@ exports.getNewInvoiceTemplate = getNewInvoiceTemplate;
 exports.getRefillRequestTemplate = getRefillRequestTemplate;
 const nodemailer = __importStar(require("nodemailer"));
 const logger = __importStar(require("firebase-functions/logger"));
-/**
- * Configuration for the Brevo SMTP Relay.
- */
 const SMTP_CONFIG = {
     host: 'smtp-relay.brevo.com',
     port: 587,
@@ -53,9 +50,6 @@ const SMTP_CONFIG = {
     },
 };
 const transporter = nodemailer.createTransport(SMTP_CONFIG);
-/**
- * Sends an email using the configured SMTP transporter.
- */
 async function sendEmail({ to, subject, text, html }) {
     try {
         if (!process.env.BREVO_API_KEY || process.env.BREVO_API_KEY === 'your_api_key_here') {
@@ -77,9 +71,6 @@ async function sendEmail({ to, subject, text, html }) {
         throw error;
     }
 }
-/**
- * Template for Delivery Status Updates
- */
 function getDeliveryStatusTemplate(businessName, status, trackingId, volume) {
     const statusColors = {
         'Delivered': '#10b981',
@@ -106,9 +97,6 @@ function getDeliveryStatusTemplate(businessName, status, trackingId, volume) {
     `,
     };
 }
-/**
- * Template for Payment Status
- */
 function getPaymentStatusTemplate(businessName, invoiceId, amount, status) {
     const isPaid = status === 'Paid';
     const title = isPaid ? 'Payment Confirmed' : 'Payment Received (Under Review)';
@@ -132,9 +120,6 @@ function getPaymentStatusTemplate(businessName, invoiceId, amount, status) {
     `,
     };
 }
-/**
- * Template for Top-Up Confirmations
- */
 function getTopUpConfirmationTemplate(businessName, amount) {
     return {
         subject: `Credits Added Successfully`,
@@ -154,9 +139,6 @@ function getTopUpConfirmationTemplate(businessName, amount) {
     `,
     };
 }
-/**
- * Template for New Invoices
- */
 function getNewInvoiceTemplate(businessName, invoiceId, amount, period) {
     return {
         subject: `New Invoice for ${period} - ${invoiceId}`,
@@ -176,9 +158,6 @@ function getNewInvoiceTemplate(businessName, invoiceId, amount, period) {
     `,
     };
 }
-/**
- * Template for Refill Requests
- */
 function getRefillRequestTemplate(businessName, status, requestId, date) {
     const isReceived = status === 'Requested';
     const title = isReceived ? 'Refill Request Received' : `Refill Status: ${status}`;

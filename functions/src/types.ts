@@ -30,7 +30,7 @@ export interface ManualCharge {
   amount: number;
   dateAdded: FieldValue | Timestamp;
 }
-    
+
 export interface RefillRequest {
   id: string;
   userId: string;

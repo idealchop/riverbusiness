@@ -1,7 +1,6 @@
-
 {
   "name": "functions",
-  "description": "Cloud Functions for Firebase",
+  "description": "Cloud Functions for River Business",
   "scripts": {
     "lint": "eslint .",
     "serve": "firebase emulators:start --only functions",

@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, DocumentData, DocumentReference } from 'firebase-admin/firestore';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
@@ -7,7 +7,7 @@ import type { ManualCharge } from './types';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
-export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
+export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async () => {
     logger.info('Starting monthly invoice generation job.');
     const db = getFirestore();
     
@@ -27,7 +27,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 
     for (const userDoc of usersSnapshot.docs) {
         const userRef = userDoc.ref;
-        let user = userDoc.data();
+        const user = userDoc.data();
         
         if (user.role === 'Admin' || user.isPrepaid) continue;
 
@@ -35,7 +35,7 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         let billingCycleStart: Date;
         let billingCycleEnd: Date;
         let monthsToBill = 1;
-        let isFirstInvoice = !user.lastBilledDate;
+        const isFirstInvoice = !user.lastBilledDate;
 
         if (currentYear === 2026 && currentMonth === 1) { 
             if (user.plan?.isConsumptionBased) {
@@ -79,8 +79,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 });
 
 async function generateInvoiceForUser(
-    user: any,
-    userRef: any,
+    user: DocumentData,
+    userRef: DocumentReference,
     billingPeriod: string,
     billingCycleStart: Date,
     billingCycleEnd: Date,

@@ -40,10 +40,6 @@ const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
 const containerToLiter = (containers) => (containers || 0) * 19.5;
-/**
- * A scheduled Cloud Function that runs on the 1st of every month
- * to generate invoices and handle plan changes.
- */
 exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     var _a;
     logger.info('Starting monthly invoice generation job.');
@@ -51,7 +47,6 @@ exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(a
     const now = new Date();
     const currentYear = (0, date_fns_1.getYear)(now);
     const currentMonth = (0, date_fns_1.getMonth)(now);
-    // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
     if (currentYear === 2026 && currentMonth === 0) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
         return null;
@@ -70,7 +65,7 @@ exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(a
         let billingCycleEnd;
         let monthsToBill = 1;
         let isFirstInvoice = !user.lastBilledDate;
-        if (currentYear === 2026 && currentMonth === 1) { // February 2026
+        if (currentYear === 2026 && currentMonth === 1) {
             if ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) {
                 billingCycleStart = new Date(2025, 11, 1);
                 billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59);
@@ -91,7 +86,6 @@ exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(a
             billingCycleStart = (0, date_fns_1.startOfMonth)(previousMonth);
             billingCycleEnd = (0, date_fns_1.endOfMonth)(previousMonth);
         }
-        // Handle Pending Plan Activation
         if (user.pendingPlan && user.planChangeEffectiveDate && user.accountType !== 'Branch') {
             const effectiveDate = user.planChangeEffectiveDate.toDate();
             if ((0, date_fns_1.isToday)(effectiveDate)) {
@@ -150,7 +144,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
         let oneTimeFee = 0;
         if (user.customPlanDetails.gallonPaymentType === 'One-Time')
             oneTimeFee += user.customPlanDetails.gallonPrice || 0;
-        if (user.customPlanDetails.dispenser佣PaymentType === 'One-Time')
+        if (user.customPlanDetails.dispenserPaymentType === 'One-Time')
             oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
         if (oneTimeFee > 0) {
             amount += oneTimeFee;
@@ -188,6 +182,6 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
     }
     if (Object.keys(userUpdatePayload).length > 0)
         batch.update(userRef, userUpdatePayload);
-    return batch.commit();
+    await batch.commit();
 }
 //# sourceMappingURL=billing.js.map
