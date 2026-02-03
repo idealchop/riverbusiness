@@ -10,7 +10,7 @@ interface SendEmailOptions {
 }
 
 const BRAND_PRIMARY = '#538ec2';
-const BRAND_ACCENT = '#8cb3d9';
+const BRAND_ACCENT = '#7ea9d2';
 const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
 
 /**
@@ -34,7 +34,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
       },
     });
     
-    logger.info(`Attempting to send email to ${to} via Brevo relay...`);
+    logger.info(`Attempting to send email to ${to} via River Philippines relay...`);
 
     const info = await transporter.sendMail({
       from: '"River Philippines" <customers@riverph.com>',
@@ -47,7 +47,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     logger.info(`Email sent successfully. MessageID: ${info.messageId}`);
     return info;
   } catch (error) {
-    logger.error('Nodemailer Error: Failed to dispatch email via Brevo relay.', error);
+    logger.error('Nodemailer Error: Failed to dispatch email.', error);
     throw error;
   }
 }
