@@ -150,7 +150,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
         let oneTimeFee = 0;
         if (user.customPlanDetails.gallonPaymentType === 'One-Time')
             oneTimeFee += user.customPlanDetails.gallonPrice || 0;
-        if (user.customPlanDetails.dispenserPaymentType === 'One-Time')
+        if (user.customPlanDetails.dispenser佣PaymentType === 'One-Time')
             oneTimeFee += user.customPlanDetails.dispenserPrice || 0;
         if (oneTimeFee > 0) {
             amount += oneTimeFee;

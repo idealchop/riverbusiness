@@ -1,4 +1,3 @@
-
 import * as functions from 'firebase-functions';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
