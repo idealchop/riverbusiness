@@ -797,7 +797,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const sanitationVisitsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'sanitationVisits'), orderBy('scheduledDate', 'desc')) : null, [firestore, authUser]);
   const { data: sanitationVisits } = useCollection<SanitationVisit>(sanitationVisitsQuery);
 
-  const complianceReportsQuery = useMemoFirebase( ( => (firestore && user?.assignedWaterStationId) ? query(collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports'), orderBy('date', 'desc')) : null), [firestore, user?.assignedWaterStationId]);
+  const complianceReportsQuery = useMemoFirebase(() => (firestore && user?.assignedWaterStationId) ? query(collection(firestore, 'waterStations', user.assignedWaterStationId, 'complianceReports'), orderBy('date', 'desc')) : null, [firestore, user?.assignedWaterStationId]);
   const { data: complianceReports } = useCollection<ComplianceReport>(complianceReportsQuery);
 
   const transactionsQuery = useMemoFirebase(() => (firestore && user?.accountType === 'Parent') ? query(collection(firestore, 'users', user.id, 'transactions'), orderBy('date', 'desc')) : null, [firestore, user]);
