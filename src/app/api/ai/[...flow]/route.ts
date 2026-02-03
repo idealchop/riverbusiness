@@ -1,17 +1,29 @@
 import { chatbot } from '@/ai/flows/chatbot-flow';
 import { NextRequest, NextResponse } from 'next/server';
-import { streamToResponse } from 'ai';
 
+/**
+ * Route handler for AI flows.
+ * Handles streaming responses for Genkit-powered features.
+ */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { flow: string[] } }
+  { params }: { params: Promise<{ flow: string[] }> }
 ) {
-  const flow = params.flow.join('/');
+  const { flow } = await params;
+  const flowPath = flow.join('/');
   const json = await req.json();
 
-  if (flow === 'chat') {
+  if (flowPath === 'chat') {
+    // chatbot returns a ReadableStream<string>
     const stream = await chatbot(json);
-    return streamToResponse(stream);
+    
+    // In Next.js App Router and AI SDK v3+, simply return a Response with the stream.
+    // The browser will handle the stream chunks as they arrive.
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    });
   }
 
   return NextResponse.json({ error: 'not found' }, { status: 404 });

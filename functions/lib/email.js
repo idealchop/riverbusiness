@@ -384,7 +384,7 @@ function getRefillRequestTemplate(businessName, status, requestId, date) {
         <div class="detail-icon">🚚</div>
         <div>
           <p class="detail-label">Target Date</p>
-          <p class="detail-value">${date ? format(new Date(date), 'PP') : 'ASAP Refill'}</p>
+          <p class="detail-value">${date ? (0, date_fns_1.format)(new Date(date), 'PP') : 'ASAP Refill'}</p>
         </div>
       </div>
       <p class="next-step">
@@ -417,7 +417,7 @@ function getInternalRefillAlertTemplate(adminName, businessName, requestId, date
         <div class="detail-icon">📅</div>
         <div>
           <p class="detail-label">Fulfillment Date</p>
-          <p class="detail-value">${date ? format(new Date(date), 'PP') : 'ASAP Priority'}</p>
+          <p class="detail-value">${date ? (0, date_fns_1.format)(new Date(date), 'PP') : 'ASAP Priority'}</p>
         </div>
       </div>
       <p class="next-step">
@@ -492,3 +492,4 @@ function getComplianceAlertTemplate(businessName, stationName, reportName) {
         html: getEmailWrapper(content, 'Quality Compliance Updated')
     };
 }
+//# sourceMappingURL=email.js.map
