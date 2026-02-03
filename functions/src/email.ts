@@ -52,28 +52,42 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
   }
 }
 
-function getEmailWrapper(content: string) {
+/**
+ * Common wrapper for all River Business emails to ensure consistent branding.
+ */
+function getEmailWrapper(content: string, buttonLabel?: string, buttonUrl?: string) {
+  const ctaButton = (buttonLabel && buttonUrl) ? `
+    <div style="margin-top: 30px; text-align: center;">
+      <a href="${buttonUrl}" style="background-color: ${BRAND_COLOR}; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block; font-size: 16px;">
+        ${buttonLabel}
+      </a>
+    </div>
+  ` : '';
+
   return `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f7f9; padding: 40px 0; margin: 0; width: 100%;">
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);">
         <tr>
           <td style="padding: 30px; background-color: ${BRAND_COLOR}; text-align: center;">
-            <img src="${LOGO_URL}" alt="River Business" width="60" height="60" style="margin-bottom: 10px; border-radius: 12px;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">River Business</h1>
+            <img src="${LOGO_URL}" alt="River Business" width="70" height="70" style="margin-bottom: 10px; border-radius: 14px;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 26px; letter-spacing: 1px; font-weight: 700;">River Business</h1>
           </td>
         </tr>
         <tr>
           <td style="padding: 40px 30px;">
             ${content}
+            ${ctaButton}
           </td>
         </tr>
         <tr>
-          <td style="padding: 20px 30px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-            <p style="margin: 0; font-size: 12px; color: #64748b;">
-              River Tech Inc. | Turn Everyday Needs Into Automatic Experience
+          <td style="padding: 30px; background-color: #f8fafc; border-top: 1px solid #eef2f6; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.5;">
+              <strong>River Tech Inc.</strong><br>
+              Turn Everyday Needs Into Automatic Experience
             </p>
-            <p style="margin: 5px 0 0 0; font-size: 12px; color: #94a3b8;">
-              Questions? Contact us at <a href="mailto:customer@riverph.com" style="color: ${BRAND_COLOR}; text-decoration: none;">customer@riverph.com</a>
+            <p style="margin: 15px 0 0 0; font-size: 11px; color: #94a3b8; font-style: italic;">
+              This is an automated message from River Business. Please do not reply directly to this email.<br>
+              For support, reach us at <a href="mailto:customer@riverph.com" style="color: ${BRAND_COLOR}; text-decoration: none;">customer@riverph.com</a>
             </p>
           </td>
         </tr>
@@ -83,121 +97,116 @@ function getEmailWrapper(content: string) {
 }
 
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
-  const isDelivered = status === 'Delivered';
-  const statusColor = isDelivered ? '#10b981' : BRAND_COLOR;
-  
   const content = `
-    <h2 style="color: #1e293b; margin-top: 0;">Hello ${businessName},</h2>
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 22px;">Stay Hydrated, ${businessName}! 💧</h2>
     <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-      Your water delivery <strong>${trackingId}</strong> has been successfully <span style="color: ${statusColor}; font-weight: bold;">Delivered</span>.
+      Great news! Your fresh water supply has been successfully <strong>Delivered</strong>. Our team has just finished stocking your station.
     </p>
-    <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0;">
-      <p style="margin: 0; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Delivery Details:</p>
-      <p style="margin: 10px 0 0 0; font-size: 20px; font-weight: bold; color: #1e293b;">${volume} Containers</p>
+    <div style="background-color: #f1f5f9; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #e2e8f0;">
+      <p style="margin: 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Delivery Summary</p>
+      <p style="margin: 10px 0 5px 0; font-size: 24px; font-weight: 800; color: #1e293b;">${volume} Containers</p>
+      <p style="margin: 0; font-size: 12px; color: #94a3b8;">Tracking ID: ${trackingId}</p>
     </div>
     <p style="color: #475569; font-size: 14px;">
-      You can track your usage and view the proof of delivery in your dashboard. Thank you for staying hydrated with River Business!
+      You can now view the high-resolution proof of delivery and track your real-time consumption directly in your portal.
     </p>
-    <div style="margin-top: 30px; text-align: center;">
-      <a href="https://app.riverph.com/dashboard" style="background-color: ${BRAND_COLOR}; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">View Dashboard</a>
-    </div>
   `;
 
   return {
-    subject: `Success: Water Delivered - ${trackingId}`,
-    html: getEmailWrapper(content),
+    subject: `Success: Water Delivered to ${businessName} 🚚`,
+    html: getEmailWrapper(content, 'Go to Dashboard', 'https://app.riverph.com/dashboard'),
   };
 }
 
 export function getPaymentStatusTemplate(businessName: string, invoiceId: string, amount: number, status: string) {
   const isPaid = status === 'Paid';
-  const title = isPaid ? 'Payment Confirmed' : 'Payment Received (Under Review)';
+  const emoji = isPaid ? '✅' : '⏳';
+  const title = isPaid ? 'Payment Confirmed' : 'Review in Progress';
   const subMessage = isPaid 
-    ? "We've successfully confirmed your payment. Thank you!" 
-    : "We've received your proof of payment and our team is currently reviewing it.";
+    ? "Thank you for your prompt payment! We've successfully updated your records, and your account remains in excellent standing." 
+    : "We've received your proof of payment. Our finance team is currently reviewing the details to finalize your record.";
 
   const content = `
-    <h2 style="color: #1e293b; margin-top: 0;">Hi ${businessName},</h2>
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 22px;">Hi ${businessName}, ${emoji}</h2>
     <p style="color: #475569; font-size: 16px; line-height: 1.6;">${subMessage}</p>
-    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin: 25px 0;">
-      <p style="margin: 0; font-size: 14px; color: #166534;">Invoice ID: <strong>${invoiceId}</strong></p>
-      <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #166534;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 25px; border-radius: 12px; margin: 25px 0;">
+      <p style="margin: 0; font-size: 13px; color: #166534; font-weight: 600;">Invoice ID: ${invoiceId}</p>
+      <p style="margin: 10px 0 0 0; font-size: 28px; font-weight: 800; color: #166534;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
     <p style="color: #475569; font-size: 14px;">
-      Your payment has been logged against your account. You can view your full transaction history in your dashboard.
+      You can download a PDF copy of your receipt and view your full billing history anytime.
     </p>
   `;
 
   return {
-    subject: `${title} - ${invoiceId}`,
-    html: getEmailWrapper(content),
+    subject: `${title}: ${invoiceId} ${emoji}`,
+    html: getEmailWrapper(content, 'View Invoices', 'https://app.riverph.com/dashboard'),
   };
 }
 
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
   const content = `
-    <h2 style="color: #1e293b; margin-top: 0;">Credits Added!</h2>
-    <p style="color: #475569; font-size: 16px; line-height: 1.6;">Hi ${businessName}, your top-up request has been approved.</p>
-    <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 8px; margin: 25px 0;">
-      <p style="margin: 0; font-size: 14px; color: #1e40af;">Amount Credited:</p>
-      <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #1e40af;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 22px;">Balance Boosted! 💰</h2>
+    <p style="color: #475569; font-size: 16px; line-height: 1.6;">Hello ${businessName}, your top-up request has been approved. You're all set for your upcoming deliveries!</p>
+    <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 25px; border-radius: 12px; margin: 25px 0;">
+      <p style="margin: 0; font-size: 13px; color: #1e40af; font-weight: 600;">Amount Credited</p>
+      <p style="margin: 10px 0 0 0; font-size: 28px; font-weight: 800; color: #1e40af;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
     <p style="color: #475569; font-size: 14px;">
-      These credits are now available to cover your upcoming water deliveries.
+      Your new credits are now available in your central wallet. We'll automatically deduct from this balance for every container delivered.
     </p>
   `;
 
   return {
-    subject: `Credits Added Successfully`,
-    html: getEmailWrapper(content),
+    subject: `Credits Added Successfully to your Wallet 💳`,
+    html: getEmailWrapper(content, 'Check Balance', 'https://app.riverph.com/dashboard'),
   };
 }
 
 export function getNewInvoiceTemplate(businessName: string, invoiceId: string, amount: number, period: string) {
   const content = `
-    <h2 style="color: #1e293b; margin-top: 0;">New Invoice Available</h2>
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 22px;">Statement Ready 📄</h2>
     <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-      Hi ${businessName}, your invoice for <strong>${period}</strong> has been generated.
+      Hi ${businessName}, your automated monthly invoice for <strong>${period}</strong> has been generated and is now ready for your review.
     </p>
-    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 25px 0;">
-      <p style="margin: 0; font-size: 14px; color: #475569;">Invoice ID: <strong>${invoiceId}</strong></p>
-      <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #1e293b;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 25px; border-radius: 12px; margin: 25px 0;">
+      <p style="margin: 0; font-size: 13px; color: #475569; font-weight: 600;">Total Amount Due</p>
+      <p style="margin: 10px 0 0 0; font-size: 28px; font-weight: 800; color: #1e293b;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+      <p style="margin: 5px 0 0 0; font-size: 12px; color: #94a3b8;">Invoice ID: ${invoiceId}</p>
     </div>
     <p style="color: #475569; font-size: 14px;">
-      Log in to your dashboard to view the full breakdown and settle your balance.
+      Log in to your dashboard to see the full breakdown of consumption and equipment fees, and to settle your balance via our secure payment channels.
     </p>
-    <div style="margin-top: 30px; text-align: center;">
-      <a href="https://app.riverph.com/dashboard" style="background-color: ${BRAND_COLOR}; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Pay Now</a>
-    </div>
   `;
 
   return {
-    subject: `New Invoice for ${period} - ${invoiceId}`,
-    html: getEmailWrapper(content),
+    subject: `New Invoice Available for ${period} 📑`,
+    html: getEmailWrapper(content, 'Pay Now', 'https://app.riverph.com/dashboard'),
   };
 }
 
 export function getRefillRequestTemplate(businessName: string, status: string, requestId: string, date?: string) {
   const isReceived = status === 'Requested';
+  const emoji = isReceived ? '🌊' : '🚀';
   const title = isReceived ? 'Refill Request Received' : `Refill Status: ${status}`;
   const message = isReceived 
-    ? "We've received your request for a water refill and our team is already on it."
-    : `Your refill request is now <strong>${status}</strong>.`;
+    ? "We've received your request for an extra water refill. Our fulfillment team has been alerted and is already preparing your containers."
+    : `Your on-demand refill request is now moving through our system and is currently <strong>${status}</strong>.`;
 
   const content = `
-    <h2 style="color: #1e293b; margin-top: 0;">${title}</h2>
+    <h2 style="color: #1e293b; margin-top: 0; font-size: 22px;">${title} ${emoji}</h2>
     <p style="color: #475569; font-size: 16px; line-height: 1.6;">Hi ${businessName}, ${message}</p>
-    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 25px 0;">
-      <p style="margin: 0; font-size: 14px; color: #475569;">Request ID: <strong>${requestId}</strong></p>
-      ${date ? `<p style="margin: 5px 0 0 0; font-size: 14px; color: #475569;">Requested for: <strong>${date}</strong></p>` : ''}
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 25px; border-radius: 12px; margin: 25px 0;">
+      <p style="margin: 0; font-size: 13px; color: #475569; font-weight: 600;">Request ID: ${requestId}</p>
+      ${date ? `<p style="margin: 10px 0 0 0; font-size: 15px; color: #1e293b;">Requested Date: <strong>${date}</strong></p>` : '<p style="margin: 10px 0 0 0; font-size: 15px; color: #156391; font-weight: 700;">Priority: ASAP Refill</p>'}
     </div>
     <p style="color: #475569; font-size: 14px;">
-      You can track the real-time progress of your request through the live tracker in your dashboard.
+      You can track the real-time progress of our delivery truck through the live tracker in your dashboard.
     </p>
   `;
 
   return {
-    subject: title,
-    html: getEmailWrapper(content),
+    subject: `Update: Refill Request ${requestId} ${emoji}`,
+    html: getEmailWrapper(content, 'Track Delivery', 'https://app.riverph.com/dashboard'),
   };
 }
