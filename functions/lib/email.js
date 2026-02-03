@@ -41,21 +41,26 @@ exports.getNewInvoiceTemplate = getNewInvoiceTemplate;
 exports.getRefillRequestTemplate = getRefillRequestTemplate;
 const nodemailer = __importStar(require("nodemailer"));
 const logger = __importStar(require("firebase-functions/logger"));
-const SMTP_CONFIG = {
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    auth: {
-        user: '998b0f001@smtp-brevo.com',
-        pass: process.env.BREVO_API_KEY,
-    },
-};
+/**
+ * Sends an email using the Brevo SMTP relay.
+ * The transporter is initialized inside the function to ensure the BREVO_API_KEY
+ * secret is correctly picked up from the environment at runtime.
+ */
 async function sendEmail({ to, subject, text, html }) {
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+        logger.error('CRITICAL: BREVO_API_KEY is not set or not mounted. Email sending aborted.');
+        throw new Error('Missing SMTP credentials.');
+    }
     try {
-        if (!process.env.BREVO_API_KEY) {
-            logger.error('CRITICAL: BREVO_API_KEY is not set in the environment variables. Email sending aborted.');
-            return;
-        }
-        const transporter = nodemailer.createTransport(SMTP_CONFIG);
+        const transporter = nodemailer.createTransport({
+            host: 'smtp-relay.brevo.com',
+            port: 587,
+            auth: {
+                user: '998b0f001@smtp-brevo.com',
+                pass: apiKey,
+            },
+        });
         logger.info(`Attempting to send email to ${to} via Brevo relay...`);
         const info = await transporter.sendMail({
             from: '"River Business Support" <support@riverph.com>',

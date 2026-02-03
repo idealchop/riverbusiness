@@ -17,7 +17,7 @@ import {
     getRefillRequestTemplate
 } from './email';
 
-// Export all billing functions
+// Export all billing functions (this includes generateMonthlyInvoices)
 export * from './billing';
 
 /**

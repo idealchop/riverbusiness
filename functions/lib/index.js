@@ -65,7 +65,10 @@ async function createNotification(userId, notificationData) {
     }
 }
 // --- TRIGGERS ---
-exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
+exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
+    document: "users/{userId}/deliveries/{deliveryId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data)
         return;
     const userId = event.params.userId;
@@ -91,7 +94,10 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)("users/{userId}/de
         });
     }
 });
-exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/deliveries/{deliveryId}", async (event) => {
+exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
+    document: "users/{userId}/deliveries/{deliveryId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -120,7 +126,10 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/de
         });
     }
 });
-exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/payments/{paymentId}", async (event) => {
+exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
+    document: "users/{userId}/payments/{paymentId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -154,7 +163,10 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/pay
 /**
  * Triggered when a top-up request status is updated (e.g., Approved).
  */
-exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}/topUpRequests/{requestId}", async (event) => {
+exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
+    document: "users/{userId}/topUpRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data)
         return;
     const before = event.data.before.data();
@@ -179,7 +191,10 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)("users/{userId
 /**
  * Triggered when a client creates a new one-time refill request.
  */
-exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)("users/{userId}/refillRequests/{requestId}", async (event) => {
+exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
+    document: "users/{userId}/refillRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
     if (!event.data)
         return;
     const userId = event.params.userId;

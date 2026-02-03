@@ -1,5 +1,5 @@
+import * as functions from 'firebase-functions';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
@@ -10,13 +10,12 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
- * Uses 2nd Gen Scheduler and mounts BREVO_API_KEY secret.
+ * Reverted to 1st Gen syntax to avoid "Upgrading from 1st Gen to 2nd Gen is not yet supported" error.
  */
-export const generateMonthlyInvoices = onSchedule({
-    schedule: '0 0 1 * *',
+export const generateMonthlyInvoices = functions.runWith({
     secrets: ["BREVO_API_KEY"],
-    memory: "256MiB"
-}, async (event) => {
+    memory: "256MB"
+}).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     logger.info('Starting monthly invoice generation job.');
     const db = getFirestore();
     
@@ -24,13 +23,14 @@ export const generateMonthlyInvoices = onSchedule({
     const currentYear = getYear(now);
     const currentMonth = getMonth(now);
 
+    // Skip Jan 1, 2026 if necessary per previous logic
     if (currentYear === 2026 && currentMonth === 0) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
-        return;
+        return null;
     }
 
     const usersSnapshot = await db.collection('users').get();
-    if (usersSnapshot.empty) return;
+    if (usersSnapshot.empty) return null;
 
     const promises: Promise<any>[] = [];
 
@@ -84,7 +84,7 @@ export const generateMonthlyInvoices = onSchedule({
     }
 
     await Promise.all(promises);
-    return;
+    return null;
 });
 
 async function generateInvoiceForUser(
