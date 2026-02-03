@@ -1,6 +1,6 @@
 
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
@@ -14,7 +14,7 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
  */
 export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     logger.info('Starting monthly invoice generation job.');
-    const db = admin.firestore();
+    const db = getFirestore();
     
     const now = new Date();
     const currentYear = getYear(now);
@@ -71,8 +71,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
                     .then(() => userRef.update({
                         plan: user.pendingPlan,
                         isPrepaid: user.pendingPlan.isPrepaid || false,
-                        pendingPlan: admin.firestore.FieldValue.delete(),
-                        planChangeEffectiveDate: admin.firestore.FieldValue.delete(),
+                        pendingPlan: FieldValue.delete(),
+                        planChangeEffectiveDate: FieldValue.delete(),
                     })));
                 continue;
             }
@@ -86,8 +86,8 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 });
 
 async function generateInvoiceForUser(
-    user: admin.firestore.DocumentData,
-    userRef: admin.firestore.DocumentReference,
+    user: any,
+    userRef: any,
     billingPeriod: string,
     billingCycleStart: Date,
     billingCycleEnd: Date,
@@ -95,7 +95,7 @@ async function generateInvoiceForUser(
     isFirstInvoice: boolean
 ) {
     if (!user.plan) return;
-    const db = admin.firestore();
+    const db = getFirestore();
 
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();
@@ -109,7 +109,7 @@ async function generateInvoiceForUser(
         .where('date', '<=', billingCycleEnd.toISOString())
         .get();
 
-    const consumedLiters = deliveriesSnapshot.docs.reduce((sum, doc) => sum + containerToLiter(doc.data().volumeContainers), 0);
+    const consumedLiters = deliveriesSnapshot.docs.reduce((sum: number, doc: any) => sum + containerToLiter(doc.data().volumeContainers), 0);
     
     let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
@@ -148,14 +148,14 @@ async function generateInvoiceForUser(
     if (pendingTotal > 0) {
         amount += pendingTotal;
         description += ` + Manual Charges`;
-        userUpdatePayload.pendingCharges = admin.firestore.FieldValue.delete();
+        userUpdatePayload.pendingCharges = FieldValue.delete();
     }
 
     if (amount > 0) {
         const invoiceId = `INV-${userRef.id.substring(0, 5)}-${billingPeriod.replace(/\s/g, '-')}`;
         const newInvoice = {
             id: invoiceId,
-            date: admin.firestore.FieldValue.serverTimestamp(),
+            date: FieldValue.serverTimestamp(),
             description: description,
             amount: amount,
             status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
@@ -173,7 +173,7 @@ async function generateInvoiceForUser(
         }
 
         batch.set(paymentsRef.doc(invoiceId), newInvoice, { merge: true });
-        userUpdatePayload.lastBilledDate = admin.firestore.FieldValue.serverTimestamp();
+        userUpdatePayload.lastBilledDate = FieldValue.serverTimestamp();
     }
     
     if (Object.keys(userUpdatePayload).length > 0) batch.update(userRef, userUpdatePayload);

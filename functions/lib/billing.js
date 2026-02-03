@@ -39,7 +39,6 @@ const admin = __importStar(require("firebase-admin"));
 const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
-const db = admin.firestore();
 const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
@@ -47,13 +46,14 @@ const containerToLiter = (containers) => (containers || 0) * 19.5;
  */
 exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     var _a;
-    console.log('Starting monthly invoice generation job.');
+    logger.info('Starting monthly invoice generation job.');
+    const db = admin.firestore();
     const now = new Date();
     const currentYear = (0, date_fns_1.getYear)(now);
     const currentMonth = (0, date_fns_1.getMonth)(now);
     // Special Case: On Jan 1, 2026, do nothing for fixed-plan users.
     if (currentYear === 2026 && currentMonth === 0) {
-        console.log('Skipping invoice generation for Jan 1, 2026.');
+        logger.info('Skipping invoice generation for Jan 1, 2026.');
         return null;
     }
     const usersSnapshot = await db.collection('users').get();
@@ -114,6 +114,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
     var _a, _b, _c, _d, _e, _f, _g;
     if (!user.plan)
         return;
+    const db = admin.firestore();
     const paymentsRef = userRef.collection('payments');
     const batch = db.batch();
     const userUpdatePayload = {};
