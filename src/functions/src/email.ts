@@ -107,7 +107,7 @@ function getEmailWrapper(content: string, header: string, subheader: string = ''
           ${subheader}
           ${content}
           <div class="btn-container">
-            <a href="https://app.riverph.com" class="btn">Go to Dashboard</a>
+            <a href="https://app.riverph.com" class="btn">See Dashboard</a>
           </div>
           <p class="support-link">
             Questions? We're here to help. <a href="mailto:customers@riverph.com">Contact Support</a>
@@ -133,10 +133,10 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
   const subheader = `<p class="tracking-id">Tracking ID: <span>${trackingId}</span></p>`;
   
   const content = `
-    <p class="greeting">Hello ${businessName}, 💧</p>
+    <p class="greeting">Stay Hydrated, ${businessName}! 💧</p>
     
     <p class="body-text">
-      Your hydration is here! We've successfully replenished your water supply so your team can stay focused, healthy, and productive throughout the workday.
+      Great news! Your fresh water supply has been successfully replenished. Ensuring your team stays focused, healthy, and productive is our top priority.
     </p>
 
     <div class="status-badge">
@@ -146,7 +146,7 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
     </div>
 
     <div class="details-box">
-      <h3 class="details-title">Delivery Summary</h3>
+      <h3 class="details-title">Shipment Summary</h3>
       <div class="detail-item">
         <div class="detail-icon">📦</div>
         <div>
@@ -155,14 +155,14 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
         </div>
       </div>
       <p class="next-step">
-        <strong>Value Check:</strong> Your digital <strong>Proof of Delivery (POD)</strong> is now available. Log in to track your real-time consumption and ensure your office overhead is optimized.
+        <strong>Transparency Check:</strong> Your digital <strong>Proof of Delivery (POD)</strong> is now available. Log in to track your real-time consumption and keep your office overhead optimized.
       </p>
     </div>
   `;
 
   return {
     subject: `Hydration Delivered to ${businessName} 🚚`,
-    html: getEmailWrapper(content, 'Stay Refreshed!', subheader)
+    html: getEmailWrapper(content, 'Fresh Water Delivered', subheader)
   };
 }
 
@@ -177,8 +177,8 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
     
     <p class="body-text">
       ${isPaid 
-        ? "Your account is in excellent standing. We've successfully processed your payment, ensuring your automated water management continues without interruption." 
-        : "We've received your proof of payment! Our finance team is now reviewing the details to finalize your record."}
+        ? "Your account is in excellent standing! We've successfully processed your payment, ensuring your automated water management continues without interruption." 
+        : "We've received your proof of payment. Our finance team is now reviewing the details to finalize your record and update your balance."}
     </p>
 
     <div class="status-badge">
@@ -197,7 +197,7 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
         </div>
       </div>
       <p class="next-step">
-        Maintaining a healthy balance keeps your office running smoothly. You can download your official receipt anytime in the billing section.
+        Maintaining a healthy balance keeps your office running smoothly. You can download your official digital receipt anytime in the billing section.
       </p>
     </div>
   `;
@@ -210,10 +210,10 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
 
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
   const content = `
-    <p class="greeting">Hello ${businessName}, 💳</p>
+    <p class="greeting">Balance Boosted, ${businessName}! 💳</p>
     
     <p class="body-text">
-      Your central wallet has been boosted! You're all set for your upcoming deliveries. No more manual approvals needed for every container—just pure, automated efficiency for your business.
+      Your central wallet has been topped up! You're all set for your upcoming deliveries. No more manual approvals needed for every container—just pure, automated efficiency for your business.
     </p>
 
     <div class="details-box">
@@ -226,14 +226,14 @@ export function getTopUpConfirmationTemplate(businessName: string, amount: numbe
         </div>
       </div>
       <p class="next-step">
-        We will automatically deduct from this balance for every container delivered, keeping your admin work to a minimum.
+        We will automatically deduct from this balance for every container delivered across all your branches, keeping your admin work to an absolute minimum.
       </p>
     </div>
   `;
 
   return {
     subject: `Credits Added Successfully to your Wallet 💰`,
-    html: getEmailWrapper(content, 'Balance Boosted!')
+    html: getEmailWrapper(content, 'Wallet Topped Up!')
   };
 }
 
@@ -244,7 +244,7 @@ export function getNewInvoiceTemplate(businessName: string, invoiceId: string, a
     <p class="greeting">Hi ${businessName}, 📄</p>
     
     <p class="body-text">
-      Transparency is key to good management. Your automated statement for <strong>${period}</strong> is now ready. Review your consumption and keep your office records organized.
+      Transparency is the key to good management. Your automated monthly statement for <strong>${period}</strong> is now ready. Review your consumption patterns and keep your office records organized.
     </p>
 
     <div class="details-box">
@@ -257,7 +257,7 @@ export function getNewInvoiceTemplate(businessName: string, invoiceId: string, a
         </div>
       </div>
       <p class="next-step">
-        Log in to your dashboard to settle this statement via GCash, Maya, or Bank Transfer instantly.
+        Log in to your dashboard to settle this statement via GCash, Maya, or Bank Transfer instantly and keep your service flowing.
       </p>
     </div>
   `;
@@ -277,8 +277,8 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
     
     <p class="body-text">
       ${isReceived 
-        ? "We've prioritize your extra water refill request. Our fulfillment team has been alerted and is already preparing your containers for dispatch." 
-        : `Your on-demand refill request is currently <strong>${status}</strong>.`}
+        ? "We've prioritized your extra water refill request. Our fulfillment team has been alerted and is already preparing your containers for dispatch to ensure you never run dry." 
+        : `Your on-demand refill request is moving through our system and is currently <strong>${status}</strong>.`}
     </p>
 
     <div class="status-badge">
@@ -288,7 +288,7 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
     </div>
 
     <div class="details-box">
-      <h3 class="details-title">Request Summary</h3>
+      <h3 class="details-title">Request Details</h3>
       <div class="detail-item">
         <div class="detail-icon">🚚</div>
         <div>
@@ -297,13 +297,13 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
         </div>
       </div>
       <p class="next-step">
-        Track the real-time progress of our delivery truck through the tracker in your dashboard.
+        You can track the real-time progress of our delivery truck through the live tracker in your dashboard.
       </p>
     </div>
   `;
 
   return {
     subject: `Update: Refill Request ${requestId} ${isReceived ? '🌊' : '🚀'}`,
-    html: getEmailWrapper(content, isReceived ? 'Request Received' : 'Request Updated', subheader)
+    html: getEmailWrapper(content, isReceived ? 'Refill Priority Confirmed' : 'Refill Request Updated', subheader)
   };
 }

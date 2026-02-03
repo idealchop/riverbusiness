@@ -34,8 +34,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateMonthlyInvoices = void 0;
+const functions = __importStar(require("firebase-functions"));
 const firestore_1 = require("firebase-admin/firestore");
-const scheduler_1 = require("firebase-functions/v2/scheduler");
 const date_fns_1 = require("date-fns");
 const email_1 = require("./email");
 const logger = __importStar(require("firebase-functions/logger"));
@@ -43,26 +43,26 @@ const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
- * Uses 2nd Gen Scheduler and mounts BREVO_API_KEY secret.
+ * Reverted to 1st Gen syntax to avoid "Upgrading from 1st Gen to 2nd Gen is not yet supported" error.
  */
-exports.generateMonthlyInvoices = (0, scheduler_1.onSchedule)({
-    schedule: '0 0 1 * *',
+exports.generateMonthlyInvoices = functions.runWith({
     secrets: ["BREVO_API_KEY"],
-    memory: "256MiB"
-}, async (event) => {
+    memory: "256MB"
+}).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     var _a;
     logger.info('Starting monthly invoice generation job.');
     const db = (0, firestore_1.getFirestore)();
     const now = new Date();
     const currentYear = (0, date_fns_1.getYear)(now);
     const currentMonth = (0, date_fns_1.getMonth)(now);
+    // Skip Jan 1, 2026 if necessary per previous logic
     if (currentYear === 2026 && currentMonth === 0) {
         logger.info('Skipping invoice generation for Jan 1, 2026.');
-        return;
+        return null;
     }
     const usersSnapshot = await db.collection('users').get();
     if (usersSnapshot.empty)
-        return;
+        return null;
     const promises = [];
     for (const userDoc of usersSnapshot.docs) {
         const userRef = userDoc.ref;
@@ -111,7 +111,7 @@ exports.generateMonthlyInvoices = (0, scheduler_1.onSchedule)({
         promises.push(generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill, isFirstInvoice));
     }
     await Promise.all(promises);
-    return;
+    return null;
 });
 async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill = 1, isFirstInvoice) {
     var _a, _b, _c, _d, _e, _f, _g;

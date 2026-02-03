@@ -46,7 +46,7 @@ const logger = __importStar(require("firebase-functions/logger"));
 const storage_2 = require("firebase-functions/v2/storage");
 const firestore_2 = require("firebase-functions/v2/firestore");
 const email_1 = require("./email");
-// Export all billing functions
+// Export all billing functions (this includes generateMonthlyInvoices)
 __exportStar(require("./billing"), exports);
 /**
  * Creates a notification document in a user's notification subcollection.
@@ -78,18 +78,20 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
+    // Always create in-app notification
     await createNotification(userId, {
         type: 'delivery',
         title: 'Delivery Scheduled',
         description: `Delivery of ${delivery.volumeContainers} containers scheduled.`,
         data: { deliveryId }
     });
-    if (userData === null || userData === void 0 ? void 0 : userData.email) {
-        const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Scheduled', deliveryId, delivery.volumeContainers);
+    // ONLY send email if status is 'Delivered' (Completed)
+    if ((userData === null || userData === void 0 ? void 0 : userData.email) && delivery.status === 'Delivered') {
+        const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         await (0, email_1.sendEmail)({
             to: userData.email,
             subject: template.subject,
-            text: `Delivery ${deliveryId} scheduled.`,
+            text: `Delivery ${deliveryId} is complete.`,
             html: template.html
         });
     }
@@ -110,18 +112,20 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
+    // Always create in-app notification
     await createNotification(userId, {
         type: 'delivery',
         title: `Delivery ${after.status}`,
         description: `Your delivery is now ${after.status}.`,
         data: { deliveryId }
     });
-    if (userData === null || userData === void 0 ? void 0 : userData.email) {
-        const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, after.status, deliveryId, after.volumeContainers);
+    // ONLY send email if status is now 'Delivered' (Completed)
+    if ((userData === null || userData === void 0 ? void 0 : userData.email) && after.status === 'Delivered') {
+        const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
         await (0, email_1.sendEmail)({
             to: userData.email,
             subject: template.subject,
-            text: `Delivery ${after.status}.`,
+            text: `Delivery ${deliveryId} is complete.`,
             html: template.html
         });
     }
