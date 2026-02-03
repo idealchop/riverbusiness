@@ -2,9 +2,9 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
-import { createNotification } from './index';
 import { sendEmail, getNewInvoiceTemplate } from './email';
-import type { Notification, ManualCharge } from './types'; 
+import * as logger from 'firebase-functions/logger';
+import type { ManualCharge } from './types'; 
 
 const db = admin.firestore();
 

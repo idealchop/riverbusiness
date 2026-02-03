@@ -1,12 +1,10 @@
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
-import { onDocumentUpdated, onDocumentCreated, QueryDocumentSnapshot } from "firebase-functions/v2/firestore";
+import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore, FieldValue, increment } from "firebase-admin/firestore";
-import * as logger from "firebase-functions/logger";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { initializeApp } from "firebase-admin/app";
-import * as path from 'path';
-import type { Notification, Delivery, RefillRequest, Transaction } from './types';
+import type { Notification, Delivery } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -20,13 +18,6 @@ export * from './billing';
 initializeApp();
 const db = getFirestore();
 const storage = getStorage();
-
-const containerToLiter = (containers: number) => (containers || 0) * 19.5;
-
-async function getAdminId(): Promise<string | null> {
-    const adminQuery = await db.collection('users').where('email', '==', 'admin@riverph.com').limit(1).get();
-    return !adminQuery.empty ? adminQuery.docs[0].id : null;
-}
 
 export async function createNotification(userId: string, notificationData: Omit<Notification, 'id' | 'userId' | 'date' | 'isRead'>) {
   if (!userId) return;
@@ -116,7 +107,7 @@ export const onrefillrequestcreate = onDocumentCreated("users/{userId}/refillReq
     }
 });
 
-export const onfileupload = onObjectFinalized({ cpu: "memory" }, async (event) => {
+export const onfileupload = onObjectFinalized({}, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
 
