@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -164,11 +163,6 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
             doc.moveDown(2);
         };
 
-        // Financial Summary (For Parents)
-        if (user.accountType === 'Parent') {
-            // Summary logic can be added here if needed
-        }
-
         // 3. Equipment Summary
         if (user.customPlanDetails) {
             const eq = user.customPlanDetails;
@@ -278,7 +272,6 @@ export const onpaymentremindercreate = onDocumentCreated({
     try {
         await sendEmail({
             to: user.email,
-            cc: 'support@riverph.com',
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,

@@ -1,4 +1,3 @@
-
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -121,6 +120,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     // 3. Metadata
     currentY += 90;
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('STATEMENT DATE:', margin, currentY);
     doc.setFont('helvetica', 'normal');

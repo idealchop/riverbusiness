@@ -1,10 +1,10 @@
-
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { AppUser, Payment } from '@/lib/types';
 import { Timestamp, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { PlusCircle, Copy, Send } from 'lucide-react';
@@ -242,7 +242,7 @@ export function BillingTab({
                     <DialogDescription>Select which billing period you would like to remind the client about.</DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <Label className="mb-2 block">Billing Period</Label>
+                    <Label className="mb-2 block text-sm font-medium">Billing Period</Label>
                     <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select a period..." />
