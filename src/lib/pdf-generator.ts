@@ -119,6 +119,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     const addressLines = doc.splitTextToSize(address, pageWidth / 2 - 60);
     doc.text(addressLines, pageWidth / 2 + 20, currentY + 27);
     
+    // Tightened vertical spacing for Client ID
     const nextY = currentY + 27 + (addressLines.length * 12);
     doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, nextY);
     doc.text(user.email || '', pageWidth / 2 + 20, nextY + 12);
@@ -138,7 +139,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     currentY += 40;
 
-    const renderTable = (title: string, head: any[], body: any[][], startY: number) => {
+    const renderTable = (title: string, head: any[], body: any[][], startY: number, foot?: any[]) => {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(83, 142, 194);
@@ -147,9 +148,11 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         autoTable(doc, {
             head: head,
             body: body,
+            foot: foot,
             startY: startY + 10,
             theme: 'striped',
             headStyles: { fillColor: [83, 142, 194], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+            footStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', fontSize: 9 },
             bodyStyles: { fontSize: 8, cellPadding: 6 },
             margin: { left: margin, right: margin },
         });
@@ -215,17 +218,17 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             ];
         });
         
-        const summaryRow = [
+        // Use 'foot' parameter to ensure summary stays with the table
+        const summaryFoot = [[
             { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right' } },
             { content: totalQty.toString(), styles: { fontStyle: 'bold' } },
             { content: '' },
             { content: `${totalLiters.toFixed(1)} L`, styles: { fontStyle: 'bold' } },
             { content: `P ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold' } },
             ...(isParent ? [] : [{ content: '' }])
-        ];
-        deliveryBody.push(summaryRow as any);
+        ]];
         
-        currentY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, currentY);
+        currentY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, currentY, summaryFoot);
         
         const vatAmount = totalAmount * (12/112);
         doc.setFontSize(8); 

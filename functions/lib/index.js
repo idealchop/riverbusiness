@@ -103,7 +103,7 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
-        const pageWidth = doc.page.width || 612; // PDFKit API for width
+        const pageWidth = doc.page.width;
         const margin = 40;
         // 1. High-Fidelity Header (Solid Blue Corner)
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 120).fill();
@@ -307,6 +307,7 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     try {
         await (0, email_1.sendEmail)({
             to: user.email,
+            cc: 'support@riverph.com',
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
@@ -338,7 +339,7 @@ exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
     const schedule = `${((_b = profile.customPlanDetails) === null || _b === void 0 ? void 0 : _b.deliveryDay) || 'TBD'} / ${((_c = profile.customPlanDetails) === null || _c === void 0 ? void 0 : _c.deliveryFrequency) || 'TBD'}`;
     const template = (0, email_1.getWelcomeUnclaimedTemplate)(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
     try {
-        await (0, email_1.sendEmail)({ to: profile.businessEmail, subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
+        await (0, email_1.sendEmail)({ to: profile.businessEmail, cc: 'support@riverph.com', subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
     }
     catch (error) {
         logger.error(`Failed welcome email`, error);
@@ -359,7 +360,7 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && delivery.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
+        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
@@ -380,7 +381,7 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && after.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
+        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
@@ -401,7 +402,7 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
             const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
-            await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Payment confirmed`, html: template.html });
+            await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Payment confirmed`, html: template.html });
         }
     }
 });
@@ -421,7 +422,7 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Top-up approved`, html: template.html });
+        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Top-up approved`, html: template.html });
     }
 });
 exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
@@ -438,7 +439,7 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Refill request received`, html: template.html });
+        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Refill request received`, html: template.html });
     }
 });
 exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
@@ -455,7 +456,7 @@ exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && visit.status === 'Scheduled') {
         const dateStr = new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
-        await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Visit scheduled`, html: template.html });
+        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Visit scheduled`, html: template.html });
     }
 });
 exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
@@ -474,7 +475,7 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
             const dateStr = new Date(after.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr);
-            await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Report ready`, html: template.html });
+            await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Report ready`, html: template.html });
         }
     }
 });

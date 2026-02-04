@@ -124,8 +124,11 @@ export async function generatePasswordProtectedSOA(
 
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2); 
-        doc.text(user.email || '', pageWidth / 2 + 20, doc.y + 2);
+        
+        // Stakeholder Details Spacing standardized
+        const idY = doc.y + 2;
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, idY); 
+        doc.text(user.email || '', pageWidth / 2 + 20, idY + 12);
 
         doc.moveDown(3);
         const metadataY = doc.y;
@@ -139,6 +142,9 @@ export async function generatePasswordProtectedSOA(
         const drawTable = (title: string, headers: string[], rows: any[][]) => {
             if (rows.length === 0) return;
             
+            // Safety break before table title
+            if (doc.y > doc.page.height - 100) doc.addPage();
+
             doc.moveDown(1);
             doc.fontSize(11).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text(title, margin);
             doc.moveDown(0.5);
@@ -158,6 +164,10 @@ export async function generatePasswordProtectedSOA(
             doc.fillColor('#000000').font('Helvetica').fontSize(8);
 
             rows.forEach((row, rowIndex) => {
+                // Check if current row needs a page break
+                if (doc.y > doc.page.height - 40) {
+                    doc.addPage();
+                }
                 const rowY = doc.y;
                 if (rowIndex % 2 !== 0) {
                     doc.rect(margin, rowY - 2, pageWidth - margin * 2, 15).fill('#f8fafc');
@@ -233,7 +243,9 @@ export async function generatePasswordProtectedSOA(
         });
         drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
 
-        // Final Totals
+        // Final Totals - Fixed Page Breaking
+        if (doc.y > doc.page.height - 80) doc.addPage();
+        
         const finalY = doc.y;
         doc.fontSize(10).font('Helvetica-Bold').text('TOTAL CONSUMPTION:', margin + 150, finalY);
         doc.text(totalQty.toString(), margin + 280, finalY);
