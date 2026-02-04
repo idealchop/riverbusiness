@@ -1,15 +1,7 @@
-
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment, Transaction } from '@/lib/types';
-
-// Extend jsPDF with the autoTable method
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 
 const LITER_RATIO = 19.5;
 const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO;
@@ -170,7 +162,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             doc.text(title, margin, tableFinalY);
             tableFinalY += 20;
 
-            doc.autoTable({
+            autoTable(doc, {
                 head: head,
                 body: body,
                 startY: tableFinalY,
@@ -355,7 +347,7 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     const planName = user.plan?.name || 'N/A';
     const description = `${invoice.description}\nPlan: ${planName}`;
 
-    doc.autoTable({
+    autoTable(doc, {
         startY: lastY,
         head: [["Description", "Qty", "Unit price", "Amount"]],
         body: [[
