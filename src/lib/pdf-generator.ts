@@ -6,33 +6,6 @@ import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Transaction 
 const LITER_RATIO = 19.5;
 const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO;
 
-/**
- * Utility to convert an image URL to a Base64 Data URL.
- */
-const getBase64ImageFromURL = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.setAttribute('crossOrigin', 'anonymous');
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-      ctx.drawImage(img, 0, 0);
-      const dataURL = canvas.toDataURL('image/png');
-      resolve(dataURL);
-    };
-    img.onerror = (error) => {
-      reject(error);
-    };
-    img.src = url;
-  });
-};
-
 const getSanitationPassRate = (v: SanitationVisit) => {
     if (!v.dispenserReports || v.dispenserReports.length === 0) return 'N/A';
     let total = 0;
@@ -59,40 +32,39 @@ interface MonthlySOAProps {
 
 export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, complianceReports, billingPeriod, branches, transactions }: MonthlySOAProps) => {
     const doc = new jsPDF('p', 'pt');
-    const primaryColor = [83, 142, 194]; // #538ec2
     const pageWidth = doc.internal.pageSize.width;
     const margin = 40;
     const isParent = user.accountType === 'Parent';
     const pricePerLiter = user.plan?.price || 0;
     const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
-    let logoBase64 = '';
-    try {
-        logoBase64 = await getBase64ImageFromURL(logoUrl);
-    } catch (e) {
-        console.warn("Could not pre-load logo for SOA:", e);
-    }
-
-    // 1. High-Fidelity Header (Solid Blue Corner)
-    doc.setFillColor(83, 142, 194);
+    // 1. High-Fidelity Header (Solid Blue Banner)
+    doc.setFillColor(83, 142, 194); // #538ec2
     doc.rect(0, 0, pageWidth, 120, 'F');
 
-    if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', margin, 35, 50, 50);
-    }
-    
+    // Left Side Header Text
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('River Philippines', margin + 65, 55);
+    doc.text('River Philippines', margin, 55);
 
     doc.setFontSize(14);
-    doc.text('Statement of Account', margin + 65, 78);
+    doc.text('Statement of Account', margin, 78);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Plan: ${user.plan?.name || 'N/A'}`, margin + 65, 95);
+    doc.text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 95);
+
+    // Right Side Banner Metadata
+    doc.setFont('helvetica', 'bold');
+    doc.text('STATEMENT DATE:', pageWidth - margin, 55, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(format(new Date(), 'MMM d, yyyy'), pageWidth - margin, 68, { align: 'right' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILLING PERIOD:', pageWidth - margin, 85, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(billingPeriod, pageWidth - margin, 98, { align: 'right' });
 
     // 2. Stakeholder Details (Two Column Layout)
     let currentY = 160;
@@ -119,25 +91,11 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     const addressLines = doc.splitTextToSize(address, pageWidth / 2 - 60);
     doc.text(addressLines, pageWidth / 2 + 20, currentY + 27);
     
-    // Tightened vertical spacing for Client ID
     const nextY = currentY + 27 + (addressLines.length * 12);
     doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, nextY);
     doc.text(user.email || '', pageWidth / 2 + 20, nextY + 12);
 
-    // 3. Metadata
-    currentY = nextY + 50;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('STATEMENT DATE:', margin, currentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(format(new Date(), 'MMM d, yyyy'), margin + 110, currentY);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('BILLING PERIOD:', margin, currentY + 15);
-    doc.setFont('helvetica', 'normal');
-    doc.text(billingPeriod, margin + 110, currentY + 15);
-
-    currentY += 40;
+    currentY = nextY + 40;
 
     const renderTable = (title: string, head: any[], body: any[][], startY: number, foot?: any[]) => {
         doc.setFontSize(11);
@@ -159,7 +117,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         return (doc as any).lastAutoTable.finalY + 30;
     };
 
-    // 1. Financial Summary (Parents only)
     if (isParent && transactions) {
         const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
         const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + (t.amountCredits || 0), 0);
@@ -172,7 +129,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         currentY = renderTable('Financial Summary', [['Description', 'Amount']], summaryBody, currentY);
     }
 
-    // 2. Equipment Summary
     if (user.customPlanDetails) {
         const eq = user.customPlanDetails;
         const equipmentBody = [];
@@ -182,19 +138,16 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         if (equipmentBody.length > 0) currentY = renderTable('Equipment & Services Summary', [['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal']], equipmentBody, currentY);
     }
 
-    // 3. Service Logs (Sanitation)
     if (sanitationVisits.length > 0) {
         const sanitationBody = sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo, getSanitationPassRate(v)]);
         currentY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, currentY);
     }
 
-    // 4. Compliance Reports
     if (complianceReports.length > 0) {
         const complianceBody = complianceReports.map(r => [r.name, r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A', r.status]);
         currentY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, currentY);
     }
 
-    // 5. Refill Logs (LAST)
     if (deliveries.length > 0) {
         let totalQty = 0; let totalLiters = 0; let totalAmount = 0;
         const branchMap = (branches || []).reduce((map, b) => ({ ...map, [b.id]: b.businessName }), {} as Record<string, string>);
@@ -218,7 +171,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             ];
         });
         
-        // Use 'foot' parameter to ensure summary stays with the table
         const summaryFoot = [[
             { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right' } },
             { content: totalQty.toString(), styles: { fontStyle: 'bold' } },
@@ -249,21 +201,16 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     const doc = new jsPDF('p', 'pt');
     const pageWidth = doc.internal.pageSize.width;
     const margin = 40;
-    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
-    let logoBase64 = '';
-    try { logoBase64 = await getBase64ImageFromURL(logoUrl); } catch (e) {}
     
     doc.setFillColor(83, 142, 194); 
     doc.rect(0, 0, pageWidth, 100, 'F');
     
-    if (logoBase64) doc.addImage(logoBase64, 'PNG', margin, 30, 40, 40);
-    
     doc.setFontSize(22); 
     doc.setFont('helvetica', 'bold'); 
     doc.setTextColor(255, 255, 255); 
-    doc.text('River Tech Inc.', margin + 50, 55);
+    doc.text('River Tech Inc.', margin, 55);
     doc.setFontSize(12); 
-    doc.text('Invoice Receipt', margin + 50, 75);
+    doc.text('Invoice Receipt', margin, 75);
     
     let lastY = 140; 
     const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();

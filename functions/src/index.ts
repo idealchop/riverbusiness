@@ -2,7 +2,6 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
-import axios from 'axios';
 import PDFDocument from 'pdfkit';
 import { format, startOfMonth, endOfMonth, parse, endOfDay } from 'date-fns';
 
@@ -11,7 +10,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, TopUpRequest } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -28,7 +27,6 @@ import {
 export * from './billing';
 
 const BRAND_PRIMARY = '#538ec2';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
 const LITER_RATIO = 19.5;
 
 /**
@@ -91,24 +89,24 @@ export async function generatePasswordProtectedSOA(
         const pageWidth = doc.page.width;
         const margin = 40;
 
-        // 1. High-Fidelity Header (Solid Blue Corner)
+        // 1. High-Fidelity Header (Solid Blue Banner)
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 120).fill();
-
-        try {
-            const response = await axios.get(LOGO_URL, { responseType: 'arraybuffer' });
-            doc.image(Buffer.from(response.data), margin, 35, { width: 50 });
-        } catch (e) {
-            logger.warn("PDF Logo fetch failed, skipping image.");
-        }
 
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-        // White Hierarchical Text
-        doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin + 65, 45);
-        doc.fontSize(14).text('Statement of Account', margin + 65, 72);
-        doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin + 65, 92);
+        // Left Side Header Text
+        doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin, 45);
+        doc.fontSize(14).text('Statement of Account', margin, 72);
+        doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
         
+        // Right Side Banner Metadata
+        doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: pageWidth - margin * 2 });
+        doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: pageWidth - margin * 2 });
+        
+        doc.font('Helvetica-Bold').text('BILLING PERIOD:', margin, 75, { align: 'right', width: pageWidth - margin * 2 });
+        doc.font('Helvetica').text(period, margin, 88, { align: 'right', width: pageWidth - margin * 2 });
+
         doc.fillColor('#000000').moveDown(4.5);
         
         // 2. Stakeholder Details (Two Column Layout)
@@ -125,24 +123,15 @@ export async function generatePasswordProtectedSOA(
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
         
-        // Stakeholder Details Spacing standardized
         const idY = doc.y + 2;
         doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, idY); 
         doc.text(user.email || '', pageWidth / 2 + 20, idY + 12);
 
         doc.moveDown(3);
-        const metadataY = doc.y;
-        doc.font('Helvetica-Bold').text('STATEMENT DATE:', margin, metadataY);
-        doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin + 110, metadataY);
-        doc.font('Helvetica-Bold').text('BILLING PERIOD:', margin, metadataY + 15);
-        doc.font('Helvetica').text(period, margin + 110, metadataY + 15);
-
-        doc.moveDown(2);
 
         const drawTable = (title: string, headers: string[], rows: any[][]) => {
             if (rows.length === 0) return;
             
-            // Safety break before table title
             if (doc.y > doc.page.height - 100) doc.addPage();
 
             doc.moveDown(1);
@@ -164,7 +153,6 @@ export async function generatePasswordProtectedSOA(
             doc.fillColor('#000000').font('Helvetica').fontSize(8);
 
             rows.forEach((row, rowIndex) => {
-                // Check if current row needs a page break
                 if (doc.y > doc.page.height - 40) {
                     doc.addPage();
                 }
@@ -181,7 +169,6 @@ export async function generatePasswordProtectedSOA(
             doc.moveDown(1);
         };
 
-        // 1. Financial Summary (Parents only)
         if (transactions && transactions.length > 0) {
             const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
             const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + (t.amountCredits || 0), 0);
@@ -194,7 +181,6 @@ export async function generatePasswordProtectedSOA(
             drawTable('Financial Summary', ['Description', 'Amount'], summaryBody);
         }
 
-        // 2. Equipment Summary
         if (user.customPlanDetails) {
             const eq = user.customPlanDetails;
             const eqRows = [];
@@ -204,7 +190,6 @@ export async function generatePasswordProtectedSOA(
             drawTable('Equipment & Services Summary', ['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal'], eqRows);
         }
 
-        // 3. Service Logs
         if (sanitation.length > 0) {
             const sanRows = sanitation.map(s => [
                 format(new Date(typeof s.scheduledDate === 'string' ? s.scheduledDate : (s.scheduledDate as any).toDate()), 'PP'), 
@@ -224,7 +209,6 @@ export async function generatePasswordProtectedSOA(
             drawTable('Water Quality & Station Compliance', ['Report Name', 'Period', 'Status'], compRows);
         }
 
-        // 4. Water Refill Logs (LAST)
         let totalQty = 0; let totalLiters = 0; let totalAmount = 0;
         const refillRows = deliveries.map(d => {
             const qty = d.volumeContainers || 0;
@@ -243,7 +227,6 @@ export async function generatePasswordProtectedSOA(
         });
         drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
 
-        // Final Totals - Fixed Page Breaking
         if (doc.y > doc.page.height - 80) doc.addPage();
         
         const finalY = doc.y;
@@ -262,9 +245,6 @@ export async function generatePasswordProtectedSOA(
 
 // --- TRIGGERS ---
 
-/**
- * Triggered when an admin clicks the "Send Reminder" button.
- */
 export const onpaymentremindercreate = onDocumentCreated({
     document: "users/{userId}/reminders/{reminderId}",
     secrets: ["BREVO_API_KEY"]
@@ -343,9 +323,6 @@ export const onpaymentremindercreate = onDocumentCreated({
     }
 });
 
-/**
- * Triggered when a new unclaimed profile is created by an admin.
- */
 export const onunclaimedprofilecreate = onDocumentCreated({
     document: "unclaimedProfiles/{clientId}",
     secrets: ["BREVO_API_KEY"]
