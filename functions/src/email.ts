@@ -16,6 +16,43 @@ const BRAND_PRIMARY = '#538ec2';
 const BRAND_ACCENT = '#7ea9d2';
 const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
 
+const GCASH_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2FRiver_gcash.png?alt=media&token=13c80b31-8f08-4857-a066-5a666d546d81';
+const BPI_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_BPI.png?alt=media&token=6ac4fd16-2014-40fe-b7cf-1fdf3e94a61e';
+const MAYA_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_maya.png?alt=media&token=a3ca4e56-c797-4d9a-8dcd-4b78a0a96965';
+
+const PAYMENT_OPTIONS_BLOCK = `
+    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 32px; margin-bottom: 20px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 13px; color: ${BRAND_PRIMARY}; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Payment Instructions</h3>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+        1. <strong>Pay:</strong> Scan a QR code below or use the account details to settle your balance.<br>
+        2. <strong>Capture:</strong> Take a screenshot of your successful transaction receipt.<br>
+        3. <strong>Settle:</strong> Log in to your dashboard and upload the proof of payment to finalize.
+      </p>
+      
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="32%" align="center" valign="top" style="background-color: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9;">
+            <img src="${GCASH_QR}" width="80" style="display: block; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">GCash</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.3;">Jamie Camille L.<br>09557750188</p>
+          </td>
+          <td width="2%">&nbsp;</td>
+          <td width="32%" align="center" valign="top" style="background-color: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9;">
+            <img src="${BPI_QR}" width="80" style="display: block; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">BPI Bank</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.3;">Jimboy R.<br>3489145013</p>
+          </td>
+          <td width="2%">&nbsp;</td>
+          <td width="32%" align="center" valign="top" style="background-color: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9;">
+            <img src="${MAYA_QR}" width="80" style="display: block; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">Maya</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.3;">Jimboy R.<br>09557750188</p>
+          </td>
+        </tr>
+      </table>
+    </div>
+`;
+
 /**
  * Sends an email using the Brevo SMTP relay.
  */
@@ -109,6 +146,9 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
           <h2 class="main-title">${headerTitle}</h2>
           ${subheader}
           ${content}
+          <div class="btn-container">
+            <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
+          </div>
         </div>
       </div>
       <div class="footer">
@@ -331,10 +371,14 @@ export function getNewInvoiceTemplate(businessName: string, invoiceId: string, a
           <p class="detail-value">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
-      <p class="next-step">
-        To keep your hydration service flowing without interruption, please settle this statement via GCash, Maya, or Bank Transfer through your secure portal.
+      <p class="next-step" style="border-bottom: 1px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px;">
+        To keep your hydration service flowing without interruption, please settle this statement via GCash, Maya, or Bank Transfer.
+      </p>
+      <p class="body-text" style="font-size: 13px; margin-bottom: 0;">
+        <strong>Password Protection:</strong> For your security, the attached SOA is encrypted. Use your <strong>Client ID</strong> to open it.
       </p>
     </div>
+    ${PAYMENT_OPTIONS_BLOCK}
   `;
 
   return {
@@ -473,10 +517,14 @@ export function getPaymentReminderTemplate(businessName: string, amount: string,
           <p class="detail-value">₱${amount}</p>
         </div>
       </div>
-      <p class="next-step">
+      <p class="next-step" style="border-bottom: 1px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px;">
         <strong>Security Notice:</strong> For your privacy, the attached Statement of Account is password-protected. Please use your <strong>Client ID</strong> to open the file.
       </p>
+      <p class="body-text" style="font-size: 13px; margin-bottom: 0;">
+        Follow the instructions below to pay via QR or Bank Transfer.
+      </p>
     </div>
+    ${PAYMENT_OPTIONS_BLOCK}
   `;
 
   return {
