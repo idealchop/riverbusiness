@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -12,7 +11,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -52,10 +51,23 @@ async function createNotification(userId: string, notificationData: any) {
   }
 }
 
+const getSanitationPassRate = (v: SanitationVisit) => {
+    if (!v.dispenserReports || v.dispenserReports.length === 0) return 'N/A';
+    let total = 0;
+    let passed = 0;
+    v.dispenserReports.forEach(r => {
+        if (r.checklist) {
+            total += r.checklist.length;
+            passed += r.checklist.filter(item => item.checked).length;
+        }
+    });
+    return total > 0 ? `${Math.round((passed / total) * 100)}%` : 'N/A';
+};
+
 /**
  * Generates a password-protected PDF Statement of Account.
  */
-async function generatePasswordProtectedSOA(user: any, period: string, deliveries: Delivery[], sanitation: SanitationVisit[]): Promise<Buffer> {
+async function generatePasswordProtectedSOA(user: any, period: string, deliveries: Delivery[], sanitation: SanitationVisit[], compliance: ComplianceReport[]): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
         const doc = new PDFDocument({
             userPassword: user.clientId || 'password',
@@ -69,7 +81,6 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         doc.on('error', (err) => reject(err));
 
         try {
-            // Add Logo
             const response = await axios.get(LOGO_URL, { responseType: 'arraybuffer' });
             doc.image(Buffer.from(response.data), 40, 40, { width: 50 });
         } catch (e) {
@@ -79,21 +90,22 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-        // Header
-        doc.fillColor(BRAND_PRIMARY).fontSize(24).font('Helvetica-Bold').text('Statement of Account', 110, 50);
-        doc.fillColor('#000').fontSize(10).font('Helvetica').text(`Period: ${period}`, 110, 80);
+        // Top Bar Left-Aligned Structured Header
+        doc.fillColor(BRAND_PRIMARY).fontSize(20).font('Helvetica-Bold').text('River Philippines', 110, 45);
+        doc.fontSize(14).text('Statement of Account', 110, 68);
+        doc.fillColor('#666').fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, 110, 85);
         
-        doc.moveDown(2);
-        doc.fontSize(12).font('Helvetica-Bold').text('Client Details');
+        doc.moveDown(3);
+        doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Client Details');
         doc.fontSize(10).font('Helvetica').text(`Business Name: ${user.businessName}`);
         doc.text(`Client ID: ${user.clientId}`);
         doc.text(`Address: ${user.address || 'N/A'}`);
+        doc.text(`Period: ${period}`);
 
         doc.moveDown(2);
         doc.fontSize(12).font('Helvetica-Bold').text('Water Delivery History');
         doc.moveDown();
 
-        // Table Header
         const tableTop = doc.y;
         doc.fontSize(9).font('Helvetica-Bold');
         doc.text('Date', 40, tableTop);
@@ -134,7 +146,6 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
             doc.moveDown();
         });
 
-        // Summary Lines
         doc.moveDown();
         doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
         doc.moveDown(0.5);
@@ -146,7 +157,6 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         doc.text(`${totalLiters.toFixed(1)} L`, 330, summaryY);
         doc.text(`P ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 410, summaryY);
 
-        // VAT Inclusion Note
         doc.moveDown(1.5);
         const vatAmount = totalAmount * (12/112);
         doc.font('Helvetica-Oblique').fontSize(8).fillColor('#666');
@@ -154,22 +164,60 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
 
         if (sanitation.length > 0) {
             doc.addPage();
-            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Sanitation Visits');
+            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Office Sanitation Logs');
             doc.moveDown();
+            doc.fontSize(9);
+            doc.text('Date', 40, doc.y);
+            doc.text('Status', 150, doc.y);
+            doc.text('Officer', 250, doc.y);
+            doc.text('Score Rate', 400, doc.y);
+            doc.moveDown(0.5);
+            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+            doc.moveDown(0.5);
+            
+            doc.font('Helvetica').fontSize(8);
             sanitation.forEach(s => {
                 const dateStr = typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A';
-                doc.fontSize(10).font('Helvetica').text(`${dateStr} - Status: ${s.status} - Officer: ${s.assignedTo}`);
-                doc.moveDown(0.5);
+                const currentY = doc.y;
+                doc.text(dateStr, 40, currentY);
+                doc.text(s.status, 150, currentY);
+                doc.text(s.assignedTo, 250, currentY);
+                doc.text(getSanitationPassRate(s), 400, currentY);
+                doc.moveDown();
             });
         }
 
-        // Footer
+        if (compliance.length > 0) {
+            doc.moveDown(2);
+            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Water Quality & Station Compliance');
+            doc.moveDown();
+            doc.fontSize(9);
+            doc.text('Report Name', 40, doc.y);
+            doc.text('Period', 300, doc.y);
+            doc.text('Status', 450, doc.y);
+            doc.moveDown(0.5);
+            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+            doc.moveDown(0.5);
+            
+            doc.font('Helvetica').fontSize(8);
+            compliance.forEach(c => {
+                const currentY = doc.y;
+                doc.text(c.name, 40, currentY);
+                const periodStr = c.date ? format((c.date as any).toDate(), 'MMM yyyy') : 'N/A';
+                doc.text(periodStr, 300, currentY);
+                doc.text(c.status, 450, currentY);
+                doc.moveDown();
+            });
+        }
+
+        // Standardized Footer Fix
         const pageCount = doc.bufferedPageRange().count;
         for (let i = 0; i < pageCount; i++) {
             doc.switchToPage(i);
-            const pageHeight = doc.page.height;
-            doc.fontSize(8).fillColor(BRAND_PRIMARY).text('River PH - Automated, Connected, Convenient.', 40, pageHeight - 60, { align: 'center', width: 500 });
-            doc.fillColor('#999').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeight - 48, { align: 'center', width: 500 });
+            const pageHeightLocal = doc.page.height;
+            doc.lineWidth(0.5).moveTo(40, pageHeightLocal - 60).lineTo(550, pageHeightLocal - 60).stroke();
+            doc.fontSize(8).fillColor(BRAND_PRIMARY).text('River PH - Automated, Connected, Convenient.', 40, pageHeightLocal - 45, { align: 'center', width: 500 });
+            doc.fillColor('#999').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeightLocal - 33, { align: 'center', width: 500 });
         }
 
         doc.end();
@@ -194,7 +242,6 @@ export const onpaymentremindercreate = onDocumentCreated({
     
     if (!user || !user.email) return;
 
-    // Find the latest unpaid payment or use estimated info
     const paymentsSnap = await db.collection('users').doc(userId).collection('payments').orderBy('date', 'desc').limit(1).get();
     let amount = "0.00";
     let period = format(new Date(), 'MMMM yyyy');
@@ -205,7 +252,6 @@ export const onpaymentremindercreate = onDocumentCreated({
         period = p.description.replace('Bill for ', '').replace('Monthly Subscription for ', '').replace('Estimated bill for ', '');
     }
 
-    // Determine Date Range for SOA
     let cycleStart = startOfMonth(new Date());
     let cycleEnd = endOfMonth(new Date());
     try {
@@ -216,7 +262,6 @@ export const onpaymentremindercreate = onDocumentCreated({
         logger.warn("Date parsing failed, using current month defaults.");
     }
 
-    // Fetch Deliveries & Sanitation for the period
     const deliveriesSnap = await db.collection('users').doc(userId).collection('deliveries')
         .where('date', '>=', cycleStart.toISOString())
         .where('date', '<=', cycleEnd.toISOString())
@@ -229,15 +274,19 @@ export const onpaymentremindercreate = onDocumentCreated({
         .get();
     const sanitation = sanitationSnap.docs.map(d => d.data() as SanitationVisit);
 
-    // Generate Password Protected PDF
-    const pdfBuffer = await generatePasswordProtectedSOA(user, period, deliveries, sanitation);
+    let complianceReports: ComplianceReport[] = [];
+    if (user.assignedWaterStationId) {
+        const complianceSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').get();
+        complianceReports = complianceSnap.docs.map(d => d.data() as ComplianceReport);
+    }
+
+    const pdfBuffer = await generatePasswordProtectedSOA(user, period, deliveries, sanitation, complianceReports);
 
     const template = getPaymentReminderTemplate(user.businessName, amount, period);
     
     try {
         await sendEmail({
             to: user.email,
-            cc: 'support@riverph.com',
             subject: template.subject,
             text: `Reminder: Your statement for ${period} is ₱${amount}.`,
             html: template.html,

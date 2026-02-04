@@ -8,7 +8,6 @@ const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO
 
 /**
  * Utility to convert an image URL to a Base64 Data URL.
- * This resolves the "wrong PNG signature" error by sanitizing the image through a canvas.
  */
 const getBase64ImageFromURL = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -34,6 +33,19 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
   });
 };
 
+const getSanitationPassRate = (v: SanitationVisit) => {
+    if (!v.dispenserReports || v.dispenserReports.length === 0) return 'N/A';
+    let total = 0;
+    let passed = 0;
+    v.dispenserReports.forEach(r => {
+        if (r.checklist) {
+            total += r.checklist.length;
+            passed += r.checklist.filter(item => item.checked).length;
+        }
+    });
+    return total > 0 ? `${((passed / total) * 100).toFixed(0)}%` : 'N/A';
+};
+
 interface MonthlySOAProps {
     user: AppUser;
     deliveries: Delivery[];
@@ -57,7 +69,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     const pricePerLiter = user.plan?.price || 0;
     const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-    // Pre-load logo
     const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
     let logoBase64 = '';
     try {
@@ -66,53 +77,57 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         console.warn("Could not pre-load logo for SOA:", e);
     }
 
-    // --- HEADER ---
     const drawHeader = () => {
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, pageWidth, 70, 'F');
+      doc.rect(0, 0, pageWidth, 85, 'F');
       
       if (logoBase64) {
         try {
-           doc.addImage(logoBase64, 'PNG', margin, 18, 35, 35);
+           doc.addImage(logoBase64, 'PNG', margin, 18, 45, 45);
         } catch (e) {
           console.error("Could not add logo to PDF:", e);
         }
       }
       
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
-      doc.text('Statement of Account', pageWidth - margin, 38, { align: 'right' });
+      
+      // H1: River Philippines
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('River Philippines', margin + 60, 32);
 
+      // H2: Statement of Account
+      doc.setFontSize(14);
+      doc.text('Statement of Account', margin + 60, 52);
+
+      // H3: Plan Name
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const planText = user.plan ? `Plan: ${user.plan.name}` : 'No Active Plan';
-      doc.text(planText, pageWidth - margin, 55, { align: 'right' });
+      doc.text(planText, margin + 60, 68);
     };
 
-    // --- FOOTER ---
     const drawPdfFooter = (pageNumber: number) => {
       doc.setLineWidth(0.5);
       doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
+      doc.line(margin, pageHeight - 60, pageWidth - margin, pageHeight - 60);
       
       doc.setFontSize(8);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text('River PH - Automated, Connected, Convenient.', pageWidth / 2, pageHeight - 38, { align: 'center' });
+      doc.text('River PH - Automated, Connected, Convenient.', pageWidth / 2, pageHeight - 45, { align: 'center' });
       
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120);
-      doc.text('See how we’re shaping the future of the Philippines → riverph.com', pageWidth / 2, pageHeight - 28, { align: 'center' });
+      doc.text('See how we’re shaping the future of the Philippines → riverph.com', pageWidth / 2, pageHeight - 33, { align: 'center' });
       
       doc.setTextColor(150);
-      doc.text(`Page ${pageNumber}`, pageWidth - margin, pageHeight - 28, { align: 'right' });
+      doc.text(`Page ${pageNumber}`, pageWidth - margin, pageHeight - 33, { align: 'right' });
     };
     
     drawHeader();
     
-    // --- CLIENT INFO ---
-    lastY = 100;
+    lastY = 120;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -132,7 +147,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.text(user.address || 'No address provided', pageWidth / 2, lastY + 22);
     doc.text(user.email || '', pageWidth / 2, lastY + 32);
 
-    lastY += 50;
+    lastY += 55;
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
@@ -147,14 +162,13 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     lastY += 40;
 
-    // --- RENDER TABLES ---
     const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
         let tableFinalY = finalY;
         if (body.length > 0) {
             if (tableFinalY > pageHeight - 150) { 
                 doc.addPage();
                 drawHeader();
-                tableFinalY = 100;
+                tableFinalY = 110;
             }
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
@@ -176,7 +190,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         return tableFinalY;
     };
     
-    // --- Parent Credits Logic ---
     if (isParent && transactions) {
         const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
         const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + (t.amountCredits || 0), 0);
@@ -192,7 +205,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         lastY += 30;
     }
 
-    // --- Deliveries ---
     let totalContainers = 0;
     let totalLitersConsumed = 0;
     let totalRefillAmount = 0;
@@ -229,7 +241,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     });
 
     if (deliveries.length > 0) {
-        // Totals Row
         const summaryRow = [
           { content: 'TOTALS', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
@@ -240,8 +251,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         ];
         deliveryBody.push(summaryRow as any);
 
-        // VAT Row (12% of total amount is included)
-        const vatAmount = totalRefillAmount * (12/112); // Calculation for "VAT Included"
+        const vatAmount = totalRefillAmount * (12/112);
         const vatRow = [
             { content: 'VAT (12% Included)', colSpan: isParent ? 6 : 5, styles: { fontStyle: 'italic', halign: 'right', textColor: [100, 100, 100] } },
             { content: `P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'italic', textColor: [100, 100, 100] } },
@@ -253,14 +263,28 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     lastY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, lastY);
     lastY += 30;
     
-    // --- Sanitation ---
     if (sanitationVisits.length > 0) {
-        const sanitationBody = sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]);
-        lastY = renderTable('Sanitation Visits', [["Scheduled Date", "Status", "Quality Officer"]], sanitationBody, lastY);
+        const sanitationBody = sanitationVisits.map(v => [
+            format(new Date(v.scheduledDate), 'PP'), 
+            v.status, 
+            v.assignedTo,
+            getSanitationPassRate(v)
+        ]);
+        lastY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, lastY);
         lastY += 30;
     }
 
-    const totalPages = (doc as any).internal.getNumberOfPages();
+    if (complianceReports.length > 0) {
+        const complianceBody = complianceReports.map(r => [
+            r.name,
+            r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A',
+            r.status
+        ]);
+        lastY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, lastY);
+        lastY += 30;
+    }
+
+    const totalPages = doc.internal.getNumberOfPages();
     for(let i=1; i <= totalPages; i++) {
         doc.setPage(i);
         drawPdfFooter(i);
@@ -365,7 +389,6 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
 
     const summaryX = pageWidth - margin - 200;
     const vatIncluded = invoice.amount * (12/112);
-    const subtotal = invoice.amount - 0; // The total is the amount
 
     const totals = [
         ['Subtotal (VAT Included)', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
