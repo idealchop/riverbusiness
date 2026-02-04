@@ -100,7 +100,7 @@ export async function generatePasswordProtectedSOA(
         doc.fontSize(14).text('Statement of Account', margin, 72);
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
         
-        // Right Side Banner Metadata (Relocated to right corner inside banner)
+        // Right Side Banner Metadata
         doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: pageWidth - margin * 2 });
         doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: pageWidth - margin * 2 });
         
