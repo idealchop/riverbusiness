@@ -49,10 +49,45 @@ const date_fns_1 = require("date-fns");
 const BRAND_PRIMARY = '#538ec2';
 const BRAND_ACCENT = '#7ea9d2';
 const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
+const GCASH_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2FRiver_gcash.png?alt=media&token=13c80b31-8f08-4857-a066-5a666d546d81';
+const BPI_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_BPI.png?alt=media&token=6ac4fd16-2014-40fe-b7cf-1fdf3e94a61e';
+const MAYA_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_maya.png?alt=media&token=a3ca4e56-c797-4d9a-8dcd-4b78a0a96965';
+const PAYMENT_OPTIONS_BLOCK = `
+    <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 32px; margin-bottom: 20px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 13px; color: ${BRAND_PRIMARY}; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Payment Instructions</h3>
+      <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+        1. <strong>Pay:</strong> Scan a QR code below or use the account details to settle your balance.<br>
+        2. <strong>Capture:</strong> Take a screenshot of your successful transaction receipt.<br>
+        3. <strong>Settle:</strong> Log in to your dashboard and upload the proof of payment to finalize.
+      </p>
+      
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="32%" align="center" valign="top" style="background-color: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9;">
+            <img src="${GCASH_QR}" width="80" style="display: block; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">GCash</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.3;">Jamie Camille L.<br>09557750188</p>
+          </td>
+          <td width="2%">&nbsp;</td>
+          <td width="32%" align="center" valign="top" style="background-color: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9;">
+            <img src="${BPI_QR}" width="80" style="display: block; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">BPI Bank</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.3;">Jimboy R.<br>3489145013</p>
+          </td>
+          <td width="2%">&nbsp;</td>
+          <td width="32%" align="center" valign="top" style="background-color: #f8fafc; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9;">
+            <img src="${MAYA_QR}" width="80" style="display: block; margin-bottom: 8px; border-radius: 4px;">
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #0f172a;">Maya</p>
+            <p style="margin: 4px 0 0 0; font-size: 10px; color: #64748b; line-height: 1.3;">Jimboy R.<br>09557750188</p>
+          </td>
+        </tr>
+      </table>
+    </div>
+`;
 /**
  * Sends an email using the Brevo SMTP relay.
  */
-async function sendEmail({ to, subject, text, html }) {
+async function sendEmail({ to, cc, subject, text, html, attachments }) {
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
         logger.error('CRITICAL: BREVO_API_KEY is not set or not mounted. Email sending aborted.');
@@ -71,11 +106,13 @@ async function sendEmail({ to, subject, text, html }) {
         const info = await transporter.sendMail({
             from: '"River Philippines" <customers@riverph.com>',
             to,
+            cc,
             subject,
             text,
             html,
+            attachments,
         });
-        logger.info(`Email sent successfully. MessageID: ${info.messageId}`);
+        logger.info(`Email sent successfully. MessageID: ${info.id || info.messageId}`);
         return info;
     }
     catch (error) {
@@ -101,7 +138,6 @@ function getEmailWrapper(content, headerTitle, subheader = '') {
         .header { background: linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%); padding: 40px 24px; text-align: center; }
         .logo { width: 60px; height: auto; margin-bottom: 12px; }
         .header-title { color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
-        .header-subtext { color: #ffffff; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; font-weight: 400; }
         .content { padding: 40px; }
         .main-title { color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 8px; text-align: center; margin-top: 0; }
         .tracking-id { color: #64748b; font-size: 14px; text-align: center; margin-bottom: 32px; }
@@ -119,7 +155,7 @@ function getEmailWrapper(content, headerTitle, subheader = '') {
         .next-step { padding-top: 16px; border-top: 1px dashed #cbd5e1; margin: 0; font-size: 14px; color: #475569; line-height: 1.5; }
         .btn-container { text-align: center; margin-top: 30px; }
         .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
-        .footer { text-align: center; margin-top: 40px; padding-top: 40px; }
+        .footer { text-align: center; margin-top: 40px; padding: 0 40px; }
         .footer-brand { font-size: 16px; font-weight: 800; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
         .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
         .footer-sub a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700; }
@@ -131,20 +167,22 @@ function getEmailWrapper(content, headerTitle, subheader = '') {
         <div class="header">
           <img src="${LOGO_URL}" alt="River Logo" class="logo">
           <h1 class="header-title">River Philippines</h1>
-          <p class="header-subtext">Your Operating System for Business Essentials.</p>
         </div>
         <div class="content">
           <h2 class="main-title">${headerTitle}</h2>
           ${subheader}
           ${content}
-          <div class="footer">
-            <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
-            <p class="footer-sub">
-              See how we’re shaping the future of the Philippines<br>
-              <a href="https://riverph.com">riverph.com</a>
-            </p>
+          <div class="btn-container">
+            <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
           </div>
         </div>
+      </div>
+      <div class="footer">
+        <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
+        <p class="footer-sub">
+          See how we’re shaping the future of the Philippines<br>
+          <a href="https://riverph.com">→ riverph.com</a>
+        </p>
       </div>
       <div class="legal-disclaimer">
         DISCLAIMER: This communication and any attachments are intended to be confidential, protected under the Data Privacy Act of 2012 (RA 10173), Intellectual Property laws, and other applicable Philippine statutes. It is intended for the exclusive use of the addressee. If you are not the intended recipient, you are hereby notified that any disclosure, retention, dissemination, copying, alteration, or distribution of this communication and/or any attachment, or any information therein, is strictly prohibited. If you have received this communication in error, kindly notify the sender by return e-mail and delete this communication and all attachments immediately.
@@ -169,7 +207,7 @@ function getWelcomeUnclaimedTemplate(businessName, clientId, planName, address, 
           <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
           <style>
               body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f9; }
-              .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+              .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); background-color: #ffffff; }
               .header { background-color: ${brandColor}; color: #ffffff; padding: 40px 30px; text-align: center; }
               .header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; font-weight: 800; }
               .content { padding: 40px; background-color: #ffffff; }
@@ -180,7 +218,7 @@ function getWelcomeUnclaimedTemplate(businessName, clientId, planName, address, 
               .button-container { text-align: center; margin: 30px 0; }
               .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
               .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
-              .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
+              .footer { text-align: center; margin-top: 40px; padding: 0 40px; }
               .footer-brand { font-size: 16px; font-weight: 800; color: ${brandColor}; margin-bottom: 4px; }
               .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
               .footer-sub a { color: ${brandColor}; text-decoration: none; font-weight: 700; }
@@ -190,7 +228,6 @@ function getWelcomeUnclaimedTemplate(businessName, clientId, planName, address, 
           <div class="container">
               <div class="header">
                   <h1>RIVER PHILIPPINES</h1>
-                  <p style="margin-top: 5px; font-size: 14px; opacity: 0.9;">Your Operating System for Business Essentials</p>
               </div>
 
               <div class="content">
@@ -216,15 +253,14 @@ function getWelcomeUnclaimedTemplate(businessName, clientId, planName, address, 
                       <p><strong>The River Philippines Quality Commitment:</strong> We guarantee premium hydration through DOH-certified water, automated <strong>Smart Refills</strong> that ensure you never run dry, and <strong>Monthly Professional Sanitation</strong> of your equipment. Manage everything effortlessly with real-time tracking and automated <strong>Digital Records (SOA/Invoices)</strong> for seamless liquidation.</p>
                       <p>Welcome to the future of clean, automated hydration!</p>
                   </div>
-                  
-                  <div class="footer">
-                    <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
-                    <p class="footer-sub">
-                      See how we’re shaping the future of the Philippines<br>
-                      <a href="https://riverph.com">riverph.com</a>
-                    </p>
-                  </div>
               </div>
+          </div>
+          <div class="footer">
+            <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
+            <p class="footer-sub">
+              See how we’re shaping the future of the Philippines<br>
+              <a href="https://riverph.com">→ riverph.com</a>
+            </p>
           </div>
           <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Welcome ID: ${timestamp} - </div>
       </body>
@@ -343,10 +379,14 @@ function getNewInvoiceTemplate(businessName, invoiceId, amount, period) {
           <p class="detail-value">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
-      <p class="next-step">
-        To keep your hydration service flowing without interruption, please settle this statement via GCash, Maya, or Bank Transfer through your secure portal.
+      <p class="next-step" style="border-bottom: 1px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px;">
+        To keep your hydration service flowing without interruption, please settle this statement via GCash, Maya, or Bank Transfer.
+      </p>
+      <p class="body-text" style="font-size: 13px; margin-bottom: 0;">
+        <strong>Password Protection:</strong> For your security, the attached SOA is encrypted. Use your <strong>Client ID</strong> to open it.
       </p>
     </div>
+    ${PAYMENT_OPTIONS_BLOCK}
   `;
     return {
         subject: `Statement Available: Optimized Consumption Insights for ${period} 📑`,
@@ -360,7 +400,7 @@ function getRefillRequestTemplate(businessName, status, requestId, date) {
     <p class="greeting">Hello ${businessName}, ${isReceived ? '🌊' : '🚀'}</p>
     <p class="body-text">
       ${isReceived
-        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never runs dry."
+        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never run dry."
         : `Your on-demand refill is currently <strong>${status}</strong>. We're working hard to get your supply back to 100%.`}
     </p>
     <div class="status-badge">
@@ -476,10 +516,14 @@ function getPaymentReminderTemplate(businessName, amount, period) {
           <p class="detail-value">₱${amount}</p>
         </div>
       </div>
-      <p class="next-step">
-        Settling your bill is easy—just scan the QR code in your portal or use the secure payment link provided in your dashboard.
+      <p class="next-step" style="border-bottom: 1px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px;">
+        <strong>Security Notice:</strong> For your privacy, the attached Statement of Account is password-protected. Please use your <strong>Client ID</strong> to open the file.
+      </p>
+      <p class="body-text" style="font-size: 13px; margin-bottom: 0;">
+        Follow the instructions below to pay via QR or Bank Transfer.
       </p>
     </div>
+    ${PAYMENT_OPTIONS_BLOCK}
   `;
     return {
         subject: `Friendly Follow-up: Statement for ${period} 📑`,

@@ -86,7 +86,7 @@ export async function sendEmail({ to, cc, subject, text, html, attachments }: Se
       attachments,
     });
 
-    logger.info(`Email sent successfully. MessageID: ${info.id || info.messageId}`);
+    logger.info(`Email sent successfully. MessageID: ${info.messageId}`);
     return info;
   } catch (error) {
     logger.error('Nodemailer Error: Failed to dispatch email.', error);
