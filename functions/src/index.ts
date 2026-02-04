@@ -118,8 +118,8 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
 
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, topOfDetails + 51);
-        doc.text(user.email, pageWidth / 2 + 20, topOfDetails + 63);
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, topOfDetails + 39);
+        doc.text(user.email, pageWidth / 2 + 20, topOfDetails + 51);
 
         doc.moveDown(3);
         const metadataY = doc.y;

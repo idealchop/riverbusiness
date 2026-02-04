@@ -115,8 +115,8 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.text(user.businessName || 'N/A', pageWidth / 2 + 20, currentY + 15);
     doc.setFont('helvetica', 'normal');
     doc.text(user.address || 'No address provided', pageWidth / 2 + 20, currentY + 27, { maxWidth: pageWidth / 2 - 60 });
-    doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, currentY + 51);
-    doc.text(user.email || '', pageWidth / 2 + 20, currentY + 63);
+    doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, currentY + 39);
+    doc.text(user.email || '', pageWidth / 2 + 20, currentY + 51);
 
     // 3. Statement Metadata
     currentY += 90;
@@ -297,8 +297,8 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     doc.setTextColor(0);
     doc.text(user.businessName || '', margin, lastY + 15);
     doc.text(user.address || '', margin, lastY + 27, { maxWidth: pageWidth / 2 });
-    doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin, lastY + 51);
-    doc.text(user.email || '', margin, lastY + 63);
+    doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin, lastY + 39);
+    doc.text(user.email || '', margin, lastY + 51);
 
     lastY += 90;
     
