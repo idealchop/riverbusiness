@@ -305,6 +305,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
+    // Specialized CC Logic
     const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
 
     try {

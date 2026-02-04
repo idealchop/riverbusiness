@@ -180,6 +180,7 @@ async function generateInvoiceForUser(
             const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             
+            // Specialized CC Logic
             const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
 
             sendEmail({
