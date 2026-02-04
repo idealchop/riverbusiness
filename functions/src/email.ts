@@ -45,7 +45,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
       html,
     });
 
-    logger.info(`Email sent successfully. MessageID: ${info.messageId}`);
+    logger.info(`Email sent successfully. MessageID: ${info.id || info.messageId}`);
     return info;
   } catch (error) {
     logger.error('Nodemailer Error: Failed to dispatch email.', error);
@@ -89,7 +89,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         .next-step { padding-top: 16px; border-top: 1px dashed #cbd5e1; margin: 0; font-size: 14px; color: #475569; line-height: 1.5; }
         .btn-container { text-align: center; margin-top: 30px; }
         .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
-        .footer { text-align: center; margin-top: 40px; padding-top: 40px; }
+        .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
         .footer-brand { font-size: 16px; font-weight: 800; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
         .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
         .footer-sub a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700; }
@@ -107,6 +107,9 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
           <h2 class="main-title">${headerTitle}</h2>
           ${subheader}
           ${content}
+          <div class="btn-container">
+            <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
+          </div>
           <div class="footer">
             <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
             <p class="footer-sub">
@@ -143,7 +146,7 @@ export function getWelcomeUnclaimedTemplate(
       <html lang="en">
       <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="UTF-8">
           <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
           <style>
               body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f9; }
@@ -351,7 +354,7 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
     <p class="greeting">Hello ${businessName}, ${isReceived ? '🌊' : '🚀'}</p>
     <p class="body-text">
       ${isReceived 
-        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never runs dry." 
+        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never run dry." 
         : `Your on-demand refill is currently <strong>${status}</strong>. We're working hard to get your supply back to 100%.`}
     </p>
     <div class="status-badge">
