@@ -100,7 +100,7 @@ export async function generatePasswordProtectedSOA(
         doc.fontSize(14).text('Statement of Account', margin, 72);
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
         
-        // Right Side Banner Metadata
+        // Right Side Banner Metadata (Relocated to right corner inside banner)
         doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: pageWidth - margin * 2 });
         doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: pageWidth - margin * 2 });
         
@@ -305,10 +305,12 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
+    const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+
     try {
         await sendEmail({
             to: user.email,
-            cc: 'support@riverph.com',
+            cc: ccList,
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
