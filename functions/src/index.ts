@@ -82,7 +82,7 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
 
         try {
             const response = await axios.get(LOGO_URL, { responseType: 'arraybuffer' });
-            doc.image(Buffer.from(response.data), 40, 40, { width: 50 });
+            doc.image(Buffer.from(response.data), 40, 40, { width: 55 });
         } catch (e) {
             logger.warn("PDF Logo fetch failed, skipping image.");
         }
@@ -90,17 +90,63 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-        // Top Bar Left-Aligned Structured Header
+        // Structured Header (Left Aligned)
         doc.fillColor(BRAND_PRIMARY).fontSize(20).font('Helvetica-Bold').text('River Philippines', 110, 45);
         doc.fontSize(14).text('Statement of Account', 110, 68);
         doc.fillColor('#666').fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, 110, 85);
         
-        doc.moveDown(3);
+        doc.moveDown(3.5);
         doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Client Details');
         doc.fontSize(10).font('Helvetica').text(`Business Name: ${user.businessName}`);
         doc.text(`Client ID: ${user.clientId}`);
         doc.text(`Address: ${user.address || 'N/A'}`);
         doc.text(`Period: ${period}`);
+
+        // 1. Equipment & Services Summary
+        if (user.customPlanDetails) {
+            const eq = user.customPlanDetails;
+            doc.moveDown(2);
+            doc.fontSize(12).font('Helvetica-Bold').text('Equipment & Services Summary');
+            doc.moveDown();
+
+            const eqTop = doc.y;
+            doc.fontSize(9).font('Helvetica-Bold');
+            doc.text('Service Item', 40, eqTop);
+            doc.text('Qty', 220, eqTop);
+            doc.text('Unit Price', 260, eqTop);
+            doc.text('Frequency', 340, eqTop);
+            doc.text('Subtotal', 450, eqTop);
+            
+            doc.moveDown(0.5);
+            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+            doc.moveDown(0.5);
+
+            doc.font('Helvetica').fontSize(8);
+            if (eq.gallonQuantity) {
+                doc.text('5-Gallon Reusable Containers', 40, doc.y);
+                doc.text(eq.gallonQuantity.toString(), 220, doc.y);
+                doc.text(`P${(eq.gallonPrice || 0).toLocaleString()}`, 260, doc.y);
+                doc.text(eq.gallonPaymentType || 'Monthly', 340, doc.y);
+                doc.text(`P${(eq.gallonPrice || 0).toLocaleString()}`, 450, doc.y);
+                doc.moveDown();
+            }
+            if (eq.dispenserQuantity) {
+                doc.text('Premium Hot & Cold Water Dispenser', 40, doc.y);
+                doc.text(eq.dispenserQuantity.toString(), 220, doc.y);
+                doc.text(`P${(eq.dispenserPrice || 0).toLocaleString()}`, 260, doc.y);
+                doc.text(eq.dispenserPaymentType || 'Monthly', 340, doc.y);
+                doc.text(`P${(eq.dispenserPrice || 0).toLocaleString()}`, 450, doc.y);
+                doc.moveDown();
+            }
+            if (eq.sanitationPrice) {
+                doc.text('Professional Monthly Sanitation Service', 40, doc.y);
+                doc.text('1', 220, doc.y);
+                doc.text(`P${(eq.sanitationPrice || 0).toLocaleString()}`, 260, doc.y);
+                doc.text(eq.sanitationPaymentType || 'Monthly', 340, doc.y);
+                doc.text(`P${(eq.sanitationPrice || 0).toLocaleString()}`, 450, doc.y);
+                doc.moveDown();
+            }
+        }
 
         doc.moveDown(2);
         doc.fontSize(12).font('Helvetica-Bold').text('Water Delivery History');
@@ -152,7 +198,7 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         
         const summaryY = doc.y;
         doc.font('Helvetica-Bold').fontSize(10);
-        doc.text('TOTALS', 40, summaryY);
+        doc.text('TOTAL CONSUMPTION', 40, summaryY);
         doc.text(totalQty.toString(), 220, summaryY);
         doc.text(`${totalLiters.toFixed(1)} L`, 330, summaryY);
         doc.text(`P ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 410, summaryY);
@@ -210,14 +256,14 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
             });
         }
 
-        // Standardized Footer Fix
+        // Professional Standard Footer
         const pageCount = doc.bufferedPageRange().count;
         for (let i = 0; i < pageCount; i++) {
             doc.switchToPage(i);
             const pageHeightLocal = doc.page.height;
-            doc.lineWidth(0.5).moveTo(40, pageHeightLocal - 60).lineTo(550, pageHeightLocal - 60).stroke();
-            doc.fontSize(8).fillColor(BRAND_PRIMARY).text('River PH - Automated, Connected, Convenient.', 40, pageHeightLocal - 45, { align: 'center', width: 500 });
-            doc.fillColor('#999').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeightLocal - 33, { align: 'center', width: 500 });
+            doc.setDrawColor(BRAND_PRIMARY).lineWidth(0.5).moveTo(40, pageHeightLocal - 60).lineTo(550, pageHeightLocal - 60).stroke();
+            doc.fontSize(8).fillColor(BRAND_PRIMARY).font('Helvetica-Bold').text('River PH - Automated, Connected, Convenient.', 40, pageHeightLocal - 45, { align: 'center', width: 500 });
+            doc.fillColor('#999').font('Helvetica').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeightLocal - 33, { align: 'center', width: 500 });
         }
 
         doc.end();
@@ -419,7 +465,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const after = event.data.after.data();
     const userId = event.params.userId;
 
-    if (before.status === after.status || after.status !== 'Approved') return;
+    if (before.status ===廷 after.status || after.status !== 'Approved') return;
 
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();

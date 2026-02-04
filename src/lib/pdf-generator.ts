@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment, Transaction } from '@/lib/types';
+import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Transaction } from '@/lib/types';
 
 const LITER_RATIO = 19.5;
 const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO;
@@ -79,11 +79,11 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     const drawHeader = () => {
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, pageWidth, 85, 'F');
+      doc.rect(0, 0, pageWidth, 95, 'F');
       
       if (logoBase64) {
         try {
-           doc.addImage(logoBase64, 'PNG', margin, 18, 45, 45);
+           doc.addImage(logoBase64, 'PNG', margin, 22, 50, 50);
         } catch (e) {
           console.error("Could not add logo to PDF:", e);
         }
@@ -94,17 +94,17 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
       // H1: River Philippines
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('River Philippines', margin + 60, 32);
+      doc.text('River Philippines', margin + 65, 38);
 
       // H2: Statement of Account
       doc.setFontSize(14);
-      doc.text('Statement of Account', margin + 60, 52);
+      doc.text('Statement of Account', margin + 65, 58);
 
       // H3: Plan Name
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const planText = user.plan ? `Plan: ${user.plan.name}` : 'No Active Plan';
-      doc.text(planText, margin + 60, 68);
+      doc.text(planText, margin + 65, 75);
     };
 
     const drawPdfFooter = (pageNumber: number) => {
@@ -127,7 +127,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     
     drawHeader();
     
-    lastY = 120;
+    lastY = 130;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -168,7 +168,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             if (tableFinalY > pageHeight - 150) { 
                 doc.addPage();
                 drawHeader();
-                tableFinalY = 110;
+                tableFinalY = 120;
             }
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
@@ -190,6 +190,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         return tableFinalY;
     };
     
+    // 1. Financial Summary (Parent Only)
     if (isParent && transactions) {
         const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
         const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + (t.amountCredits || 0), 0);
@@ -205,6 +206,46 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         lastY += 30;
     }
 
+    // 2. Equipment & Services Summary
+    if (user.customPlanDetails) {
+        const eq = user.customPlanDetails;
+        const equipmentBody = [];
+        
+        if (eq.gallonQuantity) {
+            equipmentBody.push([
+                '5-Gallon Reusable Containers',
+                eq.gallonQuantity,
+                `P ${eq.gallonPrice?.toLocaleString()}`,
+                eq.gallonPaymentType || 'Monthly',
+                `P ${(eq.gallonPrice || 0).toLocaleString()}`
+            ]);
+        }
+        if (eq.dispenserQuantity) {
+            equipmentBody.push([
+                'Premium Hot & Cold Water Dispenser',
+                eq.dispenserQuantity,
+                `P ${eq.dispenserPrice?.toLocaleString()}`,
+                eq.dispenserPaymentType || 'Monthly',
+                `P ${(eq.dispenserPrice || 0).toLocaleString()}`
+            ]);
+        }
+        if (eq.sanitationPrice) {
+            equipmentBody.push([
+                'Professional Monthly Sanitation Service',
+                '1',
+                `P ${eq.sanitationPrice?.toLocaleString()}`,
+                eq.sanitationPaymentType || 'Monthly',
+                `P ${(eq.sanitationPrice || 0).toLocaleString()}`
+            ]);
+        }
+
+        if (equipmentBody.length > 0) {
+            lastY = renderTable('Equipment & Services Summary', [['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal']], equipmentBody, lastY);
+            lastY += 30;
+        }
+    }
+
+    // 3. Water Refill Logs
     let totalContainers = 0;
     let totalLitersConsumed = 0;
     let totalRefillAmount = 0;
@@ -242,7 +283,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     if (deliveries.length > 0) {
         const summaryRow = [
-          { content: 'TOTALS', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
+          { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
           { content: '', styles: { fillColor: [230, 242, 255] } },
           { content: `${totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1})} L`, styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
@@ -263,6 +304,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     lastY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, lastY);
     lastY += 30;
     
+    // 4. Sanitation Logs
     if (sanitationVisits.length > 0) {
         const sanitationBody = sanitationVisits.map(v => [
             format(new Date(v.scheduledDate), 'PP'), 
@@ -274,6 +316,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         lastY += 30;
     }
 
+    // 5. Compliance Reports
     if (complianceReports.length > 0) {
         const complianceBody = complianceReports.map(r => [
             r.name,
