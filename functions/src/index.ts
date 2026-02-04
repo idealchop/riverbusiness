@@ -85,7 +85,7 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
         const pageWidth = doc.page.width;
         const margin = 40;
 
-        // Solid Blue Header Background
+        // Solid Blue Header Background (Left Corner Focused)
         doc.rect(0, 0, pageWidth, 120).fill('#538ec2');
 
         try {
@@ -118,6 +118,7 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
 
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
+        // TIGHTENED SPACING: Fixed jump between address and Client ID
         doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, topOfDetails + 39);
         doc.text(user.email, pageWidth / 2 + 20, topOfDetails + 51);
 

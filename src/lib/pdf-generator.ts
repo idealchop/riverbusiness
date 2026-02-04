@@ -74,7 +74,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         console.warn("Could not pre-load logo for SOA:", e);
     }
 
-    // 1. Header Block (Solid Blue)
+    // 1. Header Block (Solid Blue Corner)
     doc.setFillColor(83, 142, 194);
     doc.rect(0, 0, pageWidth, 120, 'F');
 
@@ -115,6 +115,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.text(user.businessName || 'N/A', pageWidth / 2 + 20, currentY + 15);
     doc.setFont('helvetica', 'normal');
     doc.text(user.address || 'No address provided', pageWidth / 2 + 20, currentY + 27, { maxWidth: pageWidth / 2 - 60 });
+    // TIGHTENED SPACING: +12pt jump
     doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, currentY + 39);
     doc.text(user.email || '', pageWidth / 2 + 20, currentY + 51);
 
