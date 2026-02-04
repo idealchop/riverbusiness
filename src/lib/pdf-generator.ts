@@ -94,7 +94,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.setFont('helvetica', 'normal');
     doc.text(`Plan: ${user.plan?.name || 'N/A'}`, margin + 65, 95);
 
-    // 2. Stakeholder Details (FROM / TO)
+    // 2. Stakeholder Details (Two Column Layout)
     let currentY = 160;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');

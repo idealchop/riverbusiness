@@ -4,14 +4,14 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import axios from 'axios';
 import PDFDocument from 'pdfkit';
-import { format, startOfMonth, endOfMonth, parse, endOfDay, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, endOfDay } from 'date-fns';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, TopUpRequest } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -21,8 +21,7 @@ import {
     getWelcomeUnclaimedTemplate,
     getSanitationScheduledTemplate,
     getSanitationReportTemplate,
-    getPaymentReminderTemplate,
-    getNewInvoiceTemplate
+    getPaymentReminderTemplate
 } from './email';
 
 // Export all billing functions

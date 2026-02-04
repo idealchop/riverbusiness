@@ -56,7 +56,7 @@ const email_1 = require("./email");
 // Export all billing functions
 __exportStar(require("./billing"), exports);
 const BRAND_PRIMARY = '#538ec2';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
+const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
 const LITER_RATIO = 19.5;
 /**
  * Creates a notification document in a user's notification subcollection.
@@ -88,7 +88,7 @@ const getSanitationPassRate = (v) => {
     return total > 0 ? `${Math.round((passed / total) * 100)}%` : 'N/A';
 };
 /**
- * Generates a password-protected PDF Statement of Account.
+ * Generates a high-fidelity, password-protected PDF Statement of Account.
  */
 async function generatePasswordProtectedSOA(user, period, deliveries, sanitation, compliance) {
     return new Promise(async (resolve, reject) => {
@@ -96,168 +96,122 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         const doc = new pdfkit_1.default({
             userPassword: user.clientId || 'password',
             ownerPassword: 'river-admin-secret',
-            permissions: { printing: 'highResolution', copying: true, modifying: false }
+            permissions: { printing: 'highResolution', copying: true, modifying: false },
+            margin: 40
         });
         const chunks = [];
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
+        const pageWidth = doc.page.width;
+        const margin = 40;
+        // 1. High-Fidelity Header (Solid Blue Corner)
+        doc.rect(0, 0, pageWidth, 120).fill(BRAND_PRIMARY);
         try {
             const response = await axios_1.default.get(LOGO_URL, { responseType: 'arraybuffer' });
-            doc.image(Buffer.from(response.data), 40, 40, { width: 55 });
+            doc.image(Buffer.from(response.data), margin, 35, { width: 50 });
         }
         catch (e) {
             logger.warn("PDF Logo fetch failed, skipping image.");
         }
         const pricePerLiter = ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.price) || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
-        // Structured Header (Left Aligned)
-        doc.fillColor(BRAND_PRIMARY).fontSize(20).font('Helvetica-Bold').text('River Philippines', 110, 45);
-        doc.fontSize(14).text('Statement of Account', 110, 68);
-        doc.fillColor('#666').fontSize(10).font('Helvetica').text(`Plan: ${((_b = user.plan) === null || _b === void 0 ? void 0 : _b.name) || 'N/A'}`, 110, 85);
-        doc.moveDown(3.5);
-        doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Client Details');
-        doc.fontSize(10).font('Helvetica').text(`Business Name: ${user.businessName}`);
-        doc.text(`Client ID: ${user.clientId}`);
-        doc.text(`Address: ${user.address || 'N/A'}`);
-        doc.text(`Period: ${period}`);
-        // 1. Equipment & Services Summary
+        // White Hierarchical Text
+        doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin + 65, 45);
+        doc.fontSize(14).text('Statement of Account', margin + 65, 72);
+        doc.fontSize(10).font('Helvetica').text(`Plan: ${((_b = user.plan) === null || _b === void 0 ? void 0 : _b.name) || 'N/A'}`, margin + 65, 92);
+        doc.fillColor('#000000').moveDown(4.5);
+        // 2. Stakeholder Details (Two Column Layout)
+        const topOfDetails = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('FROM:', margin, topOfDetails);
+        doc.text('TO:', pageWidth / 2 + 20, topOfDetails);
+        doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold');
+        doc.text('River Tech Inc.', margin, topOfDetails + 15);
+        doc.font('Helvetica').text('SEC Reg #: 202406123456', margin, topOfDetails + 27);
+        doc.text('Filinvest Axis Tower 1, Alabang', margin, topOfDetails + 39);
+        doc.text('customers@riverph.com', margin, topOfDetails + 51);
+        doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
+        doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, topOfDetails + 39);
+        doc.text(user.email, pageWidth / 2 + 20, topOfDetails + 51);
+        doc.moveDown(3);
+        const metadataY = doc.y;
+        doc.font('Helvetica-Bold').text('STATEMENT DATE:', margin, metadataY);
+        doc.font('Helvetica').text((0, date_fns_1.format)(new Date(), 'MMM d, yyyy'), margin + 110, metadataY);
+        doc.font('Helvetica-Bold').text('BILLING PERIOD:', margin, metadataY + 15);
+        doc.font('Helvetica').text(period, margin + 110, metadataY + 15);
+        doc.moveDown(3);
+        const drawTable = (title, headers, rows) => {
+            if (rows.length === 0)
+                return;
+            doc.fontSize(11).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text(title, margin);
+            doc.moveDown(0.5);
+            const tableTop = doc.y;
+            const colWidth = (pageWidth - margin * 2) / headers.length;
+            doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
+            doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+            headers.forEach((h, i) => {
+                doc.text(h, margin + (i * colWidth) + 5, tableTop + 6);
+            });
+            doc.moveDown(0.8);
+            doc.fillColor('#000000').font('Helvetica').fontSize(8);
+            rows.forEach((row, rowIndex) => {
+                const rowY = doc.y;
+                if (rowIndex % 2 !== 0) {
+                    doc.rect(margin, rowY - 2, pageWidth - margin * 2, 15).fill('#f8fafc');
+                    doc.fillColor('#000000');
+                }
+                row.forEach((cell, i) => {
+                    doc.text(cell.toString(), margin + (i * colWidth) + 5, rowY);
+                });
+                doc.moveDown(1.2);
+            });
+            doc.moveDown(2);
+        };
+        // 3. Equipment Summary
         if (user.customPlanDetails) {
             const eq = user.customPlanDetails;
-            doc.moveDown(2);
-            doc.fontSize(12).font('Helvetica-Bold').text('Equipment & Services Summary');
-            doc.moveDown();
-            const eqTop = doc.y;
-            doc.fontSize(9).font('Helvetica-Bold');
-            doc.text('Service Item', 40, eqTop);
-            doc.text('Qty', 220, eqTop);
-            doc.text('Unit Price', 260, eqTop);
-            doc.text('Frequency', 340, eqTop);
-            doc.text('Subtotal', 450, eqTop);
-            doc.moveDown(0.5);
-            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-            doc.moveDown(0.5);
-            doc.font('Helvetica').fontSize(8);
-            if (eq.gallonQuantity) {
-                doc.text('5-Gallon Reusable Containers', 40, doc.y);
-                doc.text(eq.gallonQuantity.toString(), 220, doc.y);
-                doc.text(`P${(eq.gallonPrice || 0).toLocaleString()}`, 260, doc.y);
-                doc.text(eq.gallonPaymentType || 'Monthly', 340, doc.y);
-                doc.text(`P${(eq.gallonPrice || 0).toLocaleString()}`, 450, doc.y);
-                doc.moveDown();
-            }
-            if (eq.dispenserQuantity) {
-                doc.text('Premium Hot & Cold Water Dispenser', 40, doc.y);
-                doc.text(eq.dispenserQuantity.toString(), 220, doc.y);
-                doc.text(`P${(eq.dispenserPrice || 0).toLocaleString()}`, 260, doc.y);
-                doc.text(eq.dispenserPaymentType || 'Monthly', 340, doc.y);
-                doc.text(`P${(eq.dispenserPrice || 0).toLocaleString()}`, 450, doc.y);
-                doc.moveDown();
-            }
-            if (eq.sanitationPrice) {
-                doc.text('Professional Monthly Sanitation Service', 40, doc.y);
-                doc.text('1', 220, doc.y);
-                doc.text(`P${(eq.sanitationPrice || 0).toLocaleString()}`, 260, doc.y);
-                doc.text(eq.sanitationPaymentType || 'Monthly', 340, doc.y);
-                doc.text(`P${(eq.sanitationPrice || 0).toLocaleString()}`, 450, doc.y);
-                doc.moveDown();
-            }
+            const eqRows = [];
+            if (eq.gallonQuantity)
+                eqRows.push(['5-Gallon Reusable Containers', eq.gallonQuantity, `P${(eq.gallonPrice || 0).toLocaleString()}`, eq.gallonPaymentType || 'Monthly', `P${(eq.gallonPrice || 0).toLocaleString()}`]);
+            if (eq.dispenserQuantity)
+                eqRows.push(['Premium Hot & Cold Water Dispenser', eq.dispenserQuantity, `P${(eq.dispenserPrice || 0).toLocaleString()}`, eq.dispenserPaymentType || 'Monthly', `P${(eq.dispenserPrice || 0).toLocaleString()}`]);
+            if (eq.sanitationPrice)
+                eqRows.push(['Professional Monthly Sanitation', '1', `P${(eq.sanitationPrice || 0).toLocaleString()}`, eq.sanitationPaymentType || 'Monthly', `P${(eq.sanitationPrice || 0).toLocaleString()}`]);
+            drawTable('Equipment & Services Summary', ['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal'], eqRows);
         }
+        // 4. Service Logs
         if (sanitation.length > 0) {
-            doc.moveDown(2);
-            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Office Sanitation Logs');
-            doc.moveDown();
-            doc.fontSize(9);
-            doc.text('Date', 40, doc.y);
-            doc.text('Status', 150, doc.y);
-            doc.text('Officer', 250, doc.y);
-            doc.text('Score Rate', 400, doc.y);
-            doc.moveDown(0.5);
-            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-            doc.moveDown(0.5);
-            doc.font('Helvetica').fontSize(8);
-            sanitation.forEach(s => {
-                const dateStr = typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A';
-                const currentY = doc.y;
-                doc.text(dateStr, 40, currentY);
-                doc.text(s.status, 150, currentY);
-                doc.text(s.assignedTo, 250, currentY);
-                doc.text(getSanitationPassRate(s), 400, currentY);
-                doc.moveDown();
-            });
+            const sanRows = sanitation.map(s => [typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A', s.status, s.assignedTo, getSanitationPassRate(s)]);
+            drawTable('Office Sanitation Logs', ['Date', 'Status', 'Officer', 'Score Rate'], sanRows);
         }
         if (compliance.length > 0) {
-            doc.moveDown(2);
-            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Water Quality & Station Compliance');
-            doc.moveDown();
-            doc.fontSize(9);
-            doc.text('Report Name', 40, doc.y);
-            doc.text('Period', 300, doc.y);
-            doc.text('Status', 450, doc.y);
-            doc.moveDown(0.5);
-            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-            doc.moveDown(0.5);
-            doc.font('Helvetica').fontSize(8);
-            compliance.forEach(c => {
-                const currentY = doc.y;
-                doc.text(c.name, 40, currentY);
-                const periodStr = c.date ? (0, date_fns_1.format)(c.date.toDate(), 'MMM yyyy') : 'N/A';
-                doc.text(periodStr, 300, currentY);
-                doc.text(c.status, 450, currentY);
-                doc.moveDown();
-            });
+            const compRows = compliance.map(c => [c.name, c.date ? (0, date_fns_1.format)(c.date.toDate(), 'MMM yyyy') : 'N/A', c.status]);
+            drawTable('Water Quality & Station Compliance', ['Report Name', 'Period', 'Status'], compRows);
         }
-        // 4. Water Delivery History (REFILL LOGS LAST)
-        doc.moveDown(2);
-        doc.fontSize(12).font('Helvetica-Bold').text('Water Delivery History');
-        doc.moveDown();
-        const tableTop = doc.y;
-        doc.fontSize(9).font('Helvetica-Bold');
-        doc.text('Date', 40, tableTop);
-        doc.text('Tracking #', 120, tableTop);
-        doc.text('Qty', 220, tableTop);
-        doc.text('Price/Unit', 260, tableTop);
-        doc.text('Vol (L)', 330, tableTop);
-        doc.text('Amount', 410, tableTop);
-        doc.text('Status', 490, tableTop);
-        doc.moveDown(0.5);
-        doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-        doc.moveDown(0.5);
+        // 5. Water Refill Logs (LAST)
         let totalQty = 0;
         let totalLiters = 0;
         let totalAmount = 0;
-        doc.font('Helvetica').fontSize(8);
-        deliveries.forEach(d => {
-            const dateStr = typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A';
+        const refillRows = deliveries.map(d => {
             const qty = d.volumeContainers || 0;
             const liters = d.liters || (qty * LITER_RATIO);
             const amount = d.amount || (liters * pricePerLiter);
             totalQty += qty;
             totalLiters += liters;
             totalAmount += amount;
-            const currentY = doc.y;
-            doc.text(dateStr, 40, currentY);
-            doc.text(d.id, 120, currentY);
-            doc.text(qty.toString(), 220, currentY);
-            doc.text(`P${pricePerContainer.toFixed(2)}`, 260, currentY);
-            doc.text(`${liters.toFixed(1)}L`, 330, currentY);
-            doc.text(`P${amount.toFixed(2)}`, 410, currentY);
-            doc.text(d.status, 490, currentY);
-            doc.moveDown();
+            return [d.id, typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A', qty, `P${pricePerContainer.toFixed(2)}`, `${liters.toFixed(1)}L`, `P${amount.toFixed(2)}`, d.status];
         });
-        doc.moveDown();
-        doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-        doc.moveDown(0.5);
-        const summaryY = doc.y;
-        doc.font('Helvetica-Bold').fontSize(10);
-        doc.text('TOTAL CONSUMPTION', 40, summaryY);
-        doc.text(totalQty.toString(), 220, summaryY);
-        doc.text(`${totalLiters.toFixed(1)} L`, 330, summaryY);
-        doc.text(`P ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 410, summaryY);
-        doc.moveDown(1.5);
+        drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
+        // Final Totals
+        const finalY = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').text('TOTAL CONSUMPTION:', margin + 150, finalY);
+        doc.text(totalQty.toString(), margin + 280, finalY);
+        doc.text(`${totalLiters.toFixed(1)} L`, margin + 360, finalY);
+        doc.text(`P ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 440, finalY);
         const vatAmount = totalAmount * (12 / 112);
-        doc.font('Helvetica-Oblique').fontSize(8).fillColor('#666');
-        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 40, doc.y, { align: 'right', width: 510 });
+        doc.moveDown(1.5).fontSize(8).font('Helvetica-Oblique').fillColor('#666666');
+        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`, 0, doc.y, { align: 'right', width: pageWidth - margin });
         doc.end();
     });
 }
@@ -269,37 +223,39 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     document: "users/{userId}/reminders/{reminderId}",
     secrets: ["BREVO_API_KEY"]
 }, async (event) => {
+    var _a;
     if (!event.data)
         return;
     const userId = event.params.userId;
     const db = (0, firestore_1.getFirestore)();
+    const { period: selectedPeriod } = event.data.data();
     const userDoc = await db.collection('users').doc(userId).get();
     const user = userDoc.data();
     if (!user || !user.email)
         return;
-    const paymentsSnap = await db.collection('users').doc(userId).collection('payments').orderBy('date', 'desc').limit(1).get();
-    let amount = "0.00";
-    let period = (0, date_fns_1.format)(new Date(), 'MMMM yyyy');
-    if (!paymentsSnap.empty) {
-        const p = paymentsSnap.docs[0].data();
-        amount = p.amount.toFixed(2);
-        period = p.description.replace('Bill for ', '').replace('Monthly Subscription for ', '').replace('Estimated bill for ', '');
-    }
-    let cycleStart = (0, date_fns_1.startOfMonth)(new Date());
-    let cycleEnd = (0, date_fns_1.endOfMonth)(new Date());
-    try {
-        const parsedDate = (0, date_fns_1.parse)(period, 'MMMM yyyy', new Date());
-        cycleStart = (0, date_fns_1.startOfMonth)(parsedDate);
-        cycleEnd = (0, date_fns_1.endOfMonth)(parsedDate);
-    }
-    catch (e) {
-        logger.warn("Date parsing failed, using current month defaults.");
+    let billingPeriodLabel = 'Full Account History';
+    let cycleStart = new Date(0);
+    let cycleEnd = (0, date_fns_1.endOfDay)(new Date());
+    if (selectedPeriod && selectedPeriod !== 'full') {
+        if (selectedPeriod === '2025-12_2026-01') {
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.endOfMonth)(new Date(2026, 0, 1)));
+            billingPeriodLabel = 'December 2025 - January 2026';
+        }
+        else {
+            const parsed = (0, date_fns_1.parse)(selectedPeriod, 'yyyy-MM', new Date());
+            cycleStart = (0, date_fns_1.startOfMonth)(parsed);
+            cycleEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.endOfMonth)(parsed));
+            billingPeriodLabel = (0, date_fns_1.format)(parsed, 'MMMM yyyy');
+        }
     }
     const deliveriesSnap = await db.collection('users').doc(userId).collection('deliveries')
         .where('date', '>=', cycleStart.toISOString())
         .where('date', '<=', cycleEnd.toISOString())
         .get();
     const deliveries = deliveriesSnap.docs.map(d => d.data());
+    const pricePerLiter = ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.price) || 0;
+    const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const sanitationSnap = await db.collection('users').doc(userId).collection('sanitationVisits')
         .where('scheduledDate', '>=', cycleStart.toISOString())
         .where('scheduledDate', '<=', cycleEnd.toISOString())
@@ -307,24 +263,23 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const sanitation = sanitationSnap.docs.map(d => d.data());
     let complianceReports = [];
     if (user.assignedWaterStationId) {
-        const complianceSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').get();
+        const complianceSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').limit(5).get();
         complianceReports = complianceSnap.docs.map(d => d.data());
     }
-    const pdfBuffer = await generatePasswordProtectedSOA(user, period, deliveries, sanitation, complianceReports);
-    const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, amount, period);
+    const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports);
+    const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     try {
         await (0, email_1.sendEmail)({
             to: user.email,
-            cc: 'support@riverph.com',
             subject: template.subject,
-            text: `Reminder: Your statement for ${period} is ₱${amount}.`,
+            text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
             attachments: [{
-                    filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${period.replace(/\s/g, '-')}.pdf`,
+                    filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${billingPeriodLabel.replace(/\s/g, '-')}.pdf`,
                     content: pdfBuffer
                 }]
         });
-        logger.info(`Follow-up email with SOA sent to ${user.email}`);
+        logger.info(`Follow-up email with SOA sent to ${user.email} for period ${selectedPeriod}`);
     }
     catch (error) {
         logger.error(`Failed to send follow-up to ${user.email}`, error);
@@ -347,12 +302,7 @@ exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
     const schedule = `${((_b = profile.customPlanDetails) === null || _b === void 0 ? void 0 : _b.deliveryDay) || 'TBD'} / ${((_c = profile.customPlanDetails) === null || _c === void 0 ? void 0 : _c.deliveryFrequency) || 'TBD'}`;
     const template = (0, email_1.getWelcomeUnclaimedTemplate)(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
     try {
-        await (0, email_1.sendEmail)({
-            to: profile.businessEmail,
-            subject: template.subject,
-            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`,
-            html: template.html
-        });
+        await (0, email_1.sendEmail)({ to: profile.businessEmail, subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
     }
     catch (error) {
         logger.error(`Failed welcome email`, error);
@@ -370,12 +320,7 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-    await createNotification(userId, {
-        type: 'delivery',
-        title: 'Delivery Scheduled',
-        description: `Delivery of ${delivery.volumeContainers} containers scheduled.`,
-        data: { deliveryId }
-    });
+    await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && delivery.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         await (0, email_1.sendEmail)({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
