@@ -57,7 +57,7 @@ interface MonthlySOAProps {
     transactions?: Transaction[] | null;
 }
 
-export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches, transactions }: MonthlySOAProps) => {
+export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, complianceReports, billingPeriod, branches, transactions }: MonthlySOAProps) => {
     const doc = new jsPDF('p', 'pt');
     const primaryColor = [83, 142, 194]; // #538ec2
     const pageHeight = doc.internal.pageSize.height;
@@ -143,8 +143,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
                 bodyStyles: { fontSize: 8, cellPadding: 6 },
                 margin: { left: margin, right: margin },
                 didDrawPage: (data) => {
-                    // Optional: add a line under headers
-                    const ctx = doc.getContext('2d');
                     doc.setDrawColor(200);
                     doc.setLineWidth(0.5);
                     doc.line(margin, data.settings.startY + 10, pageWidth - margin, data.settings.startY + 10);
