@@ -91,40 +91,19 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
       
       doc.setTextColor(255, 255, 255);
       
-      // H1: River Philippines
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
       doc.text('River Philippines', margin + 65, 38);
 
-      // H2: Statement of Account
       doc.setFontSize(14);
       doc.text('Statement of Account', margin + 65, 58);
 
-      // H3: Plan Name
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const planText = user.plan ? `Plan: ${user.plan.name}` : 'No Active Plan';
       doc.text(planText, margin + 65, 75);
     };
 
-    const drawPdfFooter = (pageNumber: number) => {
-      doc.setLineWidth(0.5);
-      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.line(margin, pageHeight - 60, pageWidth - margin, pageHeight - 60);
-      
-      doc.setFontSize(8);
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setFont('helvetica', 'bold');
-      doc.text('River PH - Automated, Connected, Convenient.', pageWidth / 2, pageHeight - 45, { align: 'center' });
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(120);
-      doc.text('See how we’re shaping the future of the Philippines → riverph.com', pageWidth / 2, pageHeight - 33, { align: 'center' });
-      
-      doc.setTextColor(150);
-      doc.text(`Page ${pageNumber}`, pageWidth - margin, pageHeight - 33, { align: 'right' });
-    };
-    
     drawHeader();
     
     lastY = 130;
@@ -245,7 +224,30 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         }
     }
 
-    // 3. Water Refill Logs
+    // 3. Sanitation Logs
+    if (sanitationVisits.length > 0) {
+        const sanitationBody = sanitationVisits.map(v => [
+            format(new Date(v.scheduledDate), 'PP'), 
+            v.status, 
+            v.assignedTo,
+            getSanitationPassRate(v)
+        ]);
+        lastY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, lastY);
+        lastY += 30;
+    }
+
+    // 4. Compliance Reports
+    if (complianceReports.length > 0) {
+        const complianceBody = complianceReports.map(r => [
+            r.name,
+            r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A',
+            r.status
+        ]);
+        lastY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, lastY);
+        lastY += 30;
+    }
+
+    // 5. Water Refill Logs (MOVED TO LAST)
     let totalContainers = 0;
     let totalLitersConsumed = 0;
     let totalRefillAmount = 0;
@@ -302,36 +304,6 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     }
 
     lastY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, lastY);
-    lastY += 30;
-    
-    // 4. Sanitation Logs
-    if (sanitationVisits.length > 0) {
-        const sanitationBody = sanitationVisits.map(v => [
-            format(new Date(v.scheduledDate), 'PP'), 
-            v.status, 
-            v.assignedTo,
-            getSanitationPassRate(v)
-        ]);
-        lastY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, lastY);
-        lastY += 30;
-    }
-
-    // 5. Compliance Reports
-    if (complianceReports.length > 0) {
-        const complianceBody = complianceReports.map(r => [
-            r.name,
-            r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A',
-            r.status
-        ]);
-        lastY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, lastY);
-        lastY += 30;
-    }
-
-    const totalPages = doc.internal.getNumberOfPages();
-    for(let i=1; i <= totalPages; i++) {
-        doc.setPage(i);
-        drawPdfFooter(i);
-    }
     
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`);
 };
@@ -453,11 +425,5 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     doc.text('Amount paid', summaryX, lastY);
     doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right'});
 
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    const footerText = 'Thank you for your business. For any questions, please contact us at customers@riverph.com.';
-    const splitFooter = doc.splitTextToSize(footerText, pageWidth - (margin * 2));
-    doc.text(splitFooter, margin, pageHeight - margin - 10);
-    
     doc.save(`Invoice_${invoice.id}.pdf`);
 };

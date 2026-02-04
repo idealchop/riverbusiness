@@ -148,6 +148,55 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
             }
         }
 
+        if (sanitation.length > 0) {
+            doc.moveDown(2);
+            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Office Sanitation Logs');
+            doc.moveDown();
+            doc.fontSize(9);
+            doc.text('Date', 40, doc.y);
+            doc.text('Status', 150, doc.y);
+            doc.text('Officer', 250, doc.y);
+            doc.text('Score Rate', 400, doc.y);
+            doc.moveDown(0.5);
+            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+            doc.moveDown(0.5);
+            
+            doc.font('Helvetica').fontSize(8);
+            sanitation.forEach(s => {
+                const dateStr = typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A';
+                const currentY = doc.y;
+                doc.text(dateStr, 40, currentY);
+                doc.text(s.status, 150, currentY);
+                doc.text(s.assignedTo, 250, currentY);
+                doc.text(getSanitationPassRate(s), 400, currentY);
+                doc.moveDown();
+            });
+        }
+
+        if (compliance.length > 0) {
+            doc.moveDown(2);
+            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Water Quality & Station Compliance');
+            doc.moveDown();
+            doc.fontSize(9);
+            doc.text('Report Name', 40, doc.y);
+            doc.text('Period', 300, doc.y);
+            doc.text('Status', 450, doc.y);
+            doc.moveDown(0.5);
+            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+            doc.moveDown(0.5);
+            
+            doc.font('Helvetica').fontSize(8);
+            compliance.forEach(c => {
+                const currentY = doc.y;
+                doc.text(c.name, 40, currentY);
+                const periodStr = c.date ? format((c.date as any).toDate(), 'MMM yyyy') : 'N/A';
+                doc.text(periodStr, 300, currentY);
+                doc.text(c.status, 450, currentY);
+                doc.moveDown();
+            });
+        }
+
+        // 4. Water Delivery History (REFILL LOGS LAST)
         doc.moveDown(2);
         doc.fontSize(12).font('Helvetica-Bold').text('Water Delivery History');
         doc.moveDown();
@@ -207,64 +256,6 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         const vatAmount = totalAmount * (12/112);
         doc.font('Helvetica-Oblique').fontSize(8).fillColor('#666');
         doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 40, doc.y, { align: 'right', width: 510 });
-
-        if (sanitation.length > 0) {
-            doc.addPage();
-            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Office Sanitation Logs');
-            doc.moveDown();
-            doc.fontSize(9);
-            doc.text('Date', 40, doc.y);
-            doc.text('Status', 150, doc.y);
-            doc.text('Officer', 250, doc.y);
-            doc.text('Score Rate', 400, doc.y);
-            doc.moveDown(0.5);
-            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-            doc.moveDown(0.5);
-            
-            doc.font('Helvetica').fontSize(8);
-            sanitation.forEach(s => {
-                const dateStr = typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A';
-                const currentY = doc.y;
-                doc.text(dateStr, 40, currentY);
-                doc.text(s.status, 150, currentY);
-                doc.text(s.assignedTo, 250, currentY);
-                doc.text(getSanitationPassRate(s), 400, currentY);
-                doc.moveDown();
-            });
-        }
-
-        if (compliance.length > 0) {
-            doc.moveDown(2);
-            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Water Quality & Station Compliance');
-            doc.moveDown();
-            doc.fontSize(9);
-            doc.text('Report Name', 40, doc.y);
-            doc.text('Period', 300, doc.y);
-            doc.text('Status', 450, doc.y);
-            doc.moveDown(0.5);
-            doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-            doc.moveDown(0.5);
-            
-            doc.font('Helvetica').fontSize(8);
-            compliance.forEach(c => {
-                const currentY = doc.y;
-                doc.text(c.name, 40, currentY);
-                const periodStr = c.date ? format((c.date as any).toDate(), 'MMM yyyy') : 'N/A';
-                doc.text(periodStr, 300, currentY);
-                doc.text(c.status, 450, currentY);
-                doc.moveDown();
-            });
-        }
-
-        // Professional Standard Footer
-        const pageCount = doc.bufferedPageRange().count;
-        for (let i = 0; i < pageCount; i++) {
-            doc.switchToPage(i);
-            const pageHeightLocal = doc.page.height;
-            doc.setDrawColor(BRAND_PRIMARY).lineWidth(0.5).moveTo(40, pageHeightLocal - 60).lineTo(550, pageHeightLocal - 60).stroke();
-            doc.fontSize(8).fillColor(BRAND_PRIMARY).font('Helvetica-Bold').text('River PH - Automated, Connected, Convenient.', 40, pageHeightLocal - 45, { align: 'center', width: 500 });
-            doc.fillColor('#999').font('Helvetica').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeightLocal - 33, { align: 'center', width: 500 });
-        }
 
         doc.end();
     });
@@ -465,7 +456,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const after = event.data.after.data();
     const userId = event.params.userId;
 
-    if (before.status ===廷 after.status || after.status !== 'Approved') return;
+    if (before.status === after.status || after.status !== 'Approved') return;
 
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
