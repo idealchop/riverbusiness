@@ -74,36 +74,27 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         console.warn("Could not pre-load logo for SOA:", e);
     }
 
-    const drawHeader = () => {
-      // Solid Blue Header Background
-      doc.setFillColor(83, 142, 194);
-      doc.rect(0, 0, pageWidth, 120, 'F');
+    // 1. Header Block (Solid Blue)
+    doc.setFillColor(83, 142, 194);
+    doc.rect(0, 0, pageWidth, 120, 'F');
 
-      if (logoBase64) {
-        try {
-           doc.addImage(logoBase64, 'PNG', margin, 35, 50, 50);
-        } catch (e) {
-          console.error("Could not add logo to PDF:", e);
-        }
-      }
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
-      doc.text('River Philippines', margin + 65, 55);
-
-      doc.setFontSize(14);
-      doc.text('Statement of Account', margin + 65, 78);
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const planText = user.plan ? `Plan: ${user.plan.name}` : 'No Active Plan';
-      doc.text(planText, margin + 65, 95);
-    };
-
-    drawHeader();
+    if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', margin, 35, 50, 50);
+    }
     
-    // Stakeholder Details (Two Columns)
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('River Philippines', margin + 65, 55);
+
+    doc.setFontSize(14);
+    doc.text('Statement of Account', margin + 65, 78);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Plan: ${user.plan?.name || 'N/A'}`, margin + 65, 95);
+
+    // 2. Stakeholder Details (FROM / TO)
     let currentY = 160;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
@@ -112,10 +103,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.text('TO:', pageWidth / 2 + 20, currentY);
 
     doc.setTextColor(0);
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    
-    // FROM Column
     doc.setFont('helvetica', 'bold');
     doc.text('River Tech Inc.', margin, currentY + 15);
     doc.setFont('helvetica', 'normal');
@@ -123,13 +111,13 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.text('Filinvest Axis Tower 1, Alabang', margin, currentY + 39);
     doc.text('customers@riverph.com', margin, currentY + 51);
 
-    // TO Column
     doc.setFont('helvetica', 'bold');
     doc.text(user.businessName || 'N/A', pageWidth / 2 + 20, currentY + 15);
     doc.setFont('helvetica', 'normal');
     doc.text(user.address || 'No address provided', pageWidth / 2 + 20, currentY + 27, { maxWidth: pageWidth / 2 - 60 });
-    doc.text(user.email, pageWidth / 2 + 20, currentY + 51);
+    doc.text(user.email || '', pageWidth / 2 + 20, currentY + 51);
 
+    // 3. Statement Metadata
     currentY += 80;
     doc.setFont('helvetica', 'bold');
     doc.text('STATEMENT DATE:', margin, currentY);
@@ -143,30 +131,25 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     currentY += 40;
 
-    const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
-        let tableFinalY = finalY;
-        if (body.length > 0) {
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(83, 142, 194);
-            doc.text(title, margin, tableFinalY);
-            tableFinalY += 15;
-
-            autoTable(doc, {
-                head: head,
-                body: body,
-                startY: tableFinalY,
-                theme: 'striped',
-                headStyles: { fillColor: [83, 142, 194], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-                bodyStyles: { fontSize: 8, cellPadding: 6 },
-                margin: { left: margin, right: margin },
-            });
-            tableFinalY = (doc as any).lastAutoTable.finalY + 30;
-        }
-        return tableFinalY;
+    const renderTable = (title: string, head: any[], body: any[][], startY: number) => {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(83, 142, 194);
+        doc.text(title, margin, startY);
+        
+        autoTable(doc, {
+            head: head,
+            body: body,
+            startY: startY + 10,
+            theme: 'striped',
+            headStyles: { fillColor: [83, 142, 194], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { fontSize: 8, cellPadding: 6 },
+            margin: { left: margin, right: margin },
+        });
+        return (doc as any).lastAutoTable.finalY + 30;
     };
-    
-    // 1. Financial Summary (Parent Only)
+
+    // 4. Financial Summary (Parent Only)
     if (isParent && transactions) {
         const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
         const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + (t.amountCredits || 0), 0);
@@ -177,125 +160,82 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             ['Total Debits (Branch Consumption)', `P ${totalDebits.toLocaleString(undefined, {minimumFractionDigits: 2})}`],
             ['Final Balance', `P ${finalBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}`]
         ];
-        
         currentY = renderTable('Financial Summary', [['Description', 'Amount']], summaryBody, currentY);
     }
 
-    // 2. Equipment & Services Summary
+    // 5. Equipment Summary
     if (user.customPlanDetails) {
         const eq = user.customPlanDetails;
         const equipmentBody = [];
+        if (eq.gallonQuantity) equipmentBody.push(['5-Gallon Reusable Containers', eq.gallonQuantity, `P ${eq.gallonPrice || 0}`, eq.gallonPaymentType || 'Monthly', `P ${(eq.gallonPrice || 0).toLocaleString()}`]);
+        if (eq.dispenserQuantity) equipmentBody.push(['Premium Hot & Cold Water Dispenser', eq.dispenserQuantity, `P ${eq.dispenserPrice || 0}`, eq.dispenserPaymentType || 'Monthly', `P ${(eq.dispenserPrice || 0).toLocaleString()}`]);
+        if (eq.sanitationPrice) equipmentBody.push(['Professional Monthly Sanitation', '1', `P ${eq.sanitationPrice || 0}`, eq.sanitationPaymentType || 'Monthly', `P ${(eq.sanitationPrice || 0).toLocaleString()}`]);
         
-        if (eq.gallonQuantity) {
-            equipmentBody.push([
-                '5-Gallon Reusable Containers',
-                eq.gallonQuantity,
-                `P ${eq.gallonPrice?.toLocaleString()}`,
-                eq.gallonPaymentType || 'Monthly',
-                `P ${(eq.gallonPrice || 0).toLocaleString()}`
-            ]);
-        }
-        if (eq.dispenserQuantity) {
-            equipmentBody.push([
-                'Premium Hot & Cold Water Dispenser',
-                eq.dispenserQuantity,
-                `P ${eq.dispenserPrice?.toLocaleString()}`,
-                eq.dispenserPaymentType || 'Monthly',
-                `P ${(eq.dispenserPrice || 0).toLocaleString()}`
-            ]);
-        }
-        if (eq.sanitationPrice) {
-            equipmentBody.push([
-                'Professional Monthly Sanitation Service',
-                '1',
-                `P ${eq.sanitationPrice?.toLocaleString()}`,
-                eq.sanitationPaymentType || 'Monthly',
-                `P ${(eq.sanitationPrice || 0).toLocaleString()}`
-            ]);
-        }
-
         if (equipmentBody.length > 0) {
             currentY = renderTable('Equipment & Services Summary', [['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal']], equipmentBody, currentY);
         }
     }
 
-    // 3. Sanitation Logs
+    // 6. Sanitation Logs
     if (sanitationVisits.length > 0) {
-        const sanitationBody = sanitationVisits.map(v => [
-            format(new Date(v.scheduledDate), 'PP'), 
-            v.status, 
-            v.assignedTo,
-            getSanitationPassRate(v)
-        ]);
+        const sanitationBody = sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo, getSanitationPassRate(v)]);
         currentY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, currentY);
     }
 
-    // 4. Compliance Reports
+    // 7. Compliance Reports
     if (complianceReports.length > 0) {
-        const complianceBody = complianceReports.map(r => [
-            r.name,
-            r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A',
-            r.status
-        ]);
+        const complianceBody = complianceReports.map(r => [r.name, r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A', r.status]);
         currentY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, currentY);
     }
 
-    // 5. Water Refill Logs (LAST)
-    let totalQty = 0;
-    let totalLiters = 0;
-    let totalAmount = 0;
-    
-    const branchMap = (branches || []).reduce((map, branch) => {
-        if (branch.id) map[branch.id] = branch.businessName;
-        return map;
-    }, {} as Record<string, string>);
-
-    const deliveryHead = isParent
-        ? [["Ref ID", "Date", "Branch", "Qty", "Price/Unit", "Volume", "Amount"]]
-        : [["Ref ID", "Date", "Qty", "Price/Unit", "Volume", "Amount", "Status"]];
-    
-    const deliveryBody = deliveries.map(d => {
-        const qty = d.volumeContainers || 0;
-        const liters = d.liters ?? containerToLiter(qty);
-        const deliveryAmount = d.amount ?? (liters * pricePerLiter);
-        
-        totalQty += qty;
-        totalLiters += liters;
-        totalAmount += deliveryAmount;
-
-        return [
-            d.id,
-            format(new Date(d.date), 'MMM d, yyyy'),
-            ...(isParent ? [branchMap[d.userId] || d.userId] : []),
-            qty,
-            `P${pricePerContainer.toFixed(2)}`,
-            `${liters.toFixed(1)} L`,
-            `P ${deliveryAmount.toFixed(2)}`,
-            ...(isParent ? [] : [d.status]),
-        ];
-    });
-
+    // 8. Water Refill Logs (LAST)
     if (deliveries.length > 0) {
+        let totalQty = 0;
+        let totalLiters = 0;
+        let totalAmount = 0;
+        const branchMap = (branches || []).reduce((map, b) => ({ ...map, [b.id]: b.businessName }), {} as Record<string, string>);
+
+        const deliveryHead = isParent 
+            ? [["Ref ID", "Date", "Branch", "Qty", "Price/Unit", "Volume", "Amount"]]
+            : [["Ref ID", "Date", "Qty", "Price/Unit", "Volume", "Amount", "Status"]];
+
+        const deliveryBody = deliveries.map(d => {
+            const qty = d.volumeContainers || 0;
+            const liters = d.liters ?? containerToLiter(qty);
+            const deliveryAmount = d.amount ?? (liters * pricePerLiter);
+            totalQty += qty; totalLiters += liters; totalAmount += deliveryAmount;
+
+            return [
+                d.id,
+                format(new Date(d.date), 'MMM d, yyyy'),
+                ...(isParent ? [branchMap[d.userId] || d.userId] : []),
+                qty,
+                `P ${pricePerContainer.toFixed(2)}`,
+                `${liters.toFixed(1)} L`,
+                `P ${deliveryAmount.toFixed(2)}`,
+                ...(isParent ? [] : [d.status]),
+            ];
+        });
+
         const summaryRow = [
-          { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right' } },
-          { content: totalQty.toString(), styles: { fontStyle: 'bold' } },
-          { content: '' },
-          { content: `${totalLiters.toFixed(1)} L`, styles: { fontStyle: 'bold' } },
-          { content: `P ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold' } },
-          ...(isParent ? [] : [{ content: '' }]),
+            { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: totalQty.toString(), styles: { fontStyle: 'bold' } },
+            { content: '' },
+            { content: `${totalLiters.toFixed(1)} L`, styles: { fontStyle: 'bold' } },
+            { content: `P ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold' } },
+            ...(isParent ? [] : [{ content: '' }]),
         ];
         deliveryBody.push(summaryRow as any);
+
+        currentY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, currentY);
+
+        const vatAmount = totalAmount * (12/112);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(150);
+        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 3})}`, pageWidth - margin, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
     }
 
-    renderTable('Water Refill Logs', deliveryHead, deliveryBody, currentY);
-    
-    // VAT transparency
-    const vatAmount = totalAmount * (12/112);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(150);
-    doc.text(`VAT (12% Included)  P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}`, pageWidth - margin, (doc as any).lastAutoTable.finalY + 15, { align: 'right' });
-    
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`);
 };
 
@@ -318,16 +258,11 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
         console.warn("Could not pre-load logo for Invoice:", e);
     }
 
-    // Header Background
     doc.setFillColor(83, 142, 194);
     doc.rect(0, 0, pageWidth, 100, 'F');
 
     if (logoBase64) {
-        try {
-            doc.addImage(logoBase64, 'PNG', margin, 30, 40, 40);
-        } catch (e) {
-            console.error("Could not add logo to PDF:", e);
-        }
+        doc.addImage(logoBase64, 'PNG', margin, 30, 40, 40);
     }
 
     doc.setFontSize(22);
@@ -354,7 +289,6 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     doc.text(format(invoiceDate, 'MMMM d, yyyy'), margin + 80, lastY + 15);
 
     lastY += 50;
-
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(83, 142, 194);
     doc.text('BILL TO:', margin, lastY);
@@ -362,27 +296,22 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     doc.setTextColor(0);
     doc.text(user.businessName || '', margin, lastY + 15);
     doc.text(user.address || '', margin, lastY + 27, { maxWidth: pageWidth / 2 });
-    doc.text(user.email, margin, lastY + 51);
+    doc.text(user.email || '', margin, lastY + 51);
 
     lastY += 80;
     
     autoTable(doc, {
         startY: lastY,
         head: [["Description", "Qty", "Unit price", "Amount"]],
-        body: [[
-            invoice.description,
-            1,
-            `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`,
-            `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`
-        ]],
+        body: [[invoice.description, 1, `P ${invoice.amount.toLocaleString()}`, `P ${invoice.amount.toLocaleString()}`]],
         theme: 'striped',
         headStyles: { fillColor: [83, 142, 194], textColor: 255, fontStyle: 'bold' },
         margin: { left: margin, right: margin },
     });
-    lastY = (doc as any).lastAutoTable.finalY + 30;
 
     const summaryX = pageWidth - margin - 200;
     const vatIncluded = invoice.amount * (12/112);
+    lastY = (doc as any).lastAutoTable.finalY + 30;
 
     const totals = [
         ['Subtotal (VAT Included)', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`],
