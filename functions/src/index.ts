@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -67,7 +68,7 @@ const getSanitationPassRate = (v: SanitationVisit) => {
 /**
  * Generates a password-protected PDF Statement of Account.
  */
-async function generatePasswordProtectedSOA(user: any, period: string, deliveries: Delivery[], sanitation: SanitationVisit[], compliance: ComplianceReport[]): Promise<Buffer> {
+export async function generatePasswordProtectedSOA(user: any, period: string, deliveries: Delivery[], sanitation: SanitationVisit[], compliance: ComplianceReport[]): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
         const doc = new PDFDocument({
             userPassword: user.clientId || 'password',
@@ -324,6 +325,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     try {
         await sendEmail({
             to: user.email,
+            cc: 'support@riverph.com',
             subject: template.subject,
             text: `Reminder: Your statement for ${period} is ₱${amount}.`,
             html: template.html,

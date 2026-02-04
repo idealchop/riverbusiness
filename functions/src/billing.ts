@@ -4,7 +4,8 @@ import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
-import type { ManualCharge } from './types'; 
+import type { ManualCharge, Delivery, SanitationVisit, ComplianceReport } from './types'; 
+import { generatePasswordProtectedSOA } from './index';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -108,8 +109,9 @@ async function generateInvoiceForUser(
         .where('date', '>=', billingCycleStart.toISOString())
         .where('date', '<=', billingCycleEnd.toISOString())
         .get();
+    const deliveries = deliveriesSnapshot.docs.map(d => d.data() as Delivery);
 
-    const consumedLiters = deliveriesSnapshot.docs.reduce((sum, doc) => sum + containerToLiter(doc.data().volumeContainers), 0);
+    const consumedLiters = deliveries.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
     
     let monthlyEquipmentCost = 0;
     if (user.customPlanDetails?.gallonPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
@@ -163,13 +165,32 @@ async function generateInvoiceForUser(
         };
 
         if (user.accountType !== 'Branch' && user.email) {
+            // Fetch additional data for SOA
+            const sanitationSnap = await userRef.collection('sanitationVisits')
+                .where('scheduledDate', '>=', billingCycleStart.toISOString())
+                .where('scheduledDate', '<=', billingCycleEnd.toISOString())
+                .get();
+            const sanitation = sanitationSnap.docs.map(d => d.data() as SanitationVisit);
+
+            let compliance: ComplianceReport[] = [];
+            if (user.assignedWaterStationId) {
+                const compSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').limit(5).get();
+                compliance = compSnap.docs.map(d => d.data() as ComplianceReport);
+            }
+
+            const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
+            
             sendEmail({
                 to: user.email,
                 cc: 'support@riverph.com',
                 subject: template.subject,
                 text: `Invoice for ${billingPeriod} is available for ₱${amount.toFixed(2)}.`,
-                html: template.html
+                html: template.html,
+                attachments: [{
+                    filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`,
+                    content: pdfBuffer
+                }]
             }).catch(e => logger.error("Email failed", e));
         }
 
