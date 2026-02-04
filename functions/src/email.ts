@@ -1,3 +1,4 @@
+
 import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
 import { format } from 'date-fns';
@@ -88,11 +89,10 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         .next-step { padding-top: 16px; border-top: 1px dashed #cbd5e1; margin: 0; font-size: 14px; color: #475569; line-height: 1.5; }
         .btn-container { text-align: center; margin-top: 30px; }
         .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
-        .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
-        .footer-company { font-size: 16px; font-weight: 700; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
-        .footer-sub { font-size: 14px; color: #94a3b8; margin: 0; line-height: 1.6; }
+        .footer { text-align: center; margin-top: 40px; padding-top: 40px; }
+        .footer-brand { font-size: 16px; font-weight: 800; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
+        .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
         .footer-sub a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700; }
-        .automated-note { font-size: 11px; color: #cbd5e1; margin-top: 24px; font-style: italic; }
         .legal-disclaimer { max-width: 600px; margin: 24px auto; padding: 0 24px; color: #94a3b8; font-size: 10px; line-height: 1.5; text-align: justify; }
       </style>
     </head>
@@ -107,16 +107,12 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
           <h2 class="main-title">${headerTitle}</h2>
           ${subheader}
           ${content}
-          <div class="btn-container">
-            <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
-          </div>
           <div class="footer">
-            <p class="footer-company">River PH - Automated, Connected, Convenient.</p>
+            <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
             <p class="footer-sub">
               See how we’re shaping the future of the Philippines<br>
               <a href="https://riverph.com">riverph.com</a>
             </p>
-            <p class="automated-note">This is an automated notification from your River Business account. For security, please do not reply to this email.</p>
           </div>
         </div>
       </div>
@@ -162,9 +158,9 @@ export function getWelcomeUnclaimedTemplate(
               .button-container { text-align: center; margin: 30px 0; }
               .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
               .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
-              .footer { background-color: #f1f1f1; padding: 30px; font-size: 11px; color: #777; line-height: 1.4; text-align: center; }
-              .footer-brand { font-size: 16px; font-weight: 700; color: ${brandColor}; margin-bottom: 4px; }
-              .footer-sub { font-size: 14px; color: #94a3b8; margin: 0; line-height: 1.6; }
+              .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
+              .footer-brand { font-size: 16px; font-weight: 800; color: ${brandColor}; margin-bottom: 4px; }
+              .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
               .footer-sub a { color: ${brandColor}; text-decoration: none; font-weight: 700; }
           </style>
       </head>
@@ -198,19 +194,14 @@ export function getWelcomeUnclaimedTemplate(
                       <p><strong>The River Philippines Quality Commitment:</strong> We guarantee premium hydration through DOH-certified water, automated <strong>Smart Refills</strong> that ensure you never run dry, and <strong>Monthly Professional Sanitation</strong> of your equipment. Manage everything effortlessly with real-time tracking and automated <strong>Digital Records (SOA/Invoices)</strong> for seamless liquidation.</p>
                       <p>Welcome to the future of clean, automated hydration!</p>
                   </div>
-              </div>
-
-              <div class="footer">
-                  <div class="footer-brand">River PH - Automated, Connected, Convenient.</div>
-                  <div class="footer-sub">
-                    See how we’re shaping the future of the Philippines<br>
-                    <a href="https://riverph.com">riverph.com</a>
+                  
+                  <div class="footer">
+                    <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
+                    <p class="footer-sub">
+                      See how we’re shaping the future of the Philippines<br>
+                      <a href="https://riverph.com">riverph.com</a>
+                    </p>
                   </div>
-
-                  <div style="margin: 15px 0; border-top: 1px solid #ddd; padding-top: 10px; text-align: justify; font-size: 10px;">
-                      <strong>DISCLAIMER:</strong> This communication and any attachments are intended to be confidential, protected under the Bank Secrecy, Data Privacy (RA 10173), or Intellectual Property laws, and for the exclusive use of the addressee. If you are not the intended recipient, you are notified that disclosure, retention, dissemination, copying, alteration or distribution of this communication and/or any attachment, or any part thereof or information therein, is strictly prohibited. If you receive this communication in error, kindly notify the sender by e-mail, and delete this communication and all attachments immediately.
-                  </div>
-                  <p style="text-align: center;">© 2026 River Business. All rights reserved.</p>
               </div>
           </div>
           <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Welcome ID: ${timestamp} - </div>
@@ -389,39 +380,42 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
   };
 }
 
-export function getInternalRefillAlertTemplate(adminName: string, businessName: string, requestId: string, date?: string) {
-  const subheader = `<p class="tracking-id">Alert for Request ID: <span>${requestId}</span></p>`;
-  
+export function getSanitationScheduledTemplate(businessName: string, officerName: string, date: string) {
   const content = `
-    <p class="greeting">Hey ${adminName}, 🌊</p>
+    <p class="greeting">Scheduled: Your Office Sanitation Visit 🗓️</p>
     <p class="body-text">
-      Our operating system has just flagged a new priority request. <strong>${businessName}</strong> has requested an extra refill through their customer portal.
+      Hi ${businessName}, we've scheduled a professional sanitation visit for your office water equipment. Keeping your dispensers clean is a core part of our quality guarantee.
     </p>
+    <div class="status-badge">
+      <span class="badge" style="background-color: ${BRAND_PRIMARY}15; color: ${BRAND_PRIMARY}; border: 1.5px solid ${BRAND_PRIMARY};">
+        Visit Scheduled
+      </span>
+    </div>
     <div class="details-box">
-      <h3 class="details-title">Request Context</h3>
-      <div class="detail-item">
-        <div class="detail-icon">🏢</div>
-        <div>
-          <p class="detail-label">Customer Profile</p>
-          <p class="detail-value">${businessName}</p>
-        </div>
-      </div>
+      <h3 class="details-title">Appointment Details</h3>
       <div class="detail-item">
         <div class="detail-icon">📅</div>
         <div>
-          <p class="detail-label">Fulfillment Date</p>
-          <p class="detail-value">${date ? format(new Date(date), 'PP') : 'ASAP Priority'}</p>
+          <p class="detail-label">Scheduled Date</p>
+          <p class="detail-value">${date}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-icon">🧑‍🔧</div>
+        <div>
+          <p class="detail-label">Assigned Officer</p>
+          <p class="detail-value">${officerName || 'TBD'}</p>
         </div>
       </div>
       <p class="next-step">
-        Please log in to the <strong>Admin Panel</strong> immediately to coordinate this dispatch. Keeping our clients restocked is key to our automated mission.
+        Our officer will perform a comprehensive cleaning and safety check. You don't need to do anything—just keep the area accessible.
       </p>
     </div>
   `;
 
   return {
-    subject: `🚨 Priority: New Refill Request from ${businessName}`,
-    html: getEmailWrapper(content, 'Internal Dispatch Alert', subheader)
+    subject: `Confirmed: Sanitation Visit Scheduled for ${date} 🗓️`,
+    html: getEmailWrapper(content, 'Sanitation Visit Scheduled')
   };
 }
 
@@ -464,68 +458,29 @@ export function getSanitationReportTemplate(businessName: string, officerName: s
   };
 }
 
-export function getSanitationScheduledTemplate(businessName: string, officerName: string, date: string) {
+export function getPaymentReminderTemplate(businessName: string, amount: string, period: string) {
   const content = `
-    <p class="greeting">Scheduled: Your Office Sanitation Visit 🗓️</p>
+    <p class="greeting">Hi ${businessName}, 📄</p>
     <p class="body-text">
-      Hi ${businessName}, we've scheduled a professional sanitation visit for your office water equipment. Keeping your dispensers clean is a core part of our quality guarantee.
+      This is a friendly reminder from our operating system regarding your account statement for <strong>${period}</strong>. To ensure your automated hydration service continues without delay, please settle your outstanding balance.
     </p>
-    <div class="status-badge">
-      <span class="badge" style="background-color: ${BRAND_PRIMARY}15; color: ${BRAND_PRIMARY}; border: 1.5px solid ${BRAND_PRIMARY};">
-        Visit Scheduled
-      </span>
-    </div>
     <div class="details-box">
-      <h3 class="details-title">Appointment Details</h3>
+      <h3 class="details-title">Statement Overview</h3>
       <div class="detail-item">
-        <div class="detail-icon">📅</div>
+        <div class="detail-icon">💰</div>
         <div>
-          <p class="detail-label">Scheduled Date</p>
-          <p class="detail-value">${date}</p>
-        </div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-icon">🧑‍🔧</div>
-        <div>
-          <p class="detail-label">Assigned Officer</p>
-          <p class="detail-value">${officerName || 'TBD'}</p>
+          <p class="detail-label">Balance Due</p>
+          <p class="detail-value">₱${amount}</p>
         </div>
       </div>
       <p class="next-step">
-        Our officer will perform a comprehensive cleaning and safety check. You don't need to do anything—just keep the area accessible.
+        Settling your bill is easy—just scan the QR code in your portal or use the secure payment link provided in your dashboard.
       </p>
     </div>
   `;
 
   return {
-    subject: `Confirmed: Sanitation Visit Scheduled for ${date} 🗓️`,
-    html: getEmailWrapper(content, 'Sanitation Visit Scheduled')
-  };
-}
-
-export function getComplianceAlertTemplate(businessName: string, stationName: string, reportName: string) {
-  const content = `
-    <p class="greeting">Transparency First, ${businessName} 🛡️</p>
-    <p class="body-text">
-      We've just updated the quality compliance documents for your assigned station, <strong>${stationName}</strong>. Ensuring you have visibility into the safety of your water is core to our Operating System.
-    </p>
-    <div class="details-box">
-      <h3 class="details-title">Newly Uploaded Report</h3>
-      <div class="detail-item">
-        <div class="detail-icon">📑</div>
-        <div>
-          <p class="detail-label">Report Type</p>
-          <p class="detail-value">${reportName}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        You can now view and download the official testing results and safety permits directly from the <strong>Compliance</strong> section of your dashboard.
-      </p>
-    </div>
-  `;
-
-  return {
-    subject: `Safety Update: New Quality Report for ${stationName} 🛡️`,
-    html: getEmailWrapper(content, 'Quality Compliance Updated')
+    subject: `Friendly Follow-up: Statement for ${period} 📑`,
+    html: getEmailWrapper(content, 'Account Statement Reminder')
   };
 }

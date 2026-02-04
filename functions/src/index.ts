@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -8,21 +9,20 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport } from './types';
+import type { Delivery, RefillRequest, SanitationVisit } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
     getPaymentStatusTemplate, 
     getTopUpConfirmationTemplate,
     getRefillRequestTemplate,
-    getInternalRefillAlertTemplate,
-    getSanitationReportTemplate,
+    getWelcomeUnclaimedTemplate,
     getSanitationScheduledTemplate,
-    getComplianceAlertTemplate,
-    getWelcomeUnclaimedTemplate
+    getSanitationReportTemplate,
+    getPaymentReminderTemplate
 } from './email';
 
-// Export all billing functions (this includes generateMonthlyInvoices)
+// Export all billing functions
 export * from './billing';
 
 /**
@@ -48,8 +48,49 @@ async function createNotification(userId: string, notificationData: any) {
 // --- TRIGGERS ---
 
 /**
+ * Triggered when an admin clicks the "Send Reminder" button.
+ */
+export const onpaymentremindercreate = onDocumentCreated({
+    document: "users/{userId}/reminders/{reminderId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const db = getFirestore();
+    
+    const userDoc = await db.collection('users').doc(userId).get();
+    const user = userDoc.data();
+    
+    if (!user || !user.email) return;
+
+    // Find the latest unpaid payment or use estimated info
+    const paymentsSnap = await db.collection('users').doc(userId).collection('payments').orderBy('date', 'desc').limit(1).get();
+    let amount = "0.00";
+    let period = "Current Period";
+
+    if (!paymentsSnap.empty) {
+        const p = paymentsSnap.docs[0].data();
+        amount = p.amount.toFixed(2);
+        period = p.description.replace('Bill for ', '').replace('Monthly Subscription for ', '');
+    }
+
+    const template = getPaymentReminderTemplate(user.businessName, amount, period);
+    
+    try {
+        await sendEmail({
+            to: user.email,
+            subject: template.subject,
+            text: `Reminder: Your statement for ${period} is ₱${amount}.`,
+            html: template.html
+        });
+        logger.info(`Follow-up email sent to ${user.email}`);
+    } catch (error) {
+        logger.error(`Failed to send follow-up to ${user.email}`, error);
+    }
+});
+
+/**
  * Triggered when a new unclaimed profile is created by an admin.
- * Sends a welcome invitation email to the business contact.
  */
 export const onunclaimedprofilecreate = onDocumentCreated({
     document: "unclaimedProfiles/{clientId}",
@@ -58,11 +99,7 @@ export const onunclaimedprofilecreate = onDocumentCreated({
     if (!event.data) return;
     const profile = event.data.data();
     
-    // Check if we have an email to send to
-    if (!profile.businessEmail) {
-        logger.warn(`No businessEmail found for unclaimed profile: ${event.params.clientId}`);
-        return;
-    }
+    if (!profile.businessEmail) return;
 
     const planName = `${profile.clientType || ''} - ${profile.plan?.name || ''}`;
     const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
@@ -79,12 +116,11 @@ export const onunclaimedprofilecreate = onDocumentCreated({
         await sendEmail({
             to: profile.businessEmail,
             subject: template.subject,
-            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}. Link it at app.riverph.com to activate your dashboard.`,
+            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`,
             html: template.html
         });
-        logger.info(`Welcome email sent to ${profile.businessEmail} for client ${profile.clientId}`);
     } catch (error) {
-        logger.error(`Failed to send welcome email to ${profile.businessEmail}`, error);
+        logger.error(`Failed welcome email`, error);
     }
 });
 
@@ -97,13 +133,10 @@ export const ondeliverycreate = onDocumentCreated({
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
     
-    logger.info(`Triggered ondeliverycreate for user: ${userId}, delivery: ${deliveryId}`);
-
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
-    // Always create in-app notification
     await createNotification(userId, { 
         type: 'delivery', 
         title: 'Delivery Scheduled', 
@@ -111,15 +144,9 @@ export const ondeliverycreate = onDocumentCreated({
         data: { deliveryId } 
     });
 
-    // ONLY send email if status is 'Delivered' (Completed)
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        await sendEmail({ 
-            to: userData.email, 
-            subject: template.subject, 
-            text: `Delivery ${deliveryId} is complete.`, 
-            html: template.html 
-        });
+        await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 
@@ -135,29 +162,15 @@ export const ondeliveryupdate = onDocumentUpdated({
 
     if (before.status === after.status) return;
 
-    logger.info(`Triggered ondeliveryupdate for user: ${userId}, delivery: ${deliveryId}. Status: ${before.status} -> ${after.status}`);
-
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
 
-    // Always create in-app notification
-    await createNotification(userId, { 
-        type: 'delivery', 
-        title: `Delivery ${after.status}`, 
-        description: `Your delivery is now ${after.status}.`, 
-        data: { deliveryId } 
-    });
+    await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
 
-    // ONLY send email if status is now 'Delivered' (Completed)
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        await sendEmail({ 
-            to: userData.email, 
-            subject: template.subject, 
-            text: `Delivery ${deliveryId} is complete.`, 
-            html: template.html 
-        });
+        await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 
@@ -169,38 +182,22 @@ export const onpaymentupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    const paymentId = event.params.paymentId;
 
     if (before.status === after.status) return;
-
-    logger.info(`Triggered onpaymentupdate for user: ${userId}, payment: ${paymentId}. Status: ${before.status} -> ${after.status}`);
 
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
     if (before.status === 'Pending Review' && after.status === 'Paid') {
-        await createNotification(userId, { 
-            type: 'payment', 
-            title: 'Payment Confirmed', 
-            description: `Payment for invoice ${after.id} confirmed.`, 
-            data: { paymentId: after.id }
-        });
+        await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData?.email) {
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
-            await sendEmail({ 
-                to: userData.email, 
-                subject: template.subject, 
-                text: `Payment confirmed.`, 
-                html: template.html 
-            });
+            await sendEmail({ to: userData.email, subject: template.subject, text: `Payment confirmed`, html: template.html });
         }
     }
 });
 
-/**
- * Triggered when a top-up request status is updated (e.g., Approved).
- */
 export const ontopuprequestupdate = onDocumentUpdated({
     document: "users/{userId}/topUpRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
@@ -212,26 +209,16 @@ export const ontopuprequestupdate = onDocumentUpdated({
 
     if (before.status === after.status || after.status !== 'Approved') return;
 
-    logger.info(`Triggered ontopuprequestupdate for user: ${userId}. Status: Approved`);
-
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        await sendEmail({ 
-            to: userData.email, 
-            subject: template.subject, 
-            text: `Your top-up of ₱${after.amount} has been approved.`, 
-            html: template.html 
-        });
+        await sendEmail({ to: userData.email, subject: template.subject, text: `Top-up approved`, html: template.html });
     }
 });
 
-/**
- * Triggered when a client creates a new one-time refill request.
- */
 export const onrefillrequestcreate = onDocumentCreated({
     document: "users/{userId}/refillRequests/{requestId}",
     secrets: ["BREVO_API_KEY"]
@@ -241,45 +228,16 @@ export const onrefillrequestcreate = onDocumentCreated({
     const requestId = event.params.requestId;
     const request = event.data.data() as RefillRequest;
 
-    logger.info(`Triggered onrefillrequestcreate for user: ${userId}, request: ${requestId}`);
-
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
-    // 1. Notify the Client
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
-        await sendEmail({ 
-            to: userData.email, 
-            subject: template.subject, 
-            text: `Refill request ${requestId} received.`, 
-            html: template.html 
-        }).catch(e => logger.error("Client refill email failed", e));
-    }
-
-    // 2. Notify the Internal Team (Jimbs and Jayvee)
-    if (userData?.businessName) {
-        const admins = [
-            { name: 'Jimbs', email: 'jimbs.work@gmail.com' },
-            { name: 'Jayvee', email: 'jayvee@riverph.com' }
-        ];
-
-        for (const admin of admins) {
-            const adminTemplate = getInternalRefillAlertTemplate(admin.name, userData.businessName, requestId, request.requestedDate);
-            await sendEmail({
-                to: admin.email,
-                subject: adminTemplate.subject,
-                text: `${userData.businessName} requested a refill.`,
-                html: adminTemplate.html
-            }).catch(e => logger.error(`Internal admin alert failed for ${admin.name}`, e));
-        }
+        await sendEmail({ to: userData.email, subject: template.subject, text: `Refill request received`, html: template.html });
     }
 });
 
-/**
- * Triggered when a new sanitation visit is created (Scheduled).
- */
 export const onsanitationcreate = onDocumentCreated({
     document: "users/{userId}/sanitationVisits/{visitId}",
     secrets: ["BREVO_API_KEY"]
@@ -287,9 +245,6 @@ export const onsanitationcreate = onDocumentCreated({
     if (!event.data) return;
     const userId = event.params.userId;
     const visit = event.data.data() as SanitationVisit;
-
-    logger.info(`Triggered onsanitationcreate for user: ${userId}. Status: Scheduled`);
-    
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
@@ -297,18 +252,10 @@ export const onsanitationcreate = onDocumentCreated({
     if (userData?.email && visit.status === 'Scheduled') {
         const dateStr = new Date(visit.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
-        await sendEmail({
-            to: userData.email,
-            subject: template.subject,
-            text: `Your office sanitation visit has been scheduled for ${dateStr}.`,
-            html: template.html
-        });
+        await sendEmail({ to: userData.email, subject: template.subject, text: `Visit scheduled`, html: template.html });
     }
 });
 
-/**
- * Triggered when a sanitation visit is marked as Completed.
- */
 export const onsanitationupdate = onDocumentUpdated({
     document: "users/{userId}/sanitationVisits/{visitId}",
     secrets: ["BREVO_API_KEY"]
@@ -319,8 +266,6 @@ export const onsanitationupdate = onDocumentUpdated({
     const userId = event.params.userId;
 
     if (before.status !== 'Completed' && after.status === 'Completed') {
-        logger.info(`Triggered onsanitationupdate for user: ${userId}. Status: Completed`);
-        
         const db = getFirestore();
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
@@ -328,68 +273,20 @@ export const onsanitationupdate = onDocumentUpdated({
         if (userData?.email) {
             const dateStr = new Date(after.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
-            await sendEmail({
-                to: userData.email,
-                subject: template.subject,
-                text: `Your sanitation report for ${dateStr} is ready.`,
-                html: template.html
-            });
+            await sendEmail({ to: userData.email, subject: template.subject, text: `Report ready`, html: template.html });
         }
     }
-});
-
-/**
- * Triggered when a new compliance report is added to a station.
- * Notifies all users assigned to that station.
- */
-export const oncompliancecreate = onDocumentCreated({
-    document: "waterStations/{stationId}/complianceReports/{reportId}",
-    secrets: ["BREVO_API_KEY"]
-}, async (event) => {
-    if (!event.data) return;
-    const stationId = event.params.stationId;
-    const report = event.data.data() as ComplianceReport;
-
-    logger.info(`Triggered oncompliancecreate for station: ${stationId}`);
-
-    const db = getFirestore();
-    const stationDoc = await db.collection("waterStations").doc(stationId).get();
-    const stationData = stationDoc.data();
-
-    // Find all users assigned to this station
-    const usersSnapshot = await db.collection("users").where("assignedWaterStationId", "==", stationId).get();
-    
-    if (usersSnapshot.empty || !stationData) return;
-
-    const emailPromises = usersSnapshot.docs.map(async (doc) => {
-        const userData = doc.data();
-        if (userData.email) {
-            const template = getComplianceAlertTemplate(userData.businessName, stationData.name, report.name);
-            return sendEmail({
-                to: userData.email,
-                subject: template.subject,
-                text: `New safety report available for ${stationData.name}.`,
-                html: template.html
-            }).catch(e => logger.error(`Compliance email failed for ${userData.businessName}`, e));
-        }
-        return null;
-    });
-
-    await Promise.all(emailPromises);
 });
 
 export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
 
-  logger.info(`File uploaded: ${filePath}`);
-
   const storage = getStorage();
   const db = getFirestore();
   const bucket = storage.bucket(event.data.bucket);
   const file = bucket.file(filePath);
   
-  // Create a long-lived signed URL
   const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
 
   if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
@@ -398,10 +295,7 @@ export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event
   } else if (filePath.startsWith("users/") && filePath.includes("/payments/")) {
       const customMetadata = event.data.metadata;
       if (customMetadata?.paymentId && customMetadata?.userId) {
-          await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ 
-              proofOfPaymentUrl: url, 
-              status: "Pending Review" 
-          });
+          await db.collection("users").doc(customMetadata.userId).collection("payments").doc(customMetadata.paymentId).update({ proofOfPaymentUrl: url, status: "Pending Review" });
       }
   }
 });

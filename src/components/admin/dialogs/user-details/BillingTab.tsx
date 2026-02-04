@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,10 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AppUser, Payment } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
-import { PlusCircle, Copy } from 'lucide-react';
+import { Timestamp, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { PlusCircle, Copy, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useFirestore } from '@/firebase';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -41,7 +43,9 @@ export function BillingTab({
     onSetIsPaymentReviewOpen,
 }: BillingTabProps) {
     const { toast } = useToast();
+    const firestore = useFirestore();
     const [paymentsCurrentPage, setPaymentsCurrentPage] = useState(1);
+    const [isSendingReminder, setIsSendingReminder] = useState(false);
     const PAYMENTS_PER_PAGE = 5;
 
     const showCurrentMonthInvoice = useMemo(() => {
@@ -79,18 +83,43 @@ export function BillingTab({
         onSetIsPaymentReviewOpen(true);
     };
 
+    const handleSendReminder = async () => {
+        if (!firestore || !user) return;
+        setIsSendingReminder(true);
+        try {
+            const remindersCol = collection(firestore, 'users', user.id, 'reminders');
+            await addDoc(remindersCol, {
+                type: 'payment_follow_up',
+                triggeredAt: serverTimestamp(),
+                status: 'pending'
+            });
+            toast({ title: 'Reminder Sent!', description: `A statement reminder has been dispatched to ${user.businessName}.` });
+        } catch (error) {
+            console.error("Error triggering reminder:", error);
+            toast({ variant: 'destructive', title: 'Action Failed' });
+        } finally {
+            setIsSendingReminder(false);
+        }
+    };
+
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <CardTitle>Billing & Invoices</CardTitle>
                     <CardDescription>Manage invoices and charges.</CardDescription>
                 </div>
-                {user.accountType === 'Parent' ? (
-                    <Button onClick={() => onSetIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Top-up Credits</Button>
-                ) : (
-                    <Button onClick={() => onSetIsManualChargeOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add Manual Charge</Button>
-                )}
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleSendReminder} disabled={isSendingReminder}>
+                        <Send className="mr-2 h-4 w-4" />
+                        {isSendingReminder ? 'Sending...' : 'Send Statement Reminder'}
+                    </Button>
+                    {user.accountType === 'Parent' ? (
+                        <Button onClick={() => onSetIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Top-up Credits</Button>
+                    ) : (
+                        <Button onClick={() => onSetIsManualChargeOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add Adjustment</Button>
+                    )}
+                </div>
             </CardHeader>
             <CardContent>
                 {user.accountType === 'Parent' && (
