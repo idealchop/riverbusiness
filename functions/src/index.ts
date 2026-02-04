@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -83,7 +82,7 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
 
         try {
             const response = await axios.get(LOGO_URL, { responseType: 'arraybuffer' });
-            doc.image(Buffer.from(response.data), 40, 40, { width: 55 });
+            doc.image(Buffer.from(response.data), 40, 40, { width: 50 });
         } catch (e) {
             logger.warn("PDF Logo fetch failed, skipping image.");
         }
@@ -92,9 +91,9 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
         // Structured Header (Left Aligned)
-        doc.fillColor(BRAND_PRIMARY).fontSize(20).font('Helvetica-Bold').text('River Philippines', 110, 45);
-        doc.fontSize(14).text('Statement of Account', 110, 68);
-        doc.fillColor('#666').fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, 110, 85);
+        doc.fillColor(BRAND_PRIMARY).fontSize(20).font('Helvetica-Bold').text('River Philippines', 105, 45);
+        doc.fontSize(14).text('Statement of Account', 105, 68);
+        doc.fillColor('#666').fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, 105, 85);
         
         doc.moveDown(3.5);
         doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Client Details');
@@ -256,7 +255,7 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
         doc.moveDown(1.5);
         const vatAmount = totalAmount * (12/112);
         doc.font('Helvetica-Oblique').fontSize(8).fillColor('#666');
-        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 40, doc.y, { align: 'right', width: 510 });
+        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}`, 40, doc.y, { align: 'right', width: 510 });
 
         doc.end();
     });

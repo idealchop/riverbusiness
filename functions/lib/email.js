@@ -112,7 +112,7 @@ async function sendEmail({ to, cc, subject, text, html, attachments }) {
             html,
             attachments,
         });
-        logger.info(`Email sent successfully. MessageID: ${info.id || info.messageId}`);
+        logger.info(`Email sent successfully. MessageID: ${info.messageId}`);
         return info;
     }
     catch (error) {

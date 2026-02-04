@@ -69,7 +69,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     const pricePerLiter = user.plan?.price || 0;
     const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
+    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
     let logoBase64 = '';
     try {
         logoBase64 = await getBase64ImageFromURL(logoUrl);
@@ -78,68 +78,47 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     }
 
     const drawHeader = () => {
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, pageWidth, 95, 'F');
-      
       if (logoBase64) {
         try {
-           doc.addImage(logoBase64, 'PNG', margin, 22, 50, 50);
+           doc.addImage(logoBase64, 'PNG', margin, 40, 50, 50);
         } catch (e) {
           console.error("Could not add logo to PDF:", e);
         }
       }
       
-      doc.setTextColor(255, 255, 255);
-      
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('River Philippines', margin + 65, 38);
+      doc.text('River Philippines', margin + 65, 55);
 
+      doc.setTextColor(83, 142, 194);
       doc.setFontSize(14);
-      doc.text('Statement of Account', margin + 65, 58);
+      doc.text('Statement of Account', margin + 65, 75);
 
+      doc.setTextColor(100, 100, 100);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const planText = user.plan ? `Plan: ${user.plan.name}` : 'No Active Plan';
-      doc.text(planText, margin + 65, 75);
+      doc.text(planText, margin + 65, 92);
     };
 
     drawHeader();
     
-    lastY = 130;
-    doc.setFontSize(9);
+    lastY = 150;
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('FROM:', margin, lastY);
-    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text('River Tech Inc.', margin, lastY + 12);
-    doc.text('Filinvest Axis Tower 1, Alabang', margin, lastY + 22);
-    doc.text('customers@riverph.com', margin, lastY + 32);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('TO:', pageWidth / 2, lastY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0);
-    doc.text(user.businessName || 'N/A', pageWidth / 2, lastY + 12);
-    doc.text(user.address || 'No address provided', pageWidth / 2, lastY + 22);
-    doc.text(user.email || '', pageWidth / 2, lastY + 32);
-
-    lastY += 55;
+    doc.text('Client Details', margin, lastY);
     
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('STATEMENT DATE:', margin, lastY);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(format(new Date(), 'PP'), margin + 110, lastY);
+    doc.setTextColor(0);
+    doc.text(`Business Name: ${user.businessName || 'N/A'}`, margin, lastY + 15);
+    doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin, lastY + 27);
+    doc.text(`Address: ${user.address || 'No address provided'}`, margin, lastY + 39);
+    doc.text(`Period: ${billingPeriod}`, margin, lastY + 51);
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('BILLING PERIOD:', margin, lastY + 15);
-    doc.setFont('helvetica', 'normal');
-    doc.text(billingPeriod, margin + 110, lastY + 15);
-
-    lastY += 40;
+    lastY += 85;
 
     const renderTable = (title: string, head: any[], body: any[][], finalY: number) => {
         let tableFinalY = finalY;
@@ -147,22 +126,29 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             if (tableFinalY > pageHeight - 150) { 
                 doc.addPage();
                 drawHeader();
-                tableFinalY = 120;
+                tableFinalY = 150;
             }
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setTextColor(0);
             doc.text(title, margin, tableFinalY);
-            tableFinalY += 20;
+            tableFinalY += 15;
 
             autoTable(doc, {
                 head: head,
                 body: body,
                 startY: tableFinalY,
-                theme: 'striped',
-                headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
-                bodyStyles: { fontSize: 8, cellPadding: 4 },
-                margin: { left: margin, right: margin }
+                theme: 'plain',
+                headStyles: { fontStyle: 'bold', textColor: 0, fontSize: 9, cellPadding: { bottom: 8 } },
+                bodyStyles: { fontSize: 8, cellPadding: 6 },
+                margin: { left: margin, right: margin },
+                didDrawPage: (data) => {
+                    // Optional: add a line under headers
+                    const ctx = doc.getContext('2d');
+                    doc.setDrawColor(200);
+                    doc.setLineWidth(0.5);
+                    doc.line(margin, data.settings.startY + 10, pageWidth - margin, data.settings.startY + 10);
+                }
             });
             tableFinalY = (doc as any).lastAutoTable.finalY;
         }
@@ -182,7 +168,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         ];
         
         lastY = renderTable('Financial Summary', [['Description', 'Amount']], summaryBody, lastY);
-        lastY += 30;
+        lastY += 40;
     }
 
     // 2. Equipment & Services Summary
@@ -220,7 +206,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
         if (equipmentBody.length > 0) {
             lastY = renderTable('Equipment & Services Summary', [['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal']], equipmentBody, lastY);
-            lastY += 30;
+            lastY += 40;
         }
     }
 
@@ -233,7 +219,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             getSanitationPassRate(v)
         ]);
         lastY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, lastY);
-        lastY += 30;
+        lastY += 40;
     }
 
     // 4. Compliance Reports
@@ -244,7 +230,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             r.status
         ]);
         lastY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, lastY);
-        lastY += 30;
+        lastY += 40;
     }
 
     // 5. Water Refill Logs (MOVED TO LAST)
@@ -258,8 +244,8 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     }, {} as Record<string, string>);
 
     const deliveryHead = isParent
-        ? [["Ref ID", "Branch", "Date", "Qty", "Price/Unit", "Volume", "Amount"]]
-        : [["Ref ID", "Date", "Qty", "Price/Unit", "Volume", "Amount", "Status"]];
+        ? [["Date", "Tracking #", "Branch", "Qty", "Price/Unit", "Vol (L)", "Amount"]]
+        : [["Date", "Tracking #", "Qty", "Price/Unit", "Vol (L)", "Amount", "Status"]];
     
     const deliveryBody = deliveries.map(d => {
         const containers = d.volumeContainers || 0;
@@ -271,12 +257,12 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         totalRefillAmount += deliveryAmount;
 
         const row: (string | number)[] = [
+            format(new Date(d.date), 'yyyy-MM-dd'),
             d.id,
             ...(isParent ? [branchMap[d.userId] || d.userId] : []),
-            format(new Date(d.date), 'PP'),
             containers,
             `P${pricePerContainer.toFixed(2)}`,
-            `${liters.toFixed(1)} L`,
+            `${liters.toFixed(1)}L`,
             `P${deliveryAmount.toFixed(2)}`,
             ...(isParent ? [] : [d.status]),
         ];
@@ -285,25 +271,24 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 
     if (deliveries.length > 0) {
         const summaryRow = [
-          { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
-          { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
-          { content: '', styles: { fillColor: [230, 242, 255] } },
-          { content: `${totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1})} L`, styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
-          { content: `P ${totalRefillAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
-          ...(isParent ? [] : [{ content: '', styles: {fillColor: [230, 242, 255] } }]),
+          { content: 'TOTAL CONSUMPTION', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'left' } },
+          { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
+          { content: '' },
+          { content: `${totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1})} L`, styles: { fontStyle: 'bold' } },
+          { content: `P ${totalRefillAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold' } },
+          ...(isParent ? [] : [{ content: '' }]),
         ];
         deliveryBody.push(summaryRow as any);
-
-        const vatAmount = totalRefillAmount * (12/112);
-        const vatRow = [
-            { content: 'VAT (12% Included)', colSpan: isParent ? 6 : 5, styles: { fontStyle: 'italic', halign: 'right', textColor: [100, 100, 100] } },
-            { content: `P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'italic', textColor: [100, 100, 100] } },
-            ...(isParent ? [] : [{ content: '' }]),
-        ];
-        deliveryBody.push(vatRow as any);
     }
 
-    lastY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, lastY);
+    lastY = renderTable('Water Delivery History', deliveryHead, deliveryBody, lastY);
+    
+    // VAT transparency below the table
+    const vatAmount = totalRefillAmount * (12/112);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(150);
+    doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}`, pageWidth - margin, (doc as any).lastAutoTable.finalY + 20, { align: 'right' });
     
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`);
 };
@@ -316,7 +301,6 @@ interface InvoicePDFProps {
 export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => {
     const doc = new jsPDF('p', 'pt');
     const primaryColor = [83, 142, 194]; // #538ec2
-    const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
     let lastY = 0;
     const margin = 40;
@@ -331,58 +315,47 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
 
     if (logoBase64) {
         try {
-            doc.addImage(logoBase64, 'PNG', pageWidth - margin - 35, margin - 10, 35, 35);
+            doc.addImage(logoBase64, 'PNG', margin, 40, 40, 40);
         } catch (e) {
             console.error("Could not add logo to PDF:", e);
         }
     }
 
-    doc.setFontSize(28);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0);
-    doc.text('Invoice', margin, margin + 20);
-
-    lastY = margin + 50;
-    
-    const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
-    const details = [
-        ['Invoice number', invoice.id],
-        ['Date of issue', format(invoiceDate, 'MMMM d, yyyy')],
-        ['Date due', format(invoiceDate, 'MMMM d, yyyy')]
-    ];
-    doc.setFontSize(10);
-    details.forEach((detail, index) => {
-        doc.setFont('helvetica', 'bold');
-        doc.text(detail[0], margin, lastY + (index * 15));
-        doc.setFont('helvetica', 'normal');
-        doc.text(detail[1], margin + 80, lastY + (index * 15));
-    });
-
-    lastY += (details.length * 15) + 20;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('River Tech Inc.', margin, lastY);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Filinvest Axis Tower 1', margin, lastY + 12);
-    doc.text('Alabang, Muntinlupa', margin, lastY + 24);
-    doc.text('customers@riverph.com', margin, lastY + 36);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Bill to', margin + 250, lastY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(user.businessName || '', margin + 250, lastY + 12);
-    doc.text(user.address || '', margin + 250, lastY + 24);
-    doc.text(user.email, margin + 250, lastY + 36);
-
-    lastY += 60;
-    
-    doc.setFontSize(16);
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text(`PHP ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} PAID`, margin, lastY);
-    
-    lastY += 30;
+    doc.text('River Tech Inc.', margin + 55, 65);
 
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text('Invoice Receipt', margin + 55, 82);
+
+    lastY = 130;
+    
+    const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Invoice #:', margin, lastY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.id, margin + 80, lastY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', margin, lastY + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text(format(invoiceDate, 'MMMM d, yyyy'), margin + 80, lastY + 15);
+
+    lastY += 50;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Bill To:', margin, lastY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(user.businessName || '', margin, lastY + 12);
+    doc.text(user.address || '', margin, lastY + 24);
+    doc.text(user.email, margin, lastY + 36);
+
+    lastY += 70;
+    
     const planName = user.plan?.name || 'N/A';
     const description = `${invoice.description}\nPlan: ${planName}`;
 
@@ -396,8 +369,8 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
             `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
         ]],
         theme: 'plain',
-        headStyles: { fontStyle: 'bold', textColor: 120, fontSize: 10, cellPadding: { top: 0, bottom: 8 } },
-        bodyStyles: { fontSize: 10, cellPadding: { top: 8, bottom: 8 } },
+        headStyles: { fontStyle: 'bold', textColor: 0, fontSize: 10, cellPadding: { bottom: 8 } },
+        bodyStyles: { fontSize: 10, cellPadding: { top: 10, bottom: 10 } },
         margin: { left: margin, right: margin },
     });
     lastY = (doc as any).lastAutoTable.finalY;
@@ -408,22 +381,15 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     const totals = [
         ['Subtotal (VAT Included)', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
         ['VAT (12% Included)', `P ${vatIncluded.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
-        ['Total', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]
+        ['Total Paid', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]
     ];
     
     doc.setFontSize(10);
     totals.forEach((total, index) => {
         doc.setFont('helvetica', index === totals.length - 1 ? 'bold' : 'normal');
-        doc.text(total[0], summaryX, lastY + 20 + (index * 15));
-        doc.text(total[1], pageWidth - margin, lastY + 20 + (index * 15), { align: 'right'});
+        doc.text(total[0], summaryX, lastY + 30 + (index * 18));
+        doc.text(total[1], pageWidth - margin, lastY + 30 + (index * 18), { align: 'right'});
     });
-    
-    lastY += (totals.length * 15) + 20;
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Amount paid', summaryX, lastY);
-    doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right'});
 
     doc.save(`Invoice_${invoice.id}.pdf`);
 };
