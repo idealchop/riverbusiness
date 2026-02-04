@@ -12,7 +12,8 @@ declare module 'jspdf' {
   }
 }
 
-const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+const LITER_RATIO = 19.5;
+const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO;
 const toSafeDate = (timestamp: any): Date => {
     if (!timestamp) return new Date(0);
     if (timestamp.toDate && typeof timestamp.toDate === 'function') {
@@ -41,6 +42,8 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
 
     const margin = 40;
     const isParent = user.accountType === 'Parent';
+    const pricePerLiter = user.plan?.price || 0;
+    const pricePerContainer = pricePerLiter * LITER_RATIO;
 
     // --- HEADER ---
     const drawHeader = () => {
@@ -168,8 +171,9 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }
 
     // --- Deliveries ---
-    const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
-    const totalLitersConsumed = containerToLiter(totalContainers);
+    let totalContainers = 0;
+    let totalLitersConsumed = 0;
+    let totalRefillAmount = 0;
     
     const branchMap = (branches || []).reduce((map, branch) => {
         if (branch.id) map[branch.id] = branch.businessName;
@@ -177,30 +181,51 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }, {} as Record<string, string>);
 
     const deliveryHead = isParent
-        ? [["Ref ID", "Branch Name", "Date", "Qty (Cont.)", "Volume (L)", "Status"]]
-        : [["Ref ID", "Date", "Qty (Cont.)", "Volume (L)", "Status"]];
+        ? [["Ref ID", "Branch", "Date", "Qty", "Price/Unit", "Volume", "Amount"]]
+        : [["Ref ID", "Date", "Qty", "Price/Unit", "Volume", "Amount", "Status"]];
     
     const deliveryBody = deliveries.map(d => {
+        const containers = d.volumeContainers || 0;
+        const liters = d.liters ?? containerToLiter(containers);
+        const deliveryAmount = d.amount ?? (liters * pricePerLiter);
+        
+        totalContainers += containers;
+        totalLitersConsumed += liters;
+        totalRefillAmount += deliveryAmount;
+
         const row: (string | number)[] = [
             d.id,
             ...(isParent ? [branchMap[d.userId] || d.userId] : []),
             format(new Date(d.date), 'PP'),
-            d.volumeContainers,
-            (d.liters ?? containerToLiter(d.volumeContainers)).toFixed(1),
-            d.status,
+            containers,
+            `P${pricePerContainer.toFixed(2)}`,
+            `${liters.toFixed(1)} L`,
+            `P${deliveryAmount.toFixed(2)}`,
+            ...(isParent ? [] : [d.status]),
         ];
         return row;
     });
 
     if (deliveries.length > 0) {
+        // Totals Row
         const summaryRow = [
-          { content: 'Total Consumption', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
+          { content: 'TOTALS', colSpan: isParent ? 3 : 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 242, 255] } },
           { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
-          { content: totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1}), styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
-          { content: '', styles: {fillColor: [230, 242, 255] } },
-          ...(isParent ? [{ content: '', styles: {fillColor: [230, 242, 255] } }] : []),
+          { content: '', styles: { fillColor: [230, 242, 255] } },
+          { content: `${totalLitersConsumed.toLocaleString(undefined, {maximumFractionDigits:1})} L`, styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
+          { content: `P ${totalRefillAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'bold', fillColor: [230, 242, 255] } },
+          ...(isParent ? [] : [{ content: '', styles: {fillColor: [230, 242, 255] } }]),
         ];
         deliveryBody.push(summaryRow as any);
+
+        // VAT Row (12% of total amount is included)
+        const vatAmount = totalRefillAmount * (12/112); // Calculation for "VAT Included"
+        const vatRow = [
+            { content: 'VAT (12% Included)', colSpan: isParent ? 6 : 5, styles: { fontStyle: 'italic', halign: 'right', textColor: [100, 100, 100] } },
+            { content: `P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, styles: { fontStyle: 'italic', textColor: [100, 100, 100] } },
+            ...(isParent ? [] : [{ content: '' }]),
+        ];
+        deliveryBody.push(vatRow as any);
     }
 
     lastY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, lastY);
@@ -308,8 +333,12 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     lastY = (doc as any).lastAutoTable.finalY;
 
     const summaryX = pageWidth - margin - 200;
+    const vatIncluded = invoice.amount * (12/112);
+    const subtotal = invoice.amount - 0; // The total is the amount
+
     const totals = [
-        ['Subtotal', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
+        ['Subtotal (VAT Included)', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
+        ['VAT (12% Included)', `P ${vatIncluded.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
         ['Total', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`]
     ];
     

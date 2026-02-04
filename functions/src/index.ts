@@ -30,6 +30,7 @@ export * from './billing';
 
 const BRAND_PRIMARY = '#538ec2';
 const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
+const LITER_RATIO = 19.5;
 
 /**
  * Creates a notification document in a user's notification subcollection.
@@ -75,6 +76,9 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
             logger.warn("PDF Logo fetch failed, skipping image.");
         }
 
+        const pricePerLiter = user.plan?.price || 0;
+        const pricePerContainer = pricePerLiter * LITER_RATIO;
+
         // Header
         doc.fillColor(BRAND_PRIMARY).fontSize(24).font('Helvetica-Bold').text('Statement of Account', 110, 50);
         doc.fillColor('#000').fontSize(10).font('Helvetica').text(`Period: ${period}`, 110, 80);
@@ -89,47 +93,68 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         doc.fontSize(12).font('Helvetica-Bold').text('Water Delivery History');
         doc.moveDown();
 
-        // Simple Table Layout
+        // Table Header
         const tableTop = doc.y;
-        doc.fontSize(10).font('Helvetica-Bold');
+        doc.fontSize(9).font('Helvetica-Bold');
         doc.text('Date', 40, tableTop);
-        doc.text('Tracking #', 140, tableTop);
-        doc.text('Qty', 280, tableTop);
-        doc.text('Status', 340, tableTop);
-        doc.text('Amount', 440, tableTop);
+        doc.text('Tracking #', 120, tableTop);
+        doc.text('Qty', 220, tableTop);
+        doc.text('Price/Unit', 260, tableTop);
+        doc.text('Vol (L)', 330, tableTop);
+        doc.text('Amount', 410, tableTop);
+        doc.text('Status', 490, tableTop);
+        
         doc.moveDown(0.5);
-        doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+        doc.lineWidth(0.5).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
         doc.moveDown(0.5);
 
         let totalQty = 0;
         let totalLiters = 0;
+        let totalAmount = 0;
 
-        doc.font('Helvetica');
+        doc.font('Helvetica').fontSize(8);
         deliveries.forEach(d => {
             const dateStr = typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A';
-            const liters = d.liters || (d.volumeContainers * 19.5);
-            totalQty += d.volumeContainers;
+            const qty = d.volumeContainers || 0;
+            const liters = d.liters || (qty * LITER_RATIO);
+            const amount = d.amount || (liters * pricePerLiter);
+            
+            totalQty += qty;
             totalLiters += liters;
+            totalAmount += amount;
 
-            doc.text(dateStr, 40, doc.y);
-            doc.text(d.id, 140, doc.y - 12);
-            doc.text(d.volumeContainers.toString(), 280, doc.y - 12);
-            doc.text(d.status, 340, doc.y - 12);
-            doc.text(`P ${ (d.amount || 0).toFixed(2) }`, 440, doc.y - 12);
+            const currentY = doc.y;
+            doc.text(dateStr, 40, currentY);
+            doc.text(d.id, 120, currentY);
+            doc.text(qty.toString(), 220, currentY);
+            doc.text(`P${pricePerContainer.toFixed(2)}`, 260, currentY);
+            doc.text(`${liters.toFixed(1)}L`, 330, currentY);
+            doc.text(`P${amount.toFixed(2)}`, 410, currentY);
+            doc.text(d.status, 490, currentY);
             doc.moveDown();
         });
 
-        // Summary Line
+        // Summary Lines
         doc.moveDown();
         doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
         doc.moveDown(0.5);
-        doc.font('Helvetica-Bold').text('TOTALS', 40, doc.y);
-        doc.text(totalQty.toString(), 280, doc.y - 12);
-        doc.text(`${totalLiters.toFixed(1)} L`, 140, doc.y - 12);
+        
+        const summaryY = doc.y;
+        doc.font('Helvetica-Bold').fontSize(10);
+        doc.text('TOTALS', 40, summaryY);
+        doc.text(totalQty.toString(), 220, summaryY);
+        doc.text(`${totalLiters.toFixed(1)} L`, 330, summaryY);
+        doc.text(`P ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 410, summaryY);
+
+        // VAT Inclusion Note
+        doc.moveDown(1.5);
+        const vatAmount = totalAmount * (12/112);
+        doc.font('Helvetica-Oblique').fontSize(8).fillColor('#666');
+        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 40, doc.y, { align: 'right', width: 510 });
 
         if (sanitation.length > 0) {
             doc.addPage();
-            doc.fontSize(12).font('Helvetica-Bold').text('Sanitation Visits');
+            doc.fillColor('#000').fontSize(12).font('Helvetica-Bold').text('Sanitation Visits');
             doc.moveDown();
             sanitation.forEach(s => {
                 const dateStr = typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A';
@@ -139,9 +164,13 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         }
 
         // Footer
-        const pageHeight = doc.page.height;
-        doc.fontSize(8).fillColor(BRAND_PRIMARY).text('River PH - Automated, Connected, Convenient.', 40, pageHeight - 60, { align: 'center', width: 500 });
-        doc.fillColor('#999').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeight - 48, { align: 'center', width: 500 });
+        const pageCount = doc.bufferedPageRange().count;
+        for (let i = 0; i < pageCount; i++) {
+            doc.switchToPage(i);
+            const pageHeight = doc.page.height;
+            doc.fontSize(8).fillColor(BRAND_PRIMARY).text('River PH - Automated, Connected, Convenient.', 40, pageHeight - 60, { align: 'center', width: 500 });
+            doc.fillColor('#999').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeight - 48, { align: 'center', width: 500 });
+        }
 
         doc.end();
     });
