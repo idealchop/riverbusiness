@@ -10,7 +10,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, TopUpRequest } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
