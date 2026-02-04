@@ -88,7 +88,7 @@ export async function generatePasswordProtectedSOA(
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = doc.internal.pageSize?.width || 612; // Default letter width
+        const pageWidth = doc.page.width || 612; // PDFKit API for width
         const margin = 40;
 
         // 1. High-Fidelity Header (Solid Blue Corner)
@@ -124,7 +124,7 @@ export async function generatePasswordProtectedSOA(
 
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2); // Tightened spacing
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2); 
         doc.text(user.email || '', pageWidth / 2 + 20, doc.y + 2);
 
         doc.moveDown(3);
