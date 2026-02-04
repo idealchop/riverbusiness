@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -12,7 +11,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, TopUpRequest } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 

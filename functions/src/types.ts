@@ -54,6 +54,16 @@ export interface Transaction {
     branchName?: string;
 }
 
+export interface TopUpRequest {
+  id: string;
+  userId: string;
+  amount: number;
+  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
+  requestedAt: FieldValue | Timestamp;
+  proofOfPaymentUrl?: string;
+  rejectionReason?: string;
+}
+
 export interface SanitationChecklistItem {
     item: string;
     checked: boolean;

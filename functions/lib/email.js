@@ -389,7 +389,7 @@ function getNewInvoiceTemplate(businessName, invoiceId, amount, period) {
     ${PAYMENT_OPTIONS_BLOCK}
   `;
     return {
-        subject: `Statement Available: Optimized Consumption Insights for ${period} 📑`,
+        subject: `Quick heads-up: Your invoice ${invoiceId} is ready 🌊`,
         html: getEmailWrapper(content, 'New Statement Available', subheader)
     };
 }
@@ -526,7 +526,7 @@ function getPaymentReminderTemplate(businessName, amount, period) {
     ${PAYMENT_OPTIONS_BLOCK}
   `;
     return {
-        subject: `Friendly Follow-up: Statement for ${period} 📑`,
+        subject: `Quick heads-up: Your statement for ${period} is ready 📑`,
         html: getEmailWrapper(content, 'Account Statement Reminder')
     };
 }
