@@ -1,10 +1,11 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import axios from 'axios';
 import PDFDocument from 'pdfkit';
-import { format, startOfMonth, endOfMonth, parse } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, endOfDay, isWithinInterval } from 'date-fns';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -66,7 +67,7 @@ const getSanitationPassRate = (v: SanitationVisit) => {
 };
 
 /**
- * Generates a password-protected PDF Statement of Account matching the user dashboard design.
+ * Generates a high-fidelity, password-protected PDF Statement of Account.
  */
 export async function generatePasswordProtectedSOA(user: any, period: string, deliveries: Delivery[], sanitation: SanitationVisit[], compliance: ComplianceReport[]): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
@@ -85,8 +86,8 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
         const pageWidth = doc.page.width;
         const margin = 40;
 
-        // Solid Blue Header Background (Left Corner Focused)
-        doc.rect(0, 0, pageWidth, 120).fill('#538ec2');
+        // 1. High-Fidelity Header (Solid Blue Corner)
+        doc.rect(0, 0, pageWidth, 120).fill(BRAND_PRIMARY);
 
         try {
             const response = await axios.get(LOGO_URL, { responseType: 'arraybuffer' });
@@ -98,16 +99,16 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-        // Structured Header (Left Aligned, White Text)
+        // White Hierarchical Text
         doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin + 65, 45);
         doc.fontSize(14).text('Statement of Account', margin + 65, 72);
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin + 65, 92);
         
         doc.fillColor('#000000').moveDown(4.5);
         
-        // Stakeholder Details (Two Column Layout)
+        // 2. Stakeholder Details (Two Column Layout)
         const topOfDetails = doc.y;
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#538ec2').text('FROM:', margin, topOfDetails);
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('FROM:', margin, topOfDetails);
         doc.text('TO:', pageWidth / 2 + 20, topOfDetails);
 
         doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold');
@@ -118,7 +119,6 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
 
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
-        // TIGHTENED SPACING: Fixed jump between address and Client ID
         doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, topOfDetails + 39);
         doc.text(user.email, pageWidth / 2 + 20, topOfDetails + 51);
 
@@ -134,14 +134,13 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
         const drawTable = (title: string, headers: string[], rows: any[][]) => {
             if (rows.length === 0) return;
             
-            doc.fontSize(11).font('Helvetica-Bold').fillColor('#538ec2').text(title, margin);
+            doc.fontSize(11).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text(title, margin);
             doc.moveDown(0.5);
 
             const tableTop = doc.y;
             const colWidth = (pageWidth - margin * 2) / headers.length;
 
-            // Draw Header Background
-            doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill('#538ec2');
+            doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
             doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
             
             headers.forEach((h, i) => {
@@ -153,12 +152,10 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
 
             rows.forEach((row, rowIndex) => {
                 const rowY = doc.y;
-                // Alternate row background
                 if (rowIndex % 2 !== 0) {
                     doc.rect(margin, rowY - 2, pageWidth - margin * 2, 15).fill('#f8fafc');
                     doc.fillColor('#000000');
                 }
-                
                 row.forEach((cell, i) => {
                     doc.text(cell.toString(), margin + (i * colWidth) + 5, rowY);
                 });
@@ -167,65 +164,44 @@ export async function generatePasswordProtectedSOA(user: any, period: string, de
             doc.moveDown(2);
         };
 
-        // 1. Equipment & Services Summary
+        // Financial Summary (For Parents)
+        if (user.accountType === 'Parent') {
+            // Summary logic can be added here if needed
+        }
+
+        // 3. Equipment Summary
         if (user.customPlanDetails) {
             const eq = user.customPlanDetails;
             const eqRows = [];
             if (eq.gallonQuantity) eqRows.push(['5-Gallon Reusable Containers', eq.gallonQuantity, `P${(eq.gallonPrice || 0).toLocaleString()}`, eq.gallonPaymentType || 'Monthly', `P${(eq.gallonPrice || 0).toLocaleString()}`]);
             if (eq.dispenserQuantity) eqRows.push(['Premium Hot & Cold Water Dispenser', eq.dispenserQuantity, `P${(eq.dispenserPrice || 0).toLocaleString()}`, eq.dispenserPaymentType || 'Monthly', `P${(eq.dispenserPrice || 0).toLocaleString()}`]);
             if (eq.sanitationPrice) eqRows.push(['Professional Monthly Sanitation', '1', `P${(eq.sanitationPrice || 0).toLocaleString()}`, eq.sanitationPaymentType || 'Monthly', `P${(eq.sanitationPrice || 0).toLocaleString()}`]);
-            
             drawTable('Equipment & Services Summary', ['Service Item', 'Qty', 'Unit Price', 'Frequency', 'Subtotal'], eqRows);
         }
 
-        // 2. Sanitation Logs
+        // 4. Service Logs
         if (sanitation.length > 0) {
-            const sanRows = sanitation.map(s => [
-                typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A',
-                s.status,
-                s.assignedTo,
-                getSanitationPassRate(s)
-            ]);
+            const sanRows = sanitation.map(s => [typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A', s.status, s.assignedTo, getSanitationPassRate(s)]);
             drawTable('Office Sanitation Logs', ['Date', 'Status', 'Officer', 'Score Rate'], sanRows);
         }
 
-        // 3. Compliance
         if (compliance.length > 0) {
-            const compRows = compliance.map(c => [
-                c.name,
-                c.date ? format((c.date as any).toDate(), 'MMM yyyy') : 'N/A',
-                c.status
-            ]);
+            const compRows = compliance.map(c => [c.name, c.date ? format((c.date as any).toDate(), 'MMM yyyy') : 'N/A', c.status]);
             drawTable('Water Quality & Station Compliance', ['Report Name', 'Period', 'Status'], compRows);
         }
 
-        // 4. Refill Logs (LAST)
-        let totalQty = 0;
-        let totalLiters = 0;
-        let totalAmount = 0;
-
+        // 5. Water Refill Logs (LAST)
+        let totalQty = 0; let totalLiters = 0; let totalAmount = 0;
         const refillRows = deliveries.map(d => {
             const qty = d.volumeContainers || 0;
             const liters = d.liters || (qty * LITER_RATIO);
             const amount = d.amount || (liters * pricePerLiter);
-            totalQty += qty;
-            totalLiters += liters;
-            totalAmount += amount;
-
-            return [
-                d.id,
-                typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A',
-                qty,
-                `P${pricePerContainer.toFixed(2)}`,
-                `${liters.toFixed(1)}L`,
-                `P${amount.toFixed(2)}`,
-                d.status
-            ];
+            totalQty += qty; totalLiters += liters; totalAmount += amount;
+            return [d.id, typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A', qty, `P${pricePerContainer.toFixed(2)}`, `${liters.toFixed(1)}L`, `P${amount.toFixed(2)}`, d.status];
         });
-
         drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
 
-        // Totals & VAT
+        // Final Totals
         const finalY = doc.y;
         doc.fontSize(10).font('Helvetica-Bold').text('TOTAL CONSUMPTION:', margin + 150, finalY);
         doc.text(totalQty.toString(), margin + 280, finalY);
@@ -252,30 +228,27 @@ export const onpaymentremindercreate = onDocumentCreated({
     if (!event.data) return;
     const userId = event.params.userId;
     const db = getFirestore();
+    const { period: selectedPeriod } = event.data.data();
     
     const userDoc = await db.collection('users').doc(userId).get();
     const user = userDoc.data();
-    
     if (!user || !user.email) return;
 
-    const paymentsSnap = await db.collection('users').doc(userId).collection('payments').orderBy('date', 'desc').limit(1).get();
-    let amount = "0.00";
-    let period = format(new Date(), 'MMMM yyyy');
+    let billingPeriodLabel = 'Full Account History';
+    let cycleStart = new Date(0);
+    let cycleEnd = endOfDay(new Date());
 
-    if (!paymentsSnap.empty) {
-        const p = paymentsSnap.docs[0].data();
-        amount = p.amount.toFixed(2);
-        period = p.description.replace('Bill for ', '').replace('Monthly Subscription for ', '').replace('Estimated bill for ', '');
-    }
-
-    let cycleStart = startOfMonth(new Date());
-    let cycleEnd = endOfMonth(new Date());
-    try {
-        const parsedDate = parse(period, 'MMMM yyyy', new Date());
-        cycleStart = startOfMonth(parsedDate);
-        cycleEnd = endOfMonth(parsedDate);
-    } catch(e) {
-        logger.warn("Date parsing failed, using current month defaults.");
+    if (selectedPeriod && selectedPeriod !== 'full') {
+        if (selectedPeriod === '2025-12_2026-01') {
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = endOfDay(endOfMonth(new Date(2026, 0, 1)));
+            billingPeriodLabel = 'December 2025 - January 2026';
+        } else {
+            const parsed = parse(selectedPeriod, 'yyyy-MM', new Date());
+            cycleStart = startOfMonth(parsed);
+            cycleEnd = endOfDay(endOfMonth(parsed));
+            billingPeriodLabel = format(parsed, 'MMMM yyyy');
+        }
     }
 
     const deliveriesSnap = await db.collection('users').doc(userId).collection('deliveries')
@@ -283,6 +256,9 @@ export const onpaymentremindercreate = onDocumentCreated({
         .where('date', '<=', cycleEnd.toISOString())
         .get();
     const deliveries = deliveriesSnap.docs.map(d => d.data() as Delivery);
+
+    const pricePerLiter = user.plan?.price || 0;
+    const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
 
     const sanitationSnap = await db.collection('users').doc(userId).collection('sanitationVisits')
         .where('scheduledDate', '>=', cycleStart.toISOString())
@@ -292,27 +268,26 @@ export const onpaymentremindercreate = onDocumentCreated({
 
     let complianceReports: ComplianceReport[] = [];
     if (user.assignedWaterStationId) {
-        const complianceSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').get();
+        const complianceSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').limit(5).get();
         complianceReports = complianceSnap.docs.map(d => d.data() as ComplianceReport);
     }
 
-    const pdfBuffer = await generatePasswordProtectedSOA(user, period, deliveries, sanitation, complianceReports);
-
-    const template = getPaymentReminderTemplate(user.businessName, amount, period);
+    const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports);
+    const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
     try {
         await sendEmail({
             to: user.email,
             cc: 'support@riverph.com',
             subject: template.subject,
-            text: `Reminder: Your statement for ${period} is ₱${amount}.`,
+            text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
             attachments: [{
-                filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${period.replace(/\s/g, '-')}.pdf`,
+                filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${billingPeriodLabel.replace(/\s/g, '-')}.pdf`,
                 content: pdfBuffer
             }]
         });
-        logger.info(`Follow-up email with SOA sent to ${user.email}`);
+        logger.info(`Follow-up email with SOA sent to ${user.email} for period ${selectedPeriod}`);
     } catch (error) {
         logger.error(`Failed to send follow-up to ${user.email}`, error);
     }
@@ -327,30 +302,13 @@ export const onunclaimedprofilecreate = onDocumentCreated({
 }, async (event) => {
     if (!event.data) return;
     const profile = event.data.data();
-    
     if (!profile.businessEmail) return;
-
     const planName = `${profile.clientType || ''} - ${profile.plan?.name || ''}`;
     const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
-
-    const template = getWelcomeUnclaimedTemplate(
-        profile.businessName || profile.name || 'Valued Client',
-        profile.clientId,
-        planName,
-        profile.address || 'N/A',
-        schedule
-    );
-
+    const template = getWelcomeUnclaimedTemplate(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
     try {
-        await sendEmail({
-            to: profile.businessEmail,
-            subject: template.subject,
-            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`,
-            html: template.html
-        });
-    } catch (error) {
-        logger.error(`Failed welcome email`, error);
-    }
+        await sendEmail({ to: profile.businessEmail, subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
+    } catch (error) { logger.error(`Failed welcome email`, error); }
 });
 
 export const ondeliverycreate = onDocumentCreated({
@@ -361,18 +319,10 @@ export const ondeliverycreate = onDocumentCreated({
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
     const delivery = event.data.data() as Delivery;
-    
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-
-    await createNotification(userId, { 
-        type: 'delivery', 
-        title: 'Delivery Scheduled', 
-        description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, 
-        data: { deliveryId } 
-    });
-
+    await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
@@ -388,15 +338,11 @@ export const ondeliveryupdate = onDocumentUpdated({
     const after = event.data.after.data() as Delivery;
     const userId = event.params.userId;
     const deliveryId = event.params.deliveryId;
-
     if (before.status === after.status) return;
-
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
-
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
-
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
         await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
@@ -411,13 +357,10 @@ export const onpaymentupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-
     if (before.status === after.status) return;
-
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-
     if (before.status === 'Pending Review' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData?.email) {
@@ -435,13 +378,10 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-
     if (before.status === after.status || after.status !== 'Approved') return;
-
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
         await sendEmail({ to: userData.email, subject: template.subject, text: `Top-up approved`, html: template.html });
@@ -456,11 +396,9 @@ export const onrefillrequestcreate = onDocumentCreated({
     const userId = event.params.userId;
     const requestId = event.params.requestId;
     const request = event.data.data() as RefillRequest;
-
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
         await sendEmail({ to: userData.email, subject: template.subject, text: `Refill request received`, html: template.html });
@@ -477,7 +415,6 @@ export const onsanitationcreate = onDocumentCreated({
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-
     if (userData?.email && visit.status === 'Scheduled') {
         const dateStr = new Date(visit.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
@@ -493,12 +430,10 @@ export const onsanitationupdate = onDocumentUpdated({
     const before = event.data.before.data() as SanitationVisit;
     const after = event.data.after.data() as SanitationVisit;
     const userId = event.params.userId;
-
     if (before.status !== 'Completed' && after.status === 'Completed') {
         const db = getFirestore();
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
-
         if (userData?.email) {
             const dateStr = new Date(after.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
@@ -510,14 +445,11 @@ export const onsanitationupdate = onDocumentUpdated({
 export const onfileupload = onObjectFinalized({ memory: "256MiB" }, async (event) => {
   const filePath = event.data.name;
   if (!filePath || event.data.contentType?.startsWith('application/x-directory')) return;
-
   const storage = getStorage();
   const db = getFirestore();
   const bucket = storage.bucket(event.data.bucket);
   const file = bucket.file(filePath);
-  
   const [url] = await file.getSignedUrl({ action: "read", expires: "01-01-2500" });
-
   if (filePath.startsWith("users/") && filePath.includes("/profile/")) {
       const userId = filePath.split("/")[1];
       await db.collection("users").doc(userId).update({ photoURL: url });

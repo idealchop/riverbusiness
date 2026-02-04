@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,9 @@ import { PlusCircle, Copy, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format, startOfMonth, subMonths, isAfter, isSameDay } from 'date-fns';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -46,7 +49,26 @@ export function BillingTab({
     const firestore = useFirestore();
     const [paymentsCurrentPage, setPaymentsCurrentPage] = useState(1);
     const [isSendingReminder, setIsSendingReminder] = useState(false);
+    const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
+    const [selectedPeriod, setSelectedPeriod] = useState('full');
     const PAYMENTS_PER_PAGE = 5;
+
+    const soaDateOptions = useMemo(() => {
+        if (!user?.createdAt) return [];
+        const options: { label: string; value: string }[] = [];
+        const now = new Date();
+        let startDate = toSafeDate(user.createdAt);
+        if (!startDate || isNaN(startDate.getTime())) startDate = startOfMonth(now);
+        let currentDate = startOfMonth(now);
+        while (isAfter(currentDate, startDate) || isSameDay(currentDate, startDate)) {
+            options.push({ label: format(currentDate, 'MMMM yyyy'), value: format(currentDate, 'yyyy-MM') });
+            currentDate = subMonths(currentDate, 1);
+        }
+        options.push({ label: 'December 2025 - January 2026', value: '2025-12_2026-01' });
+        options.unshift({ label: 'Full History', value: 'full' });
+        const uniqueValues = new Set();
+        return options.filter(o => !uniqueValues.has(o.value) && uniqueValues.add(o.value));
+    }, [user?.createdAt]);
 
     const showCurrentMonthInvoice = useMemo(() => {
         if (!currentMonthInvoice || !userPaymentsData) return false;
@@ -83,7 +105,7 @@ export function BillingTab({
         onSetIsPaymentReviewOpen(true);
     };
 
-    const handleSendReminder = async () => {
+    const handleConfirmSendReminder = async () => {
         if (!firestore || !user) return;
         setIsSendingReminder(true);
         try {
@@ -91,9 +113,11 @@ export function BillingTab({
             await addDoc(remindersCol, {
                 type: 'payment_follow_up',
                 triggeredAt: serverTimestamp(),
-                status: 'pending'
+                status: 'pending',
+                period: selectedPeriod
             });
-            toast({ title: 'Reminder Sent!', description: `A statement reminder has been dispatched to ${user.businessName}.` });
+            toast({ title: 'Reminder Dispatched!', description: `A statement reminder for ${soaDateOptions.find(o => o.value === selectedPeriod)?.label} is being sent.` });
+            setIsReminderDialogOpen(false);
         } catch (error) {
             console.error("Error triggering reminder:", error);
             toast({ variant: 'destructive', title: 'Action Failed' });
@@ -103,6 +127,7 @@ export function BillingTab({
     };
 
     return (
+        <>
         <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -110,9 +135,9 @@ export function BillingTab({
                     <CardDescription>Manage invoices and charges.</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleSendReminder} disabled={isSendingReminder}>
+                    <Button variant="outline" onClick={() => setIsReminderDialogOpen(true)}>
                         <Send className="mr-2 h-4 w-4" />
-                        {isSendingReminder ? 'Sending...' : 'Send Statement Reminder'}
+                        Send Statement Reminder
                     </Button>
                     {user.accountType === 'Parent' ? (
                         <Button onClick={() => onSetIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Top-up Credits</Button>
@@ -128,7 +153,6 @@ export function BillingTab({
                         <p className="text-2xl font-bold">₱{(user.topUpBalanceCredits || 0).toLocaleString()}</p>
                     </div>
                 )}
-                {/* Desktop Table */}
                 <Table className="hidden md:table">
                     <TableHeader><TableRow><TableHead>Invoice ID</TableHead><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -172,7 +196,6 @@ export function BillingTab({
                     </TableBody>
                 </Table>
                 
-                {/* Mobile Card View */}
                 <div className="space-y-4 md:hidden">
                     {paginatedPayments.map(payment => {
                         const isEstimated = payment.id.startsWith('INV-EST');
@@ -202,9 +225,6 @@ export function BillingTab({
                             </CardContent>
                         </Card>
                     )})}
-                    {paginatedPayments.length === 0 && (
-                         <p className="text-center py-10 text-muted-foreground">No invoices found.</p>
-                    )}
                 </div>
 
                 <div className="flex items-center justify-end space-x-2 pt-4">
@@ -214,5 +234,34 @@ export function BillingTab({
                 </div>
             </CardContent>
         </Card>
+
+        <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Send Statement Reminder</DialogTitle>
+                    <DialogDescription>Select which billing period you would like to remind the client about.</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Label className="mb-2 block">Billing Period</Label>
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a period..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {soaDateOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline" disabled={isSendingReminder}>Cancel</Button></DialogClose>
+                    <Button onClick={handleConfirmSendReminder} disabled={isSendingReminder}>
+                        {isSendingReminder ? "Sending..." : "Send Reminder Email"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
