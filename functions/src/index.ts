@@ -192,6 +192,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     try {
         await sendEmail({
             to: user.email,
+            cc: 'support@riverph.com',
             subject: template.subject,
             text: `Reminder: Your statement for ${period} is ₱${amount}.`,
             html: template.html,

@@ -1,3 +1,4 @@
+
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
@@ -165,6 +166,7 @@ async function generateInvoiceForUser(
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             sendEmail({
                 to: user.email,
+                cc: 'support@riverph.com',
                 subject: template.subject,
                 text: `Invoice for ${billingPeriod} is available for ₱${amount.toFixed(2)}.`,
                 html: template.html

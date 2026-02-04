@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 
 interface SendEmailOptions {
   to: string;
+  cc?: string | string[];
   subject: string;
   text: string;
   html: string;
@@ -18,7 +19,7 @@ const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singap
 /**
  * Sends an email using the Brevo SMTP relay.
  */
-export async function sendEmail({ to, subject, text, html, attachments }: SendEmailOptions) {
+export async function sendEmail({ to, cc, subject, text, html, attachments }: SendEmailOptions) {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
@@ -41,6 +42,7 @@ export async function sendEmail({ to, subject, text, html, attachments }: SendEm
     const info = await transporter.sendMail({
       from: '"River Philippines" <customers@riverph.com>',
       to,
+      cc,
       subject,
       text,
       html,
@@ -73,7 +75,6 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         .header { background: linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%); padding: 40px 24px; text-align: center; }
         .logo { width: 60px; height: auto; margin-bottom: 12px; }
         .header-title { color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
-        .header-subtext { color: #ffffff; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; font-weight: 400; }
         .content { padding: 40px; }
         .main-title { color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 8px; text-align: center; margin-top: 0; }
         .tracking-id { color: #64748b; font-size: 14px; text-align: center; margin-bottom: 32px; }
@@ -91,7 +92,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         .next-step { padding-top: 16px; border-top: 1px dashed #cbd5e1; margin: 0; font-size: 14px; color: #475569; line-height: 1.5; }
         .btn-container { text-align: center; margin-top: 30px; }
         .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
-        .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
+        .footer { text-align: center; margin-top: 40px; padding: 0 40px; }
         .footer-brand { font-size: 16px; font-weight: 800; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
         .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
         .footer-sub a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700; }
@@ -103,20 +104,19 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         <div class="header">
           <img src="${LOGO_URL}" alt="River Logo" class="logo">
           <h1 class="header-title">River Philippines</h1>
-          <p class="header-subtext">Your Operating System for Business Essentials.</p>
         </div>
         <div class="content">
           <h2 class="main-title">${headerTitle}</h2>
           ${subheader}
           ${content}
-          <div class="footer">
-            <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
-            <p class="footer-sub">
-              See how we’re shaping the future of the Philippines<br>
-              <a href="https://riverph.com">riverph.com</a>
-            </p>
-          </div>
         </div>
+      </div>
+      <div class="footer">
+        <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
+        <p class="footer-sub">
+          See how we’re shaping the future of the Philippines<br>
+          <a href="https://riverph.com">→ riverph.com</a>
+        </p>
       </div>
       <div class="legal-disclaimer">
         DISCLAIMER: This communication and any attachments are intended to be confidential, protected under the Data Privacy Act of 2012 (RA 10173), Intellectual Property laws, and other applicable Philippine statutes. It is intended for the exclusive use of the addressee. If you are not the intended recipient, you are hereby notified that any disclosure, retention, dissemination, copying, alteration, or distribution of this communication and/or any attachment, or any information therein, is strictly prohibited. If you have received this communication in error, kindly notify the sender by return e-mail and delete this communication and all attachments immediately.
@@ -149,7 +149,7 @@ export function getWelcomeUnclaimedTemplate(
           <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
           <style>
               body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f9; }
-              .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+              .container { max-width: 600px; margin: 20px auto; border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); background-color: #ffffff; }
               .header { background-color: ${brandColor}; color: #ffffff; padding: 40px 30px; text-align: center; }
               .header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; font-weight: 800; }
               .content { padding: 40px; background-color: #ffffff; }
@@ -160,7 +160,7 @@ export function getWelcomeUnclaimedTemplate(
               .button-container { text-align: center; margin: 30px 0; }
               .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
               .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
-              .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
+              .footer { text-align: center; margin-top: 40px; padding: 0 40px; }
               .footer-brand { font-size: 16px; font-weight: 800; color: ${brandColor}; margin-bottom: 4px; }
               .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
               .footer-sub a { color: ${brandColor}; text-decoration: none; font-weight: 700; }
@@ -170,7 +170,6 @@ export function getWelcomeUnclaimedTemplate(
           <div class="container">
               <div class="header">
                   <h1>RIVER PHILIPPINES</h1>
-                  <p style="margin-top: 5px; font-size: 14px; opacity: 0.9;">Your Operating System for Business Essentials</p>
               </div>
 
               <div class="content">
@@ -196,15 +195,14 @@ export function getWelcomeUnclaimedTemplate(
                       <p><strong>The River Philippines Quality Commitment:</strong> We guarantee premium hydration through DOH-certified water, automated <strong>Smart Refills</strong> that ensure you never run dry, and <strong>Monthly Professional Sanitation</strong> of your equipment. Manage everything effortlessly with real-time tracking and automated <strong>Digital Records (SOA/Invoices)</strong> for seamless liquidation.</p>
                       <p>Welcome to the future of clean, automated hydration!</p>
                   </div>
-                  
-                  <div class="footer">
-                    <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
-                    <p class="footer-sub">
-                      See how we’re shaping the future of the Philippines<br>
-                      <a href="https://riverph.com">riverph.com</a>
-                    </p>
-                  </div>
               </div>
+          </div>
+          <div class="footer">
+            <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
+            <p class="footer-sub">
+              See how we’re shaping the future of the Philippines<br>
+              <a href="https://riverph.com">→ riverph.com</a>
+            </p>
           </div>
           <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Welcome ID: ${timestamp} - </div>
       </body>
