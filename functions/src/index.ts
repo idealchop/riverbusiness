@@ -3,6 +3,9 @@ import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
+import axios from 'axios';
+import PDFDocument from 'pdfkit';
+import { format, startOfMonth, endOfMonth, parse } from 'date-fns';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -25,6 +28,9 @@ import {
 // Export all billing functions
 export * from './billing';
 
+const BRAND_PRIMARY = '#538ec2';
+const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+
 /**
  * Creates a notification document in a user's notification subcollection.
  */
@@ -43,6 +49,86 @@ async function createNotification(userId: string, notificationData: any) {
   } catch (error) {
     logger.error(`Failed to create notification for user ${userId}`, error);
   }
+}
+
+/**
+ * Generates a password-protected PDF Statement of Account.
+ */
+async function generatePasswordProtectedSOA(user: any, period: string, deliveries: Delivery[], sanitation: SanitationVisit[]): Promise<Buffer> {
+    return new Promise(async (resolve, reject) => {
+        const doc = new PDFDocument({
+            userPassword: user.clientId || 'password',
+            ownerPassword: 'river-admin-secret',
+            permissions: { printing: 'highResolution', copying: true, modifying: false }
+        });
+
+        const chunks: Buffer[] = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (err) => reject(err));
+
+        try {
+            // Add Logo
+            const response = await axios.get(LOGO_URL, { responseType: 'arraybuffer' });
+            doc.image(Buffer.from(response.data), 40, 40, { width: 50 });
+        } catch (e) {
+            logger.warn("PDF Logo fetch failed, skipping image.");
+        }
+
+        // Header
+        doc.fillColor(BRAND_PRIMARY).fontSize(24).font('Helvetica-Bold').text('Statement of Account', 110, 50);
+        doc.fillColor('#000').fontSize(10).font('Helvetica').text(`Period: ${period}`, 110, 80);
+        
+        doc.moveDown(2);
+        doc.fontSize(12).font('Helvetica-Bold').text('Client Details');
+        doc.fontSize(10).font('Helvetica').text(`Business Name: ${user.businessName}`);
+        doc.text(`Client ID: ${user.clientId}`);
+        doc.text(`Address: ${user.address || 'N/A'}`);
+
+        doc.moveDown(2);
+        doc.fontSize(12).font('Helvetica-Bold').text('Water Delivery History');
+        doc.moveDown();
+
+        // Simple Table Layout
+        const tableTop = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text('Date', 40, tableTop);
+        doc.text('Tracking #', 140, tableTop);
+        doc.text('Qty', 280, tableTop);
+        doc.text('Status', 340, tableTop);
+        doc.text('Amount', 440, tableTop);
+        doc.moveDown(0.5);
+        doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+        doc.moveDown(0.5);
+
+        doc.font('Helvetica');
+        deliveries.forEach(d => {
+            const dateStr = typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A';
+            doc.text(dateStr, 40, doc.y);
+            doc.text(d.id, 140, doc.y - 12); // Adjust Y for text wrap
+            doc.text(d.volumeContainers.toString(), 280, doc.y - 12);
+            doc.text(d.status, 340, doc.y - 12);
+            doc.text(`P ${ (d.amount || 0).toFixed(2) }`, 440, doc.y - 12);
+            doc.moveDown();
+        });
+
+        if (sanitation.length > 0) {
+            doc.addPage();
+            doc.fontSize(12).font('Helvetica-Bold').text('Sanitation Visits');
+            doc.moveDown();
+            sanitation.forEach(s => {
+                const dateStr = typeof s.scheduledDate === 'string' ? s.scheduledDate.split('T')[0] : 'N/A';
+                doc.fontSize(10).font('Helvetica').text(`${dateStr} - Status: ${s.status} - Officer: ${s.assignedTo}`);
+                doc.moveDown(0.5);
+            });
+        }
+
+        // Footer
+        const pageHeight = doc.page.height;
+        doc.fontSize(8).fillColor('#999').text('River Tech Inc. | Turn Everyday Needs Into Automatic Experience.', 40, pageHeight - 60, { align: 'center', width: 500 });
+
+        doc.end();
+    });
 }
 
 // --- TRIGGERS ---
@@ -66,13 +152,40 @@ export const onpaymentremindercreate = onDocumentCreated({
     // Find the latest unpaid payment or use estimated info
     const paymentsSnap = await db.collection('users').doc(userId).collection('payments').orderBy('date', 'desc').limit(1).get();
     let amount = "0.00";
-    let period = "Current Period";
+    let period = format(new Date(), 'MMMM yyyy');
 
     if (!paymentsSnap.empty) {
         const p = paymentsSnap.docs[0].data();
         amount = p.amount.toFixed(2);
-        period = p.description.replace('Bill for ', '').replace('Monthly Subscription for ', '');
+        period = p.description.replace('Bill for ', '').replace('Monthly Subscription for ', '').replace('Estimated bill for ', '');
     }
+
+    // Determine Date Range for SOA
+    let cycleStart = startOfMonth(new Date());
+    let cycleEnd = endOfMonth(new Date());
+    try {
+        const parsedDate = parse(period, 'MMMM yyyy', new Date());
+        cycleStart = startOfMonth(parsedDate);
+        cycleEnd = endOfMonth(parsedDate);
+    } catch(e) {
+        logger.warn("Date parsing failed, using current month defaults.");
+    }
+
+    // Fetch Deliveries & Sanitation for the period
+    const deliveriesSnap = await db.collection('users').doc(userId).collection('deliveries')
+        .where('date', '>=', cycleStart.toISOString())
+        .where('date', '<=', cycleEnd.toISOString())
+        .get();
+    const deliveries = deliveriesSnap.docs.map(d => d.data() as Delivery);
+
+    const sanitationSnap = await db.collection('users').doc(userId).collection('sanitationVisits')
+        .where('scheduledDate', '>=', cycleStart.toISOString())
+        .where('scheduledDate', '<=', cycleEnd.toISOString())
+        .get();
+    const sanitation = sanitationSnap.docs.map(d => d.data() as SanitationVisit);
+
+    // Generate Password Protected PDF
+    const pdfBuffer = await generatePasswordProtectedSOA(user, period, deliveries, sanitation);
 
     const template = getPaymentReminderTemplate(user.businessName, amount, period);
     
@@ -81,9 +194,13 @@ export const onpaymentremindercreate = onDocumentCreated({
             to: user.email,
             subject: template.subject,
             text: `Reminder: Your statement for ${period} is ₱${amount}.`,
-            html: template.html
+            html: template.html,
+            attachments: [{
+                filename: `SOA_${user.businessName.replace(/\s/g, '_')}_${period.replace(/\s/g, '-')}.pdf`,
+                content: pdfBuffer
+            }]
         });
-        logger.info(`Follow-up email sent to ${user.email}`);
+        logger.info(`Follow-up email with SOA sent to ${user.email}`);
     } catch (error) {
         logger.error(`Failed to send follow-up to ${user.email}`, error);
     }

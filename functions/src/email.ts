@@ -8,6 +8,7 @@ interface SendEmailOptions {
   subject: string;
   text: string;
   html: string;
+  attachments?: any[];
 }
 
 const BRAND_PRIMARY = '#538ec2';
@@ -17,7 +18,7 @@ const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singap
 /**
  * Sends an email using the Brevo SMTP relay.
  */
-export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
+export async function sendEmail({ to, subject, text, html, attachments }: SendEmailOptions) {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
@@ -43,6 +44,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
       subject,
       text,
       html,
+      attachments,
     });
 
     logger.info(`Email sent successfully. MessageID: ${info.id || info.messageId}`);
@@ -107,9 +109,6 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
           <h2 class="main-title">${headerTitle}</h2>
           ${subheader}
           ${content}
-          <div class="btn-container">
-            <a href="https://app.riverph.com" class="btn">Login to Dashboard</a>
-          </div>
           <div class="footer">
             <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
             <p class="footer-sub">
@@ -146,7 +145,7 @@ export function getWelcomeUnclaimedTemplate(
       <html lang="en">
       <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
           <style>
               body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f7f9; }
@@ -160,7 +159,7 @@ export function getWelcomeUnclaimedTemplate(
               .summary-label { font-weight: bold; color: #555; width: 120px; display: inline-block; }
               .button-container { text-align: center; margin: 30px 0; }
               .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
-              .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+              .commitment { font-size: 13px; color: #666; border-top: 1_px solid #eee; padding-top: 20px; margin-top: 20px; }
               .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
               .footer-brand { font-size: 16px; font-weight: 800; color: ${brandColor}; margin-bottom: 4px; }
               .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
@@ -354,7 +353,7 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
     <p class="greeting">Hello ${businessName}, ${isReceived ? '🌊' : '🚀'}</p>
     <p class="body-text">
       ${isReceived 
-        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never run dry." 
+        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never runs dry." 
         : `Your on-demand refill is currently <strong>${status}</strong>. We're working hard to get your supply back to 100%.`}
     </p>
     <div class="status-badge">
@@ -477,7 +476,7 @@ export function getPaymentReminderTemplate(businessName: string, amount: string,
         </div>
       </div>
       <p class="next-step">
-        Settling your bill is easy—just scan the QR code in your portal or use the secure payment link provided in your dashboard.
+        <strong>Security Notice:</strong> For your privacy, the attached Statement of Account is password-protected. Please use your <strong>Client ID</strong> to open the file.
       </p>
     </div>
   `;
