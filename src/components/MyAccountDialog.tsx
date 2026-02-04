@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useReducer, useEffect, useMemo, useState, useTransition } from 'react';
@@ -1278,7 +1279,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   }, [user?.createdAt]);
 
 
-  const handleDownloadMonthlySOA = () => {
+  const handleDownloadMonthlySOA = async () => {
     if (!user) {
       toast({ variant: 'destructive', title: 'Error', description: 'User data not available.' });
       return;
@@ -1315,23 +1316,28 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     
     const totalInvoicedAmount = (paymentHistory || []).reduce((sum, inv) => sum + inv.amount, 0);
 
-    generateMonthlySOA({
-      user,
-      deliveries: filteredDeliveries,
-      sanitationVisits: filteredSanitation,
-      complianceReports: complianceReports || [],
-      totalAmount: totalInvoicedAmount,
-      billingPeriod,
-      branches: branchUsers,
-      transactions: transactions,
-    });
-    
     toast({
-      title: 'Download Started',
-      description: `Your Statement of Account for ${billingPeriod} is being generated.`,
+      title: 'Processing Download',
+      description: `Your Statement of Account for ${billingPeriod} is being prepared...`,
     });
-    
-    setIsSoaDialogOpen(false);
+
+    try {
+        await generateMonthlySOA({
+          user,
+          deliveries: filteredDeliveries,
+          sanitationVisits: filteredSanitation,
+          complianceReports: complianceReports || [],
+          totalAmount: totalInvoicedAmount,
+          billingPeriod,
+          branches: branchUsers,
+          transactions: transactions,
+        });
+        
+        setIsSoaDialogOpen(false);
+    } catch (error) {
+        console.error("SOA generation failed:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate PDF.' });
+    }
   };
 
   const handleViewInvoice = (invoice: Payment) => {
@@ -1339,13 +1345,15 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     dispatch({ type: 'SET_INVOICE_DETAIL_DIALOG', payload: true });
   };
   
-  const handleDownloadInvoice = (invoice: Payment) => {
+  const handleDownloadInvoice = async (invoice: Payment) => {
     if (!user) return;
-    generateInvoicePDF({ user, invoice });
-    toast({
-      title: 'Download Started',
-      description: `Your invoice ${invoice.id} is being generated.`
-    });
+    toast({ title: 'Preparing Invoice', description: `Generating invoice ${invoice.id}...` });
+    try {
+        await generateInvoicePDF({ user, invoice });
+    } catch (error) {
+        console.error("Invoice generation failed:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate invoice PDF.' });
+    }
   }
 
   const copyToClipboard = (text: string, label: string) => {

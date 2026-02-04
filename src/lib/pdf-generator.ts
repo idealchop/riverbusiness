@@ -1,9 +1,8 @@
 
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment, Transaction } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
 
 // Extend jsPDF with the autoTable method
 declare module 'jspdf' {
@@ -14,12 +13,33 @@ declare module 'jspdf' {
 
 const LITER_RATIO = 19.5;
 const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO;
-const toSafeDate = (timestamp: any): Date => {
-    if (!timestamp) return new Date(0);
-    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
-      return timestamp.toDate();
-    }
-    return new Date(timestamp);
+
+/**
+ * Utility to convert an image URL to a Base64 Data URL.
+ * This resolves the "wrong PNG signature" error by sanitizing the image through a canvas.
+ */
+const getBase64ImageFromURL = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      const dataURL = canvas.toDataURL('image/png');
+      resolve(dataURL);
+    };
+    img.onerror = (error) => {
+      reject(error);
+    };
+    img.src = url;
+  });
 };
 
 interface MonthlySOAProps {
@@ -33,7 +53,7 @@ interface MonthlySOAProps {
     transactions?: Transaction[] | null;
 }
 
-export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches, transactions }: MonthlySOAProps) => {
+export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches, transactions }: MonthlySOAProps) => {
     const doc = new jsPDF('p', 'pt');
     const primaryColor = [83, 142, 194]; // #538ec2
     const pageHeight = doc.internal.pageSize.height;
@@ -45,16 +65,26 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     const pricePerLiter = user.plan?.price || 0;
     const pricePerContainer = pricePerLiter * LITER_RATIO;
 
+    // Pre-load logo
+    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
+    let logoBase64 = '';
+    try {
+        logoBase64 = await getBase64ImageFromURL(logoUrl);
+    } catch (e) {
+        console.warn("Could not pre-load logo for SOA:", e);
+    }
+
     // --- HEADER ---
     const drawHeader = () => {
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(0, 0, pageWidth, 70, 'F');
       
-      const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
-      try {
-         doc.addImage(logoUrl, 'PNG', margin, 18, 35, 35);
-      } catch (e) {
-        console.error("Could not add logo to PDF:", e);
+      if (logoBase64) {
+        try {
+           doc.addImage(logoBase64, 'PNG', margin, 18, 35, 35);
+        } catch (e) {
+          console.error("Could not add logo to PDF:", e);
+        }
       }
       
       doc.setFontSize(22);
@@ -252,7 +282,7 @@ interface InvoicePDFProps {
     invoice: Payment;
 }
 
-export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
+export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => {
     const doc = new jsPDF('p', 'pt');
     const primaryColor = [83, 142, 194]; // #538ec2
     const pageHeight = doc.internal.pageSize.height;
@@ -261,10 +291,19 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     const margin = 40;
 
     const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
+    let logoBase64 = '';
     try {
-        doc.addImage(logoUrl, 'PNG', pageWidth - margin - 35, margin - 10, 35, 35);
+        logoBase64 = await getBase64ImageFromURL(logoUrl);
     } catch (e) {
-        console.error("Could not add logo to PDF:", e);
+        console.warn("Could not pre-load logo for Invoice:", e);
+    }
+
+    if (logoBase64) {
+        try {
+            doc.addImage(logoBase64, 'PNG', pageWidth - margin - 35, margin - 10, 35, 35);
+        } catch (e) {
+            console.error("Could not add logo to PDF:", e);
+        }
     }
 
     doc.setFontSize(28);
