@@ -29,7 +29,7 @@ import {
 export * from './billing';
 
 const BRAND_PRIMARY = '#538ec2';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
 
 /**
  * Creates a notification document in a user's notification subcollection.
@@ -101,9 +101,16 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
         doc.moveDown(0.5);
 
+        let totalQty = 0;
+        let totalLiters = 0;
+
         doc.font('Helvetica');
         deliveries.forEach(d => {
             const dateStr = typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A';
+            const liters = d.liters || (d.volumeContainers * 19.5);
+            totalQty += d.volumeContainers;
+            totalLiters += liters;
+
             doc.text(dateStr, 40, doc.y);
             doc.text(d.id, 140, doc.y - 12);
             doc.text(d.volumeContainers.toString(), 280, doc.y - 12);
@@ -111,6 +118,14 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
             doc.text(`P ${ (d.amount || 0).toFixed(2) }`, 440, doc.y - 12);
             doc.moveDown();
         });
+
+        // Summary Line
+        doc.moveDown();
+        doc.lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+        doc.moveDown(0.5);
+        doc.font('Helvetica-Bold').text('TOTALS', 40, doc.y);
+        doc.text(totalQty.toString(), 280, doc.y - 12);
+        doc.text(`${totalLiters.toFixed(1)} L`, 140, doc.y - 12);
 
         if (sanitation.length > 0) {
             doc.addPage();
@@ -125,7 +140,8 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
 
         // Footer
         const pageHeight = doc.page.height;
-        doc.fontSize(8).fillColor('#999').text('River Tech Inc. | Turn Everyday Needs Into Automatic Experience.', 40, pageHeight - 60, { align: 'center', width: 500 });
+        doc.fontSize(8).fillColor(BRAND_PRIMARY).text('River PH - Automated, Connected, Convenient.', 40, pageHeight - 60, { align: 'center', width: 500 });
+        doc.fillColor('#999').text('See how we’re shaping the future of the Philippines → riverph.com', 40, pageHeight - 48, { align: 'center', width: 500 });
 
         doc.end();
     });
