@@ -92,7 +92,7 @@ const getSanitationPassRate = (v) => {
  */
 async function generatePasswordProtectedSOA(user, period, deliveries, sanitation, compliance, transactions) {
     return new Promise(async (resolve, reject) => {
-        var _a, _b, _c;
+        var _a, _b;
         const doc = new pdfkit_1.default({
             userPassword: user.clientId || 'password',
             ownerPassword: 'river-admin-secret',
@@ -103,7 +103,7 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
-        const pageWidth = ((_a = doc.internal.pageSize) === null || _a === void 0 ? void 0 : _a.width) || 612; // Default letter width
+        const pageWidth = doc.page.width || 612; // PDFKit API for width
         const margin = 40;
         // 1. High-Fidelity Header (Solid Blue Corner)
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 120).fill();
@@ -114,12 +114,12 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         catch (e) {
             logger.warn("PDF Logo fetch failed, skipping image.");
         }
-        const pricePerLiter = ((_b = user.plan) === null || _b === void 0 ? void 0 : _b.price) || 0;
+        const pricePerLiter = ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.price) || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
         // White Hierarchical Text
         doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin + 65, 45);
         doc.fontSize(14).text('Statement of Account', margin + 65, 72);
-        doc.fontSize(10).font('Helvetica').text(`Plan: ${((_c = user.plan) === null || _c === void 0 ? void 0 : _c.name) || 'N/A'}`, margin + 65, 92);
+        doc.fontSize(10).font('Helvetica').text(`Plan: ${((_b = user.plan) === null || _b === void 0 ? void 0 : _b.name) || 'N/A'}`, margin + 65, 92);
         doc.fillColor('#000000').moveDown(4.5);
         // 2. Stakeholder Details (Two Column Layout)
         const topOfDetails = doc.y;
@@ -132,7 +132,7 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         doc.text('customers@riverph.com', margin, topOfDetails + 51);
         doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, topOfDetails + 15);
         doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, topOfDetails + 27, { width: pageWidth / 2 - 60 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2); // Tightened spacing
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2);
         doc.text(user.email || '', pageWidth / 2 + 20, doc.y + 2);
         doc.moveDown(3);
         const metadataY = doc.y;

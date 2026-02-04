@@ -88,7 +88,7 @@ export async function generatePasswordProtectedSOA(
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = doc.page.width || 612; // PDFKit API for width
+        const pageWidth = doc.page.width;
         const margin = 40;
 
         // 1. High-Fidelity Header (Solid Blue Corner)
@@ -316,6 +316,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     try {
         await sendEmail({
             to: user.email,
+            cc: 'support@riverph.com',
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
@@ -344,7 +345,7 @@ export const onunclaimedprofilecreate = onDocumentCreated({
     const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
     const template = getWelcomeUnclaimedTemplate(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
     try {
-        await sendEmail({ to: profile.businessEmail, subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
+        await sendEmail({ to: profile.businessEmail, cc: 'support@riverph.com', subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
     } catch (error) { logger.error(`Failed welcome email`, error); }
 });
 
@@ -362,7 +363,7 @@ export const ondeliverycreate = onDocumentCreated({
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
+        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 
@@ -382,7 +383,7 @@ export const ondeliveryupdate = onDocumentUpdated({
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Delivery complete`, html: template.html });
+        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 
@@ -402,7 +403,7 @@ export const onpaymentupdate = onDocumentUpdated({
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData?.email) {
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
-            await sendEmail({ to: userData.email, subject: template.subject, text: `Payment confirmed`, html: template.html });
+            await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Payment confirmed`, html: template.html });
         }
     }
 });
@@ -421,7 +422,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const userData = userDoc.data();
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Top-up approved`, html: template.html });
+        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Top-up approved`, html: template.html });
     }
 });
 
@@ -438,7 +439,7 @@ export const onrefillrequestcreate = onDocumentCreated({
     const userData = userDoc.data();
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Refill request received`, html: template.html });
+        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Refill request received`, html: template.html });
     }
 });
 
@@ -455,7 +456,7 @@ export const onsanitationcreate = onDocumentCreated({
     if (userData?.email && visit.status === 'Scheduled') {
         const dateStr = new Date(visit.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
-        await sendEmail({ to: userData.email, subject: template.subject, text: `Visit scheduled`, html: template.html });
+        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Visit scheduled`, html: template.html });
     }
 });
 
@@ -474,7 +475,7 @@ export const onsanitationupdate = onDocumentUpdated({
         if (userData?.email) {
             const dateStr = new Date(after.scheduledDate as any).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
-            await sendEmail({ to: userData.email, subject: template.subject, text: `Report ready`, html: template.html });
+            await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Report ready`, html: template.html });
         }
     }
 });
