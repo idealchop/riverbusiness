@@ -36,7 +36,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.oncompliancecreate = exports.onsanitationupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = void 0;
+exports.onfileupload = exports.oncompliancecreate = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = void 0;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
@@ -266,6 +266,32 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
                 html: adminTemplate.html
             }).catch(e => logger.error(`Internal admin alert failed for ${admin.name}`, e));
         }
+    }
+});
+/**
+ * Triggered when a new sanitation visit is created (Scheduled).
+ */
+exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
+    document: "users/{userId}/sanitationVisits/{visitId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const userId = event.params.userId;
+    const visit = event.data.data();
+    logger.info(`Triggered onsanitationcreate for user: ${userId}. Status: Scheduled`);
+    const db = (0, firestore_1.getFirestore)();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    if ((userData === null || userData === void 0 ? void 0 : userData.email) && visit.status === 'Scheduled') {
+        const dateStr = new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            subject: template.subject,
+            text: `Your office sanitation visit has been scheduled for ${dateStr}.`,
+            html: template.html
+        });
     }
 });
 /**

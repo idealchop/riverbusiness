@@ -42,6 +42,7 @@ exports.getNewInvoiceTemplate = getNewInvoiceTemplate;
 exports.getRefillRequestTemplate = getRefillRequestTemplate;
 exports.getInternalRefillAlertTemplate = getInternalRefillAlertTemplate;
 exports.getSanitationReportTemplate = getSanitationReportTemplate;
+exports.getSanitationScheduledTemplate = getSanitationScheduledTemplate;
 exports.getComplianceAlertTemplate = getComplianceAlertTemplate;
 const nodemailer = __importStar(require("nodemailer"));
 const logger = __importStar(require("firebase-functions/logger"));
@@ -465,6 +466,43 @@ function getSanitationReportTemplate(businessName, officerName, date) {
     return {
         subject: `Certified: Your Office Water Sanitation is Complete ✨`,
         html: getEmailWrapper(content, 'Equipment Quality Check')
+    };
+}
+function getSanitationScheduledTemplate(businessName, officerName, date) {
+    const content = `
+    <p class="greeting">Scheduled: Your Office Sanitation Visit 🗓️</p>
+    <p class="body-text">
+      Hi ${businessName}, we've scheduled a professional sanitation visit for your office water equipment. Keeping your dispensers clean is a core part of our quality guarantee.
+    </p>
+    <div class="status-badge">
+      <span class="badge" style="background-color: ${BRAND_PRIMARY}15; color: ${BRAND_PRIMARY}; border: 1.5px solid ${BRAND_PRIMARY};">
+        Visit Scheduled
+      </span>
+    </div>
+    <div class="details-box">
+      <h3 class="details-title">Appointment Details</h3>
+      <div class="detail-item">
+        <div class="detail-icon">📅</div>
+        <div>
+          <p class="detail-label">Scheduled Date</p>
+          <p class="detail-value">${date}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-icon">🧑‍🔧</div>
+        <div>
+          <p class="detail-label">Assigned Officer</p>
+          <p class="detail-value">${officerName || 'TBD'}</p>
+        </div>
+      </div>
+      <p class="next-step">
+        Our officer will perform a comprehensive cleaning and safety check. You don't need to do anything—just keep the area accessible.
+      </p>
+    </div>
+  `;
+    return {
+        subject: `Confirmed: Sanitation Visit Scheduled for ${date} 🗓️`,
+        html: getEmailWrapper(content, 'Sanitation Visit Scheduled')
     };
 }
 function getComplianceAlertTemplate(businessName, stationName, reportName) {
