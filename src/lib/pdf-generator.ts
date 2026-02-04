@@ -3,9 +3,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Payment, Transaction } from '@/lib/types';
-import type { DateRange } from 'react-day-picker';
 import { Timestamp } from 'firebase/firestore';
-
 
 // Extend jsPDF with the autoTable method
 declare module 'jspdf' {
@@ -16,198 +14,11 @@ declare module 'jspdf' {
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date => {
-    if (!timestamp) return new Date(0); // Return a very old date for null/undefined values
+    if (!timestamp) return new Date(0);
     if (timestamp.toDate && typeof timestamp.toDate === 'function') {
       return timestamp.toDate();
     }
     return new Date(timestamp);
-};
-
-
-export const generateSOA = (user: AppUser, deliveries: Delivery[], sanitationVisits: SanitationVisit[], dateRange?: DateRange) => {
-  const doc = new jsPDF();
-  const primaryColor = [21, 99, 145]; // A corporate blue
-  const accentColor = [240, 249, 255]; // A very light blue for backgrounds
-  const pageHeight = doc.internal.pageSize.height;
-  const pageWidth = doc.internal.pageSize.width;
-  
-  // 1. Add Logo and Header
-  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.rect(0, 0, pageWidth, 25, 'F');
-  
-  const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
-  try {
-     doc.addImage(logoUrl, 'JPEG', 14, 5, 18, 18);
-  } catch (e) {
-    console.error("Could not add logo to PDF:", e);
-  }
-  
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Water Refill History', 36, 17, { align: 'left' });
-
-  doc.setFontSize(10);
-  doc.text('River Tech Inc.', pageWidth - 14, 12, { align: 'right' });
-  doc.setFontSize(8);
-  doc.text('Turn Everyday Needs Into Automatic Experience With River', pageWidth - 14, 18, { align: 'right' });
-
-
-  // 2. Add Personalized Greeting and Info
-  let startY = 40;
-  doc.setFontSize(10);
-  doc.setTextColor(0);
-  doc.setFont('helvetica', 'normal');
-  const greetingText = `Hi ${user.name}, thank you for being part of the River Business family. This document summarizes your delivery history, showcasing the convenience and quality you enjoy with our automated service.`;
-  const splitGreeting = doc.splitTextToSize(greetingText, pageWidth - 28);
-  doc.text(splitGreeting, 14, startY);
-  
-  startY += (splitGreeting.length * 5) + 10;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('Company Information', 14, startY);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0);
-  doc.text('River Tech Inc.', 14, startY + 6);
-  doc.text('Filinvest Axis Tower 1 24th & 26th Flr, 304 Filinvest Ave, Alabang, Muntinlupa', 14, startY + 11);
-  doc.text('www.riverph.com', 14, startY + 16);
-  doc.text('customer@riverph.com', 14, startY + 21);
-  
-
-  // 3. Add Document Details
-  const docDetailsY = startY + 33;
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('Date Issued:', 14, docDetailsY);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0);
-  doc.text(format(new Date(), 'PP'), 40, docDetailsY);
-
-  let period = 'All Time';
-  if (dateRange?.from) {
-      period = format(dateRange.from, 'PP');
-      if (dateRange.to) {
-          period += ` to ${format(dateRange.to!, 'PP')}`;
-      }
-  }
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text('Period Covered:', 14, docDetailsY + 6);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(0);
-  doc.text(period, 45, docDetailsY + 6);
-
-
-  // 4. Create Table
-  const tableStartY = docDetailsY + 15;
-  const tableColumn = ["Ref ID", "Delivery Date", "Volume (Containers)", "Volume (Liters)", "Status"];
-  const tableRows: (string | number | object)[][] = [];
-
-  deliveries.forEach(delivery => {
-    const deliveryData = [
-      delivery.id,
-      format(new Date(delivery.date), 'PP'),
-      delivery.volumeContainers,
-      containerToLiter(delivery.volumeContainers),
-      delivery.status,
-    ];
-    tableRows.push(deliveryData);
-  });
-
-  const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
-  const totalLiters = containerToLiter(totalContainers);
-  
-  // Add a summary row to the table body
-  if (deliveries.length > 0) {
-    const summaryRow = [
-        { content: 'Total Consumption', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-        { content: totalContainers.toLocaleString(), styles: { fontStyle: 'bold' } },
-        { content: totalLiters.toLocaleString(), styles: { fontStyle: 'bold' } },
-        { content: '', styles: {} },
-    ];
-    tableRows.push(summaryRow as any);
-  }
-
-
-  const drawFooter = (data: any) => {
-    doc.setLineWidth(0.2);
-    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
-    
-    doc.setFontSize(8);
-    
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.text('River Tech Inc.: Turn Essential Needs Into Automatic Experience.', 14, pageHeight - 12);
-    
-    doc.setTextColor(150);
-    doc.text(`Page ${data.pageNumber}`, pageWidth - 14, pageHeight - 12, { align: 'right' });
-  };
-
-
-  doc.autoTable({
-    head: [tableColumn],
-    body: tableRows,
-    startY: tableStartY,
-    theme: 'grid',
-    headStyles: {
-        fillColor: primaryColor,
-        textColor: 255,
-        fontStyle: 'bold',
-    },
-    styles: {
-        cellPadding: 2.5,
-        fontSize: 9,
-    },
-    alternateRowStyles: {
-        fillColor: accentColor,
-    },
-    didDrawPage: drawFooter
-  });
-
-  let lastY = (doc as any).lastAutoTable.finalY;
-
-  // Sanitation Visits Table
-  const filteredSanitation = (sanitationVisits || []).filter(visit => {
-    if (!dateRange?.from) return true;
-    const visitDate = new Date(visit.scheduledDate);
-    return isWithinInterval(visitDate, { start: dateRange.from, end: dateRange.to || dateRange.from });
-  });
-
-  if(filteredSanitation.length > 0) {
-    if (lastY > pageHeight - 100) {
-        doc.addPage();
-        drawFooter({pageNumber: (doc as any).internal.getNumberOfPages()});
-        lastY = 40;
-    } else {
-        lastY += 20;
-    }
-
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('Sanitation Visits', 14, lastY);
-    lastY += 15;
-
-    const sanitationBody = filteredSanitation.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]);
-
-    doc.autoTable({
-      head: [["Scheduled Date", "Status", "Quality Officer"]],
-      body: sanitationBody,
-      startY: lastY,
-      theme: 'grid',
-      headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
-      styles: { cellPadding: 2.5, fontSize: 9 },
-      alternateRowStyles: { fillColor: accentColor },
-      didDrawPage: drawFooter,
-    });
-  }
-
-
-  // 5. Save PDF
-  doc.save(`WaterRefillHistory_${user.businessName?.replace(/\s/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 };
 
 interface MonthlySOAProps {
@@ -222,8 +33,8 @@ interface MonthlySOAProps {
 }
 
 export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complianceReports, totalAmount, billingPeriod, branches, transactions }: MonthlySOAProps) => {
-    const doc = new jsPDF('p', 'pt'); // Using points for finer control
-    const primaryColor = [21, 99, 145];
+    const doc = new jsPDF('p', 'pt');
+    const primaryColor = [83, 142, 194]; // #538ec2
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
     let lastY = 0;
@@ -236,9 +47,9 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(0, 0, pageWidth, 70, 'F');
       
-      const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+      const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_White_HQ.png?alt=media&token=a850265f-12c0-4b9b-9447-dbfd37e722ff';
       try {
-         doc.addImage(logoUrl, 'JPEG', margin, 18, 35, 35);
+         doc.addImage(logoUrl, 'PNG', margin, 18, 35, 35);
       } catch (e) {
         console.error("Could not add logo to PDF:", e);
       }
@@ -261,16 +72,13 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
       doc.line(margin, pageHeight - 50, pageWidth - margin, pageHeight - 50);
       
       doc.setFontSize(8);
-      
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont('helvetica', 'bold');
-      doc.text('River Tech Inc.', margin, pageHeight - 38);
+      doc.text('River PH - Automated, Connected, Convenient.', pageWidth / 2, pageHeight - 38, { align: 'center' });
+      
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120);
-      doc.text('| Turn Essential Needs Into Automatic Experience.', margin + 70, pageHeight - 38);
-
-      const contactInfo = 'customers@riverph.com | www.riverph.com';
-      doc.text(contactInfo, margin, pageHeight - 28);
+      doc.text('See how we’re shaping the future of the Philippines → riverph.com', pageWidth / 2, pageHeight - 28, { align: 'center' });
       
       doc.setTextColor(150);
       doc.text(`Page ${pageNumber}`, pageWidth - margin, pageHeight - 28, { align: 'right' });
@@ -278,44 +86,39 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     
     drawHeader();
     
-    // --- FROM/TO & DATE INFO ---
+    // --- CLIENT INFO ---
     lastY = 100;
-    const fromToY = lastY;
-
-    // FROM (Company Info)
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('FROM:', margin, fromToY);
+    doc.text('FROM:', margin, lastY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text('River Tech Inc.', margin, fromToY + 12);
-    doc.text('Filinvest Axis Tower 1, Alabang', margin, fromToY + 22);
-    doc.text('customer@riverph.com', margin, fromToY + 32);
+    doc.text('River Tech Inc.', margin, lastY + 12);
+    doc.text('Filinvest Axis Tower 1, Alabang', margin, lastY + 22);
+    doc.text('customers@riverph.com', margin, lastY + 32);
 
-    // TO (Client Info)
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('TO:', pageWidth / 2, fromToY);
+    doc.text('TO:', pageWidth / 2, lastY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0);
-    doc.text(user.businessName || 'N/A', pageWidth / 2, fromToY + 12);
-    doc.text(user.address || 'No address provided', pageWidth / 2, fromToY + 22);
-    doc.text(user.email || '', pageWidth / 2, fromToY + 32);
+    doc.text(user.businessName || 'N/A', pageWidth / 2, lastY + 12);
+    doc.text(user.address || 'No address provided', pageWidth / 2, lastY + 22);
+    doc.text(user.email || '', pageWidth / 2, lastY + 32);
 
-    lastY = fromToY + 50;
+    lastY += 50;
     
-    const now = new Date();
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('STATEMENT DATE:', margin, lastY);
     doc.setFont('helvetica', 'normal');
-    doc.text(format(now, 'PP'), margin + 100, lastY);
+    doc.text(format(new Date(), 'PP'), margin + 110, lastY);
 
     doc.setFont('helvetica', 'bold');
     doc.text('BILLING PERIOD:', margin, lastY + 15);
     doc.setFont('helvetica', 'normal');
-    doc.text(billingPeriod, margin + 100, lastY + 15);
+    doc.text(billingPeriod, margin + 110, lastY + 15);
 
     lastY += 40;
 
@@ -341,43 +144,17 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
                 theme: 'striped',
                 headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 8, cellPadding: 4 },
                 bodyStyles: { fontSize: 8, cellPadding: 4 },
-                margin: { left: margin, right: margin },
-                didDrawPage: (data) => {
-                  // Only draw footer on pages after the first one, since first page footer is drawn at the end.
-                  if (data.pageNumber > 1) {
-                    drawPdfFooter(data.pageNumber);
-                  }
-                }
+                margin: { left: margin, right: margin }
             });
             tableFinalY = (doc as any).lastAutoTable.finalY;
         }
         return tableFinalY;
     };
     
-     // --- Subscription Details ---
-     if (user.customPlanDetails) {
-        const { gallonQuantity, dispenserQuantity, litersPerMonth, gallonPaymentType, dispenserPaymentType } = user.customPlanDetails;
-        let equipmentBody: any[] = [];
-        if(user.plan?.name) equipmentBody.push(['Current Plan', user.plan.name]);
-        if(user.plan?.isConsumptionBased) {
-            equipmentBody.push(['Pricing', `P${user.plan.price}/liter (Consumption-based)`]);
-        } else {
-            equipmentBody.push(['Pricing', `P${user.plan.price}/month (Fixed)`]);
-        }
-        if(litersPerMonth && litersPerMonth > 0) equipmentBody.push(['Base Liters/Month', `${litersPerMonth.toLocaleString()} L`]);
-        if (gallonQuantity && gallonQuantity > 0) equipmentBody.push(['Containers', `${gallonQuantity} (${gallonPaymentType})`]);
-        if (dispenserQuantity && dispenserQuantity > 0) equipmentBody.push(['Dispensers', `${dispenserQuantity} (${dispenserPaymentType})`]);
-        
-        if (equipmentBody.length > 0) {
-            lastY = renderTable('Subscription Details', [['Item', 'Details']], equipmentBody, lastY);
-            lastY += 20;
-        }
-    }
-
-    // --- PARENT ACCOUNT SPECIFIC SECTIONS ---
+    // --- Parent Credits Logic ---
     if (isParent && transactions) {
         const totalCredits = transactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amountCredits, 0);
-        const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + t.amountCredits, 0);
+        const totalDebits = transactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + (t.amountCredits || 0), 0);
         const finalBalance = user.topUpBalanceCredits || 0;
 
         const summaryBody = [
@@ -387,24 +164,8 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         ];
         
         lastY = renderTable('Financial Summary', [['Description', 'Amount']], summaryBody, lastY);
-        lastY += 20;
-
-        const transactionBody = transactions.map(t => {
-            const dateVal = toSafeDate(t.date);
-            const amountText = t.type === 'Credit' 
-                ? `+ P ${t.amountCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}` 
-                : `- P ${t.amountCredits.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-            return [
-                format(dateVal, 'PP'),
-                t.description,
-                amountText
-            ];
-        });
-        
-        lastY = renderTable('Transaction History', [['Date', 'Description', 'Amount']], transactionBody, lastY);
-        lastY += 20;
+        lastY += 30;
     }
-
 
     // --- Deliveries ---
     const totalContainers = deliveries.reduce((sum, d) => sum + d.volumeContainers, 0);
@@ -416,8 +177,8 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
     }, {} as Record<string, string>);
 
     const deliveryHead = isParent
-        ? [["Ref ID", "Branch Name", "Date", "Containers", "Liters", "Status"]]
-        : [["Ref ID", "Date", "Containers", "Liters", "Status"]];
+        ? [["Ref ID", "Branch Name", "Date", "Qty (Cont.)", "Volume (L)", "Status"]]
+        : [["Ref ID", "Date", "Qty (Cont.)", "Volume (L)", "Status"]];
     
     const deliveryBody = deliveries.map(d => {
         const row: (string | number)[] = [
@@ -425,7 +186,7 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
             ...(isParent ? [branchMap[d.userId] || d.userId] : []),
             format(new Date(d.date), 'PP'),
             d.volumeContainers,
-            containerToLiter(d.volumeContainers).toFixed(1),
+            (d.liters ?? containerToLiter(d.volumeContainers)).toFixed(1),
             d.status,
         ];
         return row;
@@ -442,61 +203,14 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         deliveryBody.push(summaryRow as any);
     }
 
-    lastY = renderTable('Delivery History', deliveryHead, deliveryBody, lastY);
-    lastY += 20;
+    lastY = renderTable('Water Refill Logs', deliveryHead, deliveryBody, lastY);
+    lastY += 30;
     
-    // --- Sanitation & Compliance ---
-    const hasSanitation = sanitationVisits && sanitationVisits.length > 0;
-    const hasCompliance = complianceReports && complianceReports.length > 0;
-
-    if (hasSanitation || hasCompliance) {
-        lastY = renderTable('Sanitation Visits', 
-          [["Scheduled Date", "Status", "Quality Officer"]],
-          hasSanitation ? sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]) : [['No visits recorded.']],
-          lastY
-        );
-        lastY += 20;
-        
-        lastY = renderTable('Water Quality Compliance',
-          [["Report Name", "Date", "Status"]],
-          hasCompliance ? complianceReports.map(r => [r.name, r.date ? format((r.date as any).toDate(), 'PP') : 'N/A', r.status]) : [['No reports recorded.']],
-          lastY
-        );
-        lastY += 20;
-    }
-    
-    // Auto-paging for summary
-    if (lastY > pageHeight - 150) { 
-        doc.addPage();
-        drawHeader();
-        lastY = 100;
-    }
-    
-    // --- FINANCIAL SUMMARY ---
-    if (!isParent && totalAmount && totalAmount > 0) {
-        const summaryX = pageWidth - margin - 220; 
-        
-        const grandTotal = totalAmount;
-
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0);
-        doc.text('Total Billed Amount:', summaryX, lastY + 42);
-        doc.text(`P ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY + 42, { align: 'right' });
-        
-        lastY += 62;
-    }
-    
-    // Saved Liters for fixed plans
-    if (user && !isParent && !user.plan?.isConsumptionBased && user.customPlanDetails) {
-        const totalMonthlyAllocation = (user.customPlanDetails.litersPerMonth || 0) + (user.customPlanDetails.bonusLiters || 0);
-        const savedLiters = totalMonthlyAllocation - totalLitersConsumed;
-        if (savedLiters > 0) {
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'italic');
-            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-            doc.text(`Saved Liters: ${savedLiters.toLocaleString(undefined, {maximumFractionDigits:0})} L will be added to next month's balance.`, pageWidth - margin, lastY, { align: 'right' });
-        }
+    // --- Sanitation ---
+    if (sanitationVisits.length > 0) {
+        const sanitationBody = sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo]);
+        lastY = renderTable('Sanitation Visits', [["Scheduled Date", "Status", "Quality Officer"]], sanitationBody, lastY);
+        lastY += 30;
     }
 
     const totalPages = (doc as any).internal.getNumberOfPages();
@@ -505,7 +219,6 @@ export const generateMonthlySOA = ({ user, deliveries, sanitationVisits, complia
         drawPdfFooter(i);
     }
     
-    // --- SAVE PDF ---
     doc.save(`SOA_${user.businessName?.replace(/\s/g, '_')}_${billingPeriod.replace(/\s/g, '-')}.pdf`);
 };
 
@@ -516,16 +229,15 @@ interface InvoicePDFProps {
 
 export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     const doc = new jsPDF('p', 'pt');
-    const primaryColor = [21, 99, 145];
+    const primaryColor = [83, 142, 194]; // #538ec2
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
     let lastY = 0;
     const margin = 40;
 
-    // --- HEADER & LOGO ---
-    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.jpg?alt=media&token=e91345f6-0616-486a-845a-101514781446';
+    const logoUrl = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
     try {
-        doc.addImage(logoUrl, 'JPEG', pageWidth - margin - 35, margin - 10, 35, 35);
+        doc.addImage(logoUrl, 'PNG', pageWidth - margin - 35, margin - 10, 35, 35);
     } catch (e) {
         console.error("Could not add logo to PDF:", e);
     }
@@ -537,7 +249,6 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
 
     lastY = margin + 50;
     
-    // --- INVOICE DETAILS ---
     const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
     const details = [
         ['Invoice number', invoice.id],
@@ -554,13 +265,12 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
 
     lastY += (details.length * 15) + 20;
 
-    // --- FROM / TO ---
     doc.setFont('helvetica', 'bold');
     doc.text('River Tech Inc.', margin, lastY);
     doc.setFont('helvetica', 'normal');
     doc.text('Filinvest Axis Tower 1', margin, lastY + 12);
     doc.text('Alabang, Muntinlupa', margin, lastY + 24);
-    doc.text('customer@riverph.com', margin, lastY + 36);
+    doc.text('customers@riverph.com', margin, lastY + 36);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Bill to', margin + 250, lastY);
@@ -571,7 +281,6 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
 
     lastY += 60;
     
-    // --- PAID STATUS ---
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -579,30 +288,8 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     
     lastY += 30;
 
-    // --- LINE ITEMS TABLE ---
     const planName = user.plan?.name || 'N/A';
-    let litersText = '';
-    if (user.plan?.isConsumptionBased) {
-        let monthlyEquipmentCost = 0;
-        if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-            monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
-        }
-        if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-            monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
-        }
-        
-        const pricePerLiter = user.plan.price || 1; // Avoid division by zero
-        const consumptionAmount = invoice.amount - monthlyEquipmentCost;
-        const consumedLiters = consumptionAmount > 0 ? consumptionAmount / pricePerLiter : 0;
-        litersText = `(${consumedLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L consumed)`;
-    } else {
-        const monthlyLiters = user.customPlanDetails?.litersPerMonth?.toLocaleString();
-        if (monthlyLiters) {
-            litersText = `(${monthlyLiters} L/mo)`;
-        }
-    }
-    
-    const description = `${invoice.description}\nPlan: ${planName} ${litersText}`;
+    const description = `${invoice.description}\nPlan: ${planName}`;
 
     doc.autoTable({
         startY: lastY,
@@ -620,7 +307,6 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     });
     lastY = (doc as any).lastAutoTable.finalY;
 
-    // --- TOTALS ---
     const summaryX = pageWidth - margin - 200;
     const totals = [
         ['Subtotal', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`],
@@ -641,14 +327,11 @@ export const generateInvoicePDF = ({ user, invoice }: InvoicePDFProps) => {
     doc.text('Amount paid', summaryX, lastY);
     doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, pageWidth - margin, lastY, { align: 'right'});
 
-
-    // --- FOOTER ---
     doc.setFontSize(8);
     doc.setTextColor(150);
-    const footerText = 'Thank you for your business. If you have any questions, please contact us at customer@riverph.com.';
+    const footerText = 'Thank you for your business. For any questions, please contact us at customers@riverph.com.';
     const splitFooter = doc.splitTextToSize(footerText, pageWidth - (margin * 2));
     doc.text(splitFooter, margin, pageHeight - margin - 10);
     
-    // --- SAVE PDF ---
     doc.save(`Invoice_${invoice.id}.pdf`);
 };

@@ -105,7 +105,7 @@ async function generatePasswordProtectedSOA(user: any, period: string, deliverie
         deliveries.forEach(d => {
             const dateStr = typeof d.date === 'string' ? d.date.split('T')[0] : 'N/A';
             doc.text(dateStr, 40, doc.y);
-            doc.text(d.id, 140, doc.y - 12); // Adjust Y for text wrap
+            doc.text(d.id, 140, doc.y - 12);
             doc.text(d.volumeContainers.toString(), 280, doc.y - 12);
             doc.text(d.status, 340, doc.y - 12);
             doc.text(`P ${ (d.amount || 0).toFixed(2) }`, 440, doc.y - 12);

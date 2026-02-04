@@ -159,7 +159,7 @@ export function getWelcomeUnclaimedTemplate(
               .summary-label { font-weight: bold; color: #555; width: 120px; display: inline-block; }
               .button-container { text-align: center; margin: 30px 0; }
               .button { background-color: ${brandColor}; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 10px 15px -3px rgba(83, 142, 194, 0.3); }
-              .commitment { font-size: 13px; color: #666; border-top: 1_px solid #eee; padding-top: 20px; margin-top: 20px; }
+              .commitment { font-size: 13px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
               .footer { text-align: center; margin-top: 40px; padding-top: 40px; border-top: 1px solid #f1f5f9; }
               .footer-brand { font-size: 16px; font-weight: 800; color: ${brandColor}; margin-bottom: 4px; }
               .footer-sub { font-size: 14px; color: #64748b; margin: 0; line-height: 1.6; }
@@ -353,7 +353,7 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
     <p class="greeting">Hello ${businessName}, ${isReceived ? '🌊' : '🚀'}</p>
     <p class="body-text">
       ${isReceived 
-        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never runs dry." 
+        ? "We've prioritized your one-time refill request. Our fulfillment team has been alerted and is already prepping your containers to ensure your office never run dry." 
         : `Your on-demand refill is currently <strong>${status}</strong>. We're working hard to get your supply back to 100%.`}
     </p>
     <div class="status-badge">
