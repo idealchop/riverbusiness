@@ -1,5 +1,3 @@
-
-'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, startOfMonth, subMonths, isAfter, isSameDay } from 'date-fns';
+import { format, startOfMonth, subMonths, isAfter, isSameDay, endOfMonth } from 'date-fns';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;

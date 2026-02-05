@@ -1,6 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth, addDays, endOfDay } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
 import type { ManualCharge, Delivery, SanitationVisit, ComplianceReport } from './types'; 
@@ -46,24 +46,21 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
             if (user.plan?.isConsumptionBased) {
                 billingCycleStart = new Date(2025, 11, 1);
-                // Include 1st day of month logic:
-                billingCycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1, 2026 inclusive
+                billingCycleEnd = endOfMonth(new Date(2026, 0, 1)); // Jan 31, 2026
                 billingPeriod = 'December 2025 - January 2026';
                 monthsToBill = 2;
             } else {
                 const dec2025 = new Date(2025, 11, 1);
                 billingPeriod = format(dec2025, 'MMMM yyyy');
-                // Standard logic: include Feb 1st
-                billingCycleStart = addDays(startOfMonth(dec2025), 1);
-                billingCycleEnd = endOfDay(now); // Feb 1st
+                billingCycleStart = startOfMonth(dec2025);
+                billingCycleEnd = endOfMonth(dec2025);
                 monthsToBill = 1; 
             }
         } else {
             const previousMonth = subMonths(now, 1);
             billingPeriod = format(previousMonth, 'MMMM yyyy');
-            // Logic: 2nd of Month to 1st of Next Month
-            billingCycleStart = addDays(startOfMonth(previousMonth), 1);
-            billingCycleEnd = endOfDay(now); // Today is the 1st
+            billingCycleStart = startOfMonth(previousMonth);
+            billingCycleEnd = endOfMonth(previousMonth);
         }
 
         // Handle Pending Plan Activation
@@ -183,7 +180,7 @@ async function generateInvoiceForUser(
             const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             
-            // Specialized CC Logic for NEW BIG 4 J
+            // Specialized CC Logic
             const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
 
             sendEmail({

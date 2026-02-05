@@ -3,7 +3,7 @@ import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import PDFDocument from 'pdfkit';
-import { format, startOfMonth, endOfMonth, parse, endOfDay, addDays, subMonths, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, endOfDay } from 'date-fns';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -20,7 +20,8 @@ import {
     getWelcomeUnclaimedTemplate,
     getSanitationScheduledTemplate,
     getSanitationReportTemplate,
-    getPaymentReminderTemplate
+    getPaymentReminderTemplate,
+    getNewInvoiceTemplate
 } from './email';
 
 // Export all billing functions
@@ -264,13 +265,13 @@ export const onpaymentremindercreate = onDocumentCreated({
 
     if (selectedPeriod && selectedPeriod !== 'full') {
         if (selectedPeriod === '2025-12_2026-01') {
-            cycleStart = new Date(2025, 11, 2); // Start on 2nd
-            cycleEnd = endOfDay(new Date(2026, 1, 1)); // End on 1st of Feb
+            cycleStart = new Date(2025, 11, 1);
+            cycleEnd = endOfDay(new Date(2026, 0, 31)); // Jan 31
             billingPeriodLabel = 'December 2025 - January 2026';
         } else {
             const parsed = parse(selectedPeriod, 'yyyy-MM', new Date());
-            cycleStart = addDays(startOfMonth(parsed), 1); // Start on 2nd
-            cycleEnd = endOfDay(startOfMonth(addMonths(parsed, 1))); // End on 1st of following month
+            cycleStart = startOfMonth(parsed);
+            cycleEnd = endOfDay(endOfMonth(parsed));
             billingPeriodLabel = format(parsed, 'MMMM yyyy');
         }
     }
@@ -305,7 +306,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
-    // Specialized CC Logic for NEW BIG 4 J
+    // Specialized CC Logic
     const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
 
     try {
@@ -395,10 +396,7 @@ export const onpaymentupdate = onDocumentUpdated({
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData?.email) {
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
-            
-            // Specialized CC Logic for NEW BIG 4 J
             const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-
             await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Payment confirmed`, html: template.html });
         }
     }
@@ -418,10 +416,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const userData = userDoc.data();
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        
-        // Specialized CC Logic for NEW BIG 4 J
         const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-
         await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Top-up approved`, html: template.html });
     }
 });
@@ -439,10 +434,7 @@ export const onrefillrequestcreate = onDocumentCreated({
     const userData = userDoc.data();
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
-        
-        // Specialized CC Logic for NEW BIG 4 J
         const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-
         await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Refill request received`, html: template.html });
     }
 });

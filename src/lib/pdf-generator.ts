@@ -56,6 +56,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 95);
 
     // Right Side Banner Metadata
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('STATEMENT DATE:', pageWidth - margin, 55, { align: 'right' });
     doc.setFont('helvetica', 'normal');
