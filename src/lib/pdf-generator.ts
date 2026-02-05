@@ -1,3 +1,4 @@
+
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -48,7 +49,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     const pricePerLiter = user.plan?.price || 0;
     const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-    // 1. High-Fidelity Header (Solid Blue Banner)
+    // 1. High-Fidelity Header (Solid Blue Banner) - Exact Image Match
     doc.setFillColor(83, 142, 194); // #538ec2
     doc.rect(0, 0, pageWidth, 120, 'F');
 
@@ -175,7 +176,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             totalAmount += deliveryAmount;
             return [
                 d.id, 
-                format(toSafeDate(d.date), 'MMM d, yyyy'), 
+                format(toSafeDate(d.date), 'MMM d, yyyy'), // SERVICE DATE
                 ...(isParent ? [branchMap[d.userId] || d.userId] : []), 
                 qty, 
                 `P ${pricePerContainer.toFixed(2)}`, 

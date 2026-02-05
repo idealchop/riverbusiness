@@ -61,13 +61,14 @@ async function createNotification(userId: string, notificationData: any) {
 
 /**
  * Determines the CC list based on the client ID.
+ * Includes the admin team (Jayvee and Jimboy) for all operational dispatches.
  */
 function getCCList(clientId?: string): string | string[] {
-    const defaultCC = 'support@riverph.com';
+    const adminEmails = ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
     if (clientId === 'SC2500000001') {
-        return [defaultCC, 'cavatan.jheck@gmail.com'];
+        return [...adminEmails, 'cavatan.jheck@gmail.com'];
     }
-    return defaultCC;
+    return adminEmails;
 }
 
 const getSanitationPassRate = (v: SanitationVisit) => {
@@ -110,7 +111,7 @@ export async function generatePasswordProtectedSOA(
         const pageWidth = doc.page.width;
         const margin = 40;
 
-        // 1. High-Fidelity Header (Solid Blue Banner)
+        // 1. High-Fidelity Header (Solid Blue Banner) - Exact Image Match
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 120).fill();
 
         const pricePerLiter = user.plan?.price || 0;
@@ -121,7 +122,7 @@ export async function generatePasswordProtectedSOA(
         doc.fontSize(14).text('Statement of Account', margin, 72);
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
         
-        // Right Side Banner Metadata
+        // Right Side Banner Metadata (Stacked Labels and Values)
         doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: pageWidth - margin * 2 });
         doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: pageWidth - margin * 2 });
         
@@ -241,7 +242,7 @@ export async function generatePasswordProtectedSOA(
                 totalQty += qty; totalLiters += liters; totalAmount += amount;
                 return [
                     d.id, 
-                    format(toSafeDate(d.date), 'MMM d, yyyy'), 
+                    format(toSafeDate(d.date), 'MMM d, yyyy'), // SERVICE DATE
                     qty, 
                     `P${pricePerContainer.toFixed(2)}`, 
                     `${liters.toFixed(1)}L`, 
@@ -324,7 +325,7 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any): Promis
         // Summary Totals
         doc.moveDown(4);
         const totalsX = pageWidth - margin - 200;
-        const vatIncluded = invoice.amount * (12/112);
+        const vatIncluded = invoice.amount * (12 / 112);
         
         doc.fontSize(10).font('Helvetica').text('Subtotal (VAT Included)', totalsX, doc.y);
         doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
@@ -418,7 +419,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
-    // Specialized CC Logic for Client SC2500000001
+    // CC Logic
     const ccList = getCCList(user.clientId);
 
     try {
@@ -516,9 +517,7 @@ export const onpaymentupdate = onDocumentUpdated({
             logger.info(`Generating automated receipt for user ${userId}, invoice ${after.id}`);
             // Generate high-fidelity digital receipt PDF
             const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
-            const template = (after.id.startsWith('INV-EST') || after.id.startsWith('INV-EST-'))
-                ? getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid')
-                : getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid'); // Can customize further if needed
+            const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
             
             // Specialized CC Logic
             const ccList = getCCList(userData.clientId);

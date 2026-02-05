@@ -10,6 +10,18 @@ import { generatePasswordProtectedSOA } from './index';
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 /**
+ * Determines the CC list based on the client ID.
+ * Includes the admin team (Jayvee and Jimboy) for all operational dispatches.
+ */
+function getCCList(clientId?: string): string | string[] {
+    const adminEmails = ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
+    if (clientId === 'SC2500000001') {
+        return [...adminEmails, 'cavatan.jheck@gmail.com'];
+    }
+    return adminEmails;
+}
+
+/**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
  */
@@ -186,8 +198,8 @@ async function generateInvoiceForUser(
             const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             
-            // Specialized CC Logic for SC2500000001
-            const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+            // CC Logic
+            const ccList = getCCList(user.clientId);
 
             sendEmail({
                 to: user.email,
