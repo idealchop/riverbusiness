@@ -52,7 +52,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     doc.setFillColor(83, 142, 194); // #538ec2
     doc.rect(0, 0, pageWidth, 120, 'F');
 
-    // Left Side Header Text
+    // Left Side Header Text (No Logo)
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');

@@ -45,8 +45,9 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
 
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
             if (user.plan?.isConsumptionBased) {
+                // December 1, 2025 to January 31, 2026
                 billingCycleStart = new Date(2025, 11, 1);
-                billingCycleEnd = endOfMonth(new Date(2026, 0, 1)); // Jan 31, 2026
+                billingCycleEnd = endOfMonth(new Date(2026, 0, 1)); 
                 billingPeriod = 'December 2025 - January 2026';
                 monthsToBill = 2;
             } else {
@@ -104,6 +105,7 @@ async function generateInvoiceForUser(
     let amount = 0;
     let description = '';
 
+    // Boundary: Strictly 1st to last day
     const deliveriesSnapshot = await userRef.collection('deliveries')
         .where('date', '>=', billingCycleStart.toISOString())
         .where('date', '<=', billingCycleEnd.toISOString())
@@ -164,7 +166,6 @@ async function generateInvoiceForUser(
         };
 
         if (user.accountType !== 'Branch' && user.email) {
-            // Fetch additional data for SOA
             const sanitationSnap = await userRef.collection('sanitationVisits')
                 .where('scheduledDate', '>=', billingCycleStart.toISOString())
                 .where('scheduledDate', '<=', billingCycleEnd.toISOString())
