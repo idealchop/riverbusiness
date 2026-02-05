@@ -24,11 +24,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, collectionGroup, setDoc, writeBatch } from 'firebase/firestore';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User } from 'firebase/auth';
-import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest, ManualCharge } from '@/lib/types';
-import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, isToday } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Calendar, Undo2, Copy, Wallet, Info, Users, ArrowRightLeft, Plus, DollarSign, Droplets, UserCheck } from 'lucide-react';
+import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, writeBatch } from 'firebase/firestore';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
+import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
+import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans, clientTypes } from '@/lib/plans';
@@ -707,7 +707,7 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
                                 date: (req.requestedAt as Timestamp)?.toDate()?.toISOString() || new Date().toISOString(),
                                 description: `Top-Up Request`,
                                 amount: req.amount,
-                                status: req.status as any, // Cast because statuses don't perfectly align
+                                status: req.status as any,
                                 proofOfPaymentUrl: req.proofOfPaymentUrl,
                             };
                             return (
@@ -746,7 +746,7 @@ const TopUpsTab = ({ topUpRequests, dispatch, handleViewInvoice }) => (
 
 interface MyAccountDialogProps {
   user: AppUser | null;
-  authUser: User | null;
+  authUser: AuthUser | null;
   planImage: ImagePlaceholder | null;
   paymentHistory: Payment[];
   paymentsLoading: boolean;
@@ -828,15 +828,16 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     let description: string;
     let invoiceIdSuffix: string;
 
+    // Rule: Cycle is 2nd of Month to 1st of Next Month
     if (currentYear === 2026 && currentMonth === 1) {
-        cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-        cycleEnd = endOfMonth(new Date(2026, 0, 1)); // Jan 31, 2026
+        cycleStart = new Date(2025, 11, 2); // Dec 2, 2025
+        cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1, 2026
         monthsToBill = 2;
         description = 'Bill for December 2025 - January 2026';
         invoiceIdSuffix = '202512-202601';
     } else {
-        cycleStart = startOfMonth(now);
-        cycleEnd = endOfMonth(now);
+        cycleStart = addDays(startOfMonth(now), 1); // e.g. Oct 2
+        cycleEnd = endOfDay(startOfMonth(addMonths(now, 1))); // e.g. Nov 1
         description = `Bill for ${format(now, 'MMMM yyyy')}`;
         invoiceIdSuffix = format(now, 'yyyyMM');
     }
@@ -846,7 +847,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         return deliveryDate ? isWithinInterval(deliveryDate, { start: cycleStart, end: cycleEnd }) : false;
     });
     
-    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + containerToLiter(d.volumeContainers), 0);
+    const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters || containerToLiter(d.volumeContainers)), 0);
 
     let estimatedCost = 0;
     
@@ -927,13 +928,13 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         let monthsToBill = 1;
 
         if (state.invoiceForBreakdown.description.includes('December 2025 - January 2026')) {
-            cycleStart = new Date(2025, 11, 1); // Dec 1, 2025
-            cycleEnd = endOfDay(endOfMonth(new Date(2026, 0, 1))); // Jan 31, 2026
+            cycleStart = new Date(2025, 11, 2); // Dec 2, 2025
+            cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1, 2026
             monthsToBill = 2;
         } else {
             const billingMonth = isCurrent ? new Date() : subMonths(invoiceDate, 1);
-            cycleStart = startOfMonth(billingMonth);
-            cycleEnd = endOfDay(endOfMonth(billingMonth));
+            cycleStart = addDays(startOfMonth(billingMonth), 1); // 2nd of Month
+            cycleEnd = endOfDay(startOfMonth(addMonths(billingMonth, 1))); // 1st of Next Month
         }
 
         const deliveriesInPeriod = deliveries.filter(d => {
@@ -941,7 +942,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
         });
         consumedContainers = deliveriesInPeriod.reduce((sum, d) => sum + d.volumeContainers, 0);
-        consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + containerToLiter(d.volumeContainers), 0);
+        consumedLiters = deliveriesInPeriod.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
         
         if (user.plan?.isConsumptionBased) {
             consumptionCost = consumedLiters * (user.plan.price || 0);
@@ -1175,7 +1176,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     
     startTransition(async () => {
       try {
-        // The function will handle the DB update
         await uploadFileWithProgress(storage, auth, filePath, state.profilePhotoFile, {}, setUploadProgress);
         toast({ title: 'Profile Photo Uploaded!', description: 'Your new photo is being processed.' });
       } catch (error) {
@@ -1292,14 +1292,14 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (selectedSoaPeriod !== 'full') {
         let cycleStart, cycleEnd;
         if (selectedSoaPeriod === '2025-12_2026-01') {
-            cycleStart = new Date(2025, 11, 1);
-            cycleEnd = endOfMonth(new Date(2026, 0, 1));
+            cycleStart = new Date(2025, 11, 2); // Dec 2nd
+            cycleEnd = endOfDay(new Date(2026, 1, 1)); // Feb 1st inclusive
             billingPeriod = 'December 2025 - January 2026';
         } else {
             const [year, month] = selectedSoaPeriod.split('-').map(Number);
             const date = new Date(year, month - 1);
-            cycleStart = startOfMonth(date);
-            cycleEnd = endOfMonth(date);
+            cycleStart = addDays(startOfMonth(date), 1); // 2nd of Month
+            cycleEnd = endOfDay(startOfMonth(addMonths(date, 1))); // 1st of Next Month
             billingPeriod = format(date, 'MMMM yyyy');
         }
 
@@ -1971,7 +1971,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           </DialogHeader>
           {paymentProofPreview && (
             <div className="py-4 flex justify-center">
-              <Image src={paymentProofPreview} alt="Payment Proof Preview" width={40} height={600} className="rounded-md object-contain max-h-[70vh]" />
+              <Image src={paymentProofPreview} alt="Payment Proof Preview" width={400} height={600} className="rounded-md object-contain max-h-[70vh]" />
             </div>
           )}
         </DialogContent>

@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   useCollection,
   useDoc,
@@ -9,7 +10,7 @@ import {
   useMemoFirebase,
 } from '@/firebase';
 import { doc, collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth, isWithinInterval, getYear, getMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, isWithinInterval, addDays, endOfDay, addMonths } from 'date-fns';
 import type { Delivery, WaterStation, AppUser, ComplianceReport, SanitationVisit, RefillRequest, Transaction } from '@/lib/types';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -99,27 +100,34 @@ export default function DashboardPage() {
   const { data: branchUsers } = useCollection<AppUser>(branchUsersQuery);
   
   const parentCalculatedBalances = useMemo(() => {
-    if (!isParent) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalConsumptionLiters: 0 };
+    if (!isParent || !user || !deliveries) return { displayedCreditBalance: 0, displayedAvailableLiters: 0, totalConsumptionLiters: 0 };
     
     const totalCredits = (transactions || [])
         .filter(t => t.type === 'Credit')
         .reduce((sum, t) => sum + t.amountCredits, 0);
+    
+    const pricePerLiter = user.plan?.price || 1;
 
-    const totalDebitAmount = (deliveries || [])
-        .reduce((sum, d) => sum + (d.amount || 0), 0);
+    // Use adjusted cycle logic for calculations? 
+    // Usually total credits/debits are all-time for Parent wallets
+    const totalDebitAmount = (deliveries || []).reduce((sum, d) => {
+        const amount = d.amount ?? (d.liters ?? containerToLiter(d.volumeContainers)) * pricePerLiter;
+        return sum + amount;
+    }, 0);
         
-    const totalConsumptionLiters = (deliveries || [])
-        .reduce((sum, d) => sum + (d.liters || 0), 0);
+    const totalConsumptionLiters = (deliveries || []).reduce((sum, d) => {
+        const liters = d.liters ?? containerToLiter(d.volumeContainers);
+        return sum + liters;
+    }, 0);
 
     const displayedCreditBalance = totalCredits - totalDebitAmount;
     
-    const pricePerLiter = user?.plan?.price || 1;
     const totalPotentialLiters = totalCredits > 0 ? totalCredits / pricePerLiter : 0;
     const displayedAvailableLiters = totalPotentialLiters - totalConsumptionLiters;
 
     return {
       displayedCreditBalance,
-      displayedAvailableLiters: displayedAvailableLiters > 0 ? displayedAvailableLiters : 0,
+      displayedAvailableLiters: displayedAvailableLiters,
       totalConsumptionLiters: totalConsumptionLiters
     };
 

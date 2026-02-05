@@ -190,9 +190,11 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             }
             const pdfBuffer = await (0, index_1.generatePasswordProtectedSOA)(user, billingPeriod, deliveries, sanitation, compliance);
             const template = (0, email_1.getNewInvoiceTemplate)(user.businessName, invoiceId, amount, billingPeriod);
+            // Specialized CC Logic
+            const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
             (0, email_1.sendEmail)({
                 to: user.email,
-                cc: 'support@riverph.com',
+                cc: ccList,
                 subject: template.subject,
                 text: `Invoice for ${billingPeriod} is available for ₱${amount.toFixed(2)}.`,
                 html: template.html,

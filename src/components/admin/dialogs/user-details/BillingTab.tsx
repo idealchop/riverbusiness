@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -157,7 +158,7 @@ export function BillingTab({
                     <TableHeader><TableRow><TableHead>Invoice ID</TableHead><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {paginatedPayments.map(payment => {
-                            const isEstimated = payment.id.startsWith('INV-EST');
+                            const isEstimated = payment.id.startsWith('INV-EST') || payment.id.startsWith('INV-EST-');
                             return (
                                 <TableRow key={payment.id} className={cn(isEstimated && 'bg-blue-50')}>
                                     <TableCell>
@@ -198,7 +199,7 @@ export function BillingTab({
                 
                 <div className="space-y-4 md:hidden">
                     {paginatedPayments.map(payment => {
-                        const isEstimated = payment.id.startsWith('INV-EST');
+                        const isEstimated = payment.id.startsWith('INV-EST') || payment.id.startsWith('INV-EST-');
                         return (
                         <Card key={payment.id} onClick={() => handleOpenPaymentReview(payment)} className="cursor-pointer">
                             <CardContent className="p-4 space-y-2">
