@@ -1,3 +1,5 @@
+
+'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,7 +14,9 @@ import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, startOfMonth, subMonths, isAfter, isSameDay, endOfMonth } from 'date-fns';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Input } from '@/components/ui/input';
+import { format, startOfMonth, subMonths, isAfter, isSameDay } from 'date-fns';
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
@@ -50,6 +54,8 @@ export function BillingTab({
     const [isSendingReminder, setIsSendingReminder] = useState(false);
     const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState('full');
+    const [recipientType, setRecipientType] = useState<'default' | 'custom'>('default');
+    const [customEmail, setCustomEmail] = useState('');
     const PAYMENTS_PER_PAGE = 5;
 
     const soaDateOptions = useMemo(() => {
@@ -106,6 +112,12 @@ export function BillingTab({
 
     const handleConfirmSendReminder = async () => {
         if (!firestore || !user) return;
+        
+        if (recipientType === 'custom' && !customEmail.includes('@')) {
+            toast({ variant: 'destructive', title: 'Invalid Email', description: 'Please provide a valid recipient email address.' });
+            return;
+        }
+
         setIsSendingReminder(true);
         try {
             const remindersCol = collection(firestore, 'users', user.id, 'reminders');
@@ -113,10 +125,17 @@ export function BillingTab({
                 type: 'payment_follow_up',
                 triggeredAt: serverTimestamp(),
                 status: 'pending',
-                period: selectedPeriod
+                period: selectedPeriod,
+                recipientEmail: recipientType === 'custom' ? customEmail : null
             });
-            toast({ title: 'Reminder Dispatched!', description: `A statement reminder for ${soaDateOptions.find(o => o.value === selectedPeriod)?.label} is being sent.` });
+            const targetLabel = recipientType === 'custom' ? customEmail : user.email;
+            toast({ 
+                title: 'Reminder Dispatched!', 
+                description: `A statement reminder for ${soaDateOptions.find(o => o.value === selectedPeriod)?.label} is being sent to ${targetLabel}.` 
+            });
             setIsReminderDialogOpen(false);
+            setCustomEmail('');
+            setRecipientType('default');
         } catch (error) {
             console.error("Error triggering reminder:", error);
             toast({ variant: 'destructive', title: 'Action Failed' });
@@ -235,23 +254,58 @@ export function BillingTab({
         </Card>
 
         <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Send Statement Reminder</DialogTitle>
-                    <DialogDescription>Select which billing period you would like to remind the client about.</DialogDescription>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Send className="h-5 w-5" />
+                        Send Statement Reminder
+                    </DialogTitle>
+                    <DialogDescription>
+                        This will send a professional follow-up email with the <strong>Statement of Account (SOA)</strong> attached as a password-protected PDF.
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                    <Label className="mb-2 block text-sm font-medium">Billing Period</Label>
-                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a period..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {soaDateOptions.map(option => (
-                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="py-4 space-y-6">
+                    <div className="space-y-2">
+                        <Label className="text-sm font-semibold">1. Select Billing Period</Label>
+                        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a period..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {soaDateOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                        <Label className="text-sm font-semibold">2. Choose Recipient</Label>
+                        <RadioGroup value={recipientType} onValueChange={(val: any) => setRecipientType(val)} className="grid gap-2">
+                            <div className="flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-accent/50">
+                                <RadioGroupItem value="default" id="r-default" />
+                                <Label htmlFor="r-default" className="flex-1 cursor-pointer">
+                                    <span className="block font-medium">Default Address</span>
+                                    <span className="block text-xs text-muted-foreground">{user.email}</span>
+                                </Label>
+                            </div>
+                            <div className="flex flex-col space-y-2 rounded-md border p-3 cursor-pointer hover:bg-accent/50">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="custom" id="r-custom" />
+                                    <Label htmlFor="r-custom" className="flex-1 font-medium cursor-pointer">Custom Recipient Email</Label>
+                                </div>
+                                {recipientType === 'custom' && (
+                                    <Input 
+                                        placeholder="e.g. accounting@clientcompany.com" 
+                                        value={customEmail}
+                                        onChange={(e) => setCustomEmail(e.target.value)}
+                                        className="h-8 text-sm mt-2"
+                                        disabled={isSendingReminder}
+                                    />
+                                )}
+                            </div>
+                        </RadioGroup>
+                    </div>
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="outline" disabled={isSendingReminder}>Cancel</Button></DialogClose>

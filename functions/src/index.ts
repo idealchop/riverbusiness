@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -265,11 +266,18 @@ export const onpaymentremindercreate = onDocumentCreated({
     if (!event.data) return;
     const userId = event.params.userId;
     const db = getFirestore();
-    const { period: selectedPeriod } = event.data.data();
+    const { period: selectedPeriod, recipientEmail } = event.data.data();
     
     const userDoc = await db.collection('users').doc(userId).get();
     const user = userDoc.data();
-    if (!user || !user.email) return;
+    if (!user) return;
+
+    // Use custom recipient email if provided, otherwise default to user's email
+    const targetEmail = recipientEmail || user.email;
+    if (!targetEmail) {
+        logger.error(`No target email found for reminder trigger ${event.params.reminderId}`);
+        return;
+    }
 
     let billingPeriodLabel = 'Full Account History';
     let cycleStart = new Date(0);
@@ -318,12 +326,12 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
-    // Specialized CC Logic
+    // Specialized CC Logic for SC2500000001
     const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
 
     try {
         await sendEmail({
-            to: user.email,
+            to: targetEmail,
             cc: ccList,
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
@@ -333,9 +341,9 @@ export const onpaymentremindercreate = onDocumentCreated({
                 content: pdfBuffer
             }]
         });
-        logger.info(`Follow-up email with SOA sent to ${user.email} for period ${selectedPeriod}`);
+        logger.info(`Follow-up email with SOA sent to ${targetEmail} for period ${selectedPeriod}`);
     } catch (error) {
-        logger.error(`Failed to send follow-up to ${user.email}`, error);
+        logger.error(`Failed to send follow-up to ${targetEmail}`, error);
     }
 });
 
