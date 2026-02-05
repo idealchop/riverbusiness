@@ -45,7 +45,9 @@ const containerToLiter = (containers) => (containers || 0) * 19.5;
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
  */
-exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(async (context) => {
+exports.generateMonthlyInvoices = functions.runWith({
+    secrets: ["BREVO_API_KEY"]
+}).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
     var _a;
     logger.info('Starting monthly invoice generation job.');
     const db = admin.firestore();

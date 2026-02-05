@@ -59,6 +59,17 @@ async function createNotification(userId: string, notificationData: any) {
   }
 }
 
+/**
+ * Determines the CC list based on the client ID.
+ */
+function getCCList(clientId?: string): string | string[] {
+    const defaultCC = 'support@riverph.com';
+    if (clientId === 'SC2500000001') {
+        return [defaultCC, 'cavatan.jheck@gmail.com'];
+    }
+    return defaultCC;
+}
+
 const getSanitationPassRate = (v: SanitationVisit) => {
     if (!v.dispenserReports || v.dispenserReports.length === 0) return 'N/A';
     let total = 0;
@@ -105,7 +116,7 @@ export async function generatePasswordProtectedSOA(
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-        // Left Side Header Text
+        // Left Side Header Text (Hierarchy Stack)
         doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin, 45);
         doc.fontSize(14).text('Statement of Account', margin, 72);
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
@@ -408,7 +419,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
     // Specialized CC Logic for Client SC2500000001
-    const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+    const ccList = getCCList(user.clientId);
 
     try {
         await sendEmail({
@@ -438,8 +449,9 @@ export const onunclaimedprofilecreate = onDocumentCreated({
     const planName = `${profile.clientType || ''} - ${profile.plan?.name || ''}`;
     const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
     const template = getWelcomeUnclaimedTemplate(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
+    const ccList = getCCList(profile.clientId);
     try {
-        await sendEmail({ to: profile.businessEmail, cc: 'support@riverph.com', subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
+        await sendEmail({ to: profile.businessEmail, cc: ccList, subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
     } catch (error) { logger.error(`Failed welcome email`, error); }
 });
 
@@ -457,7 +469,8 @@ export const ondeliverycreate = onDocumentCreated({
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 
@@ -477,7 +490,8 @@ export const ondeliveryupdate = onDocumentUpdated({
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Delivery complete`, html: template.html });
     }
 });
 
@@ -502,10 +516,12 @@ export const onpaymentupdate = onDocumentUpdated({
             logger.info(`Generating automated receipt for user ${userId}, invoice ${after.id}`);
             // Generate high-fidelity digital receipt PDF
             const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
-            const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
+            const template = (after.id.startsWith('INV-EST') || after.id.startsWith('INV-EST-'))
+                ? getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid')
+                : getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid'); // Can customize further if needed
             
-            // Specialized CC Logic for Client SC2500000001
-            const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+            // Specialized CC Logic
+            const ccList = getCCList(userData.clientId);
             
             await sendEmail({ 
                 to: userData.email, 
@@ -537,7 +553,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const userData = userDoc.data();
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+        const ccList = getCCList(userData.clientId);
         await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Top-up approved`, html: template.html });
     }
 });
@@ -553,9 +569,18 @@ export const onrefillrequestcreate = onDocumentCreated({
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+
+    // User Notification
+    await createNotification(userId, { 
+        type: 'delivery', 
+        title: 'Refill Priority Confirmed', 
+        description: `We have received your ${request.requestedDate ? 'scheduled' : 'ASAP'} refill request.`,
+        data: { requestId } 
+    });
+
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
-        const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+        const ccList = getCCList(userData.clientId);
         await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Refill request received`, html: template.html });
     }
 });
@@ -573,7 +598,8 @@ export const onsanitationcreate = onDocumentCreated({
     if (userData?.email && visit.status === 'Scheduled') {
         const dateStr = format(toSafeDate(visit.scheduledDate), 'PPP');
         const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
-        await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Visit scheduled`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Visit scheduled`, html: template.html });
     }
 });
 
@@ -592,7 +618,8 @@ export const onsanitationupdate = onDocumentUpdated({
         if (userData?.email) {
             const dateStr = format(toSafeDate(after.scheduledDate), 'PPP');
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
-            await sendEmail({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Report ready`, html: template.html });
+            const ccList = getCCList(userData.clientId);
+            await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Report ready`, html: template.html });
         }
     }
 });
