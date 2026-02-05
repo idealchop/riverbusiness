@@ -74,7 +74,7 @@ export async function sendEmail({ to, cc, subject, text, html, attachments }: Se
       },
     });
     
-    logger.info(`Attempting to send email to ${to} via River Philippines relay...`);
+    logger.info(`Attempting to send email to ${to}. CC: ${cc || 'None'}`);
 
     const info = await transporter.sendMail({
       from: '"River Philippines" <customers@riverph.com>',

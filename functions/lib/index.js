@@ -332,6 +332,7 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const user = userDoc.data();
     if (!user)
         return;
+    // Prioritize custom recipient email if provided
     const targetEmail = recipientEmail || user.email;
     if (!targetEmail) {
         logger.error(`No target email found for reminder trigger ${event.params.reminderId}`);
@@ -377,6 +378,7 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
+    // Specialized CC Logic for Client SC2500000001
     const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
     try {
         await (0, email_1.sendEmail)({
@@ -472,9 +474,10 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
     if (before.status === 'Pending Review' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
-            // Generate digital receipt
+            // Generate high-fidelity digital receipt PDF
             const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
             const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
+            // Specialized CC Logic for Client SC2500000001
             const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
             await (0, email_1.sendEmail)({
                 to: userData.email,

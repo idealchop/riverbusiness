@@ -71,9 +71,10 @@ exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(a
         let billingCycleEnd;
         let monthsToBill = 1;
         let isFirstInvoice = !user.lastBilledDate;
+        // Rule: Billing cycle is exactly 1st to Last day of the target month.
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
             if ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) {
-                // December 1, 2025 to January 31, 2026
+                // December 1, 2025 to January 31, 2026 (2 months)
                 billingCycleStart = new Date(2025, 11, 1);
                 billingCycleEnd = (0, date_fns_1.endOfMonth)(new Date(2026, 0, 1));
                 billingPeriod = 'December 2025 - January 2026';
@@ -122,12 +123,13 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
     const userUpdatePayload = {};
     let amount = 0;
     let description = '';
-    // Boundary: Strictly 1st to last day
+    // Boundary: Strictly 1st to last day of the month
     const deliveriesSnapshot = await userRef.collection('deliveries')
         .where('date', '>=', billingCycleStart.toISOString())
         .where('date', '<=', billingCycleEnd.toISOString())
         .get();
     const deliveries = deliveriesSnapshot.docs.map(d => d.data());
+    // Use Delivery Service Date logic
     const consumedLiters = deliveries.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
     let monthlyEquipmentCost = 0;
     if (((_a = user.customPlanDetails) === null || _a === void 0 ? void 0 : _a.gallonPaymentType) === 'Monthly')
@@ -191,7 +193,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             }
             const pdfBuffer = await (0, index_1.generatePasswordProtectedSOA)(user, billingPeriod, deliveries, sanitation, compliance);
             const template = (0, email_1.getNewInvoiceTemplate)(user.businessName, invoiceId, amount, billingPeriod);
-            // Specialized CC Logic
+            // Specialized CC Logic for SC2500000001
             const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
             (0, email_1.sendEmail)({
                 to: user.email,

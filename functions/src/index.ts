@@ -342,14 +342,17 @@ export const onpaymentremindercreate = onDocumentCreated({
     const triggerData = event.data.data();
     const { period: selectedPeriod, recipientEmail } = triggerData;
     
-    logger.info(`Reminder trigger ${event.params.reminderId} for user ${userId}. Custom recipient: ${recipientEmail || 'None'}`);
+    logger.info(`Reminder trigger ${event.params.reminderId} for user ${userId}. Raw recipient input: ${recipientEmail}`);
 
     const userDoc = await db.collection('users').doc(userId).get();
     const user = userDoc.data();
     if (!user) return;
 
-    // Prioritize custom recipient email if provided
-    const targetEmail = recipientEmail || user.email;
+    // Prioritize custom recipient email if provided and valid
+    const targetEmail = (recipientEmail && typeof recipientEmail === 'string' && recipientEmail.includes('@')) 
+        ? recipientEmail 
+        : user.email;
+
     if (!targetEmail) {
         logger.error(`No target email found for reminder trigger ${event.params.reminderId}`);
         return;
@@ -372,7 +375,9 @@ export const onpaymentremindercreate = onDocumentCreated({
         }
     }
 
-    const deliveriesSnap = await db.collection('users').doc(userId).collection('deliveries')
+    // CRITICAL: Fetch from branchDeliveries for Parent accounts
+    const collectionName = user.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
+    const deliveriesSnap = await db.collection('users').doc(userId).collection(collectionName)
         .where('date', '>=', cycleStart.toISOString())
         .where('date', '<=', cycleEnd.toISOString())
         .get();
@@ -417,7 +422,7 @@ export const onpaymentremindercreate = onDocumentCreated({
                 content: pdfBuffer
             }]
         });
-        logger.info(`Follow-up email with SOA sent to ${targetEmail} for period ${selectedPeriod}`);
+        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}`);
     } catch (error) {
         logger.error(`Failed to send follow-up to ${targetEmail}`, error);
     }
@@ -484,14 +489,17 @@ export const onpaymentupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    if (before.status === after.status) return;
-    const db = getFirestore();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
     
-    if (before.status === 'Pending Review' && after.status === 'Paid') {
+    // Trigger receipt whenever status transitions TO Paid
+    if (before.status !== 'Paid' && after.status === 'Paid') {
+        const db = getFirestore();
+        const userDoc = await db.collection('users').doc(userId).get();
+        const userData = userDoc.data();
+        
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
+        
         if (userData?.email) {
+            logger.info(`Generating automated receipt for user ${userId}, invoice ${after.id}`);
             // Generate high-fidelity digital receipt PDF
             const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
             const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
@@ -510,6 +518,7 @@ export const onpaymentupdate = onDocumentUpdated({
                     content: receiptPdf
                 }]
             });
+            logger.info(`Receipt dispatched to ${userData.email}. CC: ${ccList}`);
         }
     }
 });
