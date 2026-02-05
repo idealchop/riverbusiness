@@ -41,6 +41,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = exports.onpaymentremindercreate = void 0;
 exports.generatePasswordProtectedSOA = generatePasswordProtectedSOA;
+exports.generateInvoiceReceiptPDF = generateInvoiceReceiptPDF;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
@@ -254,6 +255,66 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         doc.end();
     });
 }
+/**
+ * Generates a high-fidelity PDF Receipt for a specific payment.
+ */
+async function generateInvoiceReceiptPDF(user, invoice) {
+    return new Promise(async (resolve, reject) => {
+        const doc = new pdfkit_1.default({ margin: 40 });
+        const chunks = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (err) => reject(err));
+        const pageWidth = doc.page.width;
+        const margin = 40;
+        // Header (Solid Blue Banner)
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 100).fill();
+        doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Tech Inc.', margin, 45);
+        doc.fontSize(12).font('Helvetica').text('Invoice Receipt', margin, 72);
+        doc.fillColor('#000000').moveDown(4);
+        // Metadata
+        const topY = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').text('Invoice #:', margin, topY);
+        doc.font('Helvetica').text(invoice.id, margin + 80, topY);
+        doc.font('Helvetica-Bold').text('Date:', margin, topY + 15);
+        doc.font('Helvetica').text((0, date_fns_1.format)(toSafeDate(invoice.date), 'MMMM d, yyyy'), margin + 80, topY + 15);
+        // Bill To
+        doc.moveDown(2);
+        doc.font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('BILL TO:', margin);
+        doc.fillColor('#000000').font('Helvetica-Bold').text(user.businessName || 'N/A', margin);
+        doc.font('Helvetica').text(user.address || 'N/A', margin, doc.y, { width: pageWidth / 2 });
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin);
+        doc.text(user.email || '', margin);
+        // Table
+        doc.moveDown(3);
+        const tableTop = doc.y;
+        doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
+        doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+        doc.text('Description', margin + 5, tableTop + 6);
+        doc.text('Qty', margin + 300, tableTop + 6);
+        doc.text('Amount', margin + 400, tableTop + 6, { align: 'right', width: 100 });
+        doc.y = tableTop + 20;
+        doc.fillColor('#000000').font('Helvetica').fontSize(9);
+        doc.moveDown(0.5);
+        const rowY = doc.y;
+        doc.text(invoice.description, margin + 5, rowY, { width: 280 });
+        doc.text('1', margin + 300, rowY);
+        doc.text(`P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 400, rowY, { align: 'right', width: 100 });
+        // Summary Totals
+        doc.moveDown(4);
+        const totalsX = pageWidth - margin - 200;
+        const vatIncluded = invoice.amount * (12 / 112);
+        doc.fontSize(10).font('Helvetica').text('Subtotal (VAT Included)', totalsX, doc.y);
+        doc.text(`P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.moveDown(0.5);
+        doc.text('VAT (12% Included)', totalsX, doc.y);
+        doc.text(`P ${vatIncluded.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.moveDown(1);
+        doc.font('Helvetica-Bold').text('Total Paid', totalsX, doc.y);
+        doc.text(`P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.end();
+    });
+}
 // --- TRIGGERS ---
 exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     document: "users/{userId}/reminders/{reminderId}",
@@ -264,12 +325,13 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
         return;
     const userId = event.params.userId;
     const db = (0, firestore_1.getFirestore)();
-    const { period: selectedPeriod, recipientEmail } = event.data.data();
+    const triggerData = event.data.data();
+    const { period: selectedPeriod, recipientEmail } = triggerData;
+    logger.info(`Reminder trigger ${event.params.reminderId} for user ${userId}. Custom recipient: ${recipientEmail || 'None'}`);
     const userDoc = await db.collection('users').doc(userId).get();
     const user = userDoc.data();
     if (!user)
         return;
-    // Use custom recipient email if provided, otherwise default to user's email
     const targetEmail = recipientEmail || user.email;
     if (!targetEmail) {
         logger.error(`No target email found for reminder trigger ${event.params.reminderId}`);
@@ -315,7 +377,6 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
-    // Specialized CC Logic for SC2500000001
     const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
     try {
         await (0, email_1.sendEmail)({
@@ -411,9 +472,21 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
     if (before.status === 'Pending Review' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
+            // Generate digital receipt
+            const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
             const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
             const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-            await (0, email_1.sendEmail)({ to: userData.email, cc: ccList, subject: template.subject, text: `Payment confirmed`, html: template.html });
+            await (0, email_1.sendEmail)({
+                to: userData.email,
+                cc: ccList,
+                subject: template.subject,
+                text: `Payment confirmed for ${after.id}. Digital receipt attached.`,
+                html: template.html,
+                attachments: [{
+                        filename: `Receipt_${after.id}.pdf`,
+                        content: receiptPdf
+                    }]
+            });
         }
     }
 });

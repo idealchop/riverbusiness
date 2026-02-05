@@ -44,9 +44,10 @@ export const generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').on
         let monthsToBill = 1;
         let isFirstInvoice = !user.lastBilledDate;
 
+        // Rule: Billing cycle is exactly 1st to Last day of the target month.
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
             if (user.plan?.isConsumptionBased) {
-                // December 1, 2025 to January 31, 2026
+                // December 1, 2025 to January 31, 2026 (2 months)
                 billingCycleStart = new Date(2025, 11, 1);
                 billingCycleEnd = endOfMonth(new Date(2026, 0, 1)); 
                 billingPeriod = 'December 2025 - January 2026';
@@ -106,13 +107,14 @@ async function generateInvoiceForUser(
     let amount = 0;
     let description = '';
 
-    // Boundary: Strictly 1st to last day
+    // Boundary: Strictly 1st to last day of the month
     const deliveriesSnapshot = await userRef.collection('deliveries')
         .where('date', '>=', billingCycleStart.toISOString())
         .where('date', '<=', billingCycleEnd.toISOString())
         .get();
     const deliveries = deliveriesSnapshot.docs.map(d => d.data() as Delivery);
 
+    // Use Delivery Service Date logic
     const consumedLiters = deliveries.reduce((sum, d) => sum + (d.liters || containerToLiter(d.volumeContainers)), 0);
     
     let monthlyEquipmentCost = 0;
@@ -182,7 +184,7 @@ async function generateInvoiceForUser(
             const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             
-            // Specialized CC Logic
+            // Specialized CC Logic for SC2500000001
             const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
 
             sendEmail({
