@@ -20,8 +20,7 @@ import {
     getWelcomeUnclaimedTemplate,
     getSanitationScheduledTemplate,
     getSanitationReportTemplate,
-    getPaymentReminderTemplate,
-    getNewInvoiceTemplate
+    getPaymentReminderTemplate
 } from './email';
 
 // Export all billing functions

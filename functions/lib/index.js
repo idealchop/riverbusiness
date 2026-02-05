@@ -56,6 +56,18 @@ const email_1 = require("./email");
 __exportStar(require("./billing"), exports);
 const BRAND_PRIMARY = '#538ec2';
 const LITER_RATIO = 19.5;
+const toSafeDate = (val) => {
+    if (!val)
+        return new Date();
+    if (val instanceof firestore_1.Timestamp)
+        return val.toDate();
+    if (val instanceof Date)
+        return val;
+    if (typeof val === 'object' && 'seconds' in val)
+        return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? new Date() : d;
+};
 /**
  * Creates a notification document in a user's notification subcollection.
  */
@@ -135,7 +147,7 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         const drawTable = (title, headers, rows) => {
             if (rows.length === 0)
                 return;
-            if (doc.y > doc.page.height - 100)
+            if (doc.y > doc.page.height - 120)
                 doc.addPage();
             doc.moveDown(1);
             doc.fontSize(11).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text(title, margin);
@@ -190,7 +202,7 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         }
         if (sanitation.length > 0) {
             const sanRows = sanitation.map(s => [
-                (0, date_fns_1.format)(new Date(typeof s.scheduledDate === 'string' ? s.scheduledDate : s.scheduledDate.toDate()), 'PP'),
+                (0, date_fns_1.format)(toSafeDate(s.scheduledDate), 'PP'),
                 s.status,
                 s.assignedTo,
                 getSanitationPassRate(s)
@@ -200,42 +212,45 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
         if (compliance.length > 0) {
             const compRows = compliance.map(c => [
                 c.name,
-                c.date ? (0, date_fns_1.format)(c.date.toDate(), 'MMM yyyy') : 'N/A',
+                c.date ? (0, date_fns_1.format)(toSafeDate(c.date), 'MMM yyyy') : 'N/A',
                 c.status
             ]);
             drawTable('Water Quality & Station Compliance', ['Report Name', 'Period', 'Status'], compRows);
         }
-        let totalQty = 0;
-        let totalLiters = 0;
-        let totalAmount = 0;
-        const refillRows = deliveries.map(d => {
-            const qty = d.volumeContainers || 0;
-            const liters = d.liters || (qty * LITER_RATIO);
-            const amount = d.amount || (liters * pricePerLiter);
-            totalQty += qty;
-            totalLiters += liters;
-            totalAmount += amount;
-            return [
-                d.id,
-                (0, date_fns_1.format)(new Date(typeof d.date === 'string' ? d.date : d.date.toDate()), 'MMM d, yyyy'),
-                qty,
-                `P${pricePerContainer.toFixed(2)}`,
-                `${liters.toFixed(1)}L`,
-                `P${amount.toFixed(2)}`,
-                d.status
-            ];
-        });
-        drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
-        if (doc.y > doc.page.height - 80)
-            doc.addPage();
-        const finalY = doc.y;
-        doc.fontSize(10).font('Helvetica-Bold').text('TOTAL CONSUMPTION:', margin + 150, finalY);
-        doc.text(totalQty.toString(), margin + 280, finalY);
-        doc.text(`${totalLiters.toFixed(1)} L`, margin + 360, finalY);
-        doc.text(`P ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 440, finalY);
-        const vatAmount = totalAmount * (12 / 112);
-        doc.moveDown(1.5).fontSize(8).font('Helvetica-Oblique').fillColor('#666666');
-        doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`, 0, doc.y, { align: 'right', width: pageWidth - margin });
+        if (deliveries.length > 0) {
+            let totalQty = 0;
+            let totalLiters = 0;
+            let totalAmount = 0;
+            const sortedDeliveries = [...deliveries].sort((a, b) => toSafeDate(a.date).getTime() - toSafeDate(b.date).getTime());
+            const refillRows = sortedDeliveries.map(d => {
+                const qty = d.volumeContainers || 0;
+                const liters = d.liters || (qty * LITER_RATIO);
+                const amount = d.amount || (liters * pricePerLiter);
+                totalQty += qty;
+                totalLiters += liters;
+                totalAmount += amount;
+                return [
+                    d.id,
+                    (0, date_fns_1.format)(toSafeDate(d.date), 'MMM d, yyyy'),
+                    qty,
+                    `P${pricePerContainer.toFixed(2)}`,
+                    `${liters.toFixed(1)}L`,
+                    `P${amount.toFixed(2)}`,
+                    d.status
+                ];
+            });
+            drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
+            if (doc.y > doc.page.height - 100)
+                doc.addPage();
+            const finalY = doc.y;
+            doc.fontSize(10).font('Helvetica-Bold').text('TOTAL CONSUMPTION:', margin + 150, finalY);
+            doc.text(totalQty.toString(), margin + 280, finalY);
+            doc.text(`${totalLiters.toFixed(1)} L`, margin + 360, finalY);
+            doc.text(`P ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 440, finalY);
+            const vatAmount = totalAmount * (12 / 112);
+            doc.moveDown(1.5).fontSize(8).font('Helvetica-Oblique').fillColor('#666666');
+            doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`, 0, doc.y, { align: 'right', width: pageWidth - margin });
+        }
         doc.end();
     });
 }
@@ -260,7 +275,7 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     if (selectedPeriod && selectedPeriod !== 'full') {
         if (selectedPeriod === '2025-12_2026-01') {
             cycleStart = new Date(2025, 11, 1);
-            cycleEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.endOfMonth)(new Date(2026, 0, 1)));
+            cycleEnd = (0, date_fns_1.endOfDay)(new Date(2026, 0, 31));
             billingPeriodLabel = 'December 2025 - January 2026';
         }
         else {
@@ -275,8 +290,6 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
         .where('date', '<=', cycleEnd.toISOString())
         .get();
     const deliveries = deliveriesSnap.docs.map(d => d.data());
-    const pricePerLiter = ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.price) || 0;
-    const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const sanitationSnap = await db.collection('users').doc(userId).collection('sanitationVisits')
         .where('scheduledDate', '>=', cycleStart.toISOString())
         .where('scheduledDate', '<=', cycleEnd.toISOString())
@@ -292,6 +305,8 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
         const transactionsSnap = await db.collection('users').doc(userId).collection('transactions').get();
         transactions = transactionsSnap.docs.map(d => d.data());
     }
+    const pricePerLiter = ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.price) || 0;
+    const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     // Specialized CC Logic
@@ -391,7 +406,8 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
             const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
-            await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Payment confirmed`, html: template.html });
+            const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+            await (0, email_1.sendEmail)({ to: userData.email, cc: ccList, subject: template.subject, text: `Payment confirmed`, html: template.html });
         }
     }
 });
@@ -411,7 +427,8 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
-        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Top-up approved`, html: template.html });
+        const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+        await (0, email_1.sendEmail)({ to: userData.email, cc: ccList, subject: template.subject, text: `Top-up approved`, html: template.html });
     }
 });
 exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
@@ -428,7 +445,8 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
-        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Refill request received`, html: template.html });
+        const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+        await (0, email_1.sendEmail)({ to: userData.email, cc: ccList, subject: template.subject, text: `Refill request received`, html: template.html });
     }
 });
 exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
@@ -443,7 +461,7 @@ exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && visit.status === 'Scheduled') {
-        const dateStr = new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const dateStr = (0, date_fns_1.format)(toSafeDate(visit.scheduledDate), 'PPP');
         const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
         await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Visit scheduled`, html: template.html });
     }
@@ -462,7 +480,7 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
-            const dateStr = new Date(after.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const dateStr = (0, date_fns_1.format)(toSafeDate(after.scheduledDate), 'PPP');
             const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr);
             await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Report ready`, html: template.html });
         }

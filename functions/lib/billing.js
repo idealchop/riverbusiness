@@ -74,7 +74,7 @@ exports.generateMonthlyInvoices = functions.pubsub.schedule('0 0 1 * *').onRun(a
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
             if ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) {
                 billingCycleStart = new Date(2025, 11, 1);
-                billingCycleEnd = new Date(2026, 0, 31, 23, 59, 59);
+                billingCycleEnd = (0, date_fns_1.endOfMonth)(new Date(2026, 0, 1)); // Jan 31, 2026
                 billingPeriod = 'December 2025 - January 2026';
                 monthsToBill = 2;
             }
