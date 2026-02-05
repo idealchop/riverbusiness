@@ -339,8 +339,11 @@ export const onpaymentremindercreate = onDocumentCreated({
     if (!event.data) return;
     const userId = event.params.userId;
     const db = getFirestore();
-    const { period: selectedPeriod, recipientEmail } = event.data.data();
+    const triggerData = event.data.data();
+    const { period: selectedPeriod, recipientEmail } = triggerData;
     
+    logger.info(`Reminder trigger ${event.params.reminderId} for user ${userId}. Custom recipient: ${recipientEmail || 'None'}`);
+
     const userDoc = await db.collection('users').doc(userId).get();
     const user = userDoc.data();
     if (!user) return;
