@@ -2,9 +2,19 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Transaction } from '@/lib/types';
+import { Timestamp } from 'firebase/firestore';
 
 const LITER_RATIO = 19.5;
 const containerToLiter = (containers: number) => (containers || 0) * LITER_RATIO;
+
+const toSafeDate = (val: any): Date => {
+    if (!val) return new Date();
+    if (val instanceof Timestamp) return val.toDate();
+    if (val instanceof Date) return val;
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? new Date() : d;
+};
 
 const getSanitationPassRate = (v: SanitationVisit) => {
     if (!v.dispenserReports || v.dispenserReports.length === 0) return 'N/A';
@@ -140,12 +150,12 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     }
 
     if (sanitationVisits.length > 0) {
-        const sanitationBody = sanitationVisits.map(v => [format(new Date(v.scheduledDate), 'PP'), v.status, v.assignedTo, getSanitationPassRate(v)]);
+        const sanitationBody = sanitationVisits.map(v => [format(toSafeDate(v.scheduledDate), 'PP'), v.status, v.assignedTo, getSanitationPassRate(v)]);
         currentY = renderTable('Office Sanitation Logs', [["Scheduled Date", "Status", "Quality Officer", "Score Rate"]], sanitationBody, currentY);
     }
 
     if (complianceReports.length > 0) {
-        const complianceBody = complianceReports.map(r => [r.name, r.date && typeof (r.date as any).toDate === 'function' ? format((r.date as any).toDate(), 'MMM yyyy') : 'N/A', r.status]);
+        const complianceBody = complianceReports.map(r => [r.name, r.date ? format(toSafeDate(r.date), 'MMM yyyy') : 'N/A', r.status]);
         currentY = renderTable('Water Quality & Station Compliance', [["Report Name", "Valid Period", "Status"]], complianceBody, currentY);
     }
 
@@ -153,7 +163,10 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
         let totalQty = 0; let totalLiters = 0; let totalAmount = 0;
         const branchMap = (branches || []).reduce((map, b) => ({ ...map, [b.id]: b.businessName }), {} as Record<string, string>);
         const deliveryHead = isParent ? [["Ref ID", "Date", "Branch", "Qty", "Price/Unit", "Volume", "Amount"]] : [["Ref ID", "Date", "Qty", "Price/Unit", "Volume", "Amount", "Status"]];
-        const deliveryBody = deliveries.map(d => {
+        
+        const sortedDeliveries = [...deliveries].sort((a, b) => toSafeDate(a.date).getTime() - toSafeDate(b.date).getTime());
+
+        const deliveryBody = sortedDeliveries.map(d => {
             const qty = d.volumeContainers || 0; 
             const liters = d.liters ?? containerToLiter(qty); 
             const deliveryAmount = d.amount ?? (liters * pricePerLiter);
@@ -162,7 +175,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             totalAmount += deliveryAmount;
             return [
                 d.id, 
-                format(new Date(d.date), 'MMM d, yyyy'), 
+                format(toSafeDate(d.date), 'MMM d, yyyy'), 
                 ...(isParent ? [branchMap[d.userId] || d.userId] : []), 
                 qty, 
                 `P ${pricePerContainer.toFixed(2)}`, 
@@ -214,7 +227,7 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     doc.text('Invoice Receipt', margin, 75);
     
     let lastY = 140; 
-    const invoiceDate = typeof invoice.date === 'string' ? new Date(invoice.date) : (invoice.date as any).toDate();
+    const invoiceDate = toSafeDate(invoice.date);
     
     doc.setTextColor(0); 
     doc.setFontSize(10); 
