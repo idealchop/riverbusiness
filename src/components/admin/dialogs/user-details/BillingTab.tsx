@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { AppUser, Payment } from '@/lib/types';
 import { Timestamp, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { PlusCircle, Copy, Send, Edit } from 'lucide-react';
+import { PlusCircle, Copy, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
@@ -37,7 +37,6 @@ interface BillingTabProps {
     onSetIsTopUpOpen: (isOpen: boolean) => void;
     onSetPaymentToReview: (payment: Payment | null) => void;
     onSetIsPaymentReviewOpen: (isOpen: boolean) => void;
-    onSetIsChangePlanOpen: (isOpen: boolean) => void;
 }
 
 export function BillingTab({
@@ -48,7 +47,6 @@ export function BillingTab({
     onSetIsTopUpOpen,
     onSetPaymentToReview,
     onSetIsPaymentReviewOpen,
-    onSetIsChangePlanOpen,
 }: BillingTabProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -155,10 +153,6 @@ export function BillingTab({
                     <CardDescription>Manage invoices and charges.</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => onSetIsChangePlanOpen(true)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Change Plan
-                    </Button>
                     <Button variant="outline" onClick={() => setIsReminderDialogOpen(true)}>
                         <Send className="mr-2 h-4 w-4" />
                         Send Statement Reminder

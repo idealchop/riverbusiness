@@ -30,7 +30,6 @@ import { YearlyConsumptionDialog } from './YearlyConsumptionDialog';
 import { BranchDeliveriesTab } from './BranchDeliveriesTab';
 import { ChangePlanDialog } from './ChangePlanDialog';
 import { ManualReceiptDialog } from './ManualReceiptDialog';
-import { Edit } from 'lucide-react';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 const toSafeDate = (timestamp: any): Date | null => {
@@ -260,6 +259,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onContractUpload={handleContractUpload}
                                     onSetIsYearlyConsumptionOpen={setIsYearlyConsumptionOpen}
                                     onAssignParent={handleAssignParent}
+                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="deliveries" className="py-6">
@@ -286,7 +286,6 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetIsTopUpOpen={setIsTopUpOpen}
                                     onSetPaymentToReview={setPaymentToReview}
                                     onSetIsPaymentReviewOpen={setIsPaymentReviewOpen}
-                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="sanitation" className="py-6">

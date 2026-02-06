@@ -282,10 +282,10 @@ export function getDeliveryStatusTemplate(businessName: string, status: string, 
     </div>
   `;
 
-    return {
-        subject: `Success: Water Delivered to ${businessName} 🚚`,
-        html: getEmailWrapper(content, 'Fresh Water Delivered', subheader)
-    };
+  return {
+    subject: `Success: Water Delivered to ${businessName} 🚚`,
+    html: getEmailWrapper(content, 'Fresh Water Delivered', subheader)
+  };
 }
 
 export function getPaymentStatusTemplate(businessName: string, invoiceId: string, amount: number, status: string) {
