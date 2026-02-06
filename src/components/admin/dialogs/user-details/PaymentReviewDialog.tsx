@@ -146,8 +146,8 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                                 )}
                             </div>
                             {paymentToReview?.status === 'Paid' && onSendReceipt && (
-                                <Button variant="default" onClick={() => onSendReceipt(paymentToReview)} className="w-full">
-                                    <Receipt className="mr-2 h-4 w-4" /> Send Digital Receipt
+                                <Button variant="default" onClick={() => onSendReceipt(paymentToReview!)} className="w-full">
+                                    <Receipt className="mr-2 h-4 w-4" /> Send Receipt
                                 </Button>
                             )}
                         </div>
