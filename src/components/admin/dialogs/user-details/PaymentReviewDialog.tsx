@@ -101,7 +101,7 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                 <div className="space-y-4 py-4">
                     <div className="relative w-full aspect-[9/16] max-h-[50vh] rounded-lg border overflow-hidden bg-muted">
                         {paymentToReview?.proofOfPaymentUrl ? (
-                            <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" layout="fill" className="object-contain" />
+                            <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" fill className="object-contain" />
                         ) : (
                             <div className="flex items-center justify-center h-full text-muted-foreground text-center px-4">
                                 {isEstimated ? 'This is an estimate. No proof of payment is applicable.' : 'No proof of payment available.'}
@@ -121,7 +121,7 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         </div>
                     )}
                 </div>
-                <DialogFooter className="gap-2">
+                <DialogFooter className="flex flex-col gap-2">
                      {showRejectionInput ? (
                         <>
                             <Button variant="ghost" onClick={() => setShowRejectionInput(false)}>Cancel</Button>
@@ -130,21 +130,24 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                     ) : isEstimated ? (
                         <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">Close</Button>
                     ) : (
-                        <div className="flex flex-col sm:flex-row w-full gap-2">
-                            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Close</Button>
-                            {paymentToReview?.status === 'Pending Review' && (
-                                <>
-                                    <Button variant="destructive" onClick={() => setShowRejectionInput(true)} className="flex-1">
-                                        <X className="mr-2 h-4 w-4" /> Reject
-                                    </Button>
-                                    <Button onClick={() => handleUpdatePaymentStatus('Paid')} className="flex-1">
-                                        <CheckCircle className="mr-2 h-4 w-4" /> Approve
-                                    </Button>
-                                </>
-                            )}
+                        <div className="flex flex-col w-full gap-2">
+                            <div className="flex gap-2 w-full">
+                                {paymentToReview?.status === 'Pending Review' ? (
+                                    <>
+                                        <Button variant="destructive" onClick={() => setShowRejectionInput(true)} className="flex-1">
+                                            <X className="mr-2 h-4 w-4" /> Reject
+                                        </Button>
+                                        <Button onClick={() => handleUpdatePaymentStatus('Paid')} className="flex-1">
+                                            <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">Close</Button>
+                                )}
+                            </div>
                             {paymentToReview?.status === 'Paid' && onSendReceipt && (
-                                <Button variant="default" onClick={() => onSendReceipt(paymentToReview)} className="flex-1">
-                                    <Receipt className="mr-2 h-4 w-4" /> Send Receipt
+                                <Button variant="default" onClick={() => onSendReceipt(paymentToReview)} className="w-full">
+                                    <Receipt className="mr-2 h-4 w-4" /> Send Digital Receipt
                                 </Button>
                             )}
                         </div>

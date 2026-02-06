@@ -661,6 +661,44 @@ export const onrefillrequestcreate = onDocumentCreated({
     }
 });
 
+export const onrefillrequestupdate = onDocumentUpdated({
+    document: "users/{userId}/refillRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const before = event.data.before.data() as RefillRequest;
+    const after = event.data.after.data() as RefillRequest;
+    const userId = event.params.userId;
+    const requestId = event.params.requestId;
+
+    if (before.status === after.status) return;
+
+    const db = getFirestore();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    await createNotification(userId, { 
+        type: 'delivery', 
+        title: `Refill ${after.status}`, 
+        description: `Your refill request is now ${after.status}.`,
+        data: { requestId } 
+    });
+
+    if (userData?.email) {
+        const template = getRefillRequestTemplate(userData.businessName, after.status, requestId, after.requestedDate);
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await sendEmail({ 
+            to: userData.email, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Refill request updated`, 
+            html: template.html 
+        });
+    }
+});
+
 export const onsanitationcreate = onDocumentCreated({
     document: "users/{userId}/sanitationVisits/{visitId}",
     secrets: ["BREVO_API_KEY"]
