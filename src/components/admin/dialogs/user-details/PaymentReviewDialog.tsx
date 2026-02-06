@@ -141,20 +141,19 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         </>
                     ) : isEstimated ? (
                         <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">Close</Button>
-                    ) : paymentToReview?.status === 'Pending Review' ? (
-                        <>
-                            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-                            <div className='flex-grow' />
-                            <Button variant="destructive" onClick={() => setShowRejectionInput(true)}>
-                                <X className="mr-2 h-4 w-4" /> Reject
-                            </Button>
-                            <Button onClick={() => handleUpdatePaymentStatus('Paid')}>
-                                <CheckCircle className="mr-2 h-4 w-4" /> Approve
-                            </Button>
-                        </>
                     ) : (
                         <div className="flex flex-col sm:flex-row w-full gap-2">
                             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Close</Button>
+                            {paymentToReview?.status === 'Pending Review' && (
+                                <>
+                                    <Button variant="destructive" onClick={() => setShowRejectionInput(true)} className="flex-1">
+                                        <X className="mr-2 h-4 w-4" /> Reject
+                                    </Button>
+                                    <Button onClick={() => handleUpdatePaymentStatus('Paid')} className="flex-1">
+                                        <CheckCircle className="mr-2 h-4 w-4" /> Approve
+                                    </Button>
+                                </>
+                            )}
                             {paymentToReview?.status === 'Paid' && onSendReceipt && (
                                 <Button variant="default" onClick={() => onSendReceipt(paymentToReview)} className="flex-1">
                                     <Receipt className="mr-2 h-4 w-4" /> Send Receipt

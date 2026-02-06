@@ -286,6 +286,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                                     onSetIsTopUpOpen={setIsTopUpOpen}
                                     onSetPaymentToReview={setPaymentToReview}
                                     onSetIsPaymentReviewOpen={setIsPaymentReviewOpen}
+                                    onSetIsChangePlanOpen={setIsChangePlanOpen}
                                 />
                             </TabsContent>
                             <TabsContent value="sanitation" className="py-6">
@@ -299,10 +300,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                             </TabsContent>
                         </Tabs>
                     </ScrollArea>
-                    <div className="border-t p-4 flex justify-between items-center bg-background">
-                        <Button variant="outline" onClick={() => setIsChangePlanOpen(true)}>
-                            <Edit className="mr-2 h-4 w-4" /> Change Plan
-                        </Button>
+                    <div className="border-t p-4 flex justify-end items-center bg-background">
                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                     </div>
                 </DialogContent>

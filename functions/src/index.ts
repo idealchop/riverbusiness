@@ -61,14 +61,20 @@ async function createNotification(userId: string, notificationData: any) {
 
 /**
  * Determines the CC list based on the client ID.
- * Includes the admin team (Jayvee and Jimboy) for all operational dispatches.
+ * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
  */
 function getCCList(clientId?: string): string | string[] {
-    const adminEmails = ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
     if (clientId === 'SC2500000001') {
-        return [...adminEmails, 'cavatan.jheck@gmail.com'];
+        return ['support@riverph.com', 'cavatan.jheck@gmail.com'];
     }
-    return adminEmails;
+    return 'support@riverph.com';
+}
+
+/**
+ * Determines the BCC list. Admin team is always BCC'd.
+ */
+function getBCCList(): string[] {
+    return ['jayvee@riverph.com', 'jimboy@riverph.com'];
 }
 
 const getSanitationPassRate = (v: SanitationVisit) => {
@@ -111,18 +117,18 @@ export async function generatePasswordProtectedSOA(
         const pageWidth = doc.page.width;
         const margin = 40;
 
-        // 1. High-Fidelity Header (Solid Blue Banner) - Exact Image Match
+        // 1. High-Fidelity Header (Solid Blue Banner)
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 120).fill();
 
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-        // Left Side Header Text (Hierarchy Stack)
+        // Left Side Header Text
         doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Philippines', margin, 45);
         doc.fontSize(14).text('Statement of Account', margin, 72);
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
         
-        // Right Side Banner Metadata (Stacked Labels and Values)
+        // Right Side Banner Metadata
         doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: pageWidth - margin * 2 });
         doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: pageWidth - margin * 2 });
         
@@ -242,7 +248,7 @@ export async function generatePasswordProtectedSOA(
                 totalQty += qty; totalLiters += liters; totalAmount += amount;
                 return [
                     d.id, 
-                    format(toSafeDate(d.date), 'MMM d, yyyy'), // SERVICE DATE
+                    format(toSafeDate(d.date), 'MMM d, yyyy'), 
                     qty, 
                     `P${pricePerContainer.toFixed(2)}`, 
                     `${liters.toFixed(1)}L`, 
@@ -421,13 +427,15 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
-    // CC Logic
+    // Email Config
     const ccList = getCCList(user.clientId);
+    const bccList = getBCCList();
 
     try {
         await sendEmail({
             to: targetEmail,
             cc: ccList,
+            bcc: bccList,
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
@@ -436,7 +444,7 @@ export const onpaymentremindercreate = onDocumentCreated({
                 content: pdfBuffer
             }]
         });
-        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}`);
+        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}. BCC: ${bccList}`);
     } catch (error) {
         logger.error(`Failed to send follow-up to ${targetEmail}`, error);
     }
@@ -468,11 +476,14 @@ export const onmanualreceiptcreate = onDocumentCreated({
     try {
         const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount);
         const template = getPaymentStatusTemplate(userData.businessName, invoiceData.id, requestData.amount, 'Paid');
+        
         const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
 
         await sendEmail({
             to: userData.email,
             cc: ccList,
+            bcc: bccList,
             subject: `Receipt: ${template.subject}`,
             text: `Professional digital receipt for ${invoiceData.id} attached.`,
             html: template.html,
@@ -484,7 +495,7 @@ export const onmanualreceiptcreate = onDocumentCreated({
 
         // Mark request as completed
         await event.data.ref.update({ status: 'completed' });
-        logger.info(`Manual receipt dispatched to ${userData.email}.`);
+        logger.info(`Manual receipt dispatched to ${userData.email}. BCC: ${bccList}`);
 
     } catch (error) {
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
@@ -501,9 +512,19 @@ export const onunclaimedprofilecreate = onDocumentCreated({
     const planName = `${profile.clientType || ''} - ${profile.plan?.name || ''}`;
     const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
     const template = getWelcomeUnclaimedTemplate(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
+    
     const ccList = getCCList(profile.clientId);
+    const bccList = getBCCList();
+
     try {
-        await sendEmail({ to: profile.businessEmail, cc: ccList, subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
+        await sendEmail({ 
+            to: profile.businessEmail, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, 
+            html: template.html 
+        });
     } catch (error) { logger.error(`Failed welcome email`, error); }
 });
 
@@ -519,10 +540,19 @@ export const ondeliverycreate = onDocumentCreated({
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
+    
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         const ccList = getCCList(userData.clientId);
-        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Delivery complete`, html: template.html });
+        const bccList = getBCCList();
+        await sendEmail({ 
+            to: userData.email, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Delivery complete`, 
+            html: template.html 
+        });
     }
 });
 
@@ -540,10 +570,19 @@ export const ondeliveryupdate = onDocumentUpdated({
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
+    
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
         const ccList = getCCList(userData.clientId);
-        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Delivery complete`, html: template.html });
+        const bccList = getBCCList();
+        await sendEmail({ 
+            to: userData.email, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Delivery complete`, 
+            html: template.html 
+        });
     }
 });
 
@@ -556,7 +595,6 @@ export const onpaymentupdate = onDocumentUpdated({
     const after = event.data.after.data();
     const userId = event.params.userId;
     
-    // Trigger notification ONLY whenever status transitions TO Paid
     if (before.status !== 'Paid' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
         // Email receipt is now handled manually by admin via onmanualreceiptcreate trigger
@@ -578,7 +616,15 @@ export const ontopuprequestupdate = onDocumentUpdated({
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
         const ccList = getCCList(userData.clientId);
-        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Top-up approved`, html: template.html });
+        const bccList = getBCCList();
+        await sendEmail({ 
+            to: userData.email, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Top-up approved`, 
+            html: template.html 
+        });
     }
 });
 
@@ -594,7 +640,6 @@ export const onrefillrequestcreate = onDocumentCreated({
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
-    // User Notification
     await createNotification(userId, { 
         type: 'delivery', 
         title: 'Refill Priority Confirmed', 
@@ -605,7 +650,15 @@ export const onrefillrequestcreate = onDocumentCreated({
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
         const ccList = getCCList(userData.clientId);
-        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Refill request received`, html: template.html });
+        const bccList = getBCCList();
+        await sendEmail({ 
+            to: userData.email, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Refill request received`, 
+            html: template.html 
+        });
     }
 });
 
@@ -623,7 +676,15 @@ export const onsanitationcreate = onDocumentCreated({
         const dateStr = format(toSafeDate(visit.scheduledDate), 'PPP');
         const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
         const ccList = getCCList(userData.clientId);
-        await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Visit scheduled`, html: template.html });
+        const bccList = getBCCList();
+        await sendEmail({ 
+            to: userData.email, 
+            cc: ccList, 
+            bcc: bccList,
+            subject: template.subject, 
+            text: `Visit scheduled`, 
+            html: template.html 
+        });
     }
 });
 
@@ -643,7 +704,15 @@ export const onsanitationupdate = onDocumentUpdated({
             const dateStr = format(toSafeDate(after.scheduledDate), 'PPP');
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
             const ccList = getCCList(userData.clientId);
-            await sendEmail({ to: userData.email, cc: ccList, subject: template.subject, text: `Report ready`, html: template.html });
+            const bccList = getBCCList();
+            await sendEmail({ 
+                to: userData.email, 
+                cc: ccList, 
+                bcc: bccList,
+                subject: template.subject, 
+                text: `Report ready`, 
+                html: template.html 
+            });
         }
     }
 });

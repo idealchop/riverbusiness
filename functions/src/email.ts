@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 interface SendEmailOptions {
   to: string;
   cc?: string | string[];
+  bcc?: string | string[];
   subject: string;
   text: string;
   html: string;
@@ -56,7 +57,7 @@ const PAYMENT_OPTIONS_BLOCK = `
 /**
  * Sends an email using the Brevo SMTP relay.
  */
-export async function sendEmail({ to, cc, subject, text, html, attachments }: SendEmailOptions) {
+export async function sendEmail({ to, cc, bcc, subject, text, html, attachments }: SendEmailOptions) {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
@@ -74,12 +75,13 @@ export async function sendEmail({ to, cc, subject, text, html, attachments }: Se
       },
     });
     
-    logger.info(`Attempting to send email to ${to}. CC: ${cc || 'None'}`);
+    logger.info(`Attempting to send email to ${to}. CC: ${cc || 'None'}. BCC: ${bcc || 'None'}`);
 
     const info = await transporter.sendMail({
       from: '"River Philippines" <customers@riverph.com>',
       to,
       cc,
+      bcc,
       subject,
       text,
       html,

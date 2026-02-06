@@ -49,11 +49,11 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
     const pricePerLiter = user.plan?.price || 0;
     const pricePerContainer = pricePerLiter * LITER_RATIO;
 
-    // 1. High-Fidelity Header (Solid Blue Banner) - Exact Image Match
+    // 1. High-Fidelity Header (Solid Blue Banner)
     doc.setFillColor(83, 142, 194); // #538ec2
     doc.rect(0, 0, pageWidth, 120, 'F');
 
-    // Left Side Header Text (No Logo)
+    // Left Side Header Text
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
@@ -176,7 +176,7 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
             totalAmount += deliveryAmount;
             return [
                 d.id, 
-                format(toSafeDate(d.date), 'MMM d, yyyy'), // SERVICE DATE
+                format(toSafeDate(d.date), 'MMM d, yyyy'), 
                 ...(isParent ? [branchMap[d.userId] || d.userId] : []), 
                 qty, 
                 `P ${pricePerContainer.toFixed(2)}`, 
