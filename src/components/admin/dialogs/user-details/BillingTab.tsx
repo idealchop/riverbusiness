@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { AppUser, Payment } from '@/lib/types';
 import { Timestamp, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { PlusCircle, Copy, Send } from 'lucide-react';
+import { PlusCircle, Copy, Send, FileText, Receipt, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, startOfMonth, subMonths, isAfter, isSameDay } from 'date-fns';
 
 const toSafeDate = (timestamp: any): Date | null => {
@@ -50,9 +52,12 @@ export function BillingTab({
     const { toast } = useToast();
     const firestore = useFirestore();
     const [paymentsCurrentPage, setPaymentsCurrentPage] = useState(1);
-    const [isSendingReminder, setIsSendingReminder] = useState(false);
-    const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+    const [isDispatchDialogOpen, setIsDispatchDialogOpen] = useState(false);
+    const [docType, setDocType] = useState<'soa' | 'receipt'>('soa');
     const [selectedPeriod, setSelectedPeriod] = useState('full');
+    const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
+    const [customAmount, setCustomAmount] = useState<string>('');
     const [recipientType, setRecipientType] = useState<'default' | 'custom'>('default');
     const [customEmail, setCustomEmail] = useState('');
     const PAYMENTS_PER_PAGE = 5;
@@ -73,6 +78,10 @@ export function BillingTab({
         const uniqueValues = new Set();
         return options.filter(o => !uniqueValues.has(o.value) && uniqueValues.add(o.value));
     }, [user?.createdAt]);
+
+    const paidInvoices = useMemo(() => {
+        return (userPaymentsData || []).filter(p => p.status === 'Paid');
+    }, [userPaymentsData]);
 
     const showCurrentMonthInvoice = useMemo(() => {
         if (!currentMonthInvoice || !userPaymentsData) return false;
@@ -109,7 +118,15 @@ export function BillingTab({
         onSetIsPaymentReviewOpen(true);
     };
 
-    const handleConfirmSendReminder = async () => {
+    const handleInvoiceSelect = (id: string) => {
+        setSelectedInvoiceId(id);
+        const inv = paidInvoices.find(p => p.id === id);
+        if (inv) {
+            setCustomAmount(inv.amount.toString());
+        }
+    };
+
+    const handleConfirmDispatch = async () => {
         if (!firestore || !user) return;
         
         if (recipientType === 'custom' && !customEmail.includes('@')) {
@@ -117,29 +134,53 @@ export function BillingTab({
             return;
         }
 
-        setIsSendingReminder(true);
+        if (docType === 'receipt' && !selectedInvoiceId) {
+            toast({ variant: 'destructive', title: 'Invoice Required', description: 'Please select a paid invoice to generate a receipt.' });
+            return;
+        }
+
+        setIsSending(true);
         try {
-            const remindersCol = collection(firestore, 'users', user.id, 'reminders');
-            await addDoc(remindersCol, {
-                type: 'payment_follow_up',
-                triggeredAt: serverTimestamp(),
-                status: 'pending',
-                period: selectedPeriod,
-                recipientEmail: recipientType === 'custom' ? customEmail : null
-            });
-            const targetLabel = recipientType === 'custom' ? customEmail : user.email;
-            toast({ 
-                title: 'Reminder Dispatched!', 
-                description: `A statement reminder for ${soaDateOptions.find(o => o.value === selectedPeriod)?.label} is being sent to ${targetLabel}.` 
-            });
-            setIsReminderDialogOpen(false);
+            const targetEmail = recipientType === 'custom' ? customEmail : user.email;
+
+            if (docType === 'soa') {
+                const remindersCol = collection(firestore, 'users', user.id, 'reminders');
+                await addDoc(remindersCol, {
+                    type: 'payment_follow_up',
+                    triggeredAt: serverTimestamp(),
+                    status: 'pending',
+                    period: selectedPeriod,
+                    recipientEmail: recipientType === 'custom' ? customEmail : null
+                });
+                toast({ 
+                    title: 'SOA Reminder Dispatched!', 
+                    description: `The Statement of Account for ${soaDateOptions.find(o => o.value === selectedPeriod)?.label} is being sent to ${targetEmail}.` 
+                });
+            } else {
+                const receiptRequestsCol = collection(firestore, 'users', user.id, 'receiptRequests');
+                await addDoc(receiptRequestsCol, {
+                    invoiceId: selectedInvoiceId,
+                    amount: parseFloat(customAmount) || 0,
+                    requestedAt: serverTimestamp(),
+                    status: 'pending',
+                    recipientEmail: recipientType === 'custom' ? customEmail : null
+                });
+                toast({ 
+                    title: 'Digital Receipt Dispatched!', 
+                    description: `A customized receipt for P${parseFloat(customAmount).toFixed(2)} is being sent to ${targetEmail}.` 
+                });
+            }
+
+            setIsDispatchDialogOpen(false);
             setCustomEmail('');
             setRecipientType('default');
+            setSelectedInvoiceId('');
+            setCustomAmount('');
         } catch (error) {
-            console.error("Error triggering reminder:", error);
+            console.error("Error triggering dispatch:", error);
             toast({ variant: 'destructive', title: 'Action Failed' });
         } finally {
-            setIsSendingReminder(false);
+            setIsSending(false);
         }
     };
 
@@ -149,12 +190,12 @@ export function BillingTab({
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <CardTitle>Billing & Invoices</CardTitle>
-                    <CardDescription>Manage invoices and charges.</CardDescription>
+                    <CardDescription>Manage invoices and dispatch documents.</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setIsReminderDialogOpen(true)}>
+                    <Button variant="outline" onClick={() => setIsDispatchDialogOpen(true)}>
                         <Send className="mr-2 h-4 w-4" />
-                        Send Statement Reminder
+                        Send Statement / Receipt
                     </Button>
                     {user.accountType === 'Parent' ? (
                         <Button onClick={() => onSetIsTopUpOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Top-up Credits</Button>
@@ -252,34 +293,79 @@ export function BillingTab({
             </CardContent>
         </Card>
 
-        <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
+        <Dialog open={isDispatchDialogOpen} onOpenChange={setIsDispatchDialogOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Send className="h-5 w-5" />
-                        Send Statement Reminder
+                        Send Document
                     </DialogTitle>
                     <DialogDescription>
-                        This will send a professional follow-up email with the <strong>Statement of Account (SOA)</strong> attached as a password-protected PDF.
+                        Choose the type of professional document you wish to dispatch to {user.businessName}.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-6">
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold">1. Select Billing Period</Label>
-                        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a period..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {soaDateOptions.map(option => (
-                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="space-y-3">
+                        <Label className="text-sm font-semibold">1. Document Type</Label>
+                        <Tabs value={docType} onValueChange={(v: any) => setDocType(v)} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="soa" className="gap-2"><FileText className="h-4 w-4" /> Statement</TabsTrigger>
+                                <TabsTrigger value="receipt" className="gap-2"><Receipt className="h-4 w-4" /> Receipt</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
 
+                    {docType === 'soa' ? (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <Label className="text-sm font-semibold">2. Select Billing Period</Label>
+                            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a period..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {soaDateOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="space-y-2">
+                                <Label className="text-sm font-semibold">2. Select Paid Invoice</Label>
+                                <Select value={selectedInvoiceId} onValueChange={handleInvoiceSelect}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select an invoice..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {paidInvoices.length > 0 ? paidInvoices.map(p => (
+                                            <SelectItem key={p.id} value={p.id}>{p.description} (P{p.amount.toLocaleString()})</SelectItem>
+                                        )) : (
+                                            <div className="p-2 text-xs text-muted-foreground text-center">No paid invoices found.</div>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {selectedInvoiceId && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="receiptAmount" className="text-sm font-semibold">3. Final Receipt Amount (PHP)</Label>
+                                    <Input 
+                                        id="receiptAmount" 
+                                        type="number" 
+                                        value={customAmount} 
+                                        onChange={(e) => setCustomAmount(e.target.value)}
+                                        placeholder="Enter final amount"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground italic">You can modify this amount if there was a partial payment or special adjustment.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="space-y-3">
-                        <Label className="text-sm font-semibold">2. Choose Recipient</Label>
+                        <Label className="text-sm font-semibold">
+                            {docType === 'soa' ? '3. Choose Recipient' : '4. Choose Recipient'}
+                        </Label>
                         <RadioGroup value={recipientType} onValueChange={(val: any) => setRecipientType(val)} className="grid gap-2">
                             <div className="flex items-center space-x-2 rounded-md border p-3 cursor-pointer hover:bg-accent/50">
                                 <RadioGroupItem value="default" id="r-default" />
@@ -299,7 +385,7 @@ export function BillingTab({
                                         value={customEmail}
                                         onChange={(e) => setCustomEmail(e.target.value)}
                                         className="h-8 text-sm mt-2"
-                                        disabled={isSendingReminder}
+                                        disabled={isSending}
                                     />
                                 )}
                             </div>
@@ -307,9 +393,9 @@ export function BillingTab({
                     </div>
                 </div>
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" disabled={isSendingReminder}>Cancel</Button></DialogClose>
-                    <Button onClick={handleConfirmSendReminder} disabled={isSendingReminder}>
-                        {isSendingReminder ? "Sending..." : "Send Reminder Email"}
+                    <DialogClose asChild><Button variant="outline" disabled={isSending}>Cancel</Button></DialogClose>
+                    <Button onClick={handleConfirmDispatch} disabled={isSending || (docType === 'receipt' && !selectedInvoiceId)}>
+                        {isSending ? "Processing..." : `Send ${docType === 'soa' ? 'Statement' : 'Receipt'}`}
                     </Button>
                 </DialogFooter>
             </DialogContent>

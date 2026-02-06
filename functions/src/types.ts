@@ -112,4 +112,5 @@ export interface ManualReceiptRequest {
     amount: number;
     requestedAt: FieldValue | Timestamp;
     status: 'pending' | 'completed';
+    recipientEmail?: string | null;
 }

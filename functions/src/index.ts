@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -70,7 +71,7 @@ function getCCList(clientId?: string): string | string[] {
 }
 
 /**
- * Determines the BCC list. Admin team is always BCC'd.
+ * Determines the BCC list. Admin team is always BCC'd for privacy.
  */
 function getBCCList(): string[] {
     return ['jayvee@riverph.com', 'jimboy@riverph.com'];
@@ -466,7 +467,14 @@ export const onmanualreceiptcreate = onDocumentCreated({
 
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    if (!userData || !userData.email) return;
+    if (!userData) return;
+
+    // Prioritize custom recipient email if provided
+    const targetEmail = (requestData.recipientEmail && requestData.recipientEmail.includes('@')) 
+        ? requestData.recipientEmail 
+        : userData.email;
+
+    if (!targetEmail) return;
 
     const invoiceDoc = await db.collection('users').doc(userId).collection('payments').doc(requestData.invoiceId).get();
     const invoiceData = invoiceDoc.data();
@@ -480,7 +488,7 @@ export const onmanualreceiptcreate = onDocumentCreated({
         const bccList = getBCCList();
 
         await sendEmail({
-            to: userData.email,
+            to: targetEmail,
             cc: ccList,
             bcc: bccList,
             subject: `Receipt: ${template.subject}`,
@@ -494,7 +502,7 @@ export const onmanualreceiptcreate = onDocumentCreated({
 
         // Mark request as completed
         await event.data.ref.update({ status: 'completed' });
-        logger.info(`Manual receipt dispatched to ${userData.email}. BCC: ${bccList}`);
+        logger.info(`Manual receipt dispatched to ${targetEmail}. BCC: ${bccList}`);
 
     } catch (error) {
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
@@ -596,7 +604,7 @@ export const onpaymentupdate = onDocumentUpdated({
     
     if (before.status !== 'Paid' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
-        // Email receipt is now handled manually by admin via onmanualreceiptcreate trigger
+        // Automated receipt email removed. Handled manually via receiptRequests.
     }
 });
 
