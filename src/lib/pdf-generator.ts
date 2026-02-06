@@ -1,8 +1,8 @@
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { format } from 'date-fns';
-import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Transaction } from '@/lib/types';
+import { format, subMonths, addDays, startOfMonth, addMonths, endOfDay, isWithinInterval } from 'date-fns';
+import type { AppUser, Delivery, SanitationVisit, ComplianceReport, Transaction, Payment } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
 const LITER_RATIO = 19.5;
@@ -210,13 +210,15 @@ export const generateMonthlySOA = async ({ user, deliveries, sanitationVisits, c
 interface InvoicePDFProps {
     user: AppUser;
     invoice: Payment;
+    totalContainers?: number;
 }
 
-export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => {
+export const generateInvoicePDF = async ({ user, invoice, totalContainers }: InvoicePDFProps) => {
     const doc = new jsPDF('p', 'pt');
     const pageWidth = doc.internal.pageSize.width;
     const margin = 40;
     
+    // Header (Solid Blue Banner)
     doc.setFillColor(83, 142, 194); 
     doc.rect(0, 0, pageWidth, 100, 'F');
     
@@ -230,6 +232,7 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     let lastY = 140; 
     const invoiceDate = toSafeDate(invoice.date);
     
+    // Metadata
     doc.setTextColor(0); 
     doc.setFontSize(10); 
     doc.setFont('helvetica', 'bold'); 
@@ -242,19 +245,38 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     doc.setFont('helvetica', 'normal'); 
     doc.text(format(invoiceDate, 'MMMM d, yyyy'), margin + 80, lastY + 15);
     
+    // Bill From & Bill To
     lastY += 50; 
     doc.setFont('helvetica', 'bold'); 
     doc.setTextColor(83, 142, 194); 
-    doc.text('BILL TO:', margin, lastY); 
+    doc.text('BILL FROM:', margin, lastY); 
+    doc.text('BILL TO:', pageWidth / 2 + 20, lastY); 
+
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal'); 
     doc.setTextColor(0);
     
-    doc.text(user.businessName || '', margin, lastY + 15); 
-    doc.text(user.address || '', margin, lastY + 27, { maxWidth: pageWidth / 2 });
-    doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin, lastY + 39); 
-    doc.text(user.email || '', margin, lastY + 51);
+    // From Column
+    doc.setFont('helvetica', 'bold');
+    doc.text('River Tech Inc.', margin, lastY + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text('SEC Reg #: 202406123456', margin, lastY + 27);
+    doc.text('Filinvest Axis Tower 1, Alabang', margin, lastY + 39);
+    doc.text('customers@riverph.com', margin, lastY + 51);
+
+    // To Column
+    doc.setFont('helvetica', 'bold');
+    doc.text(user.businessName || 'N/A', pageWidth / 2 + 20, lastY + 15); 
+    doc.setFont('helvetica', 'normal');
+    const address = user.address || 'No address provided';
+    const addressLines = doc.splitTextToSize(address, pageWidth / 2 - 60);
+    doc.text(addressLines, pageWidth / 2 + 20, lastY + 27);
+    const nextY = lastY + 27 + (addressLines.length * 12);
+    doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, nextY); 
+    doc.text(user.email || '', pageWidth / 2 + 20, nextY + 12);
     
-    lastY += 90;
+    lastY = Math.max(lastY + 70, nextY + 30);
+    
     autoTable(doc, {
         startY: lastY,
         head: [["Description", "Qty", "Unit price", "Amount"]],
@@ -265,12 +287,13 @@ export const generateInvoicePDF = async ({ user, invoice }: InvoicePDFProps) => 
     });
     
     const summaryX = pageWidth - margin - 200; 
-    const vatIncluded = invoice.amount * (12/112); 
+    const vatIncluded = invoice.amount * (12 / 112); 
     lastY = (doc as any).lastAutoTable.finalY + 30;
     
     const totals = [
         ['Subtotal (VAT Included)', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`],
         ['VAT (12% Included)', `P ${vatIncluded.toLocaleString(undefined, {minimumFractionDigits: 2})}`],
+        ...(totalContainers !== undefined ? [['Total Volume', `${totalContainers} Containers`]] : []),
         ['Total Paid', `P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`]
     ];
     

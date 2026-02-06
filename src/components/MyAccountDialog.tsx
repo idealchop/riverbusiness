@@ -28,7 +28,7 @@ import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimes
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans, clientTypes } from '@/lib/plans';
@@ -986,6 +986,31 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                pendingChargeTotal;
     }, [breakdownDetails]);
 
+    const selectedInvoiceContainers = useMemo(() => {
+        if (!state.selectedInvoiceForDetail || !deliveries) return 0;
+        
+        const invoiceDate = toSafeDate(state.selectedInvoiceForDetail.date);
+        if (!invoiceDate) return 0;
+
+        let cycleStart: Date;
+        let cycleEnd: Date;
+
+        if (state.selectedInvoiceForDetail.description.includes('December 2025 - January 2026')) {
+            cycleStart = new Date(2025, 11, 2);
+            cycleEnd = endOfDay(new Date(2026, 1, 1));
+        } else {
+            const isCurrent = currentMonthInvoice?.id === state.selectedInvoiceForDetail.id;
+            const billingMonth = isCurrent ? new Date() : subMonths(invoiceDate, 1);
+            cycleStart = addDays(startOfMonth(billingMonth), 1);
+            cycleEnd = endOfDay(startOfMonth(addMonths(billingMonth, 1)));
+        }
+
+        return deliveries.filter(d => {
+            const dDate = toSafeDate(d.date);
+            return dDate ? isWithinInterval(dDate, { start: cycleStart, end: cycleEnd }) : false;
+        }).reduce((sum, d) => sum + d.volumeContainers, 0);
+    }, [state.selectedInvoiceForDetail, deliveries, currentMonthInvoice]);
+
   const showCurrentMonthInvoice = useMemo(() => {
     if (!currentMonthInvoice) return false;
     return !paymentHistory.some(inv => inv.id === currentMonthInvoice.id);
@@ -1349,7 +1374,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     if (!user) return;
     toast({ title: 'Preparing Invoice', description: `Generating invoice ${invoice.id}...` });
     try {
-        await generateInvoicePDF({ user, invoice });
+        await generateInvoicePDF({ user, invoice, totalContainers: selectedInvoiceContainers });
     } catch (error) {
         console.error("Invoice generation failed:", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate invoice PDF.' });
@@ -1645,6 +1670,10 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Invoice number</span>
                                     <span className="font-medium font-mono">{state.selectedInvoiceForDetail?.id}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Total Volume</span>
+                                    <span className="font-medium">{selectedInvoiceContainers} Containers</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Payment method</span>

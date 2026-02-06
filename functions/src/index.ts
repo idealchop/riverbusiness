@@ -4,7 +4,7 @@ import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import PDFDocument from 'pdfkit';
-import { format, startOfMonth, endOfMonth, parse, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, endOfDay, addMonths, subMonths, addDays, isWithinInterval } from 'date-fns';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -228,8 +228,8 @@ export async function generatePasswordProtectedSOA(
             drawTable('Office Sanitation Logs', ['Date', 'Status', 'Officer', 'Score Rate'], sanRows);
         }
 
-        if (compliance.length > 0) {
-            const compRows = compliance.map(c => [
+        if (complianceReports.length > 0) {
+            const compRows = complianceReports.map(c => [
                 c.name, 
                 c.date ? format(toSafeDate(c.date), 'MMM yyyy') : 'N/A', 
                 c.status
@@ -278,7 +278,7 @@ export async function generatePasswordProtectedSOA(
 /**
  * Generates a high-fidelity PDF Receipt for a specific payment.
  */
-export async function generateInvoiceReceiptPDF(user: any, invoice: any, customAmount?: number): Promise<Buffer> {
+export async function generateInvoiceReceiptPDF(user: any, invoice: any, customAmount?: number, totalContainers?: number): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
         const doc = new PDFDocument({ margin: 40 });
         const chunks: Buffer[] = [];
@@ -305,17 +305,26 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
         doc.font('Helvetica-Bold').text('Date:', margin, topY + 15);
         doc.font('Helvetica').text(format(toSafeDate(invoice.date), 'MMMM d, yyyy'), margin + 80, topY + 15);
 
-        // Bill To
+        // Bill From & Bill To
         doc.moveDown(2);
-        doc.font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('BILL TO:', margin);
-        doc.fillColor('#000000').font('Helvetica-Bold').text(user.businessName || 'N/A', margin);
-        doc.font('Helvetica').text(user.address || 'N/A', margin, doc.y, { width: pageWidth / 2 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin);
-        doc.text(user.email || '', margin);
+        const stakeholderY = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('BILL FROM:', margin, stakeholderY);
+        doc.text('BILL TO:', pageWidth / 2 + 20, stakeholderY);
+
+        doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold');
+        doc.text('River Tech Inc.', margin, stakeholderY + 15);
+        doc.font('Helvetica').text('SEC Reg #: 202406123456', margin, stakeholderY + 27);
+        doc.text('Filinvest Axis Tower 1, Alabang', margin, stakeholderY + 39);
+        doc.text('customers@riverph.com', margin, stakeholderY + 51);
+
+        doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, stakeholderY + 15);
+        doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, stakeholderY + 27, { width: pageWidth / 2 - 60 });
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2);
+        doc.text(user.email || '', pageWidth / 2 + 20, doc.y + 12);
 
         // Table
         doc.moveDown(3);
-        const tableTop = doc.y;
+        const tableTop = doc.y + 20;
         doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
         doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
         doc.text('Description', margin + 5, tableTop + 6);
@@ -342,6 +351,12 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
         doc.text('VAT (12% Included)', totalsX, doc.y);
         doc.text(`P ${vatIncluded.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
         
+        if (totalContainers !== undefined) {
+            doc.moveDown(0.5);
+            doc.text('Total Volume', totalsX, doc.y);
+            doc.text(`${totalContainers} Containers`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        }
+
         doc.moveDown(1);
         doc.font('Helvetica-Bold').text('Total Paid', totalsX, doc.y);
         doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
@@ -480,8 +495,34 @@ export const onmanualreceiptcreate = onDocumentCreated({
     const invoiceData = invoiceDoc.data();
     if (!invoiceData) return;
 
+    // Fetch deliveries to calculate containers
+    let totalContainers = 0;
     try {
-        const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount);
+        const invoiceDate = toSafeDate(invoiceData.date);
+        let cycleStart, cycleEnd;
+        
+        if (invoiceData.description.includes('December 2025 - January 2026')) {
+            cycleStart = new Date(2025, 11, 2);
+            cycleEnd = endOfDay(new Date(2026, 1, 1));
+        } else {
+            const billingMonth = subMonths(invoiceDate, 1);
+            cycleStart = addDays(startOfMonth(billingMonth), 1);
+            cycleEnd = endOfDay(startOfMonth(addMonths(billingMonth, 1)));
+        }
+
+        const collectionName = userData.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
+        const deliveriesSnap = await db.collection('users').doc(userId).collection(collectionName)
+            .where('date', '>=', cycleStart.toISOString())
+            .where('date', '<=', cycleEnd.toISOString())
+            .get();
+        
+        totalContainers = deliveriesSnap.docs.reduce((sum, d) => sum + (d.data().volumeContainers || 0), 0);
+    } catch (e) {
+        logger.error("Failed to calculate containers for receipt", e);
+    }
+
+    try {
+        const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount, totalContainers);
         const template = getPaymentStatusTemplate(userData.businessName, invoiceData.id, requestData.amount, 'Paid');
         
         const ccList = getCCList(userData.clientId);
