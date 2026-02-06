@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -33,7 +32,6 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
 
     useEffect(() => {
         if (!isOpen) {
-            // Reset state when dialog closes
             setRejectionReason('');
             setShowRejectionInput(false);
         }
@@ -68,24 +66,12 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                     description: `Your payment for invoice ${paymentToReview.id} has been confirmed. Thank you!`,
                     data: { paymentId: paymentToReview.id }
                 });
-                await createClientNotification(firestore, adminId, {
-                    type: 'payment',
-                    title: 'Payment Approved',
-                    description: `You approved a payment of ₱${paymentToReview.amount.toFixed(2)} from ${user.businessName}.`,
-                    data: { userId: user.id, paymentId: paymentToReview.id }
-                });
-            } else { // Rejected
+            } else { 
                 await createClientNotification(firestore, user.id, {
                     type: 'payment',
                     title: 'Payment Action Required',
                     description: `Your payment for invoice ${paymentToReview.id} requires attention. Reason: ${rejectionReason}.`,
                     data: { paymentId: paymentToReview.id }
-                });
-                await createClientNotification(firestore, adminId, {
-                    type: 'payment',
-                    title: 'Payment Rejected',
-                    description: `You rejected a payment from ${user.businessName}. Reason: ${rejectionReason}.`,
-                    data: { userId: user.id, paymentId: paymentToReview.id }
                 });
             }
 
@@ -117,7 +103,9 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         {paymentToReview?.proofOfPaymentUrl ? (
                             <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" layout="fill" className="object-contain" />
                         ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">{isEstimated ? 'This is an estimate. No proof of payment is applicable.' : 'No proof of payment available.'}</div>
+                            <div className="flex items-center justify-center h-full text-muted-foreground text-center px-4">
+                                {isEstimated ? 'This is an estimate. No proof of payment is applicable.' : 'No proof of payment available.'}
+                            </div>
                         )}
                     </div>
 

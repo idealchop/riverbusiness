@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -10,11 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Edit, Repeat } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { format } from 'date-fns';
+
+const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 const toSafeDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
