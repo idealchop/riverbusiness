@@ -226,8 +226,8 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
             ]);
             drawTable('Office Sanitation Logs', ['Date', 'Status', 'Officer', 'Score Rate'], sanRows);
         }
-        if (complianceReports.length > 0) {
-            const compRows = complianceReports.map(c => [
+        if (compliance.length > 0) {
+            const compRows = compliance.map((c) => [
                 c.name,
                 c.date ? (0, date_fns_1.format)(toSafeDate(c.date), 'MMM yyyy') : 'N/A',
                 c.status

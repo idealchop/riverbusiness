@@ -11,14 +11,20 @@ const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
 /**
  * Determines the CC list based on the client ID.
- * Includes the admin team (Jayvee and Jimboy) for all operational dispatches.
+ * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
  */
 function getCCList(clientId?: string): string | string[] {
-    const adminEmails = ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
     if (clientId === 'SC2500000001') {
-        return [...adminEmails, 'cavatan.jheck@gmail.com'];
+        return ['cavatan.jheck@gmail.com'];
     }
-    return adminEmails;
+    return [];
+}
+
+/**
+ * Determines the BCC list. Admin team is always BCC'd for privacy.
+ */
+function getBCCList(): string[] {
+    return ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
 }
 
 /**
@@ -60,19 +66,11 @@ export const generateMonthlyInvoices = functions.runWith({
 
         // Rule: Billing cycle is exactly 1st to Last day of the target month.
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
-            if (user.plan?.isConsumptionBased) {
-                // December 1, 2025 to January 31, 2026 (2 months)
-                billingCycleStart = new Date(2025, 11, 1);
-                billingCycleEnd = endOfMonth(new Date(2026, 0, 1)); 
-                billingPeriod = 'December 2025 - January 2026';
-                monthsToBill = 2;
-            } else {
-                const dec2025 = new Date(2025, 11, 1);
-                billingPeriod = format(dec2025, 'MMMM yyyy');
-                billingCycleStart = startOfMonth(dec2025);
-                billingCycleEnd = endOfMonth(dec2025);
-                monthsToBill = 1; 
-            }
+            // Both fixed and consumption based need 2 months if we skipped Jan 1.
+            billingCycleStart = new Date(2025, 11, 1);
+            billingCycleEnd = endOfMonth(new Date(2026, 0, 1)); 
+            billingPeriod = 'December 2025 - January 2026';
+            monthsToBill = 2;
         } else {
             const previousMonth = subMonths(now, 1);
             billingPeriod = format(previousMonth, 'MMMM yyyy');
@@ -141,7 +139,8 @@ async function generateInvoiceForUser(
         amount = (consumedLiters * user.plan.price) + equipmentCost;
         description = `Bill for ${billingPeriod}`;
     } else {
-        amount = user.plan.price + equipmentCost;
+        // Multi-month support: Multiply base price by monthsToBill
+        amount = (user.plan.price * monthsToBill) + equipmentCost;
         description = `Monthly Subscription for ${billingPeriod}`;
         
         if (user.accountType !== 'Branch') {
@@ -198,12 +197,13 @@ async function generateInvoiceForUser(
             const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             
-            // CC Logic
             const ccList = getCCList(user.clientId);
+            const bccList = getBCCList();
 
             sendEmail({
                 to: user.email,
                 cc: ccList,
+                bcc: bccList,
                 subject: template.subject,
                 text: `Invoice for ${billingPeriod} is available for ₱${amount.toFixed(2)}.`,
                 html: template.html,
