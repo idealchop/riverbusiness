@@ -4,7 +4,7 @@ import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import PDFDocument from 'pdfkit';
-import { format, startOfMonth, endOfMonth, parse, endOfDay, addMonths, subMonths, addDays, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, endOfDay, addMonths, subMonths, addDays } from 'date-fns';
 
 // Initialize Firebase Admin SDK first
 initializeApp();
@@ -228,8 +228,8 @@ export async function generatePasswordProtectedSOA(
             drawTable('Office Sanitation Logs', ['Date', 'Status', 'Officer', 'Score Rate'], sanRows);
         }
 
-        if (complianceReports.length > 0) {
-            const compRows = complianceReports.map(c => [
+        if (compliance.length > 0) {
+            const compRows = compliance.map((c: ComplianceReport) => [
                 c.name, 
                 c.date ? format(toSafeDate(c.date), 'MMM yyyy') : 'N/A', 
                 c.status

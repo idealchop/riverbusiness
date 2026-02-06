@@ -42,6 +42,17 @@ const logger = __importStar(require("firebase-functions/logger"));
 const index_1 = require("./index");
 const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
+ * Determines the CC list based on the client ID.
+ * Includes the admin team (Jayvee and Jimboy) for all operational dispatches.
+ */
+function getCCList(clientId) {
+    const adminEmails = ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
+    if (clientId === 'SC2500000001') {
+        return [...adminEmails, 'cavatan.jheck@gmail.com'];
+    }
+    return adminEmails;
+}
+/**
  * A scheduled Cloud Function that runs on the 1st of every month
  * to generate invoices and handle plan changes.
  */
@@ -195,8 +206,8 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             }
             const pdfBuffer = await (0, index_1.generatePasswordProtectedSOA)(user, billingPeriod, deliveries, sanitation, compliance);
             const template = (0, email_1.getNewInvoiceTemplate)(user.businessName, invoiceId, amount, billingPeriod);
-            // Specialized CC Logic for SC2500000001
-            const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+            // CC Logic
+            const ccList = getCCList(user.clientId);
             (0, email_1.sendEmail)({
                 to: user.email,
                 cc: ccList,

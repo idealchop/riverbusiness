@@ -39,7 +39,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = exports.onpaymentremindercreate = void 0;
+exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = void 0;
 exports.generatePasswordProtectedSOA = generatePasswordProtectedSOA;
 exports.generateInvoiceReceiptPDF = generateInvoiceReceiptPDF;
 const app_1 = require("firebase-admin/app");
@@ -84,6 +84,22 @@ async function createNotification(userId, notificationData) {
     catch (error) {
         logger.error(`Failed to create notification for user ${userId}`, error);
     }
+}
+/**
+ * Determines the CC list based on the client ID.
+ * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
+ */
+function getCCList(clientId) {
+    if (clientId === 'SC2500000001') {
+        return ['support@riverph.com', 'cavatan.jheck@gmail.com'];
+    }
+    return 'support@riverph.com';
+}
+/**
+ * Determines the BCC list. Admin team is always BCC'd for privacy.
+ */
+function getBCCList() {
+    return ['jayvee@riverph.com', 'jimboy@riverph.com'];
 }
 const getSanitationPassRate = (v) => {
     if (!v.dispenserReports || v.dispenserReports.length === 0)
@@ -210,8 +226,8 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
             ]);
             drawTable('Office Sanitation Logs', ['Date', 'Status', 'Officer', 'Score Rate'], sanRows);
         }
-        if (compliance.length > 0) {
-            const compRows = compliance.map(c => [
+        if (complianceReports.length > 0) {
+            const compRows = complianceReports.map(c => [
                 c.name,
                 c.date ? (0, date_fns_1.format)(toSafeDate(c.date), 'MMM yyyy') : 'N/A',
                 c.status
@@ -258,7 +274,7 @@ async function generatePasswordProtectedSOA(user, period, deliveries, sanitation
 /**
  * Generates a high-fidelity PDF Receipt for a specific payment.
  */
-async function generateInvoiceReceiptPDF(user, invoice) {
+async function generateInvoiceReceiptPDF(user, invoice, customAmount, totalContainers) {
     return new Promise(async (resolve, reject) => {
         const doc = new pdfkit_1.default({ margin: 40 });
         const chunks = [];
@@ -267,6 +283,7 @@ async function generateInvoiceReceiptPDF(user, invoice) {
         doc.on('error', (err) => reject(err));
         const pageWidth = doc.page.width;
         const margin = 40;
+        const finalAmount = customAmount !== undefined ? customAmount : invoice.amount;
         // Header (Solid Blue Banner)
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 100).fill();
         doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Tech Inc.', margin, 45);
@@ -278,16 +295,23 @@ async function generateInvoiceReceiptPDF(user, invoice) {
         doc.font('Helvetica').text(invoice.id, margin + 80, topY);
         doc.font('Helvetica-Bold').text('Date:', margin, topY + 15);
         doc.font('Helvetica').text((0, date_fns_1.format)(toSafeDate(invoice.date), 'MMMM d, yyyy'), margin + 80, topY + 15);
-        // Bill To
+        // Bill From & Bill To
         doc.moveDown(2);
-        doc.font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('BILL TO:', margin);
-        doc.fillColor('#000000').font('Helvetica-Bold').text(user.businessName || 'N/A', margin);
-        doc.font('Helvetica').text(user.address || 'N/A', margin, doc.y, { width: pageWidth / 2 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin);
-        doc.text(user.email || '', margin);
+        const stakeholderY = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('BILL FROM:', margin, stakeholderY);
+        doc.text('BILL TO:', pageWidth / 2 + 20, stakeholderY);
+        doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold');
+        doc.text('River Tech Inc.', margin, stakeholderY + 15);
+        doc.font('Helvetica').text('SEC Reg #: 202406123456', margin, stakeholderY + 27);
+        doc.text('Filinvest Axis Tower 1, Alabang', margin, stakeholderY + 39);
+        doc.text('customers@riverph.com', margin, stakeholderY + 51);
+        doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, stakeholderY + 15);
+        doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, stakeholderY + 27, { width: pageWidth / 2 - 60 });
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2);
+        doc.text(user.email || '', pageWidth / 2 + 20, doc.y + 12);
         // Table
         doc.moveDown(3);
-        const tableTop = doc.y;
+        const tableTop = doc.y + 20;
         doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
         doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
         doc.text('Description', margin + 5, tableTop + 6);
@@ -299,19 +323,24 @@ async function generateInvoiceReceiptPDF(user, invoice) {
         const rowY = doc.y;
         doc.text(invoice.description, margin + 5, rowY, { width: 280 });
         doc.text('1', margin + 300, rowY);
-        doc.text(`P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 400, rowY, { align: 'right', width: 100 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin + 400, rowY, { align: 'right', width: 100 });
         // Summary Totals
         doc.moveDown(4);
         const totalsX = pageWidth - margin - 200;
-        const vatIncluded = invoice.amount * (12 / 112);
+        const vatIncluded = finalAmount * (12 / 112);
         doc.fontSize(10).font('Helvetica').text('Subtotal (VAT Included)', totalsX, doc.y);
-        doc.text(`P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
         doc.moveDown(0.5);
         doc.text('VAT (12% Included)', totalsX, doc.y);
         doc.text(`P ${vatIncluded.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        if (totalContainers !== undefined) {
+            doc.moveDown(0.5);
+            doc.text('Total Volume', totalsX, doc.y);
+            doc.text(`${totalContainers} Containers`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        }
         doc.moveDown(1);
         doc.font('Helvetica-Bold').text('Total Paid', totalsX, doc.y);
-        doc.text(`P ${invoice.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
         doc.end();
     });
 }
@@ -382,12 +411,14 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
-    // Specialized CC Logic for Client SC2500000001
-    const ccList = user.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
+    // Email Config
+    const ccList = getCCList(user.clientId);
+    const bccList = getBCCList();
     try {
         await (0, email_1.sendEmail)({
             to: targetEmail,
             cc: ccList,
+            bcc: bccList,
             subject: template.subject,
             text: `Reminder: Your statement for ${billingPeriodLabel} is ₱${totalAmount.toFixed(2)}.`,
             html: template.html,
@@ -396,10 +427,87 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
                     content: pdfBuffer
                 }]
         });
-        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}`);
+        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}. BCC: ${bccList}`);
     }
     catch (error) {
         logger.error(`Failed to send follow-up to ${targetEmail}`, error);
+    }
+});
+/**
+ * Manual Receipt Trigger
+ * Triggered when admin creates a request in the receiptRequests subcollection.
+ */
+exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
+    document: "users/{userId}/receiptRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const userId = event.params.userId;
+    const requestData = event.data.data();
+    const db = (0, firestore_1.getFirestore)();
+    logger.info(`Manual Receipt Triggered for user ${userId}, invoice ${requestData.invoiceId}`);
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    if (!userData)
+        return;
+    // Prioritize custom recipient email if provided
+    const targetEmail = (requestData.recipientEmail && requestData.recipientEmail.includes('@'))
+        ? requestData.recipientEmail
+        : userData.email;
+    if (!targetEmail)
+        return;
+    const invoiceDoc = await db.collection('users').doc(userId).collection('payments').doc(requestData.invoiceId).get();
+    const invoiceData = invoiceDoc.data();
+    if (!invoiceData)
+        return;
+    // Fetch deliveries to calculate containers
+    let totalContainers = 0;
+    try {
+        const invoiceDate = toSafeDate(invoiceData.date);
+        let cycleStart, cycleEnd;
+        if (invoiceData.description.includes('December 2025 - January 2026')) {
+            cycleStart = new Date(2025, 11, 2);
+            cycleEnd = (0, date_fns_1.endOfDay)(new Date(2026, 1, 1));
+        }
+        else {
+            const billingMonth = (0, date_fns_1.subMonths)(invoiceDate, 1);
+            cycleStart = (0, date_fns_1.addDays)((0, date_fns_1.startOfMonth)(billingMonth), 1);
+            cycleEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.startOfMonth)((0, date_fns_1.addMonths)(billingMonth, 1)));
+        }
+        const collectionName = userData.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
+        const deliveriesSnap = await db.collection('users').doc(userId).collection(collectionName)
+            .where('date', '>=', cycleStart.toISOString())
+            .where('date', '<=', cycleEnd.toISOString())
+            .get();
+        totalContainers = deliveriesSnap.docs.reduce((sum, d) => sum + (d.data().volumeContainers || 0), 0);
+    }
+    catch (e) {
+        logger.error("Failed to calculate containers for receipt", e);
+    }
+    try {
+        const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount, totalContainers);
+        const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, invoiceData.id, requestData.amount, 'Paid');
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: targetEmail,
+            cc: ccList,
+            bcc: bccList,
+            subject: `Receipt: ${template.subject}`,
+            text: `Professional digital receipt for ${invoiceData.id} attached.`,
+            html: template.html,
+            attachments: [{
+                    filename: `Receipt_${invoiceData.id}.pdf`,
+                    content: receiptPdf
+                }]
+        });
+        // Mark request as completed
+        await event.data.ref.update({ status: 'completed' });
+        logger.info(`Manual receipt dispatched to ${targetEmail}. BCC: ${bccList}`);
+    }
+    catch (error) {
+        logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
     }
 });
 exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
@@ -415,8 +523,17 @@ exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
     const planName = `${profile.clientType || ''} - ${((_a = profile.plan) === null || _a === void 0 ? void 0 : _a.name) || ''}`;
     const schedule = `${((_b = profile.customPlanDetails) === null || _b === void 0 ? void 0 : _b.deliveryDay) || 'TBD'} / ${((_c = profile.customPlanDetails) === null || _c === void 0 ? void 0 : _c.deliveryFrequency) || 'TBD'}`;
     const template = (0, email_1.getWelcomeUnclaimedTemplate)(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
+    const ccList = getCCList(profile.clientId);
+    const bccList = getBCCList();
     try {
-        await (0, email_1.sendEmail)({ to: profile.businessEmail, cc: 'support@riverph.com', subject: template.subject, text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, html: template.html });
+        await (0, email_1.sendEmail)({
+            to: profile.businessEmail,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`,
+            html: template.html
+        });
     }
     catch (error) {
         logger.error(`Failed welcome email`, error);
@@ -437,7 +554,16 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && delivery.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Delivery complete`,
+            html: template.html
+        });
     }
 });
 exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
@@ -458,7 +584,16 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && after.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Delivery complete`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Delivery complete`,
+            html: template.html
+        });
     }
 });
 exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
@@ -470,32 +605,9 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    // Trigger receipt whenever status transitions TO Paid
     if (before.status !== 'Paid' && after.status === 'Paid') {
-        const db = (0, firestore_1.getFirestore)();
-        const userDoc = await db.collection('users').doc(userId).get();
-        const userData = userDoc.data();
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
-        if (userData === null || userData === void 0 ? void 0 : userData.email) {
-            logger.info(`Generating automated receipt for user ${userId}, invoice ${after.id}`);
-            // Generate high-fidelity digital receipt PDF
-            const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
-            const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, after.id, after.amount, 'Paid');
-            // Specialized CC Logic for Client SC2500000001
-            const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-            await (0, email_1.sendEmail)({
-                to: userData.email,
-                cc: ccList,
-                subject: template.subject,
-                text: `Payment confirmed for ${after.id}. Digital receipt attached.`,
-                html: template.html,
-                attachments: [{
-                        filename: `Receipt_${after.id}.pdf`,
-                        content: receiptPdf
-                    }]
-            });
-            logger.info(`Receipt dispatched to ${userData.email}. CC: ${ccList}`);
-        }
+        // Automated receipt email removed. Handled manually via receiptRequests.
     }
 });
 exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
@@ -514,8 +626,16 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
-        const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-        await (0, email_1.sendEmail)({ to: userData.email, cc: ccList, subject: template.subject, text: `Top-up approved`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Top-up approved`,
+            html: template.html
+        });
     }
 });
 exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
@@ -530,10 +650,59 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
+    await createNotification(userId, {
+        type: 'delivery',
+        title: 'Refill Priority Confirmed',
+        description: `We have received your ${request.requestedDate ? 'scheduled' : 'ASAP'} refill request.`,
+        data: { requestId }
+    });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
-        const ccList = userData.clientId === 'SC2500000001' ? ['support@riverph.com', 'cavatan.jheck@gmail.com'] : 'support@riverph.com';
-        await (0, email_1.sendEmail)({ to: userData.email, cc: ccList, subject: template.subject, text: `Refill request received`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Refill request received`,
+            html: template.html
+        });
+    }
+});
+exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
+    document: "users/{userId}/refillRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+    const requestId = event.params.requestId;
+    if (before.status === after.status)
+        return;
+    const db = (0, firestore_1.getFirestore)();
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    await createNotification(userId, {
+        type: 'delivery',
+        title: `Refill ${after.status}`,
+        description: `Your refill request is now ${after.status}.`,
+        data: { requestId }
+    });
+    if (userData === null || userData === void 0 ? void 0 : userData.email) {
+        const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, after.status, requestId, after.requestedDate);
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Refill request updated`,
+            html: template.html
+        });
     }
 });
 exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
@@ -550,7 +719,16 @@ exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && visit.status === 'Scheduled') {
         const dateStr = (0, date_fns_1.format)(toSafeDate(visit.scheduledDate), 'PPP');
         const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
-        await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Visit scheduled`, html: template.html });
+        const ccList = getCCList(userData.clientId);
+        const bccList = getBCCList();
+        await (0, email_1.sendEmail)({
+            to: userData.email,
+            cc: ccList,
+            bcc: bccList,
+            subject: template.subject,
+            text: `Visit scheduled`,
+            html: template.html
+        });
     }
 });
 exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
@@ -569,7 +747,16 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
             const dateStr = (0, date_fns_1.format)(toSafeDate(after.scheduledDate), 'PPP');
             const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr);
-            await (0, email_1.sendEmail)({ to: userData.email, cc: 'support@riverph.com', subject: template.subject, text: `Report ready`, html: template.html });
+            const ccList = getCCList(userData.clientId);
+            const bccList = getBCCList();
+            await (0, email_1.sendEmail)({
+                to: userData.email,
+                cc: ccList,
+                bcc: bccList,
+                subject: template.subject,
+                text: `Report ready`,
+                html: template.html
+            });
         }
     }
 });

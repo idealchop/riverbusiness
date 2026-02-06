@@ -87,7 +87,7 @@ const PAYMENT_OPTIONS_BLOCK = `
 /**
  * Sends an email using the Brevo SMTP relay.
  */
-async function sendEmail({ to, cc, subject, text, html, attachments }) {
+async function sendEmail({ to, cc, bcc, subject, text, html, attachments }) {
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
         logger.error('CRITICAL: BREVO_API_KEY is not set or not mounted. Email sending aborted.');
@@ -102,11 +102,12 @@ async function sendEmail({ to, cc, subject, text, html, attachments }) {
                 pass: apiKey,
             },
         });
-        logger.info(`Attempting to send email to ${to}. CC: ${cc || 'None'}`);
+        logger.info(`Attempting to send email to ${to}. CC: ${cc || 'None'}. BCC: ${bcc || 'None'}`);
         const info = await transporter.sendMail({
             from: '"River Philippines" <customers@riverph.com>',
             to,
             cc,
+            bcc,
             subject,
             text,
             html,
