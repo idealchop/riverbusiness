@@ -11,7 +11,7 @@ initializeApp();
 
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onDocumentUpdated, onDocumentCreated } from "firebase-functions/v2/firestore";
-import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction } from './types';
+import type { Delivery, RefillRequest, SanitationVisit, ComplianceReport, Transaction, ManualReceiptRequest } from './types';
 import { 
     sendEmail, 
     getDeliveryStatusTemplate, 
@@ -272,7 +272,7 @@ export async function generatePasswordProtectedSOA(
 /**
  * Generates a high-fidelity PDF Receipt for a specific payment.
  */
-export async function generateInvoiceReceiptPDF(user: any, invoice: any): Promise<Buffer> {
+export async function generateInvoiceReceiptPDF(user: any, invoice: any, customAmount?: number): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
         const doc = new PDFDocument({ margin: 40 });
         const chunks: Buffer[] = [];
@@ -282,6 +282,8 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any): Promis
 
         const pageWidth = doc.page.width;
         const margin = 40;
+
+        const finalAmount = customAmount !== undefined ? customAmount : invoice.amount;
 
         // Header (Solid Blue Banner)
         doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 100).fill();
@@ -320,15 +322,15 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any): Promis
         const rowY = doc.y;
         doc.text(invoice.description, margin + 5, rowY, { width: 280 });
         doc.text('1', margin + 300, rowY);
-        doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin + 400, rowY, { align: 'right', width: 100 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin + 400, rowY, { align: 'right', width: 100 });
 
         // Summary Totals
         doc.moveDown(4);
         const totalsX = pageWidth - margin - 200;
-        const vatIncluded = invoice.amount * (12 / 112);
+        const vatIncluded = finalAmount * (12 / 112);
         
         doc.fontSize(10).font('Helvetica').text('Subtotal (VAT Included)', totalsX, doc.y);
-        doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
         
         doc.moveDown(0.5);
         doc.text('VAT (12% Included)', totalsX, doc.y);
@@ -336,7 +338,7 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any): Promis
         
         doc.moveDown(1);
         doc.font('Helvetica-Bold').text('Total Paid', totalsX, doc.y);
-        doc.text(`P ${invoice.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
 
         doc.end();
     });
@@ -440,6 +442,55 @@ export const onpaymentremindercreate = onDocumentCreated({
     }
 });
 
+/**
+ * Manual Receipt Trigger
+ * Triggered when admin creates a request in the receiptRequests subcollection.
+ */
+export const onmanualreceiptcreate = onDocumentCreated({
+    document: "users/{userId}/receiptRequests/{requestId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const userId = event.params.userId;
+    const requestData = event.data.data() as ManualReceiptRequest;
+    const db = getFirestore();
+
+    logger.info(`Manual Receipt Triggered for user ${userId}, invoice ${requestData.invoiceId}`);
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    if (!userData || !userData.email) return;
+
+    const invoiceDoc = await db.collection('users').doc(userId).collection('payments').doc(requestData.invoiceId).get();
+    const invoiceData = invoiceDoc.data();
+    if (!invoiceData) return;
+
+    try {
+        const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount);
+        const template = getPaymentStatusTemplate(userData.businessName, invoiceData.id, requestData.amount, 'Paid');
+        const ccList = getCCList(userData.clientId);
+
+        await sendEmail({
+            to: userData.email,
+            cc: ccList,
+            subject: `Receipt: ${template.subject}`,
+            text: `Professional digital receipt for ${invoiceData.id} attached.`,
+            html: template.html,
+            attachments: [{
+                filename: `Receipt_${invoiceData.id}.pdf`,
+                content: receiptPdf
+            }]
+        });
+
+        // Mark request as completed
+        await event.data.ref.update({ status: 'completed' });
+        logger.info(`Manual receipt dispatched to ${userData.email}.`);
+
+    } catch (error) {
+        logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
+    }
+});
+
 export const onunclaimedprofilecreate = onDocumentCreated({
     document: "unclaimedProfiles/{clientId}",
     secrets: ["BREVO_API_KEY"]
@@ -505,36 +556,10 @@ export const onpaymentupdate = onDocumentUpdated({
     const after = event.data.after.data();
     const userId = event.params.userId;
     
-    // Trigger receipt whenever status transitions TO Paid
+    // Trigger notification ONLY whenever status transitions TO Paid
     if (before.status !== 'Paid' && after.status === 'Paid') {
-        const db = getFirestore();
-        const userDoc = await db.collection('users').doc(userId).get();
-        const userData = userDoc.data();
-        
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
-        
-        if (userData?.email) {
-            logger.info(`Generating automated receipt for user ${userId}, invoice ${after.id}`);
-            // Generate high-fidelity digital receipt PDF
-            const receiptPdf = await generateInvoiceReceiptPDF(userData, after);
-            const template = getPaymentStatusTemplate(userData.businessName, after.id, after.amount, 'Paid');
-            
-            // Specialized CC Logic
-            const ccList = getCCList(userData.clientId);
-            
-            await sendEmail({ 
-                to: userData.email, 
-                cc: ccList, 
-                subject: template.subject, 
-                text: `Payment confirmed for ${after.id}. Digital receipt attached.`, 
-                html: template.html,
-                attachments: [{
-                    filename: `Receipt_${after.id}.pdf`,
-                    content: receiptPdf
-                }]
-            });
-            logger.info(`Receipt dispatched to ${userData.email}. CC: ${ccList}`);
-        }
+        // Email receipt is now handled manually by admin via onmanualreceiptcreate trigger
     }
 });
 

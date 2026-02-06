@@ -1,3 +1,4 @@
+
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export interface Notification {
@@ -102,4 +103,13 @@ export interface ComplianceReport {
   status: 'Passed' | 'Failed' | 'Pending Review';
   reportUrl?: string;
   results?: string;
+}
+
+export interface ManualReceiptRequest {
+    id: string;
+    userId: string;
+    invoiceId: string;
+    amount: number;
+    requestedAt: FieldValue | Timestamp;
+    status: 'pending' | 'completed';
 }

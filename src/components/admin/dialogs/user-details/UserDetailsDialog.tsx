@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -28,6 +29,7 @@ import { ProofViewerDialog } from './ProofViewerDialog';
 import { YearlyConsumptionDialog } from './YearlyConsumptionDialog';
 import { BranchDeliveriesTab } from './BranchDeliveriesTab';
 import { ChangePlanDialog } from './ChangePlanDialog';
+import { ManualReceiptDialog } from './ManualReceiptDialog';
 import { Edit } from 'lucide-react';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
@@ -75,6 +77,8 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     const [paymentToReview, setPaymentToReview] = useState<Payment | null>(null);
     const [isYearlyConsumptionOpen, setIsYearlyConsumptionOpen] = useState(false);
     const [isChangePlanOpen, setIsChangePlanOpen] = useState(false);
+    const [isManualReceiptOpen, setIsManualReceiptOpen] = useState(false);
+    const [paymentForReceipt, setPaymentForReceipt] = useState<Payment | null>(null);
 
     const userDocRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', user.id) : null, [firestore, user.id]);
     const userDeliveriesQuery = useMemoFirebase(() => userDocRef ? query(collection(userDocRef, 'deliveries'), orderBy('date', 'desc')) : null, [userDocRef]);
@@ -209,6 +213,11 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
     
     const isParent = user.accountType === 'Parent';
 
+    const handleOpenManualReceipt = (payment: Payment) => {
+        setPaymentForReceipt(payment);
+        setIsManualReceiptOpen(true);
+    };
+
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -312,6 +321,7 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 paymentToReview={paymentToReview}
                 userDocRef={userDocRef}
                 user={user}
+                onSendReceipt={handleOpenManualReceipt}
             />
             <ManualChargeDialog
                 isOpen={isManualChargeOpen}
@@ -356,6 +366,12 @@ export function UserDetailsDialog({ isOpen, onOpenChange, user, setSelectedUser,
                 isOpen={isChangePlanOpen}
                 onOpenChange={setIsChangePlanOpen}
                 user={user}
+            />
+            <ManualReceiptDialog
+                isOpen={isManualReceiptOpen}
+                onOpenChange={setIsManualReceiptOpen}
+                user={user}
+                payment={paymentForReceipt}
             />
         </>
     );

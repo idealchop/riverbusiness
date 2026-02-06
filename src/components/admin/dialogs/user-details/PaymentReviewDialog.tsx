@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Payment, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc, deleteField, DocumentReference } from 'firebase/firestore';
-import { CheckCircle, X } from 'lucide-react';
+import { CheckCircle, X, Receipt } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth, useFirestore } from '@/firebase';
 import { createClientNotification } from '@/lib/notifications';
@@ -20,9 +20,10 @@ interface PaymentReviewDialogProps {
     paymentToReview: Payment | null;
     userDocRef: DocumentReference | null;
     user?: AppUser | null;
+    onSendReceipt?: (payment: Payment) => void;
 }
 
-export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, userDocRef, user }: PaymentReviewDialogProps) {
+export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, userDocRef, user, onSendReceipt }: PaymentReviewDialogProps) {
     const { toast } = useToast();
     const [rejectionReason, setRejectionReason] = useState('');
     const [showRejectionInput, setShowRejectionInput] = useState(false);
@@ -132,14 +133,14 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                         </div>
                     )}
                 </div>
-                <DialogFooter>
+                <DialogFooter className="gap-2">
                      {showRejectionInput ? (
                         <>
                             <Button variant="ghost" onClick={() => setShowRejectionInput(false)}>Cancel</Button>
                             <Button variant="destructive" onClick={() => handleUpdatePaymentStatus('Upcoming')}>Confirm Rejection</Button>
                         </>
                     ) : isEstimated ? (
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                        <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">Close</Button>
                     ) : paymentToReview?.status === 'Pending Review' ? (
                         <>
                             <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
@@ -152,7 +153,14 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                             </Button>
                         </>
                     ) : (
-                         <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                        <div className="flex flex-col sm:flex-row w-full gap-2">
+                            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Close</Button>
+                            {paymentToReview?.status === 'Paid' && onSendReceipt && (
+                                <Button variant="default" onClick={() => onSendReceipt(paymentToReview)} className="flex-1">
+                                    <Receipt className="mr-2 h-4 w-4" /> Send Receipt
+                                </Button>
+                            )}
+                        </div>
                     )}
                 </DialogFooter>
             </DialogContent>
