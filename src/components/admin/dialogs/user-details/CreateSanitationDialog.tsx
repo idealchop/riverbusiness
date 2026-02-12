@@ -163,15 +163,21 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
             let shareableLink = visitToEdit?.shareableLink;
             let linkId = shareableLink?.split('/').pop();
 
+            const publicLinkData = { 
+                userId: user.id, 
+                visitId: visitId!, 
+                createdAt: serverTimestamp() 
+            };
+
             if (!shareableLink || !linkId) {
                 const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
                 linkId = linkRef.id;
                 shareableLink = `${window.location.origin}/sanitation-report/${linkId}`;
-                batch.set(linkRef, { userId: user.id, visitId: visitId, createdAt: serverTimestamp() });
+                batch.set(linkRef, publicLinkData);
             } else {
                 // Link exists, update the timestamp to "renew" its 7-day window
                 const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
-                batch.set(linkRef, { userId: user.id, visitId: visitId!, createdAt: serverTimestamp() }, { merge: true });
+                batch.set(linkRef, publicLinkData, { merge: true });
             }
 
             const visitData = { 

@@ -151,13 +151,24 @@ export default function SanitationReportPage() {
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                // Expiration Check: Use createdAt if available, otherwise assume it's a legacy link and valid for now
+                // Expiration Check: Use createdAt if available
                 if (createdAt) {
-                    const createdDate = (createdAt instanceof Timestamp) ? createdAt.toDate() : new Date(createdAt);
-                    const expiryDate = addDays(createdDate, 7);
+                    let createdDate: Date;
                     
-                    if (isAfter(new Date(), expiryDate)) {
-                        throw new Error("This report link has expired. It was valid for 7 days.");
+                    // Robust date parsing for Firestore Timestamps or strings
+                    if (createdAt instanceof Timestamp) {
+                        createdDate = createdAt.toDate();
+                    } else if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
+                        createdDate = new Date((createdAt as any).seconds * 1000);
+                    } else {
+                        createdDate = new Date(createdAt);
+                    }
+
+                    if (!isNaN(createdDate.getTime())) {
+                        const expiryDate = addDays(createdDate, 7);
+                        if (isAfter(new Date(), expiryDate)) {
+                            throw new Error("This report link has expired. It was valid for 7 days from generation.");
+                        }
                     }
                 }
                 
@@ -278,7 +289,7 @@ export default function SanitationReportPage() {
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
                         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-                        <CardTitle>An Error Occurred</CardTitle>
+                        <CardTitle>Access Restricted</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Alert variant="destructive">
@@ -286,6 +297,9 @@ export default function SanitationReportPage() {
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     </CardContent>
+                    <CardFooter className="justify-center">
+                        <p className="text-xs text-muted-foreground text-center">If you believe this is an error, please contact the River Philippines administrator to generate a new link.</p>
+                    </CardFooter>
                 </Card>
             </main>
          )
