@@ -53,6 +53,8 @@ const defaultChecklist = [
     { item: 'Inspect all connections and lines for any signs of leaks.', checked: false, remarks: '' },
     { item: 'Verify that hot and cold water are at appropriate temperatures (if applicable).', checked: false, remarks: '' },
     { item: 'Inspect and note the status of the water filter (if applicable).', checked: false, remarks: '' },
+    { item: 'Inspect the placement of water containers to ensure they are stored in a cool, dry, and sanitary area.', checked: false, remarks: '' },
+    { item: 'Evaluate the physical quality of all reusable containers for cracks, deep scratches, or degradation.', checked: false, remarks: '' },
 ];
 
 interface CreateSanitationDialogProps {
@@ -157,14 +159,14 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 visitId = newVisitRef.id;
             }
 
-            // Sync with public links and refresh the expiration window (createdAt)
+            // Sync with public links and refresh expiration
             let shareableLink = visitToEdit?.shareableLink;
             let linkId = shareableLink?.split('/').pop();
 
             const publicLinkData = { 
                 userId: user.id, 
                 visitId: visitId!, 
-                createdAt: serverTimestamp() // EXPLICITLY RESET EXPIRATION HERE
+                createdAt: serverTimestamp() 
             };
 
             if (!shareableLink || !linkId) {

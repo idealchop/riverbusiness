@@ -27,7 +27,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const QUICK_REMARKS = [
     "Spotted visible dirt or residue buildup.",
     "Observed signs of physical wear and tear.",
-    "Detected minor leakage or moisture spots."
+    "Detected minor leakage or moisture spots.",
+    "Noticed storage area is damp or untidy.",
+    "Observed container showing signs of degradation."
 ];
 
 const toSafeDate = (val: any): Date | null => {
@@ -381,19 +383,19 @@ export default function SanitationReportPage() {
                                                                     onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
                                                                 />
                                                             </div>
-                                                            <div className="space-y-1.5">
-                                                                <div className="flex items-center gap-1.5">
+                                                            <div className="space-y-1.5 pt-1">
+                                                                <div className="flex items-center gap-1.5 mb-1.5">
                                                                     <Lightbulb className="h-3 w-3 text-primary" />
-                                                                    <span className="text-[10px] text-muted-foreground font-medium uppercase">Quick Observations:</span>
+                                                                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">Quick Observations:</span>
                                                                 </div>
                                                                 <div className="flex flex-wrap gap-1.5">
                                                                     {QUICK_REMARKS.map((suggestion) => (
                                                                         <Button 
                                                                             key={suggestion} 
                                                                             type="button"
-                                                                            variant="secondary" 
+                                                                            variant="outline" 
                                                                             size="sm" 
-                                                                            className="h-auto py-1.5 px-2 text-[10px] text-muted-foreground hover:text-primary transition-colors bg-muted/50 border-0 text-left justify-start"
+                                                                            className="h-auto py-1.5 px-2.5 text-[10px] text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors border-muted-foreground/20 text-left justify-start font-medium"
                                                                             onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
                                                                         >
                                                                             {suggestion}
