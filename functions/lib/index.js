@@ -385,7 +385,6 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
             billingPeriodLabel = (0, date_fns_1.format)(parsed, 'MMMM yyyy');
         }
     }
-    // CRITICAL: Fetch from branchDeliveries for Parent accounts
     const collectionName = user.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
     const deliveriesSnap = await db.collection('users').doc(userId).collection(collectionName)
         .where('date', '>=', cycleStart.toISOString())
@@ -435,7 +434,6 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
 });
 /**
  * Manual Receipt Trigger
- * Triggered when admin creates a request in the receiptRequests subcollection.
  */
 exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
     document: "users/{userId}/receiptRequests/{requestId}",
@@ -451,7 +449,6 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
     const userData = userDoc.data();
     if (!userData)
         return;
-    // Prioritize custom recipient email if provided
     const targetEmail = (requestData.recipientEmail && requestData.recipientEmail.includes('@'))
         ? requestData.recipientEmail
         : userData.email;
@@ -461,7 +458,6 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
     const invoiceData = invoiceDoc.data();
     if (!invoiceData)
         return;
-    // Fetch deliveries to calculate containers
     let totalContainers = 0;
     try {
         const invoiceDate = toSafeDate(invoiceData.date);
@@ -502,7 +498,6 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
                     content: receiptPdf
                 }]
         });
-        // Mark request as completed
         await event.data.ref.update({ status: 'completed' });
         logger.info(`Manual receipt dispatched to ${targetEmail}. BCC: ${bccList}`);
     }
@@ -607,7 +602,6 @@ exports.onpaymentupdate = (0, firestore_2.onDocumentUpdated)({
     const userId = event.params.userId;
     if (before.status !== 'Paid' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
-        // Automated receipt email removed. Handled manually via receiptRequests.
     }
 });
 exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
@@ -619,7 +613,7 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    if (before.status === after.status || after.status !== 'Approved')
+    if (before.status === アフター.status || after.status !== 'Approved')
         return;
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection('users').doc(userId).get();
@@ -740,13 +734,35 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
+    const visitId = event.params.visitId;
     if (before.status !== 'Completed' && after.status === 'Completed') {
         const db = (0, firestore_1.getFirestore)();
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
+        const dateStr = (0, date_fns_1.format)(toSafeDate(after.scheduledDate), 'PPP');
+        const passRate = getSanitationPassRate(after);
+        // 1. Create In-App Notification for Client
+        await createNotification(userId, {
+            type: 'sanitation',
+            title: 'Sanitation Visit Completed',
+            description: `Your sanitation report for ${dateStr} is complete. Score: ${passRate}.`,
+            data: { visitId: visitId }
+        });
+        // 2. Create In-App Notification for Admin
+        const adminEmail = 'admin@riverph.com';
+        const adminsSnap = await db.collection('users').where('email', '==', adminEmail).limit(1).get();
+        if (!adminsSnap.empty) {
+            const adminId = adminsSnap.docs[0].id;
+            await createNotification(adminId, {
+                type: 'sanitation',
+                title: `Visit for ${userData === null || userData === void 0 ? void 0 : userData.businessName}: Completed`,
+                description: `The sanitation visit on ${dateStr} was completed with a score of ${passRate}.`,
+                data: { userId: userId, visitId: visitId }
+            });
+        }
+        // 3. Send Email Notification
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
-            const dateStr = (0, date_fns_1.format)(toSafeDate(after.scheduledDate), 'PPP');
-            const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr);
+            const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr, passRate);
             const ccList = getCCList(userData.clientId);
             const bccList = getBCCList();
             await (0, email_1.sendEmail)({
@@ -754,7 +770,7 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
                 cc: ccList,
                 bcc: bccList,
                 subject: template.subject,
-                text: `Report ready`,
+                text: `Report ready. Score: ${passRate}`,
                 html: template.html
             });
         }

@@ -651,7 +651,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    if (before.status ===アフター.status || after.status !== 'Approved') return;
+    if (before.status === after.status || after.status !== 'Approved') return;
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();

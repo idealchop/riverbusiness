@@ -1,4 +1,4 @@
-
+sh
 # River Business: Smart Water Management Platform
 
 River Business is a comprehensive B2B management platform designed for water refilling businesses and their clients. It provides a dual-interface system: a client-facing dashboard for end-users to manage their water consumption, and a powerful admin panel for business owners to oversee operations, manage users, and ensure compliance.

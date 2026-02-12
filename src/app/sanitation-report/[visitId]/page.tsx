@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
@@ -99,7 +100,7 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
         const rect = canvas.getBoundingClientRect();
         if (event instanceof MouseEvent) {
             return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-        } else if (event.touches[0]) {
+        } else if (event instanceof TouchEvent && event.touches[0]) {
              return { x: event.touches[0].clientX - rect.left, y: event.touches[0].clientY - rect.top };
         }
         return { x: 0, y: 0 };
@@ -109,7 +110,7 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
         if (disabled) return;
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
-        const pos = getPosition(event.nativeEvent);
+        const pos = getPosition(event.nativeEvent as any);
         context.beginPath();
         context.moveTo(pos.x, pos.y);
         setIsDrawing(true);
@@ -120,7 +121,7 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
         event.preventDefault(); 
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
-        const pos = getPosition(event.nativeEvent);
+        const pos = getPosition(event.nativeEvent as any);
         context.lineTo(pos.x, pos.y);
         context.stroke();
     };
