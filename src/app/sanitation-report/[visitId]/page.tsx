@@ -24,7 +24,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-const QUICK_REMARKS = ["Needs Cleaning", "Parts Wear", "Repair Needed"];
+const QUICK_REMARKS = [
+    "Spotted visible dirt or residue buildup.",
+    "Observed signs of physical wear and tear.",
+    "Detected minor leakage or moisture spots."
+];
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
@@ -155,18 +159,18 @@ export default function SanitationReportPage() {
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                // Expiration Check
+                // Expiration Check - Updated robust parsing
                 if (createdAt) {
-                    let createdDate: Date;
+                    let createdDate: Date | null = null;
                     if (createdAt instanceof Timestamp) {
                         createdDate = createdAt.toDate();
                     } else if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
                         createdDate = new Date((createdAt as any).seconds * 1000);
-                    } else {
+                    } else if (typeof createdAt === 'string') {
                         createdDate = new Date(createdAt);
                     }
 
-                    if (!isNaN(createdDate.getTime())) {
+                    if (createdDate && !isNaN(createdDate.getTime())) {
                         const expiryDate = addDays(createdDate, 7);
                         if (isAfter(new Date(), expiryDate)) {
                             throw new Error("This report link has expired. It was valid for 7 days from the last time it was generated.");
