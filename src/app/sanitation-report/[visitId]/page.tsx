@@ -33,10 +33,12 @@ const QUICK_REMARKS = [
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
     if (val instanceof Timestamp) return val.toDate();
-    if (val instanceof Date) return val;
     if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
+    if (typeof val === 'string') {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
 };
 
 // A simple signature pad component
@@ -166,13 +168,13 @@ export default function SanitationReportPage() {
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                // Expiration Check - Strictly based on link generation time (createdAt)
+                // Expiration Check - Strictly based on link generation/renewal time (createdAt)
                 if (createdAt) {
                     const createdDate = toSafeDate(createdAt);
                     if (createdDate && !isNaN(createdDate.getTime())) {
                         const expiryDate = addDays(createdDate, 7);
                         if (isAfter(new Date(), expiryDate)) {
-                            throw new Error("This report link has expired. Shareable links are valid for 7 days from generation.");
+                            throw new Error("This report link has expired. Shareable links are valid for 7 days from generation/renewal.");
                         }
                     }
                 }
@@ -348,7 +350,7 @@ export default function SanitationReportPage() {
                                 <CardContent>
                                     <div className="space-y-4">
                                         {report.checklist?.map((item, itemIndex) => (
-                                            <div key={itemIndex} className="flex flex-col gap-3 p-3 rounded-md border bg-background">
+                                            <div key={itemIndex} className="flex flex-col gap-3 p-3 rounded-md border bg-background shadow-sm">
                                                 <div className="flex items-center gap-3">
                                                     {!isFinalized && (
                                                         <Checkbox 
@@ -357,7 +359,7 @@ export default function SanitationReportPage() {
                                                             onCheckedChange={(checked) => handleChecklistChange(report.dispenserId, itemIndex, 'checked', !!checked)}
                                                         />
                                                     )}
-                                                    <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm flex-1">{item.item}</Label>
+                                                    <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm flex-1 leading-tight font-medium">{item.item}</Label>
                                                     {isFinalized && item.checked && <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />}
                                                 </div>
                                                 {isFinalized ? (
@@ -370,25 +372,31 @@ export default function SanitationReportPage() {
                                                 ) : (
                                                     !item.checked && (
                                                         <div className="pl-7 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                            <Input 
-                                                                placeholder="Remarks..." 
-                                                                className="h-9 text-sm w-full bg-muted/30"
-                                                                value={item.remarks || ''}
-                                                                onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
-                                                            />
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                {QUICK_REMARKS.map((suggestion) => (
-                                                                    <Button 
-                                                                        key={suggestion} 
-                                                                        type="button"
-                                                                        variant="secondary" 
-                                                                        size="sm" 
-                                                                        className="h-auto py-1 px-2 text-[10px] text-muted-foreground hover:text-primary transition-colors bg-muted/50 border-0"
-                                                                        onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
-                                                                    >
-                                                                        {suggestion}
-                                                                    </Button>
-                                                                ))}
+                                                            <div className="space-y-1">
+                                                                <Label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Findings & Observations</Label>
+                                                                <Input 
+                                                                    placeholder="Describe what was detected..." 
+                                                                    className="h-9 text-sm w-full bg-muted/30"
+                                                                    value={item.remarks || ''}
+                                                                    onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <Label className="text-[9px] text-muted-foreground">Quick Observations:</Label>
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    {QUICK_REMARKS.map((suggestion) => (
+                                                                        <Button 
+                                                                            key={suggestion} 
+                                                                            type="button"
+                                                                            variant="secondary" 
+                                                                            size="sm" 
+                                                                            className="h-auto py-1 px-2 text-[10px] text-muted-foreground hover:text-primary transition-colors bg-muted/50 border-0"
+                                                                            onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
+                                                                        >
+                                                                            {suggestion}
+                                                                        </Button>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )
