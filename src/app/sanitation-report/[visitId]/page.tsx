@@ -30,6 +30,15 @@ const QUICK_REMARKS = [
     "Detected minor leakage or moisture spots."
 ];
 
+const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (val instanceof Date) return val;
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+};
+
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -159,17 +168,7 @@ export default function SanitationReportPage() {
                 
                 // Expiration Check - Strictly based on link generation time (createdAt)
                 if (createdAt) {
-                    let createdDate: Date | null = null;
-                    if (createdAt instanceof Timestamp) {
-                        createdDate = createdAt.toDate();
-                    } else if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
-                        createdDate = new Date((createdAt as any).seconds * 1000);
-                    } else if (typeof createdAt === 'string') {
-                        createdDate = new Date(createdAt);
-                    } else if (createdAt instanceof Date) {
-                        createdDate = createdAt;
-                    }
-
+                    const createdDate = toSafeDate(createdAt);
                     if (createdDate && !isNaN(createdDate.getTime())) {
                         const expiryDate = addDays(createdDate, 7);
                         if (isAfter(new Date(), expiryDate)) {
@@ -376,19 +375,22 @@ export default function SanitationReportPage() {
                                                                 value={item.remarks || ''}
                                                                 onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
                                                             />
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {QUICK_REMARKS.map((suggestion) => (
-                                                                    <Button 
-                                                                        key={suggestion} 
-                                                                        type="button"
-                                                                        variant="outline" 
-                                                                        size="sm" 
-                                                                        className="h-7 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary border-dashed"
-                                                                        onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
-                                                                    >
-                                                                        {suggestion}
-                                                                    </Button>
-                                                                ))}
+                                                            <div className="space-y-1.5">
+                                                                <p className="text-[10px] text-muted-foreground font-semibold">Choose a quick observation:</p>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {QUICK_REMARKS.map((suggestion) => (
+                                                                        <Button 
+                                                                            key={suggestion} 
+                                                                            type="button"
+                                                                            variant="outline" 
+                                                                            size="sm" 
+                                                                            className="h-7 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary border-dashed"
+                                                                            onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
+                                                                        >
+                                                                            {suggestion}
+                                                                        </Button>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )

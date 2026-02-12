@@ -158,8 +158,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 visitId = newVisitRef.id;
             }
 
-            // --- LINK EXPIRATION RENEWAL ---
-            // Refresh the createdAt timestamp to restart the 7-day validity window
+            // Sync with public links and refresh the expiration window (createdAt)
             let shareableLink = visitToEdit?.shareableLink;
             let linkId = shareableLink?.split('/').pop();
 
