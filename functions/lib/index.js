@@ -613,7 +613,7 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    if (before.status === アフター.status || after.status !== 'Approved')
+    if (before.status === after.status || after.status !== 'Approved')
         return;
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection('users').doc(userId).get();

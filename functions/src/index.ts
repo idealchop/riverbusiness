@@ -60,10 +60,10 @@ async function createNotification(userId: string, notificationData: any) {
 }
 
 /**
- * Determines the CC list based on the client ID.
- * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
+ * Determines the CC list specifically for Financial documents (SOA, Invoices, Billing).
+ * Client SC2500000001 (NEW BIG 4 J) gets specialized CC for these types only.
  */
-function getCCList(clientId?: string): string | string[] {
+function getFinancialCCList(clientId?: string): string[] {
     if (clientId === 'SC2500000001') {
         return ['cavatan.jheck@gmail.com'];
     }
@@ -441,8 +441,8 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
-    // Email Config
-    const ccList = getCCList(user.clientId);
+    // Email Config - Financial Restriction
+    const ccList = getFinancialCCList(user.clientId);
     const bccList = getBCCList();
 
     try {
@@ -521,7 +521,8 @@ export const onmanualreceiptcreate = onDocumentCreated({
         const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount, totalContainers);
         const template = getPaymentStatusTemplate(userData.businessName, invoiceData.id, requestData.amount, 'Paid');
         
-        const ccList = getCCList(userData.clientId);
+        // Email Config - Financial Restriction
+        const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
 
         await sendEmail({
@@ -556,13 +557,12 @@ export const onunclaimedprofilecreate = onDocumentCreated({
     const schedule = `${profile.customPlanDetails?.deliveryDay || 'TBD'} / ${profile.customPlanDetails?.deliveryFrequency || 'TBD'}`;
     const template = getWelcomeUnclaimedTemplate(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
     
-    const ccList = getCCList(profile.clientId);
+    // No CC for operational/general notifications for New BIG 4 J
     const bccList = getBCCList();
 
     try {
         await sendEmail({ 
             to: profile.businessEmail, 
-            cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
             text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`, 
@@ -586,11 +586,9 @@ export const ondeliverycreate = onDocumentCreated({
     
     if (userData?.email && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
             to: userData.email, 
-            cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
@@ -616,11 +614,9 @@ export const ondeliveryupdate = onDocumentUpdated({
     
     if (userData?.email && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
             to: userData.email, 
-            cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
@@ -651,13 +647,17 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
+    
+    // Fix typo:アフター changed to after
     if (before.status === after.status || after.status !== 'Approved') return;
+    
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
     if (userData?.email) {
         const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
-        const ccList = getCCList(userData.clientId);
+        // Financial CC restriction applied here
+        const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
             to: userData.email, 
@@ -691,11 +691,9 @@ export const onrefillrequestcreate = onDocumentCreated({
 
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
             to: userData.email, 
-            cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
             text: `Refill request received`, 
@@ -729,11 +727,9 @@ export const onrefillrequestupdate = onDocumentUpdated({
 
     if (userData?.email) {
         const template = getRefillRequestTemplate(userData.businessName, after.status, requestId, after.requestedDate);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
             to: userData.email, 
-            cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
             text: `Refill request updated`, 
@@ -755,11 +751,9 @@ export const onsanitationcreate = onDocumentCreated({
     if (userData?.email && visit.status === 'Scheduled') {
         const dateStr = format(toSafeDate(visit.scheduledDate), 'PPP');
         const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
             to: userData.email, 
-            cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
             text: `Visit scheduled`, 
@@ -810,11 +804,9 @@ export const onsanitationupdate = onDocumentUpdated({
         // 3. Send Email Notification
         if (userData?.email) {
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr, passRate);
-            const ccList = getCCList(userData.clientId);
             const bccList = getBCCList();
             await sendEmail({ 
                 to: userData.email, 
-                cc: ccList, 
                 bcc: bccList,
                 subject: template.subject, 
                 text: `Report ready. Score: ${passRate}`, 
