@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -196,8 +195,12 @@ export default function DashboardLayout({
               eventName = 'open-delivery-history';
               break;
           case 'sanitation':
+              eventName = 'open-compliance';
+              eventDetail = { tab: 'sanitation', visitId: notification.data.visitId };
+              break;
           case 'compliance':
-               eventName = 'open-compliance-dialog';
+               eventName = 'open-compliance';
+               eventDetail = { tab: 'compliance' };
                break;
       }
       if (eventName) {
@@ -206,7 +209,7 @@ export default function DashboardLayout({
   }
 
   const handleComplianceClick = () => {
-      window.dispatchEvent(new CustomEvent('open-compliance-dialog'));
+      window.dispatchEvent(new CustomEvent('open-compliance', { detail: { tab: 'compliance' } }));
   }
 
   const displayPhoto = user?.photoURL;

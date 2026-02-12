@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
@@ -70,6 +69,8 @@ export function DashboardDialogs({
     branches: false,
   });
 
+  const [initialComplianceTab, setInitialComplianceTab] = useState<'compliance' | 'sanitation'>('compliance');
+  const [initialVisitId, setInitialVisitId] = useState<string | null>(null);
   const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [attachmentToView, setAttachmentToView] = useState<string | null>(null);
   const [welcomeShown, setWelcomeShown] = useState(false);
@@ -119,7 +120,12 @@ export function DashboardDialogs({
       'open-update-schedule': () => openDialog('updateSchedule'),
       'open-request-refill': () => openDialog('requestRefill'),
       'open-save-liters': () => openDialog('saveLiters'),
-      'open-compliance': () => openDialog('compliance'),
+      'open-compliance': (e) => {
+          const detail = (e as CustomEvent).detail;
+          if (detail?.tab) setInitialComplianceTab(detail.tab);
+          if (detail?.visitId) setInitialVisitId(detail.visitId);
+          openDialog('compliance');
+      },
       'open-refill-status': () => openDialog('refillStatus'),
       'open-partner-notice': () => openDialog('partnerNotice'),
       'open-branches-dialog': () => openDialog('branches'),
@@ -209,13 +215,18 @@ export function DashboardDialogs({
       <SaveLitersDialog isOpen={dialogState.saveLiters} onOpenChange={() => closeDialog('saveLiters')} user={user} deliveries={deliveries} />
       <ComplianceDialog
         isOpen={dialogState.compliance}
-        onOpenChange={() => closeDialog('compliance')}
+        onOpenChange={() => {
+            closeDialog('compliance');
+            setInitialVisitId(null);
+        }}
         waterStation={waterStation}
         complianceReports={complianceReports}
         complianceLoading={complianceLoading}
         sanitationVisits={sanitationVisits}
         sanitationLoading={sanitationLoading}
         onViewAttachment={setAttachmentToView}
+        initialTab={initialComplianceTab}
+        initialVisitId={initialVisitId}
       />
       <AttachmentViewerDialog isOpen={!!attachmentToView} onOpenChange={() => setAttachmentToView(null)} attachmentUrl={attachmentToView} />
       <RefillStatusDialog isOpen={dialogState.refillStatus} onOpenChange={() => closeDialog('refillStatus')} activeRefillRequest={activeRefillRequest} />

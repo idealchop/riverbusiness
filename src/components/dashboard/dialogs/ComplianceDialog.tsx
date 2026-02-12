@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -26,6 +26,8 @@ interface ComplianceDialogProps {
   sanitationVisits: SanitationVisit[] | null;
   sanitationLoading: boolean;
   onViewAttachment: (url: string | null) => void;
+  initialTab?: 'compliance' | 'sanitation';
+  initialVisitId?: string | null;
 }
 
 export function ComplianceDialog({
@@ -37,7 +39,10 @@ export function ComplianceDialog({
   sanitationVisits,
   sanitationLoading,
   onViewAttachment,
+  initialTab = 'compliance',
+  initialVisitId = null,
 }: ComplianceDialogProps) {
+  const [activeTab, setActiveTab] = useState<string>('compliance');
   const [selectedSanitationVisit, setSelectedSanitationVisit] = useState<SanitationVisit | null>(null);
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [complianceCurrentPage, setComplianceCurrentPage] = useState(1);
@@ -45,6 +50,20 @@ export function ComplianceDialog({
   const [sanitationCurrentPage, setSanitationCurrentPage] = useState(1);
   const SANITATION_ITEMS_PER_PAGE = 5;
   const [selectedProofImg, setSelectedProofImg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      if (initialVisitId && sanitationVisits) {
+        const visit = sanitationVisits.find(v => v.id === initialVisitId);
+        if (visit) {
+          setSelectedSanitationVisit(visit);
+        }
+      }
+    } else {
+        setSelectedSanitationVisit(null);
+    }
+  }, [isOpen, initialTab, initialVisitId, sanitationVisits]);
 
   const sanitationReportStats = useMemo(() => {
     if (!selectedSanitationVisit || !selectedSanitationVisit.dispenserReports) {
@@ -132,7 +151,7 @@ export function ComplianceDialog({
           </DialogHeader>
           
           <ScrollArea className="px-6 flex-1">
-            <Tabs defaultValue="compliance" className="flex flex-col gap-4">
+            <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex flex-col gap-4">
               <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto sticky top-0 bg-background z-10">
                 <TabsTrigger value="compliance">Water Quality Reports</TabsTrigger>
                 <TabsTrigger value="sanitation">Office Sanitation Visits</TabsTrigger>
