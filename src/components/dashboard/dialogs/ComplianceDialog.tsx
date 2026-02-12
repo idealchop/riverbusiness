@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -485,6 +484,10 @@ export function ComplianceDialog({
       {/* Image Preview for Proofs */}
       <Dialog open={!!selectedProofImg} onOpenChange={() => setSelectedProofImg(null)}>
           <DialogContent className="sm:max-w-3xl p-0 overflow-hidden border-0">
+              <DialogHeader className="sr-only">
+                  <DialogTitle>Image Preview</DialogTitle>
+                  <DialogDescription>A larger preview of the selected proof image.</DialogDescription>
+              </DialogHeader>
               {selectedProofImg && (
                   <div className="relative aspect-video w-full bg-black flex items-center justify-center">
                       <Image src={selectedProofImg} alt="Sanitation Proof Zoomed" fill className="object-contain" />

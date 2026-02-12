@@ -15,13 +15,14 @@ import { format, addDays, isAfter } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Signature, CheckCircle, Save, Droplet } from 'lucide-react';
+import { AlertTriangle, Signature, CheckCircle, Save, Droplet, Eye } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
@@ -121,6 +122,7 @@ export default function SanitationReportPage() {
     const [clientData, setClientData] = useState<AppUser | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('');
+    const [selectedImg, setSelectedImg] = useState<string | null>(null);
     
     const isChecklistComplete = useMemo(() => {
         if (!visitData?.dispenserReports || visitData.dispenserReports.length === 0) {
@@ -145,7 +147,7 @@ export default function SanitationReportPage() {
                 const linkSnap = await getDoc(linkRef);
 
                 if (!linkSnap.exists()) {
-                    throw new Error("This report link is invalid or has been disabled.");
+                    throw new Error("This report link is invalid or has been disabled. Please contact the administrator.");
                 }
 
                 const linkData = linkSnap.data();
@@ -167,7 +169,7 @@ export default function SanitationReportPage() {
                     if (!isNaN(createdDate.getTime())) {
                         const expiryDate = addDays(createdDate, 7);
                         if (isAfter(new Date(), expiryDate)) {
-                            throw new Error("This report link has expired. It was valid for 7 days from generation.");
+                            throw new Error("This report link has expired. It was valid for 7 days from the last time it was generated.");
                         }
                     }
                 }
@@ -176,7 +178,7 @@ export default function SanitationReportPage() {
                 const visitSnap = await getDoc(visitRef);
 
                 if (!visitSnap.exists()) {
-                     throw new Error("The sanitation visit report could not be found.");
+                     throw new Error("The internal sanitation visit record could not be found.");
                 }
                 
                 const clientRef = doc(firestore, 'users', userId);
@@ -190,7 +192,7 @@ export default function SanitationReportPage() {
                 }
 
             } catch (err: any) {
-                setError(err.message || "An unexpected error occurred.");
+                setError(err.message || "An unexpected error occurred while loading the report.");
             } finally {
                 setIsLoading(false);
             }
@@ -472,6 +474,21 @@ export default function SanitationReportPage() {
                     </TooltipProvider>
                 </div>
             </div>
+
+            {/* Local Image Zoom Dialog */}
+            <Dialog open={!!selectedImg} onOpenChange={() => setSelectedImg(null)}>
+                <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Image Preview</DialogTitle>
+                        <DialogDescription>A larger view of the provided signature or proof.</DialogDescription>
+                    </DialogHeader>
+                    {selectedImg && (
+                        <div className="relative aspect-[4/3] w-full bg-black flex items-center justify-center">
+                            <Image src={selectedImg} alt="Image Preview Zoomed" fill className="object-contain" />
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </main>
     );
 }

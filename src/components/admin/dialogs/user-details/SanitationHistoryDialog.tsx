@@ -1,8 +1,7 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
@@ -251,6 +250,10 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
         {/* Local Image Zoom Dialog */}
         <Dialog open={!!selectedImg} onOpenChange={() => setSelectedImg(null)}>
             <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0">
+                <DialogHeader className="sr-only">
+                    <DialogTitle>Image Preview</DialogTitle>
+                    <DialogDescription>Full size preview of the sanitation proof image.</DialogDescription>
+                </DialogHeader>
                 {selectedImg && (
                     <div className="relative aspect-[4/3] w-full bg-black flex items-center justify-center">
                         <Image src={selectedImg} alt="Proof Large" fill className="object-contain" />
