@@ -159,14 +159,16 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 visitId = newVisitRef.id;
             }
 
-            // Always update or create the public link entry with a fresh timestamp
+            // --- LINK EXPIRATION FIX ---
+            // We explicitly refresh the link timestamp every time it's shared or saved.
+            // This ensures expiration is based on generation time, not the visit's schedule.
             let shareableLink = visitToEdit?.shareableLink;
             let linkId = shareableLink?.split('/').pop();
 
             const publicLinkData = { 
                 userId: user.id, 
                 visitId: visitId!, 
-                createdAt: serverTimestamp() 
+                createdAt: serverTimestamp() // This restarts the 7-day window
             };
 
             if (!shareableLink || !linkId) {
@@ -175,7 +177,6 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 shareableLink = `${window.location.origin}/sanitation-report/${linkId}`;
                 batch.set(linkRef, publicLinkData);
             } else {
-                // Link exists, update the timestamp to "renew" its 7-day window
                 const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
                 batch.set(linkRef, publicLinkData, { merge: true });
             }

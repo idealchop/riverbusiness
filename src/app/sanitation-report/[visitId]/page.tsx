@@ -153,13 +153,13 @@ export default function SanitationReportPage() {
                 const linkSnap = await getDoc(linkRef);
 
                 if (!linkSnap.exists()) {
-                    throw new Error("This report link is invalid or has been disabled. Please contact the administrator.");
+                    throw new Error("This report link is invalid. It may have been deleted or replaced by a new generation.");
                 }
 
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                // Expiration Check - Updated robust parsing
+                // Expiration Check - Strictly based on link generation time (createdAt)
                 if (createdAt) {
                     let createdDate: Date | null = null;
                     if (createdAt instanceof Timestamp) {
@@ -173,7 +173,7 @@ export default function SanitationReportPage() {
                     if (createdDate && !isNaN(createdDate.getTime())) {
                         const expiryDate = addDays(createdDate, 7);
                         if (isAfter(new Date(), expiryDate)) {
-                            throw new Error("This report link has expired. It was valid for 7 days from the last time it was generated.");
+                            throw new Error("This report link has expired. For security, shareable links are valid for 7 days from generation.");
                         }
                     }
                 }
@@ -182,7 +182,7 @@ export default function SanitationReportPage() {
                 const visitSnap = await getDoc(visitRef);
 
                 if (!visitSnap.exists()) {
-                     throw new Error("The internal sanitation visit record could not be found.");
+                     throw new Error("The associated sanitation record could not be found.");
                 }
                 
                 const clientRef = doc(firestore, 'users', userId);
@@ -295,7 +295,7 @@ export default function SanitationReportPage() {
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
                         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-                        <CardTitle>Access Restricted</CardTitle>
+                        <CardTitle>Link Status Notice</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Alert variant="destructive">
@@ -304,7 +304,7 @@ export default function SanitationReportPage() {
                         </Alert>
                     </CardContent>
                     <CardFooter className="justify-center">
-                        <p className="text-xs text-muted-foreground text-center">If you believe this is an error, please contact the River Philippines administrator to generate a new link.</p>
+                        <p className="text-xs text-muted-foreground text-center">If you need to complete this report, please contact the River Philippines administrator to refresh the shareable link.</p>
                     </CardFooter>
                 </Card>
             </main>
