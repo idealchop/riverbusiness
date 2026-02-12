@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -650,7 +651,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const before = event.data.before.data();
     const after = event.data.after.data();
     const userId = event.params.userId;
-    if (before.status === after.status || after.status !== 'Approved') return;
+    if (before.status ===アフター.status || after.status !== 'Approved') return;
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
@@ -783,12 +784,13 @@ export const onsanitationupdate = onDocumentUpdated({
         const userData = userDoc.data();
         
         const dateStr = format(toSafeDate(after.scheduledDate), 'PPP');
+        const passRate = getSanitationPassRate(after);
         
         // 1. Create In-App Notification for Client
         await createNotification(userId, {
             type: 'sanitation',
             title: 'Sanitation Visit Completed',
-            description: `Your sanitation report for ${dateStr} is complete. You can view the results now.`,
+            description: `Your sanitation report for ${dateStr} is complete. Score: ${passRate}.`,
             data: { visitId: visitId }
         });
 
@@ -800,14 +802,14 @@ export const onsanitationupdate = onDocumentUpdated({
             await createNotification(adminId, {
                 type: 'sanitation',
                 title: `Visit for ${userData?.businessName}: Completed`,
-                description: `The sanitation visit on ${dateStr} is now completed.`,
+                description: `The sanitation visit on ${dateStr} was completed with a score of ${passRate}.`,
                 data: { userId: userId, visitId: visitId }
             });
         }
 
         // 3. Send Email Notification
         if (userData?.email) {
-            const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
+            const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr, passRate);
             const ccList = getCCList(userData.clientId);
             const bccList = getBCCList();
             await sendEmail({ 
@@ -815,7 +817,7 @@ export const onsanitationupdate = onDocumentUpdated({
                 cc: ccList, 
                 bcc: bccList,
                 subject: template.subject, 
-                text: `Report ready`, 
+                text: `Report ready. Score: ${passRate}`, 
                 html: template.html 
             });
         }

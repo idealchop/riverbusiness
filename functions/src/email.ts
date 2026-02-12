@@ -465,7 +465,7 @@ export function getSanitationScheduledTemplate(businessName: string, officerName
   };
 }
 
-export function getSanitationReportTemplate(businessName: string, officerName: string, date: string) {
+export function getSanitationReportTemplate(businessName: string, officerName: string, date: string, scoreRate: string) {
   const content = `
     <p class="greeting">Quality Certified, ${businessName}! ✨</p>
     <p class="body-text">
@@ -477,7 +477,14 @@ export function getSanitationReportTemplate(businessName: string, officerName: s
       </span>
     </div>
     <div class="details-box">
-      <h3 class="details-title">Service Details</h3>
+      <h3 class="details-title">Service Results</h3>
+      <div class="detail-item">
+        <div class="detail-icon">📈</div>
+        <div>
+          <p class="detail-label">Sanitation Score</p>
+          <p class="detail-value" style="color: ${BRAND_PRIMARY}; font-size: 24px;">${scoreRate}</p>
+        </div>
+      </div>
       <div class="detail-item">
         <div class="detail-icon">📅</div>
         <div>
@@ -499,7 +506,7 @@ export function getSanitationReportTemplate(businessName: string, officerName: s
   `;
 
   return {
-    subject: `Certified: Your Office Water Sanitation is Complete ✨`,
+    subject: `Certified: Your Office Water Sanitation is Complete (${scoreRate}) ✨`,
     html: getEmailWrapper(content, 'Equipment Quality Check')
   };
 }
