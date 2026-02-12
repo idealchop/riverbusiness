@@ -24,13 +24,58 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-const QUICK_REMARKS = [
-    "Spotted visible dirt or residue buildup.",
-    "Observed signs of physical wear and tear.",
-    "Detected minor leakage or moisture spots.",
-    "Noticed storage area is damp or untidy.",
-    "Observed container showing signs of degradation."
-];
+const REMARK_MAPPING: Record<string, string[]> = {
+    "Wipe down and sanitize the entire exterior of the unit.": [
+        "Spotted visible dirt/dust buildup on panels.",
+        "Noticed minor stains or fingerprints.",
+        "Observed small surface scratches."
+    ],
+    "Remove, clean, and sanitize the drip tray.": [
+        "Found standing water or algae growth.",
+        "Detected mineral/calcium buildup.",
+        "Observed tray is cracked or loosely fitted."
+    ],
+    "Sanitize and wipe all water dispensing points (faucets/taps).": [
+        "Detected mineral scaling on faucet tips.",
+        "Noticed a slow drip from the nozzle.",
+        "Observed visible dust on the dispensing area."
+    ],
+    "Flush the system with a cleaning solution to sanitize internal water lines.": [
+        "Observed initial water discoloration.",
+        "Detected a faint stale odor from the lines.",
+        "Noticed low pressure during the sanitizing flush."
+    ],
+    "Thoroughly rinse the system to remove all cleaning solution.": [
+        "Found traces of cleaning bubbles in the rinse.",
+        "Detected chemical smell during the final check.",
+        "Observed cloudy water in the sample cup."
+    ],
+    "Inspect all connections and lines for any signs of leaks.": [
+        "Spotted moisture around the rear fittings.",
+        "Detected a slow leak at the main connection.",
+        "Noticed damp spots on the floor under the unit."
+    ],
+    "Verify that hot and cold water are at appropriate temperatures (if applicable).": [
+        "Noticed the hot water is only lukewarm.",
+        "Detected the cold water isn't sufficiently chilled.",
+        "Observed the unit is taking too long to heat/cool."
+    ],
+    "Inspect and note the status of the water filter (if applicable).": [
+        "Spotted the 'Change Filter' indicator light.",
+        "Noticed the filter is past its expiry date.",
+        "Detected a significantly decreased flow rate."
+    ],
+    "Inspect the placement of water containers to ensure they are stored in a cool, dry, and sanitary area.": [
+        "Noticed the storage area is too humid or damp.",
+        "Spotted containers stored in direct sunlight.",
+        "Observed the storage area floor is untidy."
+    ],
+    "Evaluate the physical quality of all reusable containers for cracks, deep scratches, or degradation.": [
+        "Spotted hairline cracks on the bottle neck.",
+        "Noticed deep scratches on the inner surface.",
+        "Observed discolored or foggy plastic on some units."
+    ]
+};
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -278,6 +323,16 @@ export default function SanitationReportPage() {
         setVisitData(prev => ({ ...prev, [field]: value }));
     };
 
+    const getRemarksForItem = (itemText: string) => {
+        return REMARK_MAPPING[itemText] || [
+            "Spotted visible dirt or residue buildup.",
+            "Observed signs of physical wear and tear.",
+            "Detected minor leakage or moisture spots.",
+            "Noticed storage area is damp or untidy.",
+            "Observed container showing signs of degradation."
+        ];
+    };
+
     if (isLoading) {
         return (
             <main className="flex min-h-screen w-full flex-col items-center justify-center bg-muted p-4 sm:p-8">
@@ -389,7 +444,7 @@ export default function SanitationReportPage() {
                                                                     <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">Quick Observations:</span>
                                                                 </div>
                                                                 <div className="flex flex-wrap gap-1.5">
-                                                                    {QUICK_REMARKS.map((suggestion) => (
+                                                                    {getRemarksForItem(item.item).map((suggestion) => (
                                                                         <Button 
                                                                             key={suggestion} 
                                                                             type="button"
