@@ -24,6 +24,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
+const QUICK_REMARKS = ["Needs Cleaning", "Parts Wear", "Repair Needed"];
+
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -153,11 +155,9 @@ export default function SanitationReportPage() {
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                // Expiration Check: Use createdAt if available
+                // Expiration Check
                 if (createdAt) {
                     let createdDate: Date;
-                    
-                    // Robust date parsing for Firestore Timestamps or strings
                     if (createdAt instanceof Timestamp) {
                         createdDate = createdAt.toDate();
                     } else if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
@@ -380,12 +380,28 @@ export default function SanitationReportPage() {
                                                     <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm">{item.item}</Label>
                                                 </div>
                                                 {!item.checked && (
-                                                     <Input 
-                                                        placeholder="Remarks..." 
-                                                        className="h-9 text-sm"
-                                                        value={item.remarks}
-                                                        onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
-                                                     />
+                                                     <div className="w-full sm:w-72 space-y-2">
+                                                        <Input 
+                                                            placeholder="Remarks..." 
+                                                            className="h-9 text-sm"
+                                                            value={item.remarks}
+                                                            onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
+                                                        />
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {QUICK_REMARKS.map((suggestion) => (
+                                                                <Button 
+                                                                    key={suggestion} 
+                                                                    type="button"
+                                                                    variant="outline" 
+                                                                    size="sm" 
+                                                                    className="h-6 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                                                                    onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
+                                                                >
+                                                                    {suggestion}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
+                                                     </div>
                                                 )}
                                                 {item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block self-center" />}
                                             </div>
