@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -5,7 +6,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,14 +15,17 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { AppUser, SanitationVisit } from '@/lib/types';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, PlusCircle, MinusCircle, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, MinusCircle, Trash2, Camera, XCircle } from 'lucide-react';
 import { DocumentReference } from 'firebase/firestore';
 import { createClientNotification } from '@/lib/notifications';
+import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { Progress } from '@/components/ui/progress';
+import Image from 'next/image';
 
 const dispenserReportSchema = z.object({
     dispenserId: z.string(),
@@ -66,8 +70,13 @@ interface CreateSanitationDialogProps {
 export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user, visitToEdit, setVisitToEdit }: CreateSanitationDialogProps) {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const storage = useStorage();
     const auth = useAuth();
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [proofFiles, setProofFiles] = useState<File[]>([]);
+    const [existingProofs, setExistingProofs] = useState<string[]>([]);
 
     const sanitationVisitForm = useForm<SanitationVisitFormValues>({
         resolver: zodResolver(sanitationVisitSchema),
@@ -89,6 +98,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                     ...visitToEdit,
                     scheduledDate: new Date(visitToEdit.scheduledDate),
                 });
+                setExistingProofs(visitToEdit.proofUrls || []);
             } else {
                 sanitationVisitForm.reset({
                     status: 'Scheduled',
@@ -101,48 +111,77 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                         dispenserCode: ''
                     }]
                 });
+                setExistingProofs([]);
             }
+            setProofFiles([]);
         } else {
             setVisitToEdit(null);
         }
     }, [isOpen, visitToEdit, sanitationVisitForm, setVisitToEdit]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setProofFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+        }
+    };
+
+    const removeProofFile = (index: number) => {
+        setProofFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const removeExistingProof = (index: number) => {
+        setExistingProofs(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleSanitationVisitSubmit = async (values: SanitationVisitFormValues) => {
-        if (!userDocRef || !firestore || !auth?.currentUser) return;
+        if (!userDocRef || !firestore || !auth?.currentUser || !storage) return;
+        setIsSubmitting(true);
         const isUpdate = !!visitToEdit;
         const adminId = auth.currentUser.uid;
         const scheduledDateFormatted = format(values.scheduledDate, 'PP');
 
         try {
+            let uploadedUrls: string[] = [];
+            if (proofFiles.length > 0) {
+                const uploadPromises = proofFiles.map((file, idx) => {
+                    const path = `admin_uploads/${adminId}/sanitation_proofs/${user.id}/${Date.now()}-${idx}-${file.name}`;
+                    return uploadFileWithProgress(storage, auth, path, file, {}, (p) => setUploadProgress(p));
+                });
+                uploadedUrls = await Promise.all(uploadPromises);
+            }
+
+            const finalProofUrls = [...existingProofs, ...uploadedUrls];
+
             if (isUpdate && visitToEdit) {
                 const visitRef = doc(userDocRef, 'sanitationVisits', visitToEdit.id);
-                const visitData = { ...values, scheduledDate: values.scheduledDate.toISOString() };
+                const visitData = { 
+                    ...values, 
+                    scheduledDate: values.scheduledDate.toISOString(),
+                    proofUrls: finalProofUrls
+                };
                 await updateDoc(visitRef, visitData);
                 toast({ title: "Sanitation Visit Updated" });
 
-                // Check if status changed to send notification
                 if (visitToEdit.status !== values.status) {
-                    // User Notification
                     await createClientNotification(firestore, user.id, {
                         type: 'sanitation',
                         title: `Sanitation Visit: ${values.status}`,
                         description: `Your sanitation visit for ${scheduledDateFormatted} is now ${values.status}.`,
                         data: { visitId: visitToEdit.id }
                     });
-                    
-                    // Admin Notification
-                    await createClientNotification(firestore, adminId, {
-                        type: 'sanitation',
-                        title: 'Sanitation Visit Updated',
-                        description: `The visit for ${user.businessName} on ${scheduledDateFormatted} is now ${values.status}.`,
-                        data: { userId: user.id, visitId: visitToEdit.id }
-                    });
                 }
-            } else { // This is a new visit
+            } else {
                 const visitsCol = collection(userDocRef, 'sanitationVisits');
                 const newVisitRef = doc(visitsCol);
                 const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
-                const visitData = { ...values, id: newVisitRef.id, userId: user.id, scheduledDate: values.scheduledDate.toISOString(), shareableLink: `${window.location.origin}/sanitation-report/${linkRef.id}` };
+                const visitData = { 
+                    ...values, 
+                    id: newVisitRef.id, 
+                    userId: user.id, 
+                    scheduledDate: values.scheduledDate.toISOString(), 
+                    shareableLink: `${window.location.origin}/sanitation-report/${linkRef.id}`,
+                    proofUrls: finalProofUrls
+                };
 
                 const batch = writeBatch(firestore);
                 batch.set(newVisitRef, visitData);
@@ -151,20 +190,11 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 
                 toast({ title: "Sanitation Visit Scheduled" });
                 
-                // User Notification
                 await createClientNotification(firestore, user.id, {
                     type: 'sanitation',
                     title: 'Sanitation Visit Scheduled',
                     description: `A sanitation visit is scheduled for your office on ${scheduledDateFormatted}.`,
                     data: { visitId: newVisitRef.id }
-                });
-
-                // Admin Notification
-                await createClientNotification(firestore, adminId, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Scheduled',
-                    description: `A visit for ${user.businessName} has been scheduled for ${scheduledDateFormatted}.`,
-                    data: { userId: user.id, visitId: newVisitRef.id }
                 });
             }
             
@@ -172,6 +202,9 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
         } catch (error) {
             console.error("Sanitation visit submission failed:", error);
             toast({ variant: 'destructive', title: "Operation Failed" });
+        } finally {
+            setIsSubmitting(false);
+            setUploadProgress(0);
         }
     };
     
@@ -180,12 +213,9 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
         setIsDeleting(true);
         try {
             const batch = writeBatch(firestore);
-
-            // Delete the visit document
             const visitRef = doc(firestore, 'users', visitToEdit.userId, 'sanitationVisits', visitToEdit.id);
             batch.delete(visitRef);
 
-            // Find and delete the public link
             if (visitToEdit.shareableLink) {
                 const linkId = visitToEdit.shareableLink.split('/').pop();
                 if (linkId) {
@@ -195,13 +225,11 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
             }
             
             await batch.commit();
-
-            toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
+            toast({ title: "Visit Deleted" });
             onOpenChange(false);
-
         } catch (error) {
             console.error("Error deleting visit:", error);
-            toast({ variant: 'destructive', title: "Delete Failed", description: "There was an error while deleting the visit." });
+            toast({ variant: 'destructive', title: "Delete Failed" });
         } finally {
             setIsDeleting(false);
         }
@@ -237,8 +265,43 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                         </div>
                         <div>
                             <Label>Assigned To</Label>
-                            <Input {...sanitationVisitForm.register('assignedTo')} />
+                            <Input {...sanitationVisitForm.register('assignedTo')} placeholder="Enter officer name" />
                         </div>
+
+                        <div className="space-y-4">
+                            <Label className="flex items-center gap-2"><Camera className="h-4 w-4" /> Proof of Sanitation (Result Photos)</Label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {existingProofs.map((url, idx) => (
+                                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border group">
+                                        <Image src={url} alt={`Proof ${idx + 1}`} fill className="object-cover" />
+                                        <button type="button" onClick={() => removeExistingProof(idx)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <XCircle className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {proofFiles.map((file, idx) => (
+                                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border bg-muted flex items-center justify-center group">
+                                        <p className="text-[10px] text-center px-2 truncate">{file.name}</p>
+                                        <button type="button" onClick={() => removeProofFile(idx)} className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <XCircle className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+                                    <PlusCircle className="h-6 w-6 text-muted-foreground" />
+                                    <span className="text-[10px] text-muted-foreground mt-1">Add Photo</span>
+                                    <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                                </label>
+                            </div>
+                            {isSubmitting && uploadProgress > 0 && (
+                                <div className="space-y-1">
+                                    <p className="text-xs text-muted-foreground">Uploading files...</p>
+                                    <Progress value={uploadProgress} className="h-1" />
+                                </div>
+                            )}
+                        </div>
+
+                        <Separator className="my-6" />
 
                         {fields.map((field, index) => (
                             <Card key={field.id}>
@@ -257,6 +320,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                         <Button
                             type="button"
                             variant="outline"
+                            className="w-full border-dashed"
                             onClick={() => append({
                                 dispenserId: `disp-${Date.now()}-${fields.length}`,
                                 dispenserName: `Unit #${fields.length + 1}`,
@@ -271,7 +335,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                            <div>
                                 {visitToEdit && (
                                     <AlertDialogTrigger asChild>
-                                        <Button type="button" variant="destructive" disabled={isDeleting}>
+                                        <Button type="button" variant="destructive" disabled={isDeleting || isSubmitting}>
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             Delete Visit
                                         </Button>
@@ -279,8 +343,8 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                                 )}
                             </div>
                             <div className="flex gap-2">
-                                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                                <Button type="submit">{visitToEdit ? 'Save Changes' : 'Schedule Visit'}</Button>
+                                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+                                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : (visitToEdit ? 'Save Changes' : 'Schedule Visit')}</Button>
                             </div>
                         </DialogFooter>
                     </form>

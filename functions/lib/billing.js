@@ -43,14 +43,19 @@ const index_1 = require("./index");
 const containerToLiter = (containers) => (containers || 0) * 19.5;
 /**
  * Determines the CC list based on the client ID.
- * Includes the admin team (Jayvee and Jimboy) for all operational dispatches.
+ * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
  */
 function getCCList(clientId) {
-    const adminEmails = ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
     if (clientId === 'SC2500000001') {
-        return [...adminEmails, 'cavatan.jheck@gmail.com'];
+        return ['cavatan.jheck@gmail.com'];
     }
-    return adminEmails;
+    return [];
+}
+/**
+ * Determines the BCC list. Admin team is always BCC'd for privacy.
+ */
+function getBCCList() {
+    return ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
 }
 /**
  * A scheduled Cloud Function that runs on the 1st of every month
@@ -59,7 +64,6 @@ function getCCList(clientId) {
 exports.generateMonthlyInvoices = functions.runWith({
     secrets: ["BREVO_API_KEY"]
 }).pubsub.schedule('0 0 1 * *').onRun(async (context) => {
-    var _a;
     logger.info('Starting monthly invoice generation job.');
     const db = admin.firestore();
     const now = new Date();
@@ -86,20 +90,11 @@ exports.generateMonthlyInvoices = functions.runWith({
         let isFirstInvoice = !user.lastBilledDate;
         // Rule: Billing cycle is exactly 1st to Last day of the target month.
         if (currentYear === 2026 && currentMonth === 1) { // February 2026
-            if ((_a = user.plan) === null || _a === void 0 ? void 0 : _a.isConsumptionBased) {
-                // December 1, 2025 to January 31, 2026 (2 months)
-                billingCycleStart = new Date(2025, 11, 1);
-                billingCycleEnd = (0, date_fns_1.endOfMonth)(new Date(2026, 0, 1));
-                billingPeriod = 'December 2025 - January 2026';
-                monthsToBill = 2;
-            }
-            else {
-                const dec2025 = new Date(2025, 11, 1);
-                billingPeriod = (0, date_fns_1.format)(dec2025, 'MMMM yyyy');
-                billingCycleStart = (0, date_fns_1.startOfMonth)(dec2025);
-                billingCycleEnd = (0, date_fns_1.endOfMonth)(dec2025);
-                monthsToBill = 1;
-            }
+            // Both fixed and consumption based need 2 months if we skipped Jan 1.
+            billingCycleStart = new Date(2025, 11, 1);
+            billingCycleEnd = (0, date_fns_1.endOfMonth)(new Date(2026, 0, 1));
+            billingPeriod = 'December 2025 - January 2026';
+            monthsToBill = 2;
         }
         else {
             const previousMonth = (0, date_fns_1.subMonths)(now, 1);
@@ -155,7 +150,8 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
         description = `Bill for ${billingPeriod}`;
     }
     else {
-        amount = user.plan.price + equipmentCost;
+        // Multi-month support: Multiply base price by monthsToBill
+        amount = (user.plan.price * monthsToBill) + equipmentCost;
         description = `Monthly Subscription for ${billingPeriod}`;
         if (user.accountType !== 'Branch') {
             const monthlyAllocation = (((_e = user.customPlanDetails) === null || _e === void 0 ? void 0 : _e.litersPerMonth) || 0) + (((_f = user.customPlanDetails) === null || _f === void 0 ? void 0 : _f.bonusLiters) || 0);
@@ -206,11 +202,12 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             }
             const pdfBuffer = await (0, index_1.generatePasswordProtectedSOA)(user, billingPeriod, deliveries, sanitation, compliance);
             const template = (0, email_1.getNewInvoiceTemplate)(user.businessName, invoiceId, amount, billingPeriod);
-            // CC Logic
             const ccList = getCCList(user.clientId);
+            const bccList = getBCCList();
             (0, email_1.sendEmail)({
                 to: user.email,
                 cc: ccList,
+                bcc: bccList,
                 subject: template.subject,
                 text: `Invoice for ${billingPeriod} is available for ₱${amount.toFixed(2)}.`,
                 html: template.html,

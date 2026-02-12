@@ -91,15 +91,15 @@ async function createNotification(userId, notificationData) {
  */
 function getCCList(clientId) {
     if (clientId === 'SC2500000001') {
-        return ['support@riverph.com', 'cavatan.jheck@gmail.com'];
+        return ['cavatan.jheck@gmail.com'];
     }
-    return 'support@riverph.com';
+    return [];
 }
 /**
  * Determines the BCC list. Admin team is always BCC'd for privacy.
  */
 function getBCCList() {
-    return ['jayvee@riverph.com', 'jimboy@riverph.com'];
+    return ['support@riverph.com', 'jayvee@riverph.com', 'jimboy@riverph.com'];
 }
 const getSanitationPassRate = (v) => {
     if (!v.dispenserReports || v.dispenserReports.length === 0)

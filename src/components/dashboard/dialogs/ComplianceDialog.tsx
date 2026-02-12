@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature, History } from 'lucide-react';
+import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature, History, Camera } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
 
@@ -45,6 +45,7 @@ export function ComplianceDialog({
   const COMPLIANCE_ITEMS_PER_PAGE = 5;
   const [sanitationCurrentPage, setSanitationCurrentPage] = useState(1);
   const SANITATION_ITEMS_PER_PAGE = 5;
+  const [selectedProofImg, setSelectedProofImg] = useState<string | null>(null);
 
   const sanitationReportStats = useMemo(() => {
     if (!selectedSanitationVisit || !selectedSanitationVisit.dispenserReports) {
@@ -161,7 +162,6 @@ export function ComplianceDialog({
                     )}
                   </CardHeader>
                   <CardContent>
-                    {/* Desktop Table */}
                     <Table className="hidden md:table">
                       <TableHeader>
                         <TableRow>
@@ -199,7 +199,6 @@ export function ComplianceDialog({
                       </TableBody>
                     </Table>
 
-                    {/* Mobile Cards */}
                     <div className="space-y-4 md:hidden">
                       {complianceLoading ? (
                         <p className="text-center text-muted-foreground py-4">Loading reports...</p>
@@ -228,25 +227,9 @@ export function ComplianceDialog({
                   </CardContent>
                   <CardFooter>
                       <div className="flex items-center justify-end space-x-2 pt-4 w-full">
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))}
-                              disabled={complianceCurrentPage === 1}
-                          >
-                              Previous
-                          </Button>
-                          <span className="text-sm text-muted-foreground">
-                              Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}
-                          </span>
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))}
-                              disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}
-                          >
-                              Next
-                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))} disabled={complianceCurrentPage === 1}>Previous</Button>
+                          <span className="text-sm text-muted-foreground">Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}</span>
+                          <Button variant="outline" size="sm" onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))} disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}>Next</Button>
                       </div>
                   </CardFooter>
                 </Card>
@@ -259,7 +242,6 @@ export function ComplianceDialog({
                     <CardDescription>Records of scheduled sanitation and cleaning for your office dispensers.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {/* Desktop Table */}
                     <Table className="hidden md:table">
                       <TableHeader>
                         <TableRow>
@@ -278,7 +260,7 @@ export function ComplianceDialog({
                           <TableRow key={visit.id}>
                             <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
                             <TableCell>
-                              <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-200'}>
+                              <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
                                 {visit.status}
                               </Badge>
                             </TableCell>
@@ -299,7 +281,6 @@ export function ComplianceDialog({
                       </TableBody>
                     </Table>
 
-                    {/* Mobile Cards */}
                     <div className="space-y-4 md:hidden">
                       {sanitationLoading ? (
                         <p className="text-center text-muted-foreground py-4">Loading visits...</p>
@@ -328,25 +309,9 @@ export function ComplianceDialog({
                   </CardContent>
                   <CardFooter>
                       <div className="flex items-center justify-end space-x-2 pt-4 w-full">
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))}
-                              disabled={sanitationCurrentPage === 1}
-                          >
-                              Previous
-                          </Button>
-                          <span className="text-sm text-muted-foreground">
-                              Page {sanitationCurrentPage} of {totalSanitationPages > 0 ? totalSanitationPages : 1}
-                          </span>
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))}
-                              disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}
-                          >
-                              Next
-                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))} disabled={sanitationCurrentPage === 1}>Previous</Button>
+                          <span className="text-sm text-muted-foreground">Page {sanitationCurrentPage} of {totalSanitationPages > 0 ? totalSanitationPages : 1}</span>
+                          <Button variant="outline" size="sm" onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))} disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}>Next</Button>
                       </div>
                   </CardFooter>
                 </Card>
@@ -380,18 +345,12 @@ export function ComplianceDialog({
                           <CardContent>
                               <div className="text-center mb-4">
                                   <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                      {sanitationReportStats.passed} of {sanitationReportStats.total} items passed
-                                  </p>
+                                  <p className="text-sm text-muted-foreground">{sanitationReportStats.passed} of {sanitationReportStats.total} items passed</p>
                               </div>
                               <TooltipProvider>
                                   <Tooltip>
-                                      <TooltipTrigger asChild>
-                                          <Progress value={sanitationReportStats.passRate} className="h-2" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                          <p>{sanitationReportStats.passRate.toFixed(0)}% Pass Rate</p>
-                                      </TooltipContent>
+                                      <TooltipTrigger asChild><Progress value={sanitationReportStats.passRate} className="h-2" /></TooltipTrigger>
+                                      <TooltipContent><p>{sanitationReportStats.passRate.toFixed(0)}% Pass Rate</p></TooltipContent>
                                   </Tooltip>
                               </TooltipProvider>
                           </CardContent>
@@ -401,7 +360,32 @@ export function ComplianceDialog({
                           <CardContent className="py-6 flex flex-col items-center justify-center text-center gap-2">
                               <Hourglass className="h-8 w-8 text-muted-foreground" />
                               <p className="font-semibold">Visit Not Yet Completed</p>
-                              <p className="text-sm text-muted-foreground">Checklist results will be available once the visit is marked as "Completed" by the admin.</p>
+                              <p className="text-sm text-muted-foreground">Checklist results will be available once the visit is marked as "Completed".</p>
+                          </CardContent>
+                      </Card>
+                  )}
+
+                  {/* Proof Photos for User */}
+                  {selectedSanitationVisit?.proofUrls && selectedSanitationVisit.proofUrls.length > 0 && (
+                      <Card>
+                          <CardHeader className="pb-3">
+                              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                  <Camera className="h-4 w-4 text-primary" />
+                                  Proof of Service
+                              </CardTitle>
+                              <CardDescription className="text-xs">Photos of your sanitized equipment.</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                  {selectedSanitationVisit.proofUrls.map((url, idx) => (
+                                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:opacity-90 transition-opacity shadow-sm" onClick={() => setSelectedProofImg(url)}>
+                                          <Image src={url} alt={`Sanitation Proof ${idx + 1}`} fill className="object-cover" />
+                                          <div className="absolute inset-0 bg-black/10 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                                              <Eye className="text-white h-5 w-5" />
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
                           </CardContent>
                       </Card>
                   )}
@@ -419,12 +403,7 @@ export function ComplianceDialog({
                               </CardHeader>
                               <CardContent>
                                   <Table>
-                                      <TableHeader>
-                                          <TableRow>
-                                              <TableHead>Item</TableHead>
-                                              <TableHead className="text-right w-24">Status</TableHead>
-                                          </TableRow>
-                                      </TableHeader>
+                                      <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right w-24">Status</TableHead></TableRow></TableHeader>
                                       <TableBody>
                                           {report.checklist?.map((item, index) => (
                                               <TableRow key={index} className={cn(!item.checked && "bg-destructive/5")}>
@@ -501,6 +480,17 @@ export function ComplianceDialog({
                 <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
             </DialogFooter>
         </DialogContent>
+      </Dialog>
+
+      {/* Image Preview for Proofs */}
+      <Dialog open={!!selectedProofImg} onOpenChange={() => setSelectedProofImg(null)}>
+          <DialogContent className="sm:max-w-3xl p-0 overflow-hidden border-0">
+              {selectedProofImg && (
+                  <div className="relative aspect-video w-full bg-black flex items-center justify-center">
+                      <Image src={selectedProofImg} alt="Sanitation Proof Zoomed" fill className="object-contain" />
+                  </div>
+              )}
+          </DialogContent>
       </Dialog>
     </>
   );

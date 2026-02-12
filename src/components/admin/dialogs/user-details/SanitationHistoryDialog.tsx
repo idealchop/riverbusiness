@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -8,7 +9,7 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Share2, Signature, Hourglass, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
+import { Share2, Signature, Hourglass, CheckCircle, AlertTriangle, Trash2, Camera, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -28,11 +29,13 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
     const firestore = useFirestore();
     const [isSharing, setIsSharing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedImg, setSelectedImg] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isOpen) {
             setIsSharing(false);
             setIsDeleting(false);
+            setSelectedImg(null);
         }
     }, [isOpen]);
 
@@ -65,12 +68,9 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
         setIsDeleting(true);
         try {
             const batch = writeBatch(firestore);
-
-            // Delete the visit document
             const visitRef = doc(firestore, 'users', visit.userId, 'sanitationVisits', visit.id);
             batch.delete(visitRef);
 
-            // Find and delete the public link
             if (visit.shareableLink) {
                 const linkId = visit.shareableLink.split('/').pop();
                 if (linkId) {
@@ -80,19 +80,18 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
             }
             
             await batch.commit();
-
-            toast({ title: "Visit Deleted", description: "The sanitation visit has been removed." });
+            toast({ title: "Visit Deleted" });
             onOpenChange(false);
-
         } catch (error) {
             console.error("Error deleting visit:", error);
-            toast({ variant: 'destructive', title: "Delete Failed", description: "There was an error while deleting the visit." });
+            toast({ variant: 'destructive', title: "Delete Failed" });
         } finally {
             setIsDeleting(false);
         }
     };
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
@@ -102,7 +101,32 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
                     </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh]">
-                    <div className="py-4 pr-4 space-y-4">
+                    <div className="py-4 pr-4 space-y-6">
+                        {/* Proof Photos Gallery */}
+                        {visit?.proofUrls && visit.proofUrls.length > 0 && (
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                        <Camera className="h-4 w-4 text-primary" />
+                                        Proof of Service
+                                    </CardTitle>
+                                    <CardDescription className="text-xs">Actual photos of the sanitized equipment.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {visit.proofUrls.map((url, idx) => (
+                                            <div key={idx} className="relative aspect-square rounded-md overflow-hidden border cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setSelectedImg(url)}>
+                                                <Image src={url} alt={`Proof ${idx + 1}`} fill className="object-cover" />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 hover:opacity-100 transition-opacity">
+                                                    <Eye className="h-5 w-5 text-white" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {visit?.dispenserReports && visit.dispenserReports.length > 0 ? (
                             visit.dispenserReports.map((report, reportIndex) => (
                             <Card key={report.dispenserId || reportIndex}>
@@ -223,5 +247,17 @@ export function SanitationHistoryDialog({ isOpen, onOpenChange, visit, isAdmin }
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Local Image Zoom Dialog */}
+        <Dialog open={!!selectedImg} onOpenChange={() => setSelectedImg(null)}>
+            <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0">
+                {selectedImg && (
+                    <div className="relative aspect-[4/3] w-full bg-black flex items-center justify-center">
+                        <Image src={selectedImg} alt="Proof Large" fill className="object-contain" />
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

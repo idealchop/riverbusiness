@@ -57,6 +57,7 @@ export interface SanitationVisit {
   clientRepName?: string;
   officerSignatureDate?: string;
   clientSignatureDate?: string;
+  proofUrls?: string[];
 }
 
 export interface WaterStation {
