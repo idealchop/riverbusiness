@@ -136,7 +136,6 @@ export default function SanitationReportPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('');
     const [selectedImg, setSelectedImg] = useState<string | null>(null);
-    const [showSuggestionsMap, setShowSuggestionsMap] = useState<Record<string, boolean>>({});
     
     const isChecklistComplete = useMemo(() => {
         if (!visitData?.dispenserReports || visitData.dispenserReports.length === 0) {
@@ -220,14 +219,6 @@ export default function SanitationReportPage() {
     
             return { ...prevVisitData, dispenserReports: updatedReports };
         });
-    };
-
-    const toggleSuggestions = (dispenserId: string, itemIndex: number) => {
-        const key = `${dispenserId}-${itemIndex}`;
-        setShowSuggestionsMap(prev => ({
-            ...prev,
-            [key]: !prev[key]
-        }));
     };
     
     const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
@@ -357,8 +348,8 @@ export default function SanitationReportPage() {
                                 <CardContent>
                                     <div className="space-y-4">
                                         {report.checklist?.map((item, itemIndex) => (
-                                            <div key={itemIndex} className="flex flex-col sm:flex-row items-start gap-4 p-3 rounded-md border bg-background">
-                                                <div className="flex items-center gap-3 flex-1">
+                                            <div key={itemIndex} className="flex flex-col gap-3 p-3 rounded-md border bg-background">
+                                                <div className="flex items-center gap-3">
                                                     {!isFinalized && (
                                                         <Checkbox 
                                                             id={`check-${dispenserIndex}-${itemIndex}`} 
@@ -366,62 +357,43 @@ export default function SanitationReportPage() {
                                                             onCheckedChange={(checked) => handleChecklistChange(report.dispenserId, itemIndex, 'checked', !!checked)}
                                                         />
                                                     )}
-                                                    <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm">{item.item}</Label>
+                                                    <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm flex-1">{item.item}</Label>
+                                                    {isFinalized && item.checked && <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />}
                                                 </div>
                                                 {isFinalized ? (
-                                                    item.checked ? <CheckCircle className="h-5 w-5 text-green-500" /> : (
-                                                        <div className="text-right">
-                                                            <Badge variant="destructive" className="mb-1">Failed</Badge>
+                                                    !item.checked && (
+                                                        <div className="pl-7">
+                                                            <Badge variant="destructive" className="mb-1 text-[10px]">Issue Observed</Badge>
                                                             {item.remarks && <p className="text-xs text-muted-foreground italic">"{item.remarks}"</p>}
                                                         </div>
                                                     )
                                                 ) : (
                                                     !item.checked && (
-                                                        <div className="w-full sm:w-72 space-y-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <Input 
-                                                                    placeholder="Remarks..." 
-                                                                    className="h-9 text-sm flex-1"
-                                                                    value={item.remarks || ''}
-                                                                    onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
-                                                                />
-                                                                <Button 
-                                                                    type="button" 
-                                                                    variant="ghost" 
-                                                                    size="icon" 
-                                                                    className="h-9 w-9 shrink-0 text-primary"
-                                                                    onClick={() => toggleSuggestions(report.dispenserId, itemIndex)}
-                                                                >
-                                                                    <Lightbulb className="h-4 w-4" />
-                                                                </Button>
+                                                        <div className="pl-7 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                            <Input 
+                                                                placeholder="Remarks..." 
+                                                                className="h-9 text-sm w-full bg-muted/30"
+                                                                value={item.remarks || ''}
+                                                                onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
+                                                            />
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {QUICK_REMARKS.map((suggestion) => (
+                                                                    <Button 
+                                                                        key={suggestion} 
+                                                                        type="button"
+                                                                        variant="secondary" 
+                                                                        size="sm" 
+                                                                        className="h-auto py-1 px-2 text-[10px] text-muted-foreground hover:text-primary transition-colors bg-muted/50 border-0"
+                                                                        onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
+                                                                    >
+                                                                        {suggestion}
+                                                                    </Button>
+                                                                ))}
                                                             </div>
-                                                            
-                                                            {showSuggestionsMap[`${report.dispenserId}-${itemIndex}`] && (
-                                                                <div className="space-y-1.5 p-2 bg-muted/50 rounded-md animate-in fade-in slide-in-from-top-1 duration-200">
-                                                                    <p className="text-[10px] text-muted-foreground font-semibold">Choose a quick observation:</p>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {QUICK_REMARKS.map((suggestion) => (
-                                                                            <Button 
-                                                                                key={suggestion} 
-                                                                                type="button"
-                                                                                variant="outline" 
-                                                                                size="sm" 
-                                                                                className="h-7 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary border-dashed"
-                                                                                onClick={() => {
-                                                                                    handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion);
-                                                                                    toggleSuggestions(report.dispenserId, itemIndex);
-                                                                                }}
-                                                                            >
-                                                                                {suggestion}
-                                                                            </Button>
-                                                                        ))}
-                                                                    </div>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     )
                                                 )}
-                                                {!isFinalized && item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block self-center" />}
+                                                {!isFinalized && item.checked && <div className="pl-7"><CheckCircle className="h-5 w-5 text-green-500" /></div>}
                                             </div>
                                         ))}
                                     </div>
