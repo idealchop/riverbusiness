@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { AppUser, SanitationVisit } from '@/lib/types';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle, Trash2, Camera, XCircle } from 'lucide-react';
@@ -55,7 +55,6 @@ const defaultChecklist = [
     { item: 'Verify that hot and cold water are at appropriate temperatures (if applicable).', checked: false, remarks: '' },
     { item: 'Inspect and note the status of the water filter (if applicable).', checked: false, remarks: '' },
 ];
-
 
 interface CreateSanitationDialogProps {
     isOpen: boolean;
@@ -159,16 +158,15 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
                 visitId = newVisitRef.id;
             }
 
-            // --- LINK EXPIRATION FIX ---
-            // We explicitly refresh the link timestamp every time it's shared or saved.
-            // This ensures expiration is based on generation time, not the visit's schedule.
+            // --- LINK EXPIRATION RENEWAL ---
+            // Refresh the createdAt timestamp to restart the 7-day validity window
             let shareableLink = visitToEdit?.shareableLink;
             let linkId = shareableLink?.split('/').pop();
 
             const publicLinkData = { 
                 userId: user.id, 
                 visitId: visitId!, 
-                createdAt: serverTimestamp() // This restarts the 7-day window
+                createdAt: serverTimestamp() 
             };
 
             if (!shareableLink || !linkId) {
@@ -237,7 +235,10 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
         <AlertDialog>
             <Dialog open={isOpen} onOpenChange={onOpenChange}>
                 <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader><DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle></DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle>{visitToEdit ? 'Edit' : 'Schedule'} Sanitation Visit</DialogTitle>
+                        <DialogDescription>Configure the schedule and dispensers for this visit.</DialogDescription>
+                    </DialogHeader>
                     <form onSubmit={sanitationVisitForm.handleSubmit(handleSanitationVisitSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { useAuth, useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import type { SanitationVisit, AppUser, DispenserReport, SanitationChecklistItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { format, addDays, isAfter } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Signature, CheckCircle, Save, Droplet, Eye } from 'lucide-react';
+import { AlertTriangle, Signature, CheckCircle, Save, Droplet, Eye, Camera, XCircle } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,7 +59,7 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
 
     const draw = (event: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing || disabled) return;
-        event.preventDefault(); // Prevents page scrolling on touch devices
+        event.preventDefault(); 
         const context = canvasRef.current?.getContext('2d');
         if (!context) return;
         const pos = getPosition(event.nativeEvent);
@@ -90,7 +90,6 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
         }
     };
 
-
     return (
         <div className="space-y-2">
             <Label>{label}</Label>
@@ -116,7 +115,6 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
         </div>
     );
 };
-
 
 export default function SanitationReportPage() {
     const { visitId: linkId } = useParams();
@@ -168,12 +166,14 @@ export default function SanitationReportPage() {
                         createdDate = new Date((createdAt as any).seconds * 1000);
                     } else if (typeof createdAt === 'string') {
                         createdDate = new Date(createdAt);
+                    } else if (createdAt instanceof Date) {
+                        createdDate = createdAt;
                     }
 
                     if (createdDate && !isNaN(createdDate.getTime())) {
                         const expiryDate = addDays(createdDate, 7);
                         if (isAfter(new Date(), expiryDate)) {
-                            throw new Error("This report link has expired. For security, shareable links are valid for 7 days from generation.");
+                            throw new Error("This report link has expired. Shareable links are valid for 7 days from generation.");
                         }
                     }
                 }
@@ -232,7 +232,6 @@ export default function SanitationReportPage() {
             toast({ title: "Client Signature Captured!" });
         }
     };
-    
     
     const handleSubmitReport = async () => {
         if (!firestore || !linkId || !visitData) return;
@@ -311,32 +310,7 @@ export default function SanitationReportPage() {
          )
     }
 
-    if (visitData?.status === 'Completed') {
-        return (
-            <main className="min-h-screen w-full flex flex-col items-center justify-center bg-muted p-4 sm:p-8">
-                <header className="mb-8 flex flex-col items-center gap-4">
-                    <Logo className="h-16 w-16" />
-                    <h1 className="text-3xl font-bold">River Philippines</h1>
-                </header>
-                <Card className="w-full max-w-md">
-                    <CardHeader className="text-center">
-                        <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                        <CardTitle>Report Finalized</CardTitle>
-                        <CardDescription>
-                            The sanitation visit report for {clientData?.businessName} has been successfully submitted and finalized.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center space-y-2">
-                        <p className="text-sm text-muted-foreground">Officer: {visitData.assignedTo}</p>
-                        <p className="text-sm text-muted-foreground">Date: {visitData.scheduledDate ? format(new Date(visitData.scheduledDate), 'PPP') : ''}</p>
-                    </CardContent>
-                    <CardFooter className="justify-center pt-4 border-t">
-                        <p className="text-xs text-muted-foreground italic">You can safely close this window now.</p>
-                    </CardFooter>
-                </Card>
-            </main>
-        );
-    }
+    const isFinalized = visitData?.status === 'Completed';
 
     return (
         <main className="min-h-screen w-full bg-muted p-4 sm:p-8">
@@ -344,11 +318,12 @@ export default function SanitationReportPage() {
                 <header className="flex flex-col sm:flex-row items-center gap-4">
                     <Logo className="h-12 w-12 sm:h-16 sm:w-16" />
                     <div className="text-center sm:text-left">
-                        <h1 className="text-2xl sm:text-3xl font-bold">Sanitation Visit Report</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold">{isFinalized ? 'Finalized Report' : 'Sanitation Visit Report'}</h1>
                         <p className="text-muted-foreground">
                             {clientData?.businessName} - {visitData?.scheduledDate ? format(new Date(visitData.scheduledDate), 'PP') : ''}
                         </p>
                     </div>
+                    {isFinalized && <Badge className="ml-auto bg-green-100 text-green-800 border-green-200">Completed</Badge>}
                 </header>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -357,7 +332,7 @@ export default function SanitationReportPage() {
                             <TabsTrigger key={report.dispenserId} value={report.dispenserId} className="flex items-center gap-2">
                                 <Droplet className="h-4 w-4"/>
                                 {report.dispenserName}
-                                {report.dispenserCode && <Badge variant="secondary">{report.dispenserCode}</Badge>}
+                                {report.dispenserCode && <Badge variant="secondary" className="ml-1 text-[10px] h-4">{report.dispenserCode}</Badge>}
                             </TabsTrigger>
                         ))}
                     </TabsList>
@@ -369,45 +344,56 @@ export default function SanitationReportPage() {
                                         {report.dispenserName}
                                         {report.dispenserCode && <Badge variant="outline">{report.dispenserCode}</Badge>}
                                     </CardTitle>
-                                    <CardDescription>Sanitation Checklist. Please complete all items. Any unchecked items require remarks.</CardDescription>
+                                    <CardDescription>{isFinalized ? 'Summary of sanitation checks performed.' : 'Sanitation Checklist. Please complete all items.'}</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
                                         {report.checklist?.map((item, itemIndex) => (
                                             <div key={itemIndex} className="flex flex-col sm:flex-row items-start gap-4 p-3 rounded-md border bg-background">
                                                 <div className="flex items-center gap-3 flex-1">
-                                                    <Checkbox 
-                                                        id={`check-${dispenserIndex}-${itemIndex}`} 
-                                                        checked={item.checked} 
-                                                        onCheckedChange={(checked) => handleChecklistChange(report.dispenserId, itemIndex, 'checked', !!checked)}
-                                                    />
+                                                    {!isFinalized && (
+                                                        <Checkbox 
+                                                            id={`check-${dispenserIndex}-${itemIndex}`} 
+                                                            checked={item.checked} 
+                                                            onCheckedChange={(checked) => handleChecklistChange(report.dispenserId, itemIndex, 'checked', !!checked)}
+                                                        />
+                                                    )}
                                                     <Label htmlFor={`check-${dispenserIndex}-${itemIndex}`} className="text-sm">{item.item}</Label>
                                                 </div>
-                                                {!item.checked && (
-                                                     <div className="w-full sm:w-72 space-y-2">
-                                                        <Input 
-                                                            placeholder="Remarks..." 
-                                                            className="h-9 text-sm"
-                                                            value={item.remarks}
-                                                            onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
-                                                        />
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {QUICK_REMARKS.map((suggestion) => (
-                                                                <Button 
-                                                                    key={suggestion} 
-                                                                    type="button"
-                                                                    variant="outline" 
-                                                                    size="sm" 
-                                                                    className="h-6 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary"
-                                                                    onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
-                                                                >
-                                                                    {suggestion}
-                                                                </Button>
-                                                            ))}
+                                                {isFinalized ? (
+                                                    item.checked ? <CheckCircle className="h-5 w-5 text-green-500" /> : (
+                                                        <div className="text-right">
+                                                            <Badge variant="destructive" className="mb-1">Failed</Badge>
+                                                            {item.remarks && <p className="text-xs text-muted-foreground italic">"{item.remarks}"</p>}
                                                         </div>
-                                                     </div>
+                                                    )
+                                                ) : (
+                                                    !item.checked && (
+                                                        <div className="w-full sm:w-72 space-y-2">
+                                                            <Input 
+                                                                placeholder="Remarks required if failed..." 
+                                                                className="h-9 text-sm"
+                                                                value={item.remarks || ''}
+                                                                onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
+                                                            />
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {QUICK_REMARKS.map((suggestion) => (
+                                                                    <Button 
+                                                                        key={suggestion} 
+                                                                        type="button"
+                                                                        variant="outline" 
+                                                                        size="sm" 
+                                                                        className="h-7 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary border-dashed"
+                                                                        onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
+                                                                    >
+                                                                        {suggestion}
+                                                                    </Button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )
                                                 )}
-                                                {item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block self-center" />}
+                                                {!isFinalized && item.checked && <CheckCircle className="h-5 w-5 text-green-500 hidden sm:block self-center" />}
                                             </div>
                                         ))}
                                     </div>
@@ -417,23 +403,48 @@ export default function SanitationReportPage() {
                     ))}
                 </Tabs>
 
+                {visitData?.proofUrls && visitData.proofUrls.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Camera className="h-5 w-5 text-primary" />
+                                Proof of Service
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                {visitData.proofUrls.map((url, idx) => (
+                                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer group" onClick={() => setSelectedImg(url)}>
+                                        <Image src={url} alt={`Proof ${idx + 1}`} fill className="object-cover" />
+                                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                            <Eye className="text-white h-6 w-6" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle>
-                        <CardDescription>Please provide digital signatures to confirm the completion and accuracy of this report.</CardDescription>
+                        <CardDescription>Digitally signed by the Quality Officer and Client Representative.</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                          <div className="space-y-4">
                             <Label className="font-semibold">Quality Officer</Label>
                             {visitData?.officerSignature ? (
                                 <div className="space-y-2">
-                                    <Image src={visitData.officerSignature} alt="Officer Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                    <div className="relative aspect-[4/1.5] w-full">
+                                        <Image src={visitData.officerSignature} alt="Officer Signature" fill className="rounded-md border bg-white object-contain" />
+                                    </div>
                                     <div className="flex justify-between items-center pt-1">
                                         <div>
                                             <p className="font-semibold text-sm">{visitData.assignedTo}</p>
                                             <p className="text-xs text-muted-foreground">{visitData.officerSignatureDate ? format(new Date(visitData.officerSignatureDate), 'PP') : ''}</p>
                                         </div>
-                                        <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo Signature</Button>
+                                        {!isFinalized && <Button size="sm" variant="outline" onClick={() => handleSaveSignature('officer', '')}>Redo Signature</Button>}
                                     </div>
                                 </div>
                             ) : (
@@ -444,13 +455,15 @@ export default function SanitationReportPage() {
                              <Label className="font-semibold">Client Representative</Label>
                             {visitData?.clientSignature ? (
                                 <div className="space-y-2">
-                                    <Image src={visitData.clientSignature} alt="Client Signature" width={400} height={150} className="rounded-md border bg-white" />
+                                    <div className="relative aspect-[4/1.5] w-full">
+                                        <Image src={visitData.clientSignature} alt="Client Signature" fill className="rounded-md border bg-white object-contain" />
+                                    </div>
                                     <div className="flex justify-between items-center pt-1">
                                         <div>
                                             <p className="font-semibold text-sm">{visitData.clientRepName}</p>
                                             <p className="text-xs text-muted-foreground">{visitData.clientSignatureDate ? format(new Date(visitData.clientSignatureDate), 'PP') : ''}</p>
                                         </div>
-                                        <Button size="sm" variant="outline" onClick={() => setVisitData(prev => ({...prev, clientSignature: '', clientRepName: '', clientSignatureDate: ''}))}>Redo Signature</Button>
+                                        {!isFinalized && <Button size="sm" variant="outline" onClick={() => setVisitData(prev => ({...prev, clientSignature: '', clientRepName: '', clientSignatureDate: ''}))}>Redo Signature</Button>}
                                     </div>
                                 </div>
                             ) : (
@@ -466,45 +479,46 @@ export default function SanitationReportPage() {
                     </CardContent>
                 </Card>
                 
-                 <div className="flex justify-end pt-4">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="inline-block">
-                                    <Button onClick={handleSubmitReport} disabled={isSubmitting || !isReportFullyComplete}>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
-                                    </Button>
-                                </div>
-                            </TooltipTrigger>
-                            {!isReportFullyComplete && (
-                                <TooltipContent>
-                                    <div className="space-y-1">
-                                        <p className="font-medium">Cannot submit yet. Missing items:</p>
-                                        <ul className="list-disc pl-4 text-xs text-muted-foreground">
-                                            {!isChecklistComplete && <li>All checklist items must be checked or have remarks.</li>}
-                                            {!(visitData?.officerSignature) && <li>Officer signature.</li>}
-                                            {!(visitData?.clientSignature) && <li>Client signature.</li>}
-                                            {!(visitData?.clientRepName && visitData.clientRepName.trim() !== '') && <li>Client representative's name.</li>}
-                                        </ul>
+                 {!isFinalized && (
+                    <div className="flex justify-end pt-4">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="inline-block">
+                                        <Button onClick={handleSubmitReport} disabled={isSubmitting || !isReportFullyComplete}>
+                                            <Save className="mr-2 h-4 w-4" />
+                                            {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
+                                        </Button>
                                     </div>
-                                </TooltipContent>
-                            )}
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
+                                </TooltipTrigger>
+                                {!isReportFullyComplete && (
+                                    <TooltipContent>
+                                        <div className="space-y-1">
+                                            <p className="font-medium">Cannot submit yet. Missing items:</p>
+                                            <ul className="list-disc pl-4 text-xs text-muted-foreground">
+                                                {!isChecklistComplete && <li>All failures must have remarks.</li>}
+                                                {!(visitData?.officerSignature) && <li>Officer signature.</li>}
+                                                {!(visitData?.clientSignature) && <li>Client signature.</li>}
+                                                {!(visitData?.clientRepName) && <li>Representative's name.</li>}
+                                            </ul>
+                                        </div>
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+                 )}
             </div>
 
-            {/* Local Image Zoom Dialog */}
             <Dialog open={!!selectedImg} onOpenChange={() => setSelectedImg(null)}>
                 <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0">
                     <DialogHeader className="sr-only">
-                        <DialogTitle>Image Preview</DialogTitle>
-                        <DialogDescription>A larger view of the provided signature or proof.</DialogDescription>
+                        <DialogTitle>Proof Image Preview</DialogTitle>
+                        <DialogDescription>A detailed view of the provided proof of service.</DialogDescription>
                     </DialogHeader>
                     {selectedImg && (
                         <div className="relative aspect-[4/3] w-full bg-black flex items-center justify-center">
-                            <Image src={selectedImg} alt="Image Preview Zoomed" fill className="object-contain" />
+                            <Image src={selectedImg} alt="Proof Expanded" fill className="object-contain" />
                         </div>
                     )}
                 </DialogContent>
