@@ -371,7 +371,7 @@ export default function SanitationReportPage() {
                                                     )
                                                 ) : (
                                                     !item.checked && (
-                                                        <div className="pl-7 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                        <div className="pl-7 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                                                             <div className="space-y-1">
                                                                 <Label className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Findings & Observations</Label>
                                                                 <Input 
@@ -381,8 +381,11 @@ export default function SanitationReportPage() {
                                                                     onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
                                                                 />
                                                             </div>
-                                                            <div className="space-y-1">
-                                                                <Label className="text-[9px] text-muted-foreground">Quick Observations:</Label>
+                                                            <div className="space-y-1.5">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Lightbulb className="h-3 w-3 text-primary" />
+                                                                    <span className="text-[10px] text-muted-foreground font-medium uppercase">Quick Observations:</span>
+                                                                </div>
                                                                 <div className="flex flex-wrap gap-1.5">
                                                                     {QUICK_REMARKS.map((suggestion) => (
                                                                         <Button 
@@ -390,7 +393,7 @@ export default function SanitationReportPage() {
                                                                             type="button"
                                                                             variant="secondary" 
                                                                             size="sm" 
-                                                                            className="h-auto py-1 px-2 text-[10px] text-muted-foreground hover:text-primary transition-colors bg-muted/50 border-0"
+                                                                            className="h-auto py-1.5 px-2 text-[10px] text-muted-foreground hover:text-primary transition-colors bg-muted/50 border-0 text-left justify-start"
                                                                             onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
                                                                         >
                                                                             {suggestion}
