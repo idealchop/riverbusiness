@@ -15,7 +15,7 @@ import { format, addDays, isAfter } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Signature, CheckCircle, Save, Droplet, Eye, Camera, XCircle } from 'lucide-react';
+import { AlertTriangle, Signature, CheckCircle, Save, Droplet, Eye, Camera, XCircle, Lightbulb } from 'lucide-react';
 import { Logo } from '@/components/icons';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -136,6 +136,7 @@ export default function SanitationReportPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState<string>('');
     const [selectedImg, setSelectedImg] = useState<string | null>(null);
+    const [showSuggestionsMap, setShowSuggestionsMap] = useState<Record<string, boolean>>({});
     
     const isChecklistComplete = useMemo(() => {
         if (!visitData?.dispenserReports || visitData.dispenserReports.length === 0) {
@@ -219,6 +220,14 @@ export default function SanitationReportPage() {
     
             return { ...prevVisitData, dispenserReports: updatedReports };
         });
+    };
+
+    const toggleSuggestions = (dispenserId: string, itemIndex: number) => {
+        const key = `${dispenserId}-${itemIndex}`;
+        setShowSuggestionsMap(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
     };
     
     const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
@@ -369,29 +378,46 @@ export default function SanitationReportPage() {
                                                 ) : (
                                                     !item.checked && (
                                                         <div className="w-full sm:w-72 space-y-2">
-                                                            <Input 
-                                                                placeholder="Remarks required if failed..." 
-                                                                className="h-9 text-sm"
-                                                                value={item.remarks || ''}
-                                                                onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
-                                                            />
-                                                            <div className="space-y-1.5">
-                                                                <p className="text-[10px] text-muted-foreground font-semibold">Choose a quick observation:</p>
-                                                                <div className="flex flex-wrap gap-1">
-                                                                    {QUICK_REMARKS.map((suggestion) => (
-                                                                        <Button 
-                                                                            key={suggestion} 
-                                                                            type="button"
-                                                                            variant="outline" 
-                                                                            size="sm" 
-                                                                            className="h-7 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary border-dashed"
-                                                                            onClick={() => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion)}
-                                                                        >
-                                                                            {suggestion}
-                                                                        </Button>
-                                                                    ))}
-                                                                </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Input 
+                                                                    placeholder="Remarks..." 
+                                                                    className="h-9 text-sm flex-1"
+                                                                    value={item.remarks || ''}
+                                                                    onChange={(e) => handleChecklistChange(report.dispenserId, itemIndex, 'remarks', e.target.value)}
+                                                                />
+                                                                <Button 
+                                                                    type="button" 
+                                                                    variant="ghost" 
+                                                                    size="icon" 
+                                                                    className="h-9 w-9 shrink-0 text-primary"
+                                                                    onClick={() => toggleSuggestions(report.dispenserId, itemIndex)}
+                                                                >
+                                                                    <Lightbulb className="h-4 w-4" />
+                                                                </Button>
                                                             </div>
+                                                            
+                                                            {showSuggestionsMap[`${report.dispenserId}-${itemIndex}`] && (
+                                                                <div className="space-y-1.5 p-2 bg-muted/50 rounded-md animate-in fade-in slide-in-from-top-1 duration-200">
+                                                                    <p className="text-[10px] text-muted-foreground font-semibold">Choose a quick observation:</p>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {QUICK_REMARKS.map((suggestion) => (
+                                                                            <Button 
+                                                                                key={suggestion} 
+                                                                                type="button"
+                                                                                variant="outline" 
+                                                                                size="sm" 
+                                                                                className="h-7 px-2 text-[10px] text-muted-foreground hover:bg-primary/5 hover:text-primary border-dashed"
+                                                                                onClick={() => {
+                                                                                    handleChecklistChange(report.dispenserId, itemIndex, 'remarks', suggestion);
+                                                                                    toggleSuggestions(report.dispenserId, itemIndex);
+                                                                                }}
+                                                                            >
+                                                                                {suggestion}
+                                                                            </Button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )
                                                 )}

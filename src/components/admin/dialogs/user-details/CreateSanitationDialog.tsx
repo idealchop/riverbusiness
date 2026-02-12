@@ -17,11 +17,10 @@ import { Separator } from '@/components/ui/separator';
 import { AppUser, SanitationVisit } from '@/lib/types';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, serverTimestamp, Timestamp, DocumentReference } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle, Trash2, Camera, XCircle } from 'lucide-react';
-import { DocumentReference } from 'firebase/firestore';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Progress } from '@/components/ui/progress';
 import Image from 'next/image';
@@ -165,7 +164,7 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
             const publicLinkData = { 
                 userId: user.id, 
                 visitId: visitId!, 
-                createdAt: serverTimestamp() 
+                createdAt: serverTimestamp() // EXPLICITLY RESET EXPIRATION HERE
             };
 
             if (!shareableLink || !linkId) {
