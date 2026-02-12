@@ -114,7 +114,6 @@ const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: s
 export default function SanitationReportPage() {
     const { visitId: linkId } = useParams();
     const firestore = useFirestore();
-    const auth = useAuth();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -152,11 +151,14 @@ export default function SanitationReportPage() {
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                const createdDate = (createdAt instanceof Timestamp) ? createdAt.toDate() : new Date(createdAt);
-                const expiryDate = addDays(createdDate, 7);
-                
-                if (isAfter(new Date(), expiryDate)) {
-                    throw new Error("This report link has expired. It was valid for 7 days.");
+                // Expiration Check: Use createdAt if available, otherwise assume it's a legacy link and valid for now
+                if (createdAt) {
+                    const createdDate = (createdAt instanceof Timestamp) ? createdAt.toDate() : new Date(createdAt);
+                    const expiryDate = addDays(createdDate, 7);
+                    
+                    if (isAfter(new Date(), expiryDate)) {
+                        throw new Error("This report link has expired. It was valid for 7 days.");
+                    }
                 }
                 
                 const visitRef = doc(firestore, 'users', userId, 'sanitationVisits', visitId);

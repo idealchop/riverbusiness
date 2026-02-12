@@ -152,47 +152,42 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
 
             const finalProofUrls = [...existingProofs, ...uploadedUrls];
 
-            if (isUpdate && visitToEdit) {
-                const visitRef = doc(userDocRef, 'sanitationVisits', visitToEdit.id);
-                
-                let currentShareableLink = visitToEdit.shareableLink;
-                if (!currentShareableLink) {
-                    const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
-                    currentShareableLink = `${window.location.origin}/sanitation-report/${linkRef.id}`;
-                    batch.set(linkRef, { userId: user.id, visitId: visitToEdit.id, createdAt: serverTimestamp() });
-                }
-
-                const visitData = { 
-                    ...values, 
-                    scheduledDate: values.scheduledDate.toISOString(),
-                    proofUrls: finalProofUrls,
-                    shareableLink: currentShareableLink
-                };
-                
-                batch.update(visitRef, visitData);
-                await batch.commit();
-                toast({ title: "Sanitation Visit Updated" });
-            } else {
+            let visitId = visitToEdit?.id;
+            if (!isUpdate) {
                 const visitsCol = collection(userDocRef, 'sanitationVisits');
                 const newVisitRef = doc(visitsCol);
-                const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
-                const shareLink = `${window.location.origin}/sanitation-report/${linkRef.id}`;
-                
-                const visitData = { 
-                    ...values, 
-                    id: newVisitRef.id, 
-                    userId: user.id, 
-                    scheduledDate: values.scheduledDate.toISOString(), 
-                    shareableLink: shareLink,
-                    proofUrls: finalProofUrls
-                };
-
-                batch.set(newVisitRef, visitData);
-                batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id, createdAt: serverTimestamp() });
-                await batch.commit();
-                
-                toast({ title: "Sanitation Visit Scheduled" });
+                visitId = newVisitRef.id;
             }
+
+            // Always update or create the public link entry with a fresh timestamp
+            let shareableLink = visitToEdit?.shareableLink;
+            let linkId = shareableLink?.split('/').pop();
+
+            if (!shareableLink || !linkId) {
+                const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
+                linkId = linkRef.id;
+                shareableLink = `${window.location.origin}/sanitation-report/${linkId}`;
+                batch.set(linkRef, { userId: user.id, visitId: visitId, createdAt: serverTimestamp() });
+            } else {
+                // Link exists, update the timestamp to "renew" its 7-day window
+                const linkRef = doc(firestore, 'publicSanitationLinks', linkId);
+                batch.set(linkRef, { userId: user.id, visitId: visitId!, createdAt: serverTimestamp() }, { merge: true });
+            }
+
+            const visitData = { 
+                ...values, 
+                id: visitId,
+                userId: user.id,
+                scheduledDate: values.scheduledDate.toISOString(),
+                proofUrls: finalProofUrls,
+                shareableLink: shareableLink
+            };
+
+            const visitRef = doc(userDocRef, 'sanitationVisits', visitId!);
+            batch.set(visitRef, visitData, { merge: true });
+            
+            await batch.commit();
+            toast({ title: isUpdate ? "Sanitation Visit Updated" : "Sanitation Visit Scheduled" });
             
             onOpenChange(false);
         } catch (error) {
