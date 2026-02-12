@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -410,7 +409,6 @@ export const onpaymentremindercreate = onDocumentCreated({
         }
     }
 
-    // CRITICAL: Fetch from branchDeliveries for Parent accounts
     const collectionName = user.accountType === 'Parent' ? 'branchDeliveries' : 'deliveries';
     const deliveriesSnap = await db.collection('users').doc(userId).collection(collectionName)
         .where('date', '>=', cycleStart.toISOString())
@@ -467,7 +465,6 @@ export const onpaymentremindercreate = onDocumentCreated({
 
 /**
  * Manual Receipt Trigger
- * Triggered when admin creates a request in the receiptRequests subcollection.
  */
 export const onmanualreceiptcreate = onDocumentCreated({
     document: "users/{userId}/receiptRequests/{requestId}",
@@ -484,7 +481,6 @@ export const onmanualreceiptcreate = onDocumentCreated({
     const userData = userDoc.data();
     if (!userData) return;
 
-    // Prioritize custom recipient email if provided
     const targetEmail = (requestData.recipientEmail && requestData.recipientEmail.includes('@')) 
         ? requestData.recipientEmail 
         : userData.email;
@@ -495,7 +491,6 @@ export const onmanualreceiptcreate = onDocumentCreated({
     const invoiceData = invoiceDoc.data();
     if (!invoiceData) return;
 
-    // Fetch deliveries to calculate containers
     let totalContainers = 0;
     try {
         const invoiceDate = toSafeDate(invoiceData.date);
@@ -541,7 +536,6 @@ export const onmanualreceiptcreate = onDocumentCreated({
             }]
         });
 
-        // Mark request as completed
         await event.data.ref.update({ status: 'completed' });
         logger.info(`Manual receipt dispatched to ${targetEmail}. BCC: ${bccList}`);
 
@@ -645,7 +639,6 @@ export const onpaymentupdate = onDocumentUpdated({
     
     if (before.status !== 'Paid' && after.status === 'Paid') {
         await createNotification(userId, { type: 'payment', title: 'Payment Confirmed', description: `Payment for invoice ${after.id} confirmed.`, data: { paymentId: after.id } });
-        // Automated receipt email removed. Handled manually via receiptRequests.
     }
 });
 
@@ -782,12 +775,38 @@ export const onsanitationupdate = onDocumentUpdated({
     const before = event.data.before.data() as SanitationVisit;
     const after = event.data.after.data() as SanitationVisit;
     const userId = event.params.userId;
+    const visitId = event.params.visitId;
+    
     if (before.status !== 'Completed' && after.status === 'Completed') {
         const db = getFirestore();
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
+        
+        const dateStr = format(toSafeDate(after.scheduledDate), 'PPP');
+        
+        // 1. Create In-App Notification for Client
+        await createNotification(userId, {
+            type: 'sanitation',
+            title: 'Sanitation Visit Completed',
+            description: `Your sanitation report for ${dateStr} is complete. You can view the results now.`,
+            data: { visitId: visitId }
+        });
+
+        // 2. Create In-App Notification for Admin
+        const adminEmail = 'admin@riverph.com';
+        const adminsSnap = await db.collection('users').where('email', '==', adminEmail).limit(1).get();
+        if (!adminsSnap.empty) {
+            const adminId = adminsSnap.docs[0].id;
+            await createNotification(adminId, {
+                type: 'sanitation',
+                title: `Visit for ${userData?.businessName}: Completed`,
+                description: `The sanitation visit on ${dateStr} is now completed.`,
+                data: { userId: userId, visitId: visitId }
+            });
+        }
+
+        // 3. Send Email Notification
         if (userData?.email) {
-            const dateStr = format(toSafeDate(after.scheduledDate), 'PPP');
             const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr);
             const ccList = getCCList(userData.clientId);
             const bccList = getBCCList();

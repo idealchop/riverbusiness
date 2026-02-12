@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -23,28 +22,28 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if true;
       
-      allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys()
+      allow update: if isOwner(userId) || isAdmin() || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys()
         .hasAny([
             'name', 'businessName', 'businessEmail', 'address', 'contactNumber', 'photoURL',
             'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
             'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
             'accountStatus', 'lastLogin',
             'supportDisplayName', 'supportDescription'
-        ]);
+        ]));
 
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) || isAdmin();
       
       allow create: if request.auth != null && 
                       get(/databases/$(database)/documents/unclaimedProfiles/$(request.resource.data.clientId)) != null &&
                       !exists(/databases/$(database)/documents/users/$(request.auth.uid));
 
-      allow list, read: if isOwner(userId) || 
+      allow list, read: if isOwner(userId) || isAdmin() || 
                        (request.auth != null && resource.data.parentId == request.auth.uid) ||
                        (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid);
     }
     
     match /users/{userId}/transactions/{transactionId} {
-      allow read, list: if isOwner(userId);
+      allow read, list: if isOwner(userId) || isAdmin();
     }
     
     match /users/{userId}/chatMessages/{messageId} {
@@ -86,7 +85,7 @@ service cloud.firestore {
     match /users/{userId}/sanitationVisits/{visitId} {
       allow write, delete: if isOwner(userId) || isAdmin();
       allow read: if true;
-      allow update: if request.auth == null && request.resource.data.diff(resource.data).affectedKeys()
+      allow update: if (request.auth == null || isAdmin()) && request.resource.data.diff(resource.data).affectedKeys()
         .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature', 'clientRepName', 'officerSignatureDate', 'clientSignatureDate']);
     }
 

@@ -17,12 +17,11 @@ import { Separator } from '@/components/ui/separator';
 import { AppUser, SanitationVisit } from '@/lib/types';
 import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, PlusCircle, MinusCircle, Trash2, Camera, XCircle } from 'lucide-react';
 import { DocumentReference } from 'firebase/firestore';
-import { createClientNotification } from '@/lib/notifications';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { Progress } from '@/components/ui/progress';
 import Image from 'next/image';
@@ -138,10 +137,11 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
         setIsSubmitting(true);
         const isUpdate = !!visitToEdit;
         const adminId = auth.currentUser.uid;
-        const scheduledDateFormatted = format(values.scheduledDate, 'PP');
 
         try {
+            const batch = writeBatch(firestore);
             let uploadedUrls: string[] = [];
+            
             if (proofFiles.length > 0) {
                 const uploadPromises = proofFiles.map((file, idx) => {
                     const path = `admin_uploads/${adminId}/sanitation_proofs/${user.id}/${Date.now()}-${idx}-${file.name}`;
@@ -154,48 +154,44 @@ export function CreateSanitationDialog({ isOpen, onOpenChange, userDocRef, user,
 
             if (isUpdate && visitToEdit) {
                 const visitRef = doc(userDocRef, 'sanitationVisits', visitToEdit.id);
+                
+                let currentShareableLink = visitToEdit.shareableLink;
+                if (!currentShareableLink) {
+                    const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
+                    currentShareableLink = `${window.location.origin}/sanitation-report/${linkRef.id}`;
+                    batch.set(linkRef, { userId: user.id, visitId: visitToEdit.id, createdAt: serverTimestamp() });
+                }
+
                 const visitData = { 
                     ...values, 
                     scheduledDate: values.scheduledDate.toISOString(),
-                    proofUrls: finalProofUrls
+                    proofUrls: finalProofUrls,
+                    shareableLink: currentShareableLink
                 };
-                await updateDoc(visitRef, visitData);
+                
+                batch.update(visitRef, visitData);
+                await batch.commit();
                 toast({ title: "Sanitation Visit Updated" });
-
-                if (visitToEdit.status !== values.status) {
-                    await createClientNotification(firestore, user.id, {
-                        type: 'sanitation',
-                        title: `Sanitation Visit: ${values.status}`,
-                        description: `Your sanitation visit for ${scheduledDateFormatted} is now ${values.status}.`,
-                        data: { visitId: visitToEdit.id }
-                    });
-                }
             } else {
                 const visitsCol = collection(userDocRef, 'sanitationVisits');
                 const newVisitRef = doc(visitsCol);
                 const linkRef = doc(collection(firestore, 'publicSanitationLinks'));
+                const shareLink = `${window.location.origin}/sanitation-report/${linkRef.id}`;
+                
                 const visitData = { 
                     ...values, 
                     id: newVisitRef.id, 
                     userId: user.id, 
                     scheduledDate: values.scheduledDate.toISOString(), 
-                    shareableLink: `${window.location.origin}/sanitation-report/${linkRef.id}`,
+                    shareableLink: shareLink,
                     proofUrls: finalProofUrls
                 };
 
-                const batch = writeBatch(firestore);
                 batch.set(newVisitRef, visitData);
                 batch.set(linkRef, { userId: user.id, visitId: newVisitRef.id, createdAt: serverTimestamp() });
                 await batch.commit();
                 
                 toast({ title: "Sanitation Visit Scheduled" });
-                
-                await createClientNotification(firestore, user.id, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Scheduled',
-                    description: `A sanitation visit is scheduled for your office on ${scheduledDateFormatted}.`,
-                    data: { visitId: newVisitRef.id }
-                });
             }
             
             onOpenChange(false);

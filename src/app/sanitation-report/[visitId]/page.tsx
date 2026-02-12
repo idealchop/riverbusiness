@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
@@ -21,12 +20,8 @@ import { Logo } from '@/components/icons';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { createClientNotification } from '@/lib/notifications';
 
 // A simple signature pad component
 const SignaturePad = ({ onSave, label, disabled = false }: { onSave: (dataUrl: string) => void, label: string, disabled?: boolean }) => {
@@ -157,12 +152,9 @@ export default function SanitationReportPage() {
                 const linkData = linkSnap.data();
                 const { userId, visitId, createdAt } = linkData;
                 
-                // A more robust check for a Firestore Timestamp-like object
-                if (!createdAt || typeof createdAt.toDate !== 'function') {
-                    throw new Error("This report link is invalid or has expired (invalid creation date).");
-                }
-
-                const expiryDate = addDays(createdAt.toDate(), 7);
+                const createdDate = (createdAt instanceof Timestamp) ? createdAt.toDate() : new Date(createdAt);
+                const expiryDate = addDays(createdDate, 7);
+                
                 if (isAfter(new Date(), expiryDate)) {
                     throw new Error("This report link has expired. It was valid for 7 days.");
                 }
@@ -213,7 +205,7 @@ export default function SanitationReportPage() {
     
     const handleSaveSignature = (type: 'officer' | 'client', dataUrl: string) => {
         const signatureDate = new Date().toISOString();
-        if (type === 'officer' && visitData?.assignedTo) {
+        if (type === 'officer') {
             setVisitData(prev => ({...prev, officerSignature: dataUrl, officerSignatureDate: signatureDate }));
             toast({ title: "Officer Signature Captured!" });
         } else if (type === 'client') {
@@ -224,7 +216,7 @@ export default function SanitationReportPage() {
     
     
     const handleSubmitReport = async () => {
-        if (!firestore || !linkId || !visitData || !auth?.currentUser) return;
+        if (!firestore || !linkId || !visitData) return;
 
         if (!isReportFullyComplete) {
             toast({ variant: 'destructive', title: "Incomplete Information", description: "Please ensure all fields are complete." });
@@ -251,33 +243,8 @@ export default function SanitationReportPage() {
 
             await updateDoc(visitRef, updateData);
             
-            const adminId = auth.currentUser.uid;
-            if(visitData.scheduledDate) {
-                 const scheduledDate = new Date(visitData.scheduledDate).toLocaleDateString('en-US', {
-                    month: 'long', day: 'numeric', year: 'numeric'
-                 });
-
-                // User Notification
-                await createClientNotification(firestore, userId, {
-                    type: 'sanitation',
-                    title: 'Sanitation Visit Completed',
-                    description: `Your sanitation report for ${scheduledDate} is complete. You can view the results now.`,
-                    data: { visitId: visitId }
-                });
-                
-                // Admin Notification
-                if (clientData) {
-                    await createClientNotification(firestore, adminId, {
-                        type: 'sanitation',
-                        title: `Visit for ${clientData.businessName}: Completed`,
-                        description: `The sanitation visit on ${scheduledDate} is now completed.`,
-                        data: { userId: userId, visitId: visitId }
-                    });
-                }
-            }
-
-
-            toast({ title: "Report Submitted!", description: "The sanitation report has been successfully saved and notifications have been sent." });
+            toast({ title: "Report Submitted!", description: "The sanitation report has been successfully saved." });
+            setVisitData(prev => ({ ...prev, status: 'Completed' }));
         } catch (error) {
             console.error("Error submitting report:", error);
             toast({ variant: 'destructive', title: "Submission Failed", description: "There was an error saving the report." });
@@ -320,6 +287,33 @@ export default function SanitationReportPage() {
                 </Card>
             </main>
          )
+    }
+
+    if (visitData?.status === 'Completed') {
+        return (
+            <main className="min-h-screen w-full flex flex-col items-center justify-center bg-muted p-4 sm:p-8">
+                <header className="mb-8 flex flex-col items-center gap-4">
+                    <Logo className="h-16 w-16" />
+                    <h1 className="text-3xl font-bold">River Philippines</h1>
+                </header>
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                        <CardTitle>Report Finalized</CardTitle>
+                        <CardDescription>
+                            The sanitation visit report for {clientData?.businessName} has been successfully submitted and finalized.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-center space-y-2">
+                        <p className="text-sm text-muted-foreground">Officer: {visitData.assignedTo}</p>
+                        <p className="text-sm text-muted-foreground">Date: {visitData.scheduledDate ? format(new Date(visitData.scheduledDate), 'PPP') : ''}</p>
+                    </CardContent>
+                    <CardFooter className="justify-center pt-4 border-t">
+                        <p className="text-xs text-muted-foreground italic">You can safely close this window now.</p>
+                    </CardFooter>
+                </Card>
+            </main>
+        );
     }
 
     return (
@@ -438,7 +432,7 @@ export default function SanitationReportPage() {
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <div className="inline-block"> {/* Wrapper needed for disabled button tooltip */}
+                                <div className="inline-block">
                                     <Button onClick={handleSubmitReport} disabled={isSubmitting || !isReportFullyComplete}>
                                         <Save className="mr-2 h-4 w-4" />
                                         {isSubmitting ? "Saving Report..." : "Save and Submit Report"}
