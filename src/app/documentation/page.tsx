@@ -303,8 +303,9 @@ export default function DocumentationPage() {
                     Simply update the email in your account settings and confirm. Our backend will automatically sync your login credentials without requiring verification links.
                   </div>
                 </CardContent>
-              </div>
-            </section>
+              </Card>
+            </div>
+          </section>
 
           {/* Account Management Section */}
           <section id="account" className="scroll-mt-20">
