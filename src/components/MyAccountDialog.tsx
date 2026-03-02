@@ -10,7 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, writeBatch } from 'firebase/firestore';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail, User as AuthUser } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail } from 'lucide-react';
@@ -1212,27 +1212,29 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const handleEmailChange = async () => {
-    if (!authUser || !state.newLoginEmail) return;
+    if (!firestore || !authUser || !state.newLoginEmail) return;
+    
+    // Check for basic email format
+    if (!state.newLoginEmail.includes('@')) {
+        toast({ variant: 'destructive', title: 'Invalid Email', description: 'Please enter a valid email address.' });
+        return;
+    }
+
     try {
-      // Simplest direct update
-      await updateEmail(authUser, state.newLoginEmail);
-      
-      // Also update the Firestore email record
-      const userDocRef = doc(firestore!, 'users', authUser.uid);
+      // To satisfy the "zero friction" requirement and bypass Client SDK's mandatory verification emails,
+      // we only update the Firestore record here. A Cloud Function trigger (onDocumentUpdated)
+      // will handle the actual Authentication email sync using the Admin SDK.
+      const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { email: state.newLoginEmail });
 
       toast({ 
-        title: "Email Updated", 
-        description: `Your login email has been successfully changed to ${state.newLoginEmail}.` 
+        title: "Update Initiated", 
+        description: `Your login email is being updated to ${state.newLoginEmail}. Please use this new email the next time you sign in.` 
       });
       dispatch({ type: 'RESET_EMAIL_FORM' });
     } catch (error: any) {
-      console.error("Email update failed:", error);
-      if (error.code === 'auth/requires-recent-login') {
-          toast({ variant: "destructive", title: "Action Required", description: "For your security, please logout and log back in before updating your email." });
-      } else {
-          toast({ variant: "destructive", title: "Update Failed", description: error.message || "An unexpected error occurred." });
-      }
+      console.error("Email update trigger failed:", error);
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not initiate email change." });
     }
   };
   

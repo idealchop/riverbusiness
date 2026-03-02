@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import * as logger from "firebase-functions/logger";
 import PDFDocument from 'pdfkit';
 import { format, startOfMonth, endOfMonth, parse, endOfDay, addMonths, subMonths, addDays } from 'date-fns';
@@ -367,6 +368,29 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
 
 // --- TRIGGERS ---
 
+/**
+ * Frictionless Email Update Sync.
+ * Triggered when a user updates their email in Firestore.
+ * Background-syncs the new email to Firebase Authentication via Admin SDK.
+ */
+export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) => {
+    if (!event.data) return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+
+    // Detect if the email field has changed
+    if (before.email !== after.email && after.email) {
+        logger.info(`Detected email change for user ${userId}: ${before.email} -> ${after.email}. Syncing to Auth...`);
+        try {
+            await getAuth().updateUser(userId, { email: after.email });
+            logger.info(`Successfully synced new email to Auth for user ${userId}`);
+        } catch (error) {
+            logger.error(`Failed to sync email to Auth for user ${userId}`, error);
+        }
+    }
+});
+
 export const onpaymentremindercreate = onDocumentCreated({
     document: "users/{userId}/reminders/{reminderId}",
     secrets: ["BREVO_API_KEY"]
@@ -648,7 +672,6 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const after = event.data.after.data();
     const userId = event.params.userId;
     
-    // Fix typo:アフター changed to after
     if (before.status === after.status || after.status !== 'Approved') return;
     
     const db = getFirestore();
