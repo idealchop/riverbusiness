@@ -25,10 +25,10 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, writeBatch } from 'firebase/firestore';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, User as AuthUser } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, User as AuthUser } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
-import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2 } from 'lucide-react';
+import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { uploadFileWithProgress } from '@/lib/storage-utils';
 import { enterprisePlans, familyPlans, smePlans, commercialPlans, corporatePlans, clientTypes } from '@/lib/plans';
@@ -43,6 +43,7 @@ import { Badge } from './ui/badge';
 // State Management with useReducer
 type State = {
   isPasswordDialogOpen: boolean;
+  isEmailDialogOpen: boolean;
   isPhotoPreviewOpen: boolean;
   isChangePlanDialogOpen: boolean;
   isInvoiceDetailOpen: boolean;
@@ -58,12 +59,16 @@ type State = {
   showCurrentPassword: boolean;
   showNewPassword: boolean;
   showConfirmPassword: boolean;
+  newLoginEmail: string;
+  emailPassword: string;
+  showEmailPassword: boolean;
   selectedInvoiceForDetail: Payment | null;
   invoiceForBreakdown: Payment | null;
 };
 
 type Action =
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
+  | { type: 'SET_EMAIL_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
   | { type: 'SET_INVOICE_DETAIL_DIALOG'; payload: boolean }
@@ -77,11 +82,15 @@ type Action =
   | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
   | { type: 'TOGGLE_PASSWORD_VISIBILITY'; payload: 'current' | 'new' | 'confirm' }
+  | { type: 'SET_EMAIL_FIELD'; payload: { field: 'newEmail' | 'password', value: string } }
+  | { type: 'TOGGLE_EMAIL_PASSWORD_VISIBILITY' }
   | { type: 'RESET_PASSWORD_FORM' }
+  | { type: 'RESET_EMAIL_FORM' }
   | { type: 'RESET_UPLOAD' };
 
 const initialState: State = {
   isPasswordDialogOpen: false,
+  isEmailDialogOpen: false,
   isPhotoPreviewOpen: false,
   isChangePlanDialogOpen: false,
   isInvoiceDetailOpen: false,
@@ -97,6 +106,9 @@ const initialState: State = {
   showCurrentPassword: false,
   showNewPassword: false,
   showConfirmPassword: false,
+  newLoginEmail: '',
+  emailPassword: '',
+  showEmailPassword: false,
   selectedInvoiceForDetail: null,
   invoiceForBreakdown: null,
 };
@@ -104,6 +116,7 @@ const initialState: State = {
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
+    case 'SET_EMAIL_DIALOG': return { ...state, isEmailDialogOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
     case 'SET_INVOICE_DETAIL_DIALOG': return { ...state, isInvoiceDetailOpen: action.payload };
@@ -125,7 +138,13 @@ function reducer(state: State, action: Action): State {
       if (action.payload === 'new') return { ...state, showNewPassword: !state.showNewPassword };
       if (action.payload === 'confirm') return { ...state, showConfirmPassword: !state.showConfirmPassword };
       return state;
+    case 'SET_EMAIL_FIELD':
+      if (action.payload.field === 'newEmail') return { ...state, newLoginEmail: action.payload.value };
+      if (action.payload.field === 'password') return { ...state, emailPassword: action.payload.value };
+      return state;
+    case 'TOGGLE_EMAIL_PASSWORD_VISIBILITY': return { ...state, showEmailPassword: !state.showEmailPassword };
     case 'RESET_PASSWORD_FORM': return { ...state, currentPassword: '', newPassword: '', confirmPassword: '', isPasswordDialogOpen: false };
+    case 'RESET_EMAIL_FORM': return { ...state, newLoginEmail: '', emailPassword: '', isEmailDialogOpen: false };
     case 'RESET_UPLOAD':
       if (state.profilePhotoPreview) URL.revokeObjectURL(state.profilePhotoPreview);
       return { ...state, profilePhotoFile: null, profilePhotoPreview: null, isPhotoPreviewOpen: false };
@@ -265,6 +284,7 @@ const AccountTab = ({ user, authUser, displayPhoto, state, dispatch, handleSaveC
         <h4 className="font-semibold mb-4">Security</h4>
         <div className="flex flex-col sm:flex-row gap-2">
           <Button onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: true })}><KeyRound className="mr-2 h-4 w-4" />Update Password</Button>
+          <Button variant="outline" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: true })}><Mail className="mr-2 h-4 w-4" />Update Login Email</Button>
           <Button variant="outline" onClick={() => toast({ title: "Coming soon!" })}><Shield className="mr-2 h-4 w-4" />Enable 2FA</Button>
         </div>
       </div>
@@ -1193,6 +1213,28 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
       toast({ variant: "destructive", title: "Password Update Failed", description: "The current password you entered is incorrect or the new password is too weak." });
     }
   };
+
+  const handleEmailChange = async () => {
+    if (!authUser?.email || !state.newLoginEmail) return;
+    try {
+      const credential = EmailAuthProvider.credential(authUser.email, state.emailPassword);
+      await reauthenticateWithCredential(authUser, credential);
+      await verifyBeforeUpdateEmail(authUser, state.newLoginEmail);
+      
+      // Also update the Firestore email record (though Auth is primary)
+      const userDocRef = doc(firestore!, 'users', authUser.uid);
+      await updateDoc(userDocRef, { email: state.newLoginEmail });
+
+      toast({ 
+        title: "Verification Sent", 
+        description: `A verification link has been sent to ${state.newLoginEmail}. Please verify it to complete the change.` 
+      });
+      dispatch({ type: 'RESET_EMAIL_FORM' });
+    } catch (error: any) {
+      console.error("Email update failed:", error);
+      toast({ variant: "destructive", title: "Update Failed", description: "Re-authentication failed. Please check your password." });
+    }
+  };
   
   const handleProfilePhotoUpload = async () => {
     if (!state.profilePhotoFile || !authUser || !storage || !auth) return;
@@ -1439,7 +1481,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
 
     } catch (error) {
         console.error('Top-up submission failed:', error);
-        toast({ variant: 'destructive', title: 'Submission Failed' });
+        toast({ variant: 'destructive', title: 'Top-up Failed' });
     } finally {
         setIsSubmittingTopUp(false);
     }
@@ -1761,7 +1803,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
             </div>
             <div className="relative">
                 <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type={state.showNewPassword ? 'text' : 'password'} value={state.currentPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'new', value: e.target.value}})} />
+                <Input id="new-password" type={state.showNewPassword ? 'text' : 'password'} value={state.newPassword} onChange={(e) => dispatch({type: 'SET_PASSWORD_FIELD', payload: {field: 'new', value: e.target.value}})} />
                 <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_PASSWORD_VISIBILITY', payload: 'new'})}>
                     {state.showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
@@ -1777,6 +1819,33 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
           <DialogFooter>
             <Button variant="secondary" onClick={() => dispatch({ type: 'SET_PASSWORD_DIALOG', payload: false })}>Cancel</Button>
             <Button onClick={handlePasswordChange}>Change Password</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Change Dialog */}
+      <Dialog open={state.isEmailDialogOpen} onOpenChange={(isOpen) => dispatch({ type: 'SET_EMAIL_DIALOG', payload: isOpen })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Login Email</DialogTitle>
+            <DialogDescription>Enter your new email address. We'll send a verification link to your new inbox.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label htmlFor="new-email">New Email Address</Label>
+                <Input id="new-email" type="email" placeholder="name@company.com" value={state.newLoginEmail} onChange={(e) => dispatch({type: 'SET_EMAIL_FIELD', payload: {field: 'newEmail', value: e.target.value}})} />
+            </div>
+            <div className="relative space-y-2">
+                <Label htmlFor="email-password">Current Password (for security)</Label>
+                <Input id="email-password" type={state.showEmailPassword ? 'text' : 'password'} value={state.emailPassword} onChange={(e) => dispatch({type: 'SET_EMAIL_FIELD', payload: {field: 'password', value: e.target.value}})} />
+                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_EMAIL_PASSWORD_VISIBILITY'})}>
+                    {state.showEmailPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: false })}>Cancel</Button>
+            <Button onClick={handleEmailChange} disabled={!state.newLoginEmail || !state.emailPassword}>Send Verification Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
