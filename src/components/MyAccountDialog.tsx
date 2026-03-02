@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useStorage, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, collection, Timestamp, deleteField, addDoc, serverTimestamp, query, orderBy, where, writeBatch } from 'firebase/firestore';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, verifyBeforeUpdateEmail, User as AuthUser } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail, User as AuthUser } from 'firebase/auth';
 import type { AppUser, ImagePlaceholder, Payment, Delivery, SanitationVisit, ComplianceReport, Transaction, PaymentOption, TopUpRequest } from '@/lib/types';
 import { format, startOfMonth, addMonths, isWithinInterval, subMonths, endOfMonth, isAfter, isSameDay, endOfDay, getYear, getMonth, addDays } from 'date-fns';
 import { User as UserIcon, KeyRound, Edit, Trash2, Upload, FileText, Receipt, EyeOff, Eye, Pencil, Shield, LayoutGrid, Wrench, ShieldCheck, Repeat, Package, FileX, CheckCircle, AlertCircle, Download, Copy, Wallet, Info, ArrowRightLeft, Plus, DollarSign, Droplets, Undo2, Mail } from 'lucide-react';
@@ -44,6 +44,7 @@ import { Badge } from './ui/badge';
 type State = {
   isPasswordDialogOpen: boolean;
   isEmailDialogOpen: boolean;
+  isEmailConfirmOpen: boolean;
   isPhotoPreviewOpen: boolean;
   isChangePlanDialogOpen: boolean;
   isInvoiceDetailOpen: boolean;
@@ -60,8 +61,6 @@ type State = {
   showNewPassword: boolean;
   showConfirmPassword: boolean;
   newLoginEmail: string;
-  emailPassword: string;
-  showEmailPassword: boolean;
   selectedInvoiceForDetail: Payment | null;
   invoiceForBreakdown: Payment | null;
 };
@@ -69,6 +68,7 @@ type State = {
 type Action =
   | { type: 'SET_PASSWORD_DIALOG'; payload: boolean }
   | { type: 'SET_EMAIL_DIALOG'; payload: boolean }
+  | { type: 'SET_EMAIL_CONFIRM_DIALOG'; payload: boolean }
   | { type: 'SET_PHOTO_PREVIEW_DIALOG'; payload: boolean }
   | { type: 'SET_CHANGE_PLAN_DIALOG'; payload: boolean }
   | { type: 'SET_INVOICE_DETAIL_DIALOG'; payload: boolean }
@@ -82,8 +82,7 @@ type Action =
   | { type: 'UPDATE_FORM_DATA'; payload: { name: keyof AppUser, value: string } }
   | { type: 'SET_PASSWORD_FIELD'; payload: { field: 'current' | 'new' | 'confirm', value: string } }
   | { type: 'TOGGLE_PASSWORD_VISIBILITY'; payload: 'current' | 'new' | 'confirm' }
-  | { type: 'SET_EMAIL_FIELD'; payload: { field: 'newEmail' | 'password', value: string } }
-  | { type: 'TOGGLE_EMAIL_PASSWORD_VISIBILITY' }
+  | { type: 'SET_EMAIL_FIELD'; payload: { field: 'newEmail', value: string } }
   | { type: 'RESET_PASSWORD_FORM' }
   | { type: 'RESET_EMAIL_FORM' }
   | { type: 'RESET_UPLOAD' };
@@ -91,6 +90,7 @@ type Action =
 const initialState: State = {
   isPasswordDialogOpen: false,
   isEmailDialogOpen: false,
+  isEmailConfirmOpen: false,
   isPhotoPreviewOpen: false,
   isChangePlanDialogOpen: false,
   isInvoiceDetailOpen: false,
@@ -107,8 +107,6 @@ const initialState: State = {
   showNewPassword: false,
   showConfirmPassword: false,
   newLoginEmail: '',
-  emailPassword: '',
-  showEmailPassword: false,
   selectedInvoiceForDetail: null,
   invoiceForBreakdown: null,
 };
@@ -117,6 +115,7 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_PASSWORD_DIALOG': return { ...state, isPasswordDialogOpen: action.payload };
     case 'SET_EMAIL_DIALOG': return { ...state, isEmailDialogOpen: action.payload };
+    case 'SET_EMAIL_CONFIRM_DIALOG': return { ...state, isEmailConfirmOpen: action.payload };
     case 'SET_PHOTO_PREVIEW_DIALOG': return { ...state, isPhotoPreviewOpen: action.payload };
     case 'SET_CHANGE_PLAN_DIALOG': return { ...state, isChangePlanDialogOpen: action.payload };
     case 'SET_INVOICE_DETAIL_DIALOG': return { ...state, isInvoiceDetailOpen: action.payload };
@@ -140,11 +139,9 @@ function reducer(state: State, action: Action): State {
       return state;
     case 'SET_EMAIL_FIELD':
       if (action.payload.field === 'newEmail') return { ...state, newLoginEmail: action.payload.value };
-      if (action.payload.field === 'password') return { ...state, emailPassword: action.payload.value };
       return state;
-    case 'TOGGLE_EMAIL_PASSWORD_VISIBILITY': return { ...state, showEmailPassword: !state.showEmailPassword };
     case 'RESET_PASSWORD_FORM': return { ...state, currentPassword: '', newPassword: '', confirmPassword: '', isPasswordDialogOpen: false };
-    case 'RESET_EMAIL_FORM': return { ...state, newLoginEmail: '', emailPassword: '', isEmailDialogOpen: false };
+    case 'RESET_EMAIL_FORM': return { ...state, newLoginEmail: '', isEmailDialogOpen: false, isEmailConfirmOpen: false };
     case 'RESET_UPLOAD':
       if (state.profilePhotoPreview) URL.revokeObjectURL(state.profilePhotoPreview);
       return { ...state, profilePhotoFile: null, profilePhotoPreview: null, isPhotoPreviewOpen: false };
@@ -1215,24 +1212,27 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const handleEmailChange = async () => {
-    if (!authUser?.email || !state.newLoginEmail) return;
+    if (!authUser || !state.newLoginEmail) return;
     try {
-      const credential = EmailAuthProvider.credential(authUser.email, state.emailPassword);
-      await reauthenticateWithCredential(authUser, credential);
-      await verifyBeforeUpdateEmail(authUser, state.newLoginEmail);
+      // Simplest direct update
+      await updateEmail(authUser, state.newLoginEmail);
       
-      // Also update the Firestore email record (though Auth is primary)
+      // Also update the Firestore email record
       const userDocRef = doc(firestore!, 'users', authUser.uid);
       await updateDoc(userDocRef, { email: state.newLoginEmail });
 
       toast({ 
-        title: "Verification Sent", 
-        description: `A verification link has been sent to ${state.newLoginEmail}. Please verify it to complete the change.` 
+        title: "Email Updated", 
+        description: `Your login email has been successfully changed to ${state.newLoginEmail}.` 
       });
       dispatch({ type: 'RESET_EMAIL_FORM' });
     } catch (error: any) {
       console.error("Email update failed:", error);
-      toast({ variant: "destructive", title: "Update Failed", description: "Re-authentication failed. Please check your password." });
+      if (error.code === 'auth/requires-recent-login') {
+          toast({ variant: "destructive", title: "Action Required", description: "For your security, please logout and log back in before updating your email." });
+      } else {
+          toast({ variant: "destructive", title: "Update Failed", description: error.message || "An unexpected error occurred." });
+      }
     }
   };
   
@@ -1828,27 +1828,43 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Update Login Email</DialogTitle>
-            <DialogDescription>Enter your new email address. We'll send a verification link to your new inbox.</DialogDescription>
+            <DialogDescription>Enter your new email address. This will be your new primary login identity.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
                 <Label htmlFor="new-email">New Email Address</Label>
-                <Input id="new-email" type="email" placeholder="name@company.com" value={state.newLoginEmail} onChange={(e) => dispatch({type: 'SET_EMAIL_FIELD', payload: {field: 'newEmail', value: e.target.value}})} />
-            </div>
-            <div className="relative space-y-2">
-                <Label htmlFor="email-password">Current Password (for security)</Label>
-                <Input id="email-password" type={state.showEmailPassword ? 'text' : 'password'} value={state.emailPassword} onChange={(e) => dispatch({type: 'SET_EMAIL_FIELD', payload: {field: 'password', value: e.target.value}})} />
-                <Button size="icon" variant="ghost" className="absolute right-1 top-7 h-8 w-8" onClick={() => dispatch({type: 'TOGGLE_EMAIL_PASSWORD_VISIBILITY'})}>
-                    {state.showEmailPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+                <Input 
+                  id="new-email" 
+                  type="email" 
+                  placeholder="name@company.com" 
+                  value={state.newLoginEmail} 
+                  onChange={(e) => dispatch({type: 'SET_EMAIL_FIELD', payload: {field: 'newEmail', value: e.target.value}})} 
+                />
             </div>
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => dispatch({ type: 'SET_EMAIL_DIALOG', payload: false })}>Cancel</Button>
-            <Button onClick={handleEmailChange} disabled={!state.newLoginEmail || !state.emailPassword}>Send Verification Link</Button>
+            <Button onClick={() => dispatch({ type: 'SET_EMAIL_CONFIRM_DIALOG', payload: true })} disabled={!state.newLoginEmail}>Update Email</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Email Update Confirmation Popup */}
+      <AlertDialog open={state.isEmailConfirmOpen} onOpenChange={(open) => dispatch({ type: 'SET_EMAIL_CONFIRM_DIALOG', payload: open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Email Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to change your login email to <span className="font-bold">{state.newLoginEmail}</span>? 
+              This will immediately update your login credentials.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleEmailChange}>Confirm and Update</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       {/* Change Plan Dialog */}
       <Dialog open={state.isChangePlanDialogOpen} onOpenChange={(isOpen) => dispatch({ type: 'SET_CHANGE_PLAN_DIALOG', payload: isOpen })}>
