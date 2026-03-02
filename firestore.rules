@@ -22,14 +22,9 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if true;
       
-      allow update: if isOwner(userId) || isAdmin() || (request.auth != null && request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny([
-            'email', 'name', 'businessName', 'businessEmail', 'address', 'contactNumber', 'photoURL',
-            'customPlanDetails', 'pendingPlan', 'planChangeEffectiveDate',
-            'lastChatMessage', 'lastChatTimestamp', 'hasUnreadUserMessages', 'hasUnreadAdminMessages',
-            'accountStatus', 'lastLogin',
-            'supportDisplayName', 'supportDescription'
-        ]));
+      // Allow the owner or an admin to update any field in the user profile.
+      // This ensures the email update is saved to Firestore.
+      allow update: if isOwner(userId) || isAdmin();
 
       allow delete: if isOwner(userId) || isAdmin();
       

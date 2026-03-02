@@ -382,6 +382,7 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
     if (before.email !== after.email && after.email) {
         logger.info(`Detected email change for user ${userId}: ${before.email} -> ${after.email}. Syncing to Auth...`);
         try {
+            // Admin SDK bypasses client-side re-authentication requirements.
             await getAuth().updateUser(userId, { email: after.email });
             logger.info(`Successfully synced new email to Auth for user ${userId}`);
         } catch (error) {

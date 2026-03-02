@@ -810,4 +810,3 @@ exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, as
         }
     }
 });
-//# sourceMappingURL=index.js.map
