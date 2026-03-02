@@ -39,12 +39,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = void 0;
+exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = exports.onuserupdate = void 0;
 exports.generatePasswordProtectedSOA = generatePasswordProtectedSOA;
 exports.generateInvoiceReceiptPDF = generateInvoiceReceiptPDF;
 const app_1 = require("firebase-admin/app");
 const storage_1 = require("firebase-admin/storage");
 const firestore_1 = require("firebase-admin/firestore");
+const auth_1 = require("firebase-admin/auth");
 const logger = __importStar(require("firebase-functions/logger"));
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const date_fns_1 = require("date-fns");
@@ -86,10 +87,10 @@ async function createNotification(userId, notificationData) {
     }
 }
 /**
- * Determines the CC list based on the client ID.
- * Client SC2500000001 (NEW BIG 4 J) gets specialized CC.
+ * Determines the CC list specifically for Financial documents (SOA, Invoices, Billing).
+ * Client SC2500000001 (NEW BIG 4 J) gets specialized CC for these types only.
  */
-function getCCList(clientId) {
+function getFinancialCCList(clientId) {
     if (clientId === 'SC2500000001') {
         return ['cavatan.jheck@gmail.com'];
     }
@@ -345,6 +346,29 @@ async function generateInvoiceReceiptPDF(user, invoice, customAmount, totalConta
     });
 }
 // --- TRIGGERS ---
+/**
+ * Frictionless Email Update Sync.
+ * Triggered when a user updates their email in Firestore.
+ * Background-syncs the new email to Firebase Authentication via Admin SDK.
+ */
+exports.onuserupdate = (0, firestore_2.onDocumentUpdated)("users/{userId}", async (event) => {
+    if (!event.data)
+        return;
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    const userId = event.params.userId;
+    // Detect if the email field has changed
+    if (before.email !== after.email && after.email) {
+        logger.info(`Detected email change for user ${userId}: ${before.email} -> ${after.email}. Syncing to Auth...`);
+        try {
+            await (0, auth_1.getAuth)().updateUser(userId, { email: after.email });
+            logger.info(`Successfully synced new email to Auth for user ${userId}`);
+        }
+        catch (error) {
+            logger.error(`Failed to sync email to Auth for user ${userId}`, error);
+        }
+    }
+});
 exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     document: "users/{userId}/reminders/{reminderId}",
     secrets: ["BREVO_API_KEY"]
@@ -410,8 +434,8 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
     const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = (0, email_1.getPaymentReminderTemplate)(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
-    // Email Config
-    const ccList = getCCList(user.clientId);
+    // Email Config - Financial Restriction
+    const ccList = getFinancialCCList(user.clientId);
     const bccList = getBCCList();
     try {
         await (0, email_1.sendEmail)({
@@ -484,7 +508,8 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
     try {
         const receiptPdf = await generateInvoiceReceiptPDF(userData, invoiceData, requestData.amount, totalContainers);
         const template = (0, email_1.getPaymentStatusTemplate)(userData.businessName, invoiceData.id, requestData.amount, 'Paid');
-        const ccList = getCCList(userData.clientId);
+        // Email Config - Financial Restriction
+        const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: targetEmail,
@@ -518,12 +543,11 @@ exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
     const planName = `${profile.clientType || ''} - ${((_a = profile.plan) === null || _a === void 0 ? void 0 : _a.name) || ''}`;
     const schedule = `${((_b = profile.customPlanDetails) === null || _b === void 0 ? void 0 : _b.deliveryDay) || 'TBD'} / ${((_c = profile.customPlanDetails) === null || _c === void 0 ? void 0 : _c.deliveryFrequency) || 'TBD'}`;
     const template = (0, email_1.getWelcomeUnclaimedTemplate)(profile.businessName || profile.name || 'Valued Client', profile.clientId, planName, profile.address || 'N/A', schedule);
-    const ccList = getCCList(profile.clientId);
+    // No CC for operational/general notifications for New BIG 4 J
     const bccList = getBCCList();
     try {
         await (0, email_1.sendEmail)({
             to: profile.businessEmail,
-            cc: ccList,
             bcc: bccList,
             subject: template.subject,
             text: `Welcome to River Philippines! Your Client ID is ${profile.clientId}.`,
@@ -549,11 +573,9 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && delivery.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: userData.email,
-            cc: ccList,
             bcc: bccList,
             subject: template.subject,
             text: `Delivery complete`,
@@ -579,11 +601,9 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && after.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: userData.email,
-            cc: ccList,
             bcc: bccList,
             subject: template.subject,
             text: `Delivery complete`,
@@ -620,7 +640,8 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const userData = userDoc.data();
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
-        const ccList = getCCList(userData.clientId);
+        // Financial CC restriction applied here
+        const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: userData.email,
@@ -652,11 +673,9 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
     });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: userData.email,
-            cc: ccList,
             bcc: bccList,
             subject: template.subject,
             text: `Refill request received`,
@@ -687,11 +706,9 @@ exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
     });
     if (userData === null || userData === void 0 ? void 0 : userData.email) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, after.status, requestId, after.requestedDate);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: userData.email,
-            cc: ccList,
             bcc: bccList,
             subject: template.subject,
             text: `Refill request updated`,
@@ -713,11 +730,9 @@ exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
     if ((userData === null || userData === void 0 ? void 0 : userData.email) && visit.status === 'Scheduled') {
         const dateStr = (0, date_fns_1.format)(toSafeDate(visit.scheduledDate), 'PPP');
         const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
-        const ccList = getCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
             to: userData.email,
-            cc: ccList,
             bcc: bccList,
             subject: template.subject,
             text: `Visit scheduled`,
@@ -763,11 +778,9 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
         // 3. Send Email Notification
         if (userData === null || userData === void 0 ? void 0 : userData.email) {
             const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr, passRate);
-            const ccList = getCCList(userData.clientId);
             const bccList = getBCCList();
             await (0, email_1.sendEmail)({
                 to: userData.email,
-                cc: ccList,
                 bcc: bccList,
                 subject: template.subject,
                 text: `Report ready. Score: ${passRate}`,
