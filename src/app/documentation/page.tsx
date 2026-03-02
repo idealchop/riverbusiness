@@ -21,11 +21,13 @@ import {
   Wrench,
   Settings,
   Mail,
-  Smartphone
+  Smartphone,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@/firebase';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function DocumentationPage() {
   const { user } = useUser();
@@ -301,9 +303,8 @@ export default function DocumentationPage() {
                     Simply update the email in your account settings and confirm. Our backend will automatically sync your login credentials without requiring verification links.
                   </div>
                 </CardContent>
-              </Card>
-            </div>
-          </section>
+              </div>
+            </section>
 
           {/* Account Management Section */}
           <section id="account" className="scroll-mt-20">
@@ -351,8 +352,4 @@ export default function DocumentationPage() {
       </div>
     </main>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }
