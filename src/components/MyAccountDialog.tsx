@@ -616,7 +616,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
               <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
               </CardHeader>
               <CardContent>
                   <p className={cn("text-2xl font-bold", calculatedBalances.displayedCreditBalance < 0 && "text-destructive")}>
@@ -627,7 +627,7 @@ const TransactionsTab = ({ paginatedTransactions, transactionCurrentPage, setTra
           </Card>
            <Card>
               <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Droplets className="h-4 w-4" />Available Liter Credits</CardTitle>
               </CardHeader>
               <CardContent>
                   <p className={cn("text-2xl font-bold", calculatedBalances.displayedAvailableLiters < 0 && "text-destructive")}>
@@ -1211,29 +1211,30 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   };
 
   const handleEmailChange = async () => {
-    if (!firestore || !authUser || !state.newLoginEmail) return;
+    const emailToSet = state.newLoginEmail?.trim();
+    if (!firestore || !authUser || !emailToSet) return;
     
     // Check for basic email format
-    if (!state.newLoginEmail.includes('@')) {
+    if (!emailToSet.includes('@')) {
         toast({ variant: 'destructive', title: 'Invalid Email', description: 'Please provide a valid recipient email address.' });
         return;
     }
 
     try {
       // To satisfy the "zero friction" requirement and bypass Client SDK's mandatory verification emails,
-      // we only update the Firestore record here. A Cloud Function trigger (onDocumentUpdated)
-      // will handle the actual Authentication email sync using the Admin SDK.
+      // we update the Firestore record. A Cloud Function trigger (onuserupdate)
+      // handles the actual Authentication email sync using the Admin SDK.
       const userDocRef = doc(firestore, 'users', authUser.uid);
-      await updateDoc(userDocRef, { email: state.newLoginEmail });
+      await updateDoc(userDocRef, { email: emailToSet });
 
       toast({ 
-        title: "Update Initiated", 
-        description: `Your login email is being updated to ${state.newLoginEmail}. Please use this new email the next time you sign in.` 
+        title: "Update Requested", 
+        description: `Your login email is being updated to ${emailToSet}. Please allow a few moments for synchronization.` 
       });
       dispatch({ type: 'RESET_EMAIL_FORM' });
     } catch (error: any) {
-      console.error("Email update trigger failed:", error);
-      toast({ variant: "destructive", title: "Update Failed", description: "Could not initiate email change." });
+      console.error("Email update failed:", error);
+      toast({ variant: "destructive", title: "Update Failed", description: error.message || "Could not initiate email change." });
     }
   };
   
