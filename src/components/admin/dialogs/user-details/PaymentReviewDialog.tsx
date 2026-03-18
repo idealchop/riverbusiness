@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Payment, AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc, deleteField, DocumentReference } from 'firebase/firestore';
-import { CheckCircle, X, Receipt } from 'lucide-react';
+import { CheckCircle, X, Receipt, Upload } from 'lucide-react';
 import Image from 'next/image';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useStorage } from '@/firebase';
 import { createClientNotification } from '@/lib/notifications';
-
+import { uploadFileWithProgress } from '@/lib/storage-utils';
+import { Progress } from '@/components/ui/progress';
 
 interface PaymentReviewDialogProps {
     isOpen: boolean;
@@ -28,12 +29,18 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
     const [showRejectionInput, setShowRejectionInput] = useState(false);
     const auth = useAuth();
     const firestore = useFirestore();
-
+    const storage = useStorage();
+    
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!isOpen) {
             setRejectionReason('');
             setShowRejectionInput(false);
+            setUploadProgress(0);
+            setIsUploading(false);
         }
     }, [isOpen]);
 
@@ -57,8 +64,6 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                 rejectionReason: newStatus === 'Upcoming' ? rejectionReason : deleteField(),
             });
 
-            const adminId = auth.currentUser.uid;
-            
             if (newStatus === 'Paid') {
                 await createClientNotification(firestore, user.id, {
                     type: 'payment',
@@ -86,6 +91,35 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
             toast({ variant: 'destructive', title: 'Update Failed' });
         }
     };
+
+    const handleAdminUploadProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !userDocRef || !paymentToReview || !storage || !auth?.currentUser || !user) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        const filePath = `admin_uploads/${auth.currentUser.uid}/payment_proofs/${user.id}/${paymentToReview.id}-${Date.now()}-${file.name}`;
+
+        try {
+            const downloadURL = await uploadFileWithProgress(storage, auth, filePath, file, {}, setUploadProgress);
+            const paymentRef = doc(userDocRef, 'payments', paymentToReview.id);
+            
+            await updateDoc(paymentRef, {
+                proofOfPaymentUrl: downloadURL,
+                status: 'Pending Review' // Force back to pending review if admin uploads
+            });
+
+            toast({ title: 'Proof Uploaded', description: 'The payment proof has been saved and is ready for review.' });
+        } catch (error) {
+            console.error("Admin proof upload failed:", error);
+            toast({ variant: 'destructive', title: 'Upload Failed' });
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
     
     const isEstimated = paymentToReview?.id.startsWith('INV-EST');
 
@@ -99,7 +133,7 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    <div className="relative w-full aspect-[9/16] max-h-[50vh] rounded-lg border overflow-hidden bg-muted">
+                    <div className="relative w-full aspect-[9/16] max-h-[50vh] rounded-lg border overflow-hidden bg-muted group">
                         {paymentToReview?.proofOfPaymentUrl ? (
                             <Image src={paymentToReview.proofOfPaymentUrl} alt="Proof of Payment" fill className="object-contain" />
                         ) : (
@@ -107,7 +141,36 @@ export function PaymentReviewDialog({ isOpen, onOpenChange, paymentToReview, use
                                 {isEstimated ? 'This is an estimate. No proof of payment is applicable.' : 'No proof of payment available.'}
                             </div>
                         )}
+
+                        {!isEstimated && (
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Button 
+                                    variant="secondary" 
+                                    size="sm" 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                >
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    {paymentToReview?.proofOfPaymentUrl ? 'Replace Proof' : 'Upload Proof'}
+                                </Button>
+                            </div>
+                        )}
+                        
+                        {isUploading && (
+                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 text-white text-center">
+                                <p className="text-sm font-medium mb-2">Uploading Proof...</p>
+                                <Progress value={uploadProgress} className="w-full h-1" />
+                            </div>
+                        )}
                     </div>
+
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleAdminUploadProof}
+                    />
 
                     {showRejectionInput && (
                         <div className="space-y-2 pt-4">
