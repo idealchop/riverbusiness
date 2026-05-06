@@ -1,4 +1,4 @@
-'use client';
+'use server';
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
@@ -42,6 +42,7 @@ const employeeSchema = z.object({
   salaryType: z.enum(['daily', 'monthly']),
   rate: z.coerce.number().min(1, 'Rate must be greater than zero'),
   startDate: z.string().min(1, 'Start date is required'),
+  contactNumber: z.string().optional(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -63,6 +64,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       salaryType: 'monthly',
       rate: 0,
       startDate: new Date().toISOString().split('T')[0],
+      contactNumber: '',
     }
   });
 
@@ -78,6 +80,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
         id: employeeId,
         name: values.name,
         email: values.email,
+        contactNumber: values.contactNumber,
         businessName: 'Employee Profile',
         companyId: companyId,
         hrRole: 'employee',
@@ -100,7 +103,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
 
       await setDoc(employeeRef, employeeData);
       
-      toast({ title: 'Employee created', description: `${values.name} has been added to your workforce.` });
+      toast({ title: 'New hire authorized', description: `${values.name} has been added to the directory.` });
       onOpenChange(false);
       form.reset();
     } catch (error) {
@@ -116,8 +119,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       <DialogContent className="sm:max-w-xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden bg-white">
         <div className="p-8">
             <DialogHeader className="mb-6">
-                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">New Hire Entry</DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium">Register a new member to your company workforce.</DialogDescription>
+                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Add New Employee</DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium">Register a new member and initialize their workspace profile.</DialogDescription>
             </DialogHeader>
             
             <Form {...form}>
@@ -128,7 +131,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="name"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</FormLabel>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Full Name</FormLabel>
                                 <FormControl><Input placeholder="John Doe" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -139,7 +142,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="email"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</FormLabel>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Email Address</FormLabel>
                                 <FormControl><Input placeholder="john@company.com" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -153,8 +156,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="position"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position</FormLabel>
-                                <FormControl><Input placeholder="Manager" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Position</FormLabel>
+                                <FormControl><Input placeholder="Operations Manager" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -164,8 +167,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="department"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</FormLabel>
-                                <FormControl><Input placeholder="Operations" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Department</FormLabel>
+                                <FormControl><Input placeholder="Logistics" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -180,12 +183,12 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="salaryType"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cycle</FormLabel>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Pay Cycle</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
                                 </FormControl>
-                                <SelectContent className="rounded-xl"><SelectItem value="daily">Daily</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent>
+                                <SelectContent className="rounded-xl"><SelectItem value="daily">Daily Rate</SelectItem><SelectItem value="monthly">Monthly Fixed</SelectItem></SelectContent>
                                 </Select>
                                 <FormMessage />
                             </FormItem>
@@ -196,7 +199,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="rate"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rate (PHP)</FormLabel>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Rate (PHP)</FormLabel>
                                 <FormControl><Input type="number" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -207,7 +210,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="startDate"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hire Date</FormLabel>
+                                <FormLabel className="text-xs font-semibold text-slate-400">Join Date</FormLabel>
                                 <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -216,9 +219,9 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                     </div>
 
                     <DialogFooter className="pt-4">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-6">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-xs shadow-md">
-                            {isSubmitting ? 'Syncing...' : 'Authorize New Hire'}
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-semibold px-6">Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-sm shadow-md">
+                            {isSubmitting ? 'Syncing...' : 'Add to Directory'}
                         </Button>
                     </DialogFooter>
                 </form>

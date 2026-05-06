@@ -23,7 +23,9 @@ import {
   DollarSign, 
   ShieldCheck, 
   UserCircle,
-  CalendarDays
+  CalendarDays,
+  Clock,
+  LayoutDashboard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -67,70 +69,79 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl rounded-[2rem] border-none p-0 overflow-hidden flex flex-col max-h-[90vh] bg-white">
+      <DialogContent className="sm:max-w-4xl rounded-[2.5rem] border-none p-0 overflow-hidden flex flex-col max-h-[90vh] bg-white">
         <div className="p-8 pb-4">
             <DialogHeader>
-                <div className="flex items-center gap-5 mb-4">
-                    <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center text-xl font-bold text-slate-400">
+                <div className="flex items-center gap-6 mb-6">
+                    <div className="h-20 w-20 rounded-3xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 shadow-inner">
                         {employee.name?.split(' ').map(n => n[0]).join('') || '?'}
                     </div>
-                    <div>
-                        <DialogTitle className="text-2xl font-bold text-slate-900">{employee.name}</DialogTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                            <Badge className="bg-green-50 text-green-700 border-none text-[10px] font-bold px-2 py-0.5">
+                    <div className="space-y-1">
+                        <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name}</DialogTitle>
+                        <div className="flex items-center gap-3">
+                            <Badge className={cn(
+                                "border-none text-[10px] font-bold px-3 py-1",
+                                profile?.status === 'Active' ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+                            )}>
                                 {profile?.status || 'Active'}
                             </Badge>
-                            <span className="text-xs font-medium text-slate-400">
-                                {profile?.position || 'N/A'} • {profile?.department || 'N/A'}
+                            <span className="text-sm font-medium text-slate-500">
+                                {profile?.position || 'Unassigned'} • {profile?.department || 'General'}
                             </span>
                         </div>
                     </div>
                 </div>
-                <DialogDescription className="sr-only">Detailed employment information for {employee.name}</DialogDescription>
+                <DialogDescription className="sr-only">360-degree employment overview for {employee.name}</DialogDescription>
             </DialogHeader>
         </div>
 
-        <Tabs defaultValue="info" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
             <div className="px-8 border-b border-slate-50">
-                <TabsList className="bg-transparent h-12 p-0 gap-6">
-                    <TabsTrigger value="info" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs tracking-tight">Information</TabsTrigger>
-                    <TabsTrigger value="attendance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs tracking-tight">Attendance</TabsTrigger>
-                    <TabsTrigger value="leaves" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-xs tracking-tight">Leaves</TabsTrigger>
+                <TabsList className="bg-transparent h-12 p-0 gap-8">
+                    <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Overview</TabsTrigger>
+                    <TabsTrigger value="attendance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Attendance Logs</TabsTrigger>
+                    <TabsTrigger value="leaves" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none font-semibold text-sm tracking-tight px-0">Leave History</TabsTrigger>
                 </TabsList>
             </div>
 
             <ScrollArea className="flex-1">
                 <div className="p-8">
-                    <TabsContent value="info" className="mt-0 space-y-8 animate-in fade-in duration-300">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                                    Contact
+                    <TabsContent value="overview" className="mt-0 space-y-10 animate-in fade-in duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-6">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <UserCircle className="h-4 w-4" /> Personal & Contact
                                 </h4>
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-slate-50"><Mail className="h-4 w-4 text-slate-400" /></div>
-                                        <p className="text-sm font-semibold text-slate-700">{employee.email}</p>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 group">
+                                        <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Mail className="h-4 w-4" /></div>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Primary Email</p>
+                                            <p className="text-sm font-semibold text-slate-700">{employee.email}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-slate-50"><Phone className="h-4 w-4 text-slate-400" /></div>
-                                        <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No number set'}</p>
+                                    <div className="flex items-center gap-4 group">
+                                        <div className="p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors"><Phone className="h-4 w-4" /></div>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Contact Number</p>
+                                            <p className="text-sm font-semibold text-slate-700">{employee.contactNumber || 'No record'}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
-                                <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                                    Compensation
+                            <div className="space-y-6">
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                    <DollarSign className="h-4 w-4" /> Compensation Profile
                                 </h4>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 bg-slate-50/30">
-                                        <span className="text-xs font-semibold text-slate-400">Pay Rate</span>
-                                        <span className="text-sm font-bold text-slate-900">₱{profile?.rate?.toLocaleString() || '0'}</span>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Pay Rate</p>
+                                        <p className="text-lg font-bold text-slate-900">₱{profile?.rate?.toLocaleString() || '0'}</p>
                                     </div>
-                                    <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-50 bg-slate-50/30">
-                                        <span className="text-xs font-semibold text-slate-400">Frequency</span>
-                                        <span className="text-sm font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</span>
+                                    <div className="p-4 rounded-2xl border border-slate-50 bg-slate-50/30 space-y-1">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase">Cycle</p>
+                                        <p className="text-lg font-bold text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -138,44 +149,63 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
 
                         <Separator className="bg-slate-50" />
 
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Employment Cycle</h4>
-                            <div className="p-5 rounded-2xl border border-slate-100 flex items-center justify-between bg-white shadow-sm">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-xl bg-blue-50 text-primary">
-                                        <Calendar className="h-5 w-5" />
+                        <div className="space-y-6">
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4" /> Employment Intelligence
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-3 rounded-2xl bg-blue-50 text-primary">
+                                        <Calendar className="h-6 w-6" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-slate-900">Signed On</p>
-                                        <p className="text-xs font-medium text-slate-400">{profile?.startDate ? format(new Date(profile.startDate), 'MMMM do, yyyy') : 'N/A'}</p>
+                                        <p className="text-xs font-bold text-slate-900">Date Signed</p>
+                                        <p className="text-xs font-medium text-slate-400 mt-1">{profile?.startDate ? format(new Date(profile.startDate), 'MMMM do, yyyy') : 'Pending'}</p>
                                     </div>
                                 </div>
-                                <Badge variant="outline" className="text-[10px] font-bold px-2.5 h-6 border-slate-100">Permanent</Badge>
+                                <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-3 rounded-2xl bg-green-50 text-green-600">
+                                        <Clock className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-900">Shift Coverage</p>
+                                        <p className="text-xs font-medium text-slate-400 mt-1">9:00 AM - 6:00 PM</p>
+                                    </div>
+                                </div>
+                                <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
+                                    <div className="p-3 rounded-2xl bg-purple-50 text-purple-600">
+                                        <LayoutDashboard className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-900">Workstation</p>
+                                        <p className="text-xs font-medium text-slate-400 mt-1">{profile?.department || 'Main Hub'}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="attendance" className="mt-0 animate-in fade-in duration-300">
-                         <div className="rounded-2xl border border-slate-50 overflow-hidden">
+                    <TabsContent value="attendance" className="mt-0 animate-in fade-in duration-500">
+                         <div className="rounded-3xl border border-slate-50 overflow-hidden bg-slate-50/20">
                             <Table>
                                 <TableHeader className="bg-slate-50/50">
-                                    <TableRow>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Time-In</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Time-Out</TableHead>
-                                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Status</TableHead>
+                                    <TableRow className="border-none">
+                                        <TableHead className="text-xs font-bold text-slate-400 pl-6">Work Date</TableHead>
+                                        <TableHead className="text-xs font-bold text-slate-400">Entry Time</TableHead>
+                                        <TableHead className="text-xs font-bold text-slate-400">Exit Time</TableHead>
+                                        <TableHead className="text-xs font-bold text-slate-400 text-right pr-6">Performance</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {attendanceLogs && attendanceLogs.length > 0 ? (
                                         attendanceLogs.map(log => (
-                                            <TableRow key={log.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0">
-                                                <TableCell className="text-xs font-semibold text-slate-600">{format(new Date(log.date), 'MMM d, yyyy')}</TableCell>
-                                                <TableCell className="text-xs font-bold text-slate-900">{log.timeIn instanceof Timestamp ? format(log.timeIn.toDate(), 'hh:mm a') : '--'}</TableCell>
-                                                <TableCell className="text-xs font-bold text-slate-900">{log.timeOut instanceof Timestamp ? format(log.timeOut.toDate(), 'hh:mm a') : '--'}</TableCell>
-                                                <TableCell className="text-right">
+                                            <TableRow key={log.id} className="hover:bg-white transition-colors border-b border-slate-50 last:border-0 group">
+                                                <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">{format(new Date(log.date), 'MMM d, yyyy')}</TableCell>
+                                                <TableCell className="text-sm font-semibold text-slate-700">{log.timeIn instanceof Timestamp ? format(log.timeIn.toDate(), 'hh:mm a') : '--:--'}</TableCell>
+                                                <TableCell className="text-sm font-semibold text-slate-700">{log.timeOut instanceof Timestamp ? format(log.timeOut.toDate(), 'hh:mm a') : '--:--'}</TableCell>
+                                                <TableCell className="text-right pr-6">
                                                     <Badge className={cn(
-                                                        "text-[9px] font-bold uppercase border-none px-2 h-5",
+                                                        "text-[10px] font-bold uppercase border-none px-3 py-1",
                                                         log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                                                     )}>
                                                         {log.status}
@@ -185,8 +215,8 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center py-12 text-xs font-semibold text-slate-300 uppercase tracking-tight">
-                                                No attendance logs found
+                                            <TableCell colSpan={4} className="text-center py-20 text-sm font-medium text-slate-300">
+                                                No attendance data has been logged for this period.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -195,37 +225,38 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                          </div>
                     </TabsContent>
 
-                    <TabsContent value="leaves" className="mt-0 animate-in fade-in duration-300">
-                         <div className="space-y-3">
+                    <TabsContent value="leaves" className="mt-0 animate-in fade-in duration-500">
+                         <div className="space-y-4">
                             {leaveRequests && leaveRequests.length > 0 ? (
                                 leaveRequests.map(request => (
-                                    <div key={request.id} className="p-4 rounded-xl border border-slate-50 bg-slate-50/30 flex items-center justify-between hover:bg-white hover:border-slate-100 transition-all shadow-none hover:shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400">
-                                                <CalendarDays className="h-5 w-5" />
+                                    <div key={request.id} className="p-6 rounded-[2rem] border border-slate-50 bg-slate-50/30 flex items-center justify-between hover:bg-white hover:border-slate-100 transition-all shadow-none hover:shadow-md">
+                                        <div className="flex items-center gap-5">
+                                            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-50 flex items-center justify-center text-slate-400 shadow-sm">
+                                                <CalendarDays className="h-6 w-6" />
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-900">{request.type}</p>
-                                                <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">
-                                                    {format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d')}
+                                            <div className="space-y-1">
+                                                <p className="text-base font-bold text-slate-900">{request.type}</p>
+                                                <p className="text-xs font-semibold text-slate-400">
+                                                    {format(new Date(request.startDate), 'MMM d')} — {format(new Date(request.endDate), 'MMM d, yyyy')}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right space-y-2">
                                             <Badge className={cn(
-                                                "text-[9px] font-bold uppercase border-none px-2.5 h-5",
+                                                "text-[10px] font-bold uppercase border-none px-4 py-1",
                                                 request.status === 'approved' ? "bg-green-50 text-green-700" : 
                                                 request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
                                             )}>
                                                 {request.status}
                                             </Badge>
+                                            <p className="text-[10px] text-slate-400 font-medium italic">Applied {format(request.appliedAt?.toDate() || new Date(), 'PP')}</p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="py-20 text-center flex flex-col items-center gap-3 opacity-20">
-                                    <CalendarDays className="h-10 w-10 text-slate-400" />
-                                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">No leave history found</p>
+                                <div className="py-24 text-center flex flex-col items-center gap-4 opacity-20">
+                                    <CalendarDays className="h-12 w-12 text-slate-400" />
+                                    <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Request history is clear</p>
                                 </div>
                             )}
                          </div>
@@ -234,18 +265,18 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
             </ScrollArea>
         </Tabs>
 
-        <div className="p-8 pt-4 border-t bg-slate-50/30">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="p-8 pt-4 border-t bg-slate-50/20">
+            <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
                 <div className="flex items-center gap-3 opacity-60">
-                    <ShieldCheck className="h-4 w-4 text-slate-400" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                        Secure Employee Record 
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Secure Corporate Resource — Confidential
                     </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold h-10 px-6">Dismiss</Button>
-                    <Button className="rounded-xl h-10 px-8 font-bold text-xs shadow-md">
-                        Edit Record
+                <div className="flex gap-3 shrink-0">
+                    <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-bold h-11 px-8 rounded-2xl">Dismiss</Button>
+                    <Button className="rounded-2xl h-11 px-10 font-bold text-sm shadow-lg">
+                        Edit Employment Profile
                     </Button>
                 </div>
             </div>
