@@ -7,7 +7,6 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,12 +23,11 @@ import {
   DollarSign, 
   ShieldCheck, 
   UserCircle,
-  Clock,
   CalendarDays
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 interface EmployeeDetailsDialogProps {
@@ -44,22 +42,22 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
   const companyId = employee?.companyId || 'default';
   
   const attendanceQuery = useMemoFirebase(
-    () => (firestore && employee) ? query(
+    () => (firestore && employee?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
         where('employeeId', '==', employee.id),
         orderBy('date', 'desc')
     ) : null,
-    [firestore, employee, companyId]
+    [firestore, employee?.id, companyId]
   );
   const { data: attendanceLogs } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
-    () => (firestore && employee) ? query(
+    () => (firestore && employee?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'leaveRequests'),
         where('employeeId', '==', employee.id),
         orderBy('appliedAt', 'desc')
     ) : null,
-    [firestore, employee, companyId]
+    [firestore, employee?.id, companyId]
   );
   const { data: leaveRequests } = useCollection<HRLeaveRequest>(leaveQuery);
 
@@ -74,7 +72,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
             <DialogHeader>
                 <div className="flex items-center gap-4 mb-4">
                     <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl font-black text-slate-400">
-                        {employee.name.split(' ').map(n => n[0]).join('')}
+                        {employee.name?.split(' ').map(n => n[0]).join('') || '?'}
                     </div>
                     <div>
                         <DialogTitle className="text-2xl font-black tracking-tight uppercase">{employee.name}</DialogTitle>
@@ -83,7 +81,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                 {profile?.status || 'Active'}
                             </Badge>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                {profile?.position} • {profile?.department}
+                                {profile?.position || 'N/A'} • {profile?.department || 'N/A'}
                             </span>
                         </div>
                     </div>
@@ -128,11 +126,11 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50">
                                         <span className="text-xs font-bold text-slate-400 uppercase">Rate (PHP)</span>
-                                        <span className="text-sm font-black text-slate-900">₱{profile?.rate.toLocaleString()}</span>
+                                        <span className="text-sm font-black text-slate-900">₱{profile?.rate?.toLocaleString() || '0'}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50">
                                         <span className="text-xs font-bold text-slate-400 uppercase">Type</span>
-                                        <span className="text-sm font-black text-slate-900 capitalize">{profile?.salaryType}</span>
+                                        <span className="text-sm font-black text-slate-900 capitalize">{profile?.salaryType || 'Monthly'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -177,8 +175,8 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                         attendanceLogs.map(log => (
                                             <TableRow key={log.id} className="hover:bg-slate-50/50">
                                                 <TableCell className="text-xs font-bold text-slate-600">{format(new Date(log.date), 'MMM d, yyyy')}</TableCell>
-                                                <TableCell className="text-xs font-black text-slate-900">{log.timeIn ? format(log.timeIn.toDate(), 'hh:mm a') : '--'}</TableCell>
-                                                <TableCell className="text-xs font-black text-slate-900">{log.timeOut ? format(log.timeOut.toDate(), 'hh:mm a') : '--'}</TableCell>
+                                                <TableCell className="text-xs font-black text-slate-900">{log.timeIn instanceof Timestamp ? format(log.timeIn.toDate(), 'hh:mm a') : '--'}</TableCell>
+                                                <TableCell className="text-xs font-black text-slate-900">{log.timeOut instanceof Timestamp ? format(log.timeOut.toDate(), 'hh:mm a') : '--'}</TableCell>
                                                 <TableCell className="text-right">
                                                     <Badge className={cn(
                                                         "text-[8px] font-black uppercase border-none px-2",
@@ -226,7 +224,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                                 {request.status}
                                             </Badge>
                                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
-                                                Applied {format(request.appliedAt.toDate(), 'MMM d')}
+                                                Applied {request.appliedAt instanceof Timestamp ? format(request.appliedAt.toDate(), 'MMM d') : 'N/A'}
                                             </p>
                                         </div>
                                     </div>

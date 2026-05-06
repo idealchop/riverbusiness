@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { 
   Select, 
   SelectContent, 
@@ -68,7 +67,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
   });
 
   const onSubmit = async (values: EmployeeFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !companyId) return;
     setIsSubmitting(true);
     
     try {
@@ -79,11 +78,11 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
         id: employeeId,
         name: values.name,
         email: values.email,
-        businessName: 'Employee Profile', // Default for identification
+        businessName: 'Employee Profile',
         companyId: companyId,
         hrRole: 'employee',
-        role: 'User',
-        accountStatus: 'Active',
+        role: 'User' as const,
+        accountStatus: 'Active' as const,
         createdAt: serverTimestamp(),
         totalConsumptionLiters: 0,
         lastLogin: new Date().toISOString(),
@@ -95,7 +94,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
           salaryType: values.salaryType,
           rate: values.rate,
           startDate: values.startDate,
-          status: 'Active'
+          status: 'Active' as const
         }
       };
 

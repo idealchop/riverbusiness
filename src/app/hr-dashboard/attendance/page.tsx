@@ -14,10 +14,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, addDoc, serverTimestamp, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import type { HRAttendanceLog } from '@/lib/types';
 
 export default function AttendancePage() {
   const { user } = useUser();
@@ -28,26 +29,25 @@ export default function AttendancePage() {
   const companyId = user?.companyId || user?.clientId || 'default';
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  // Fetch today's log for the current user
   const todayLogQuery = useMemoFirebase(
-    () => firestore ? query(
+    () => (firestore && user?.id && companyId) ? query(
         collection(firestore, 'hr_companies', companyId, 'attendance'),
-        where('employeeId', '==', user?.id),
+        where('employeeId', '==', user.id),
         where('date', '==', today)
     ) : null,
     [firestore, companyId, user?.id, today]
   );
-  const { data: attendanceLogs } = useCollection(todayLogQuery);
+  const { data: attendanceLogs } = useCollection<HRAttendanceLog>(todayLogQuery);
   const currentLog = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs[0] : null;
 
   const handleTimeIn = async () => {
-    if (!firestore || !user) return;
+    if (!firestore || !user || !companyId) return;
     setIsProcessing(true);
     try {
         const attendanceCol = collection(firestore, 'hr_companies', companyId, 'attendance');
         const now = new Date();
         const hour = now.getHours();
-        const status = hour >= 9 ? 'late' : 'present'; // Simple rule: after 9am is late
+        const status = hour >= 9 ? 'late' : 'present';
 
         await addDoc(attendanceCol, {
             companyId,
@@ -59,7 +59,7 @@ export default function AttendancePage() {
             status: status
         });
 
-        toast({ title: 'Clock-In Successful', description: `Good morning, ${user.name.split(' ')[0]}!` });
+        toast({ title: 'Clock-In Successful', description: `Good morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not clock in.' });
     } finally {
@@ -68,7 +68,7 @@ export default function AttendancePage() {
   };
 
   const handleTimeOut = async () => {
-    if (!firestore || !currentLog) return;
+    if (!firestore || !currentLog || !companyId) return;
     setIsProcessing(true);
     try {
         const logRef = doc(firestore, 'hr_companies', companyId, 'attendance', currentLog.id);
@@ -91,7 +91,6 @@ export default function AttendancePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Time Clock Action Card */}
         <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
            <div className="h-2 bg-green-600 w-full" />
            <CardContent className="p-8 md:p-10 flex flex-col items-center text-center space-y-8">
@@ -149,7 +148,6 @@ export default function AttendancePage() {
            </CardContent>
         </Card>
 
-        {/* Info & Rules Card */}
         <div className="space-y-6">
             <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 transition-transform group-hover:scale-110">

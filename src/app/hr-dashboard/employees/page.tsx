@@ -6,14 +6,12 @@ import {
   Search, 
   Plus, 
   MoreHorizontal, 
-  Mail, 
-  Phone,
-  Briefcase,
+  Briefcase, 
   Calendar,
   Filter,
   DollarSign
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +32,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
 import { cn } from '@/lib/utils';
@@ -50,15 +48,18 @@ export default function EmployeesPage() {
   const companyId = user?.companyId || user?.clientId || 'default';
 
   const employeesQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
   );
-  const { data: employees, isLoading } = useCollection(employeesQuery);
+  const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
-  const filteredEmployees = employees?.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.hrProfile?.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees?.filter(emp => {
+    const search = searchTerm.toLowerCase();
+    return (
+      emp.name?.toLowerCase().includes(search) ||
+      emp.hrProfile?.position?.toLowerCase().includes(search)
+    );
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -112,7 +113,7 @@ export default function EmployeesPage() {
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
-                        {emp.name.split(' ').map(n => n[0]).join('')}
+                        {emp.name?.split(' ').map(n => n[0]).join('') || '?'}
                       </div>
                       <div className="space-y-0.5">
                         <p className="text-sm font-bold text-slate-900">{emp.name}</p>
