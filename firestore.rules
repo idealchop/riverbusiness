@@ -13,8 +13,17 @@ service cloud.firestore {
       return request.auth == null || (request.auth != null && request.auth.token.email == 'admin@riverph.com');
     }
 
-    function isOrgOwner() {
-        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hrRole == 'owner';
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isOrgManager() {
+        let role = getUserData().hrRole;
+        return request.auth != null && (role == 'owner' || role == 'admin');
+    }
+
+    function belongsToCompany(companyId) {
+        return request.auth != null && getUserData().companyId == companyId;
     }
 
     // Admins have global read/write access to all documents for management purposes.
@@ -29,7 +38,8 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow list, read: if isOwner(userId) || isAdmin() || 
                        (request.auth != null && resource.data.parentId == request.auth.uid) ||
-                       (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid);
+                       (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid) ||
+                       (request.auth != null && belongsToCompany(resource.data.companyId));
     }
     
     match /unclaimedProfiles/{clientId} {
@@ -38,9 +48,31 @@ service cloud.firestore {
 
     match /unclaimedEmployees/{inviteId} {
       allow read, delete: if request.auth != null;
-      // Allow Org Owners to create invitations for their team
-      allow create: if request.auth != null && (isAdmin() || isOrgOwner());
+      // Allow Org Managers (Owners/Admins) to create invitations for their team
+      allow create: if request.auth != null && (isAdmin() || isOrgManager());
       allow list: if isAdmin() || (request.auth != null && request.query.where.get('email')[2] == request.auth.token.email);
+    }
+
+    // Rules for HR-specific multi-tenant data
+    match /hr_companies/{companyId} {
+      allow read: if isAdmin() || belongsToCompany(companyId);
+      
+      match /attendance/{logId} {
+        allow read, list: if isAdmin() || belongsToCompany(companyId);
+        allow create: if request.auth != null && belongsToCompany(companyId);
+        allow update: if isAdmin() || isOrgManager() && belongsToCompany(companyId);
+      }
+
+      match /leaveRequests/{requestId} {
+        allow read, list: if isAdmin() || belongsToCompany(companyId);
+        allow create: if request.auth != null && belongsToCompany(companyId);
+        allow update: if isAdmin() || (isOrgManager() && belongsToCompany(companyId));
+      }
+
+      match /payrollRuns/{runId} {
+        // Payroll is highly sensitive - restrict to Managers only
+        allow read, list, create: if isAdmin() || (isOrgManager() && belongsToCompany(companyId));
+      }
     }
 
     match /waterStations/{stationId} {

@@ -41,6 +41,9 @@ exports.getTopUpConfirmationTemplate = getTopUpConfirmationTemplate;
 exports.getNewInvoiceTemplate = getNewInvoiceTemplate;
 exports.getRefillRequestTemplate = getRefillRequestTemplate;
 exports.getEmployeeInvitationTemplate = getEmployeeInvitationTemplate;
+exports.getSanitationScheduledTemplate = getSanitationScheduledTemplate;
+exports.getSanitationReportTemplate = getSanitationReportTemplate;
+exports.getPaymentReminderTemplate = getPaymentReminderTemplate;
 const nodemailer = __importStar(require("nodemailer"));
 const logger = __importStar(require("firebase-functions/logger"));
 const date_fns_1 = require("date-fns");
@@ -451,6 +454,93 @@ function getEmployeeInvitationTemplate(employeeName, businessName, signupUrl) {
     return {
         subject: `Invitation: Join ${businessName} on River Business 🌊`,
         html: getEmailWrapper(content, 'Welcome to the Team')
+    };
+}
+function getSanitationScheduledTemplate(businessName, assignedTo, date) {
+    const content = `
+    <p class="greeting">Hi ${businessName}, 🛠️</p>
+    <p class="body-text">
+      Standard quality protocols are in motion. We have scheduled a professional sanitation visit for your office dispensers.
+    </p>
+    <div class="details-box">
+      <h3 class="details-title">Visit Details</h3>
+      <div class="detail-item">
+        <div class="detail-icon">📅</div>
+        <div>
+          <p class="detail-label">Target Date</p>
+          <p class="detail-value">${date}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-icon">👤</div>
+        <div>
+          <p class="detail-label">Assigned Officer</p>
+          <p class="detail-value">${assignedTo}</p>
+        </div>
+      </div>
+      <p class="next-step">
+        Our officer will perform a multi-point inspection to ensure your equipment remains compliant with DOH health standards.
+      </p>
+    </div>
+  `;
+    return {
+        subject: `Scheduled: Office Sanitation Visit for ${businessName} 🛡️`,
+        html: getEmailWrapper(content, 'Sanitation Visit Scheduled')
+    };
+}
+function getSanitationReportTemplate(businessName, assignedTo, date, score) {
+    const content = `
+    <p class="greeting">Hello ${businessName}, ✅</p>
+    <p class="body-text">
+      Your latest equipment quality report is now available. Our officer has completed the scheduled sanitation of your office hydration units.
+    </p>
+    <div class="details-box">
+      <h3 class="details-title">Compliance Summary</h3>
+      <div class="detail-item">
+        <div class="detail-icon">📊</div>
+        <div>
+          <p class="detail-label">Health Score</p>
+          <p class="detail-value" style="color: #10b981;">${score}</p>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-icon">🕒</div>
+        <div>
+          <p class="detail-label">Completion Date</p>
+          <p class="detail-value">${date}</p>
+        </div>
+      </div>
+      <p class="next-step">
+        You can view the full multi-point checklist and digital signatures in your dashboard's Compliance & Sanitation section.
+      </p>
+    </div>
+  `;
+    return {
+        subject: `Report Ready: Equipment Health Check for ${businessName} 💧`,
+        html: getEmailWrapper(content, 'Quality Report Finalized')
+    };
+}
+function getPaymentReminderTemplate(businessName, amount, period) {
+    const content = `
+    <p class="greeting">Hi ${businessName}, 🔔</p>
+    <p class="body-text">
+      This is a friendly follow-up regarding your statement for <strong>${period}</strong>. To ensure your automated hydration services continue without interruption, please settle the balance below.
+    </p>
+    <div class="details-box">
+      <h3 class="details-title">Statement Snapshot</h3>
+      <div class="detail-item">
+        <div class="detail-icon">💰</div>
+        <div>
+          <p class="detail-label">Total Amount Due</p>
+          <p class="detail-value">₱${amount}</p>
+        </div>
+      </div>
+    </div>
+    ${PAYMENT_OPTIONS_BLOCK}
+  `;
+    return {
+        subject: `Reminder: Action required for your ${period} statement 🌊`,
+        html: getEmailWrapper(content, 'Payment Follow-up')
     };
 }
 //# sourceMappingURL=email.js.map
