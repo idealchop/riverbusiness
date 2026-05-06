@@ -37,9 +37,9 @@ const apps = [
   },
   { 
     id: '04', 
-    name: 'Customers', 
-    href: '/customers', 
-    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fcustomers.svg?alt=media&token=33c27f8f-7a05-4133-bf25-ec3949110bcb' 
+    name: 'Files', 
+    href: '/files', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FFiles.svg?alt=media&token=7f746199-877e-455f-a96f-91b619f9c66a' 
   },
   { 
     id: '05', 
