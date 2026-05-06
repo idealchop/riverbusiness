@@ -1,16 +1,8 @@
 'use client';
 import React, { useMemo, useState, useEffect } from 'react';
-import Image from 'next/image';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { FileText, ShieldCheck, User } from 'lucide-react';
+  Button } from "@/components/ui/button";
+import { FileText, ShieldCheck } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import type { AppUser, Notification as NotificationType, ChatMessage, Payment } from '@/lib/types';
@@ -29,6 +21,7 @@ import { LiveSupportDialog } from '@/components/dashboard/dialogs/LiveSupportDia
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { MobileNav } from '@/components/dashboard/layout/MobileNav';
 import { PaymentDialog } from '@/components/dashboard/dialogs/PaymentDialog';
+import { Logo } from '@/components/icons';
 
 export default function DashboardLayout({
   children,
@@ -216,65 +209,68 @@ export default function DashboardLayout({
   const userFirstName = user?.name?.split(' ')[0] || 'friend';
 
   return (
-      <div className="flex flex-col h-full">
-          <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-            <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-              <div className="flex items-center"><span className="font-bold">River Business</span></div>
+      <div className="flex flex-col h-full bg-slate-50/50">
+          <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
+            <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg group">
+              <div className="flex items-center gap-2">
+                <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
+                <span className="hidden sm:block text-slate-900">River Business</span>
+              </div>
             </Link>
             <div className="flex-1" />
             
-            <LiveSupportDialog 
-                isOpen={isLiveSupportOpen}
-                onOpenChange={setIsLiveSupportOpen}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <LiveSupportDialog 
+                  isOpen={isLiveSupportOpen}
+                  onOpenChange={setIsLiveSupportOpen}
+                  user={user}
+                  chatMessages={chatMessages || []}
+                  onMessageSubmit={handleMessageSubmit}
+              />
+              
+              <Button asChild variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100 hidden sm:flex">
+                <Link href="/documentation" target="_blank"><FileText className="h-5 w-5 text-slate-600" /></Link>
+              </Button>
+
+              <NotificationPopover 
+                  notifications={notifications || []}
+                  onNotificationClick={handleNotificationClick}
+              />
+
+              <Button variant="ghost" size="icon" className="sm:hidden rounded-full hover:bg-slate-100" onClick={handleComplianceClick}>
+                <ShieldCheck className="h-5 w-5 text-slate-600" />
+              </Button>
+
+              <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block bg-slate-200" />
+
+              <MyAccountDialog
                 user={user}
-                chatMessages={chatMessages || []}
-                onMessageSubmit={handleMessageSubmit}
-            />
-            
-            <Button asChild variant="outline" size="icon" className="relative rounded-full">
-              <Link href="/documentation" target="_blank"><FileText className="h-4 w-4" /></Link>
-            </Button>
-
-            <NotificationPopover 
-                notifications={notifications || []}
-                onNotificationClick={handleNotificationClick}
-            />
-
-            <Button variant="outline" size="icon" className="sm:hidden rounded-full" onClick={handleComplianceClick}>
-              <ShieldCheck className="h-4 w-4" />
-            </Button>
-
-            <Separator orientation="vertical" className="h-8 mx-2 hidden sm:block" />
-
-            <MyAccountDialog
-              user={user}
-              authUser={authUser}
-              planImage={planImage}
-              paymentHistory={paymentHistoryFromDb || []}
-              paymentsLoading={paymentsLoading}
-              onLogout={handleLogout}
-              onPayNow={handlePayNow}
-              isOpen={isAccountDialogOpen}
-              onOpenChange={setIsAccountDialogOpen}
-              initialTab={initialAccountDialogTab}
-            >
-              <div className="items-center gap-3 cursor-pointer hidden sm:flex">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                        <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
-                        <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  <div className="hidden sm:flex flex-col items-start">
-                    <p className="font-semibold text-sm">{user?.businessName}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                authUser={authUser}
+                planImage={planImage}
+                paymentHistory={paymentHistoryFromDb || []}
+                paymentsLoading={paymentsLoading}
+                onLogout={handleLogout}
+                onPayNow={handlePayNow}
+                isOpen={isAccountDialogOpen}
+                onOpenChange={setIsAccountDialogOpen}
+                initialTab={initialAccountDialogTab}
+              >
+                <div className="items-center gap-3 cursor-pointer group hidden sm:flex pl-2 py-1 pr-1 rounded-full hover:bg-slate-100 transition-colors">
+                  <div className="flex flex-col items-end">
+                    <p className="font-bold text-xs text-slate-900 leading-tight">{user?.businessName}</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{user?.email}</p>
                   </div>
+                  <Avatar className="h-8 w-8 border border-slate-200 shadow-sm">
+                      <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
+                      <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">{user?.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
                 </div>
-              </div>
-            </MyAccountDialog>
+              </MyAccountDialog>
+            </div>
           </header>
 
           <main className="flex-1 overflow-auto p-4 sm:p-6 pb-24 sm:pb-6">
-            <div className="container mx-auto">
+            <div className="container mx-auto max-w-7xl">
               {children}
             </div>
           </main>
@@ -286,11 +282,11 @@ export default function DashboardLayout({
             onAccountClick={() => setIsAccountDialogOpen(true)}
           />
 
-          <footer className="p-4 text-center text-xs text-muted-foreground border-t hidden sm:block">
-              v1.0.0 - Smart Refill is a trademark and product name of{' '}
-              <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+          <footer className="p-4 text-center text-xs text-muted-foreground border-t bg-background/50 hidden sm:block">
+              <span className="opacity-70">v1.0.0 — Smart Refill is a trademark of </span>
+              <a href="https://riverph.com" target="_blank" rel="noopener noreferrer" className="font-bold text-slate-900 hover:underline">
                   River Philippines
-              </a>.
+              </a>
           </footer>
 
           <PaymentDialog

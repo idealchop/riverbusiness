@@ -1,9 +1,8 @@
-
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Bell, User, Receipt, FileUp, Info, MessageSquare } from 'lucide-react';
+import { Bell, User, Receipt, Info, MessageSquare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
@@ -16,7 +15,7 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-
+import { Logo } from '@/components/icons';
 
 const NOTIFICATION_ICONS: { [key: string]: React.ElementType } = {
   payment: Receipt,
@@ -92,16 +91,18 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex flex-col h-screen bg-muted/40">
-      <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:h-16 sm:px-6">
-        <Link href="/admin" className="flex items-center gap-2 font-semibold text-lg">
-            <div className="flex items-center">
-                <span className="font-bold">River Business</span>
+    <div className="flex flex-col h-screen bg-slate-50/50">
+      <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
+        <Link href="/admin" className="flex items-center gap-2 font-bold text-lg group">
+            <div className="flex items-center gap-2">
+                <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
+                <span className="hidden sm:block text-slate-900">River Command</span>
+                <Badge variant="outline" className="text-[10px] uppercase font-black bg-blue-50 text-blue-600 border-blue-200 px-2 py-0">Admin</Badge>
             </div>
         </Link>
         <div className="flex-1" />
-        <div className="flex items-center gap-4">
-          <Button variant="outline" className="rounded-full relative" asChild>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Button variant="outline" className="rounded-full relative border-slate-200 shadow-sm h-10 px-4 group hover:bg-slate-50" asChild>
             <Link href="/admin/live-chat">
                 <span className="relative flex items-center mr-2">
                     <span className="relative flex h-2 w-2">
@@ -109,9 +110,9 @@ export default function AdminLayout({
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
                 </span>
-                <span className="mr-2 hidden sm:inline">Live Support</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Support Feed</span>
                 {hasUnreadChatMessages && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background" />
+                  <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-red-500 border-2 border-background shadow-sm" />
                 )}
             </Link>
           </Button>
@@ -119,80 +120,93 @@ export default function AdminLayout({
           <Popover onOpenChange={handleNotificationOpenChange}>
             <PopoverTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="relative overflow-hidden rounded-full"
+                className="relative rounded-full hover:bg-slate-100"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5 text-slate-600" />
                  {unreadNotifications.length > 0 && (
-                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-xs">
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-[10px] font-bold border-2 border-background">
                         {unreadNotifications.length}
                     </Badge>
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-96">
-               <div className="space-y-2">
+            <PopoverContent align="end" className="w-96 p-0 shadow-2xl border-none rounded-xl overflow-hidden">
+               <div className="p-4 bg-muted/30 border-b">
                   <div className="flex justify-between items-center">
-                  <h4 className="font-medium text-sm">Notifications</h4>
-                   {unreadNotifications.length > 0 && (
-                      <Badge variant="secondary" className="rounded-sm">
-                          {unreadNotifications.length} New
-                      </Badge>
-                   )}
+                    <h4 className="font-bold text-sm uppercase tracking-wider text-slate-900">Notifications</h4>
+                    {unreadNotifications.length > 0 && (
+                        <Badge className="bg-primary text-[10px] font-bold px-2 py-0.5">{unreadNotifications.length} New</Badge>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Recent updates from your clients.
-                  </p>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mt-1">Updates from your client network</p>
               </div>
-              <Separator className="my-4" />
-                <div className="space-y-4 max-h-80 overflow-y-auto">
-                    {notifications && notifications.length > 0 ? (
-                        notifications.map((notification) => {
+              <div className="max-h-80 overflow-y-auto bg-background">
+                  {notifications && notifications.length > 0 ? (
+                      <div className="divide-y divide-slate-50">
+                        {notifications.map((notification) => {
                             const Icon = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.default;
                             const date = notification.date instanceof Timestamp ? notification.date.toDate() : null;
-                             const isActionable = !!notification.data?.userId;
+                            const isActionable = !!notification.data?.userId;
 
                             return (
-                                <div key={notification.id} className={cn("grid grid-cols-[25px_1fr] items-start gap-4", isActionable && "cursor-pointer hover:bg-accent -mx-2 px-2 py-1 rounded-md")} onClick={() => isActionable && handleNotificationClick(notification)}>
-                                    <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium leading-none">
+                                <div 
+                                  key={notification.id} 
+                                  className={cn(
+                                    "flex items-start gap-3 p-4 transition-colors", 
+                                    isActionable ? "cursor-pointer hover:bg-slate-50" : "opacity-80"
+                                  )} 
+                                  onClick={() => isActionable && handleNotificationClick(notification)}
+                                >
+                                    <div className="p-2 rounded-full bg-slate-100">
+                                      <Icon className="h-4 w-4 text-slate-600" />
+                                    </div>
+                                    <div className="space-y-1 flex-1">
+                                        <p className="text-sm font-bold leading-tight text-slate-900">
                                             {notification.title}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
                                             {notification.description}
                                         </p>
-                                        <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                                           <p>{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</p>
-                                           {isActionable && 
-                                             <span className="font-medium text-primary">View details</span>
-                                           }
+                                        <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-50">
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{date ? formatDistanceToNow(date, { addSuffix: true }) : 'Just now'}</p>
+                                          {isActionable && <span className="text-[10px] font-black uppercase text-primary tracking-widest">Details →</span>}
                                         </div>
                                     </div>
                                 </div>
                             );
-                        })
-                    ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">No new notifications.</p>
-                    )}
-                </div>
+                        })}
+                      </div>
+                  ) : (
+                      <div className="py-12 flex flex-col items-center justify-center text-center px-8 opacity-40">
+                        <Bell className="h-10 w-10 mb-2" />
+                        <p className="text-xs font-bold uppercase tracking-widest">No activity alerts</p>
+                      </div>
+                  )}
+              </div>
             </PopoverContent>
           </Popover>
+
+          <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
           <Button
             variant="ghost"
-            size="icon"
-            className="overflow-hidden rounded-full"
+            className="flex items-center gap-3 pl-2 py-1 pr-1 rounded-full hover:bg-slate-100 transition-colors group"
             onClick={handleOpenMyAccount}
           >
-            <Avatar className="h-8 w-8">
+            <div className="hidden sm:flex flex-col items-end">
+              <p className="font-bold text-xs text-slate-900 leading-tight">Administrator</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{adminUser?.email}</p>
+            </div>
+            <Avatar className="h-8 w-8 border border-slate-200 shadow-sm transition-transform group-hover:scale-105">
               <AvatarImage src={adminUser?.photoURL ?? undefined} alt="Admin" />
-              <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+              <AvatarFallback className="bg-slate-900 text-white font-bold text-xs"><User className="h-4 w-4" /></AvatarFallback>
             </Avatar>
           </Button>
         </div>
       </header>
-      <main className="flex-1 p-4 sm:p-6">
+      <main className="flex-1 p-4 sm:p-6 overflow-auto">
         <div className="container mx-auto max-w-7xl">
             {children}
         </div>
