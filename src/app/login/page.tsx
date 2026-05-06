@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -158,8 +157,8 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950/80 to-transparent z-0" />
 
             <div className="relative z-10">
-                <div className="inline-flex p-3 bg-white rounded-2xl mb-12 shadow-2xl shadow-blue-500/10">
-                    <Logo className="h-10 w-10" />
+                <div className="mb-16">
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-white">River Philippines</span>
                 </div>
                 <div className="space-y-4 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
