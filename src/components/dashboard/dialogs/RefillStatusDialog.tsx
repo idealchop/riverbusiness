@@ -4,12 +4,11 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { RefillRequest, RefillRequestStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Send, Settings, Truck, CheckCircle, FileX, Package, Calendar, MessageSquare, Info, ChevronRight } from 'lucide-react';
+import { Send, Settings, Truck, CheckCircle, FileX, Package, Calendar, Info, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { Timestamp } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface RefillStatusDialogProps {
   isOpen: boolean;
@@ -87,7 +86,7 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden shadow-none rounded-2xl border-none">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden shadow-none rounded-2xl border-none">
         <div className="relative aspect-video w-full">
            <Image 
               src={brandingImage} 
@@ -100,11 +99,11 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
            <div className="absolute bottom-6 left-6 flex items-center justify-between right-6">
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-white">Refill Tracker</h2>
-                <p className="text-xs font-bold text-white/80 uppercase tracking-widest mt-1">Real-time Fulfillment Feed</p>
+                <h2 className="text-xl font-black tracking-tight text-white">Refill Tracker</h2>
+                <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest mt-1">Real-time Fulfillment Feed</p>
               </div>
               {activeRefillRequest && (
-                  <Badge variant="outline" className="h-6 font-mono text-[10px] bg-white/10 text-white border-white/20 backdrop-blur-sm">
+                  <Badge variant="outline" className="h-5 font-mono text-[9px] bg-white/10 text-white border-white/20 backdrop-blur-sm">
                       REF-{activeRefillRequest.id.substring(0, 8).toUpperCase()}
                   </Badge>
               )}
@@ -112,18 +111,18 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
         </div>
 
         {activeRefillRequest ? (
-          <div className="p-6 space-y-6">
-            <div className={cn("rounded-2xl p-4 border flex items-center gap-4 transition-all", config.bg, "border-white shadow-none")}>
-                <div className={cn("p-3 rounded-full bg-white border border-slate-100", config.color)}>
-                    <Icon className="h-6 w-6" />
+          <div className="p-5 space-y-6">
+            <div className={cn("rounded-xl p-4 border flex items-center gap-4 transition-all", config.bg, "border-white shadow-none")}>
+                <div className={cn("p-2.5 rounded-full bg-white border border-slate-100", config.color)}>
+                    <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                    <h3 className={cn("text-lg font-black tracking-tight mb-0.5", config.color)}>{config.label}</h3>
-                    <p className="text-xs font-medium text-slate-600 leading-relaxed">{config.subtext}</p>
+                    <h3 className={cn("text-base font-black tracking-tight mb-0.5", config.color)}>{config.label}</h3>
+                    <p className="text-[11px] font-medium text-slate-600 leading-relaxed">{config.subtext}</p>
                 </div>
             </div>
 
-            <div className="relative pl-2">
+            <div className="relative pl-1">
                 <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
                 <div className="space-y-6 relative">
                     {statusOrder.map((status, index) => {
@@ -134,26 +133,26 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
 
                         return (
                             <div key={status} className={cn(
-                                "flex items-start gap-6 transition-all",
+                                "flex items-start gap-5 transition-all",
                                 !isCompleted && !isCurrent && "opacity-30 grayscale"
                             )}>
                                 <div className={cn(
-                                    "relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white transition-all",
+                                    "relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-4 border-white transition-all",
                                     isCompleted ? "bg-green-500 text-white" :
                                     isCurrent ? "bg-blue-600 text-white scale-110 ring-4 ring-blue-50" :
                                     "bg-slate-200 text-slate-400"
                                 )}>
-                                    {isCompleted ? <CheckCircle className="h-4 w-4" /> : <StatusIcon className="h-4 w-4" />}
+                                    {isCompleted ? <CheckCircle className="h-3 w-3" /> : <StatusIcon className="h-3 w-3" />}
                                 </div>
-                                <div className="pt-1">
+                                <div className="pt-0.5">
                                     <h4 className={cn(
-                                        "text-sm font-bold uppercase tracking-wider",
+                                        "text-xs font-bold uppercase tracking-wider",
                                         isCurrent ? "text-blue-600" : "text-slate-900"
                                     )}>
                                         {statusConfig[status].label}
-                                        {isCurrent && <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-blue-600 animate-ping" />}
+                                        {isCurrent && <span className="ml-2 inline-flex h-1.5 w-1.5 rounded-full bg-blue-600 animate-ping" />}
                                     </h4>
-                                    <p className="text-[10px] font-bold text-muted-foreground mt-0.5 leading-relaxed">
+                                    <p className="text-[9px] font-bold text-muted-foreground mt-0.5 leading-relaxed">
                                         {statusConfig[status].message}
                                     </p>
                                 </div>
@@ -163,33 +162,8 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
                 </div>
             </div>
 
-            <Card className="border-dashed bg-muted/20 shadow-none">
-                <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-white border border-slate-100">
-                            <MessageSquare className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-slate-900">Need to modify?</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-tight font-bold">Support is online</p>
-                        </div>
-                    </div>
-                    <Button 
-                        variant="link" 
-                        size="sm" 
-                        className="h-auto p-0 text-[10px] font-black uppercase tracking-widest text-primary gap-1"
-                        onClick={() => {
-                            onOpenChange(false);
-                            window.dispatchEvent(new CustomEvent('open-live-support'));
-                        }}
-                    >
-                        Chat Now <ChevronRight className="h-3 w-3" />
-                    </Button>
-                </CardContent>
-            </Card>
-
             {isWeekendRequest && currentStatus === 'Requested' && (
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
                     <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                     <p className="text-[10px] font-bold uppercase tracking-tight text-amber-800/80 leading-relaxed">
                         Note: Requests made on weekends are processed on the next business day (Monday).
@@ -198,15 +172,15 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
             )}
           </div>
         ) : (
-          <div className="py-20 flex flex-col items-center justify-center gap-4 text-center px-10">
-            <div className="h-12 w-12 border-4 border-dashed border-primary rounded-full animate-spin" />
-            <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Syncing Fulfillment Data...</p>
+          <div className="py-16 flex flex-col items-center justify-center gap-4 text-center px-10">
+            <div className="h-10 w-10 border-4 border-dashed border-primary rounded-full animate-spin" />
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Syncing Fulfillment Data...</p>
           </div>
         )}
 
-        <DialogFooter className="bg-slate-50 p-6 pt-4 border-t">
+        <DialogFooter className="bg-slate-50 p-5 pt-4 border-t">
             <DialogClose asChild>
-                <Button variant="outline" className="w-full h-11 font-bold uppercase tracking-widest text-[10px] border-slate-200 shadow-none rounded-xl">
+                <Button variant="outline" className="w-full h-10 font-bold uppercase tracking-widest text-[10px] border-slate-200 shadow-none rounded-xl">
                     Close Tracker
                 </Button>
             </DialogClose>
