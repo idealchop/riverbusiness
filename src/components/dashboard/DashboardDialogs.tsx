@@ -19,7 +19,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-error';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { BranchesDialog } from './dialogs/BranchesDialog';
 

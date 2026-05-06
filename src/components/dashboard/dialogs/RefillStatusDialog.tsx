@@ -6,7 +6,7 @@ import { RefillRequest, RefillRequestStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Send, Settings, Truck, CheckCircle, FileX, Package, Calendar, Info, ChevronRight, History, ArrowLeft, Clock } from 'lucide-react';
 import Image from 'next/image';
-import { Timestamp, collection, query, orderBy, where } from 'firebase/firestore';
+import { Timestamp, collection, query, where } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -116,12 +116,20 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
     if (!firestore || !authUser) return null;
     return query(
         collection(firestore, 'users', authUser.uid, 'refillRequests'),
-        where('status', 'in', ['Completed', 'Cancelled']),
-        orderBy('requestedAt', 'desc')
+        where('status', 'in', ['Completed', 'Cancelled'])
     );
   }, [firestore, authUser]);
 
-  const { data: refillHistory, isLoading: isHistoryLoading } = useCollection<RefillRequest>(historyQuery);
+  const { data: rawHistory, isLoading: isHistoryLoading } = useCollection<RefillRequest>(historyQuery);
+
+  const refillHistory = useMemo(() => {
+    if (!rawHistory) return [];
+    return [...rawHistory].sort((a, b) => {
+        const dateA = toSafeDate(a.requestedAt)?.getTime() || 0;
+        const dateB = toSafeDate(b.requestedAt)?.getTime() || 0;
+        return dateB - dateA;
+    });
+  }, [rawHistory]);
 
   const isWeekendRequest = React.useMemo(() => {
     if (!activeRefillRequest?.requestedAt) return false;
