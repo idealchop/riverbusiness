@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { cn } from "@/lib/utils";
-import { Logo } from '@/components/icons';
 
 export function Loader({ className }: { className?: string }) {
   return (
@@ -24,17 +23,10 @@ export function FullScreenLoader({ text }: { text?: string }) {
                style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0)', backgroundSize: '40px 40px' }} />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center space-y-6 animate-in fade-in zoom-in-95 duration-700">
-        {/* Simplified Pulsing Logo/Core */}
-        <div className="relative h-20 w-20 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border-2 border-primary/10 animate-ping duration-[3000ms]" />
-          <div className="absolute inset-0 rounded-full border border-primary/20 animate-[spin_4s_linear_infinite]" />
-          <Logo className="h-10 w-10 animate-pulse transition-all duration-1000" />
-        </div>
-
-        <div className="space-y-2">
+      <div className="relative z-10 flex flex-col items-center text-center space-y-4 animate-in fade-in zoom-in-95 duration-700">
+        <div className="space-y-3">
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-900 opacity-80">
-            {text || "Preparing Environment"}
+            {text || "Preparing Dashboard"}
           </p>
           <div className="flex justify-center">
             <Loader className="opacity-40" />
