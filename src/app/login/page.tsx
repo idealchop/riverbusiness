@@ -132,8 +132,8 @@ export default function LoginPage() {
       <div className="flex w-full flex-col lg:flex-row">
         {/* Branding Side */}
         <div className="relative w-full lg:w-1/2 p-8 sm:p-12 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
-            {/* Background Decorative Pattern */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+            {/* Animated Background Pattern */}
+            <div className="absolute inset-0 opacity-10 pointer-events-none animate-drift" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
             
             <div className="relative z-10">
                 <Logo className="h-10 w-10 mb-8" />
@@ -223,13 +223,13 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            {/* Immersive Image Overlay */}
+            {/* Immersive Animated Image Overlay */}
             <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
                 <Image
                     src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a"
                     alt="River Business Operations"
                     fill
-                    className="object-cover"
+                    className="object-cover animate-slow-zoom"
                 />
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950/80 to-transparent z-0" />
