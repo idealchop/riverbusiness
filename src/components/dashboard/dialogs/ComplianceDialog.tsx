@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature, History, Camera } from 'lucide-react';
+import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature, History, Camera, ChevronRight, ClipboardCheck, Microscope, ShieldCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
 
@@ -83,16 +83,16 @@ export function ComplianceDialog({
     const passRate = totalItems > 0 ? (passedItems / totalItems) * 100 : 0;
 
     let overallStatus = 'Failed';
-    let statusColor = 'text-red-500';
+    let statusColor = 'text-destructive';
     if (passRate === 100) {
-        overallStatus = 'Excellent';
-        statusColor = 'text-green-500';
+        overallStatus = 'Perfect Score';
+        statusColor = 'text-green-600';
     } else if (passRate >= 80) {
-        overallStatus = 'Good';
-        statusColor = 'text-green-500';
+        overallStatus = 'Standard Passed';
+        statusColor = 'text-green-600';
     } else if (passRate >= 60) {
-        overallStatus = 'Needs Improvement';
-        statusColor = 'text-yellow-500';
+        overallStatus = 'Action Recommended';
+        statusColor = 'text-amber-500';
     }
 
     return { passed: passedItems, total: totalItems, passRate, overallStatus, statusColor };
@@ -135,43 +135,48 @@ export function ComplianceDialog({
   const paginatedSanitationVisits = useMemo(() => {
     if (!sanitationVisits) return [];
     const startIndex = (sanitationCurrentPage - 1) * SANITATION_ITEMS_PER_PAGE;
-    return sanitationVisits.slice(startIndex, startIndex + SANITATION_ITEMS_PER_PAGE);
+    return [...sanitationVisits].sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()).slice(startIndex, startIndex + SANITATION_ITEMS_PER_PAGE);
   }, [sanitationVisits, sanitationCurrentPage]);
 
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl h-full flex flex-col sm:h-auto sm:max-h-[90vh] p-0">
-          <DialogHeader className="p-6 pb-4">
-            <DialogTitle>Compliance & Sanitation</DialogTitle>
-            <DialogDescription>
-              View water quality reports from your assigned station and scheduled sanitation visits for your office.
+        <DialogContent className="sm:max-w-4xl h-full flex flex-col sm:h-auto sm:max-h-[90vh] p-0 border-none shadow-2xl overflow-hidden rounded-2xl">
+          <DialogHeader className="p-8 pb-4 bg-muted/20 border-b">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-primary/10">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl font-bold tracking-tight">Compliance Intelligence</DialogTitle>
+            </div>
+            <DialogDescription className="text-sm font-medium">
+              Real-time monitoring of water quality tests and office sanitation records for {waterStation?.name || 'Assigned Station'}.
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="px-6 flex-1">
-            <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex flex-col gap-4">
-              <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto sticky top-0 bg-background z-10">
-                <TabsTrigger value="compliance">Water Quality Reports</TabsTrigger>
-                <TabsTrigger value="sanitation">Office Sanitation Visits</TabsTrigger>
+          <ScrollArea className="px-6 flex-1 py-6">
+            <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="flex flex-col gap-6">
+              <TabsList className="grid w-full grid-cols-2 md:w-96 mx-auto sticky top-0 bg-background/80 backdrop-blur-md z-10 p-1 border rounded-xl shadow-inner">
+                <TabsTrigger value="compliance" className="rounded-lg data-[state=active]:shadow-sm">Station Reports</TabsTrigger>
+                <TabsTrigger value="sanitation" className="rounded-lg data-[state=active]:shadow-sm">Sanitation Logs</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="compliance">
-                <Card>
-                  <CardHeader className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+              <TabsContent value="compliance" className="mt-0 space-y-6">
+                <Card className="border-none shadow-sm overflow-hidden bg-white">
+                  <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 bg-slate-50/50">
                     <div>
-                      <CardTitle>Water Quality Compliance</CardTitle>
-                      <CardDescription>View all historical compliance reports and their status for {waterStation?.name || 'your assigned station'}.</CardDescription>
+                      <CardTitle className="text-lg">Station Quality Metrics</CardTitle>
+                      <CardDescription className="text-xs">Bacteriological and operational compliance documents.</CardDescription>
                     </div>
                     {availableMonths.length > 0 && (
                       <Select value={monthFilter} onValueChange={setMonthFilter}>
-                        <SelectTrigger className="w-full md:w-[200px]">
-                          <History className="mr-2 h-4 w-4" />
-                          <SelectValue placeholder="Filter by month..." />
+                        <SelectTrigger className="w-full md:w-[200px] h-9 text-xs font-bold uppercase tracking-tight bg-white">
+                          <History className="mr-2 h-3.5 w-3.5" />
+                          <SelectValue placeholder="Period Filter" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Months</SelectItem>
+                          <SelectItem value="all">Full History</SelectItem>
                           {availableMonths.map(month => (
                             <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
                           ))}
@@ -179,157 +184,176 @@ export function ComplianceDialog({
                       </Select>
                     )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     <Table className="hidden md:table">
-                      <TableHeader>
+                      <TableHeader className="bg-muted/10">
                         <TableRow>
-                          <TableHead>Report Name</TableHead>
-                          <TableHead>Month</TableHead>
+                          <TableHead className="pl-6">Report Category</TableHead>
+                          <TableHead>Valid Period</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Attachment</TableHead>
+                          <TableHead className="text-right pr-6">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {complianceLoading ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center">Loading reports...</TableCell>
+                            <TableCell colSpan={4} className="text-center py-12 text-xs font-bold uppercase tracking-widest opacity-40">Synchronizing records...</TableCell>
                           </TableRow>
                         ) : paginatedComplianceReports.map((report) => (
-                          <TableRow key={report.id}>
-                            <TableCell className="font-medium">{report.name}</TableCell>
-                            <TableCell>{report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}</TableCell>
-                            <TableCell>
-                              <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
+                          <TableRow key={report.id} className="group hover:bg-muted/30 transition-colors cursor-default">
+                            <TableCell className="pl-6 py-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-slate-100 group-hover:bg-primary/5 transition-colors">
+                                        <Microscope className="h-4 w-4 text-slate-400 group-hover:text-primary transition-colors" />
+                                    </div>
+                                    <span className="font-bold text-sm text-slate-900">{report.name}</span>
+                                </div>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View
+                            <TableCell className="text-xs font-medium text-slate-500 uppercase">
+                                {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMMM yyyy') : 'Processing...'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={cn(
+                                  'text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border shadow-sm',
+                                  report.status === 'Passed' && 'bg-green-50 text-green-700 border-green-200',
+                                  report.status === 'Failed' && 'bg-red-50 text-red-700 border-red-200',
+                                  report.status === 'Pending Review' && 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                              )}>
+                                {report.status === 'Passed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                                {report.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                              <Button variant="ghost" size="sm" className="h-8 text-[10px] uppercase font-bold tracking-widest gap-2 hover:bg-primary/5 hover:text-primary" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                                <Eye className="h-3.5 w-3.5" />
+                                View Doc
                               </Button>
                             </TableCell>
                           </TableRow>
                         ))}
                         {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">No compliance reports available for the selected period.</TableCell>
+                            <TableCell colSpan={4} className="text-center py-20 text-muted-foreground italic">No historical reports match the filter.</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
                     </Table>
 
-                    <div className="space-y-4 md:hidden">
+                    <div className="space-y-4 md:hidden p-4">
                       {complianceLoading ? (
-                        <p className="text-center text-muted-foreground py-4">Loading reports...</p>
+                        <p className="text-center text-[10px] font-bold uppercase tracking-widest opacity-40 py-10">Synchronizing...</p>
                       ) : paginatedComplianceReports.map(report => (
-                        <Card key={report.id}>
-                          <CardContent className="p-4 space-y-3">
+                        <Card key={report.id} className="shadow-none border bg-muted/10">
+                          <CardContent className="p-4 space-y-4">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-semibold">{report.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMM yyyy') : 'Processing...'}
+                                <p className="font-bold text-sm">{report.name}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight mt-1">
+                                  {report.date && typeof (report.date as any).toDate === 'function' ? format((report.date as any).toDate(), 'MMMM yyyy') : 'Validating...'}
                                 </p>
                               </div>
-                              <Badge variant={report.status === 'Passed' ? 'default' : report.status === 'Failed' ? 'destructive' : 'secondary'} className={cn('text-xs', report.status === 'Passed' && 'bg-green-100 text-green-800', report.status === 'Failed' && 'bg-red-100 text-red-800', report.status === 'Pending Review' && 'bg-yellow-100 text-yellow-800')}>{report.status}</Badge>
+                              <Badge variant="outline" className={cn(
+                                  'text-[9px] uppercase font-bold tracking-widest px-2 py-0.5',
+                                  report.status === 'Passed' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                              )}>{report.status}</Badge>
                             </div>
-                            <Button variant="outline" size="sm" className="w-full" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
-                              <Eye className="mr-2 h-4 w-4" /> View Attachment
+                            <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest" onClick={() => onViewAttachment(report.reportUrl || 'pending')}>
+                              <Eye className="mr-2 h-3.5 w-3.5" /> View Report Document
                             </Button>
                           </CardContent>
                         </Card>
                       ))}
-                      {(!paginatedComplianceReports || paginatedComplianceReports.length === 0) && !complianceLoading && (
-                        <p className="text-center text-muted-foreground py-10">No compliance reports available for the selected period.</p>
-                      )}
                     </div>
                   </CardContent>
-                  <CardFooter>
-                      <div className="flex items-center justify-end space-x-2 pt-4 w-full">
-                          <Button variant="outline" size="sm" onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))} disabled={complianceCurrentPage === 1}>Previous</Button>
-                          <span className="text-sm text-muted-foreground">Page {complianceCurrentPage} of {totalCompliancePages > 0 ? totalCompliancePages : 1}</span>
-                          <Button variant="outline" size="sm" onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))} disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}>Next</Button>
+                  <CardFooter className="bg-slate-50/50 border-t py-4 flex items-center justify-between">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ledger {filteredReports.length} documents</div>
+                      <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setComplianceCurrentPage(p => Math.max(1, p - 1))} disabled={complianceCurrentPage === 1}>Prev</Button>
+                          <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{complianceCurrentPage} / {totalCompliancePages || 1}</span>
+                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setComplianceCurrentPage(p => Math.min(totalCompliancePages, p + 1))} disabled={complianceCurrentPage === totalCompliancePages || totalCompliancePages === 0}>Next</Button>
                       </div>
                   </CardFooter>
                 </Card>
               </TabsContent>
               
-              <TabsContent value="sanitation">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Office Sanitation Visits</CardTitle>
-                    <CardDescription>Records of scheduled sanitation and cleaning for your office dispensers.</CardDescription>
+              <TabsContent value="sanitation" className="mt-0 space-y-6">
+                <Card className="border-none shadow-sm overflow-hidden bg-white">
+                  <CardHeader className="bg-slate-50/50">
+                    <CardTitle className="text-lg">Office Service Log</CardTitle>
+                    <CardDescription className="text-xs">Professional monthly sanitation visits for your dispensers.</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     <Table className="hidden md:table">
-                      <TableHeader>
+                      <TableHeader className="bg-muted/10">
                         <TableRow>
-                          <TableHead>Scheduled Date</TableHead>
+                          <TableHead className="pl-6">Scheduled Date</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Quality Officer</TableHead>
-                          <TableHead className="text-right">Report</TableHead>
+                          <TableHead className="text-right pr-6">Management</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sanitationLoading ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center">Loading visits...</TableCell>
+                            <TableCell colSpan={4} className="text-center py-12 text-xs font-bold uppercase tracking-widest opacity-40">Loading visit history...</TableCell>
                           </TableRow>
                         ) : paginatedSanitationVisits.map((visit) => (
-                          <TableRow key={visit.id}>
-                            <TableCell>{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</TableCell>
+                          <TableRow key={visit.id} className="group hover:bg-muted/30 transition-colors">
+                            <TableCell className="pl-6 py-4 font-bold text-sm">{format(new Date(visit.scheduledDate), 'MMMM d, yyyy')}</TableCell>
                             <TableCell>
-                              <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
+                              <Badge variant="outline" className={cn(
+                                  "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border shadow-sm",
+                                  visit.status === 'Completed' ? "bg-green-50 text-green-700 border-green-200" :
+                                  visit.status === 'Scheduled' ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-50 text-slate-600 border-slate-200"
+                              )}>
                                 {visit.status}
                               </Badge>
                             </TableCell>
-                            <TableCell>{visit.assignedTo}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedSanitationVisit(visit); }}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                View Report
-                              </Button>
+                            <TableCell className="text-xs font-medium text-slate-500 uppercase tracking-tight">{visit.assignedTo}</TableCell>
+                            <TableCell className="text-right pr-6">
+                                <div className="flex items-center justify-end gap-2">
+                                    <Button variant="outline" size="sm" className="h-8 text-[10px] uppercase font-bold tracking-widest gap-2 hover:bg-primary/5 hover:text-primary transition-colors" onClick={() => setSelectedSanitationVisit(visit)}>
+                                        <FileText className="h-3.5 w-3.5" />
+                                        View Report
+                                    </Button>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                                </div>
                             </TableCell>
                           </TableRow>
                         ))}
-                        {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">No sanitation visits scheduled.</TableCell>
-                          </TableRow>
-                        )}
                       </TableBody>
                     </Table>
 
-                    <div className="space-y-4 md:hidden">
+                    <div className="space-y-4 md:hidden p-4">
                       {sanitationLoading ? (
-                        <p className="text-center text-muted-foreground py-4">Loading visits...</p>
+                        <p className="text-center text-[10px] font-bold uppercase tracking-widest opacity-40 py-10">Loading...</p>
                       ) : paginatedSanitationVisits.map(visit => (
-                        <Card key={visit.id}>
-                          <CardContent className="p-4 space-y-3">
+                        <Card key={visit.id} className="shadow-none border bg-muted/10 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => setSelectedSanitationVisit(visit)}>
+                          <CardContent className="p-4 space-y-4">
                               <div className="flex justify-between items-start">
                                   <div>
-                                      <p className="font-semibold">{new Date(visit.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-                                      <p className="text-xs text-muted-foreground">Officer: {visit.assignedTo}</p>
+                                      <p className="font-bold text-sm">{format(new Date(visit.scheduledDate), 'MMM d, yyyy')}</p>
+                                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">Officer: {visit.assignedTo}</p>
                                   </div>
-                                  <Badge variant={visit.status === 'Completed' ? 'default' : visit.status === 'Scheduled' ? 'secondary' : 'outline'} className={visit.status === 'Completed' ? 'bg-green-100 text-green-800' : visit.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
-                                      {visit.status}
-                                  </Badge>
+                                  <Badge variant="outline" className={cn(
+                                      "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5",
+                                      visit.status === 'Completed' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
+                                  )}>{visit.status}</Badge>
                               </div>
-                              <Button variant="outline" size="sm" className="w-full" onClick={() => { setSelectedSanitationVisit(visit); }}>
-                                  <FileText className="mr-2 h-4 w-4" /> View Report
+                              <Button variant="outline" size="sm" className="w-full h-9 text-[10px] uppercase font-bold tracking-widest">
+                                  Open Analysis Report
                               </Button>
                           </CardContent>
                         </Card>
                       ))}
-                      {(!paginatedSanitationVisits || paginatedSanitationVisits.length === 0) && !sanitationLoading && (
-                          <p className="text-center text-muted-foreground py-10">No sanitation visits scheduled.</p>
-                      )}
                     </div>
                   </CardContent>
-                  <CardFooter>
-                      <div className="flex items-center justify-end space-x-2 pt-4 w-full">
-                          <Button variant="outline" size="sm" onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))} disabled={sanitationCurrentPage === 1}>Previous</Button>
-                          <span className="text-sm text-muted-foreground">Page {sanitationCurrentPage} of {totalSanitationPages > 0 ? totalSanitationPages : 1}</span>
-                          <Button variant="outline" size="sm" onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))} disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}>Next</Button>
+                  <CardFooter className="bg-slate-50/50 border-t py-4 flex items-center justify-between">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total {sanitationVisits?.length || 0} visits</div>
+                      <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setSanitationCurrentPage(p => Math.max(1, p - 1))} disabled={sanitationCurrentPage === 1}>Prev</Button>
+                          <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400 px-2">{sanitationCurrentPage} / {totalSanitationPages || 1}</span>
+                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold" onClick={() => setSanitationCurrentPage(p => Math.min(totalSanitationPages, p + 1))} disabled={sanitationCurrentPage === totalSanitationPages || totalSanitationPages === 0}>Next</Button>
                       </div>
                   </CardFooter>
                 </Card>
@@ -337,179 +361,232 @@ export function ComplianceDialog({
             </Tabs>
           </ScrollArea>
           
-          <DialogFooter className="p-6 pt-4 border-t">
+          <div className="p-6 pt-4 border-t bg-muted/20 flex justify-end">
             <DialogClose asChild>
-                <Button variant="outline">Close</Button>
+                <Button variant="outline" className="font-bold uppercase tracking-widest text-[10px] rounded-xl px-8 h-10 border-slate-200 shadow-sm">Dismiss</Button>
             </DialogClose>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
       
+      {/* Individual Report Detail View */}
       <Dialog open={!!selectedSanitationVisit} onOpenChange={() => setSelectedSanitationVisit(null)}>
-        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] flex flex-col">
-            <DialogHeader>
-                <DialogTitle>Sanitation Visit Report</DialogTitle>
-                <DialogDescription>
-                    Report for {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'PP') : ''} by Quality Officer {selectedSanitationVisit?.assignedTo}.
-                </DialogDescription>
+        <DialogContent className="sm:max-w-4xl h-full sm:h-auto sm:max-h-[95vh] flex flex-col p-0 border-none shadow-3xl overflow-hidden rounded-[2rem]">
+            <DialogHeader className="p-8 pb-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-b-4 border-primary">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-2xl bg-white/10 backdrop-blur-md">
+                            <ClipboardCheck className="h-6 w-6 text-primary-light" />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-2xl font-black tracking-tight uppercase">Sanitation Intelligence Report</DialogTitle>
+                            <DialogDescription className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">
+                                {selectedSanitationVisit ? format(new Date(selectedSanitationVisit.scheduledDate), 'MMMM do, yyyy') : ''} • Ref: SAN-{selectedSanitationVisit?.id.substring(0, 8).toUpperCase()}
+                            </DialogDescription>
+                        </div>
+                    </div>
+                    {selectedSanitationVisit?.status === 'Completed' && (
+                        <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 font-black uppercase text-[10px] tracking-widest h-7 px-4">
+                            Finalized
+                        </Badge>
+                    )}
+                </div>
             </DialogHeader>
-             <div className="flex-1 overflow-y-auto -mx-6 px-6">
-              <div className="py-4 space-y-6">
+
+             <div className="flex-1 overflow-y-auto px-8 bg-slate-50/50">
+              <div className="py-8 space-y-8 max-w-3xl mx-auto">
+                  
+                  {/* Results Hero Section */}
                   {selectedSanitationVisit?.status === 'Completed' ? (
-                      <Card>
-                          <CardHeader>
-                              <CardTitle className="text-base">Overall Result</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                              <div className="text-center mb-4">
-                                  <p className={cn("text-2xl font-bold", sanitationReportStats.statusColor)}>{sanitationReportStats.overallStatus}</p>
-                                  <p className="text-sm text-muted-foreground">{sanitationReportStats.passed} of {sanitationReportStats.total} items passed</p>
+                      <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden group">
+                          <CardContent className="p-8">
+                              <div className="grid md:grid-cols-2 gap-8 items-center">
+                                  <div className="space-y-4">
+                                      <div className="space-y-1">
+                                          <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Quality Assessment</Label>
+                                          <p className={cn("text-4xl font-black tracking-tighter uppercase", sanitationReportStats.statusColor)}>
+                                              {sanitationReportStats.overallStatus}
+                                          </p>
+                                      </div>
+                                      <p className="text-sm font-bold text-slate-600 leading-relaxed">
+                                          Our officer has verified <span className="text-slate-900">{sanitationReportStats.passed} of {sanitationReportStats.total}</span> compliance checkpoints for your office hydration infrastructure.
+                                      </p>
+                                      <div className="flex items-center gap-4 pt-2">
+                                          <div className="h-10 w-px bg-slate-100" />
+                                          <div>
+                                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Assigned Officer</p>
+                                              <p className="text-sm font-black text-slate-900">{selectedSanitationVisit.assignedTo}</p>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div className="flex flex-col items-center justify-center p-6 rounded-[2.5rem] bg-slate-50 border border-slate-100 shadow-inner relative overflow-hidden">
+                                      <div className="relative z-10 text-center">
+                                          <p className="text-5xl font-black tracking-tighter text-slate-900 mb-1">{sanitationReportStats.passRate.toFixed(0)}<span className="text-2xl">%</span></p>
+                                          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Intelligence Score</p>
+                                      </div>
+                                      <Progress value={sanitationReportStats.passRate} className="absolute bottom-0 left-0 right-0 h-1.5 rounded-none bg-slate-200" />
+                                  </div>
                               </div>
-                              <TooltipProvider>
-                                  <Tooltip>
-                                      <TooltipTrigger asChild><Progress value={sanitationReportStats.passRate} className="h-2" /></TooltipTrigger>
-                                      <TooltipContent><p>{sanitationReportStats.passRate.toFixed(0)}% Pass Rate</p></TooltipContent>
-                                  </Tooltip>
-                              </TooltipProvider>
                           </CardContent>
                       </Card>
                   ) : (
-                      <Card className="border-dashed">
-                          <CardContent className="py-6 flex flex-col items-center justify-center text-center gap-2">
-                              <Hourglass className="h-8 w-8 text-muted-foreground" />
-                              <p className="font-semibold">Visit Not Yet Completed</p>
-                              <p className="text-sm text-muted-foreground">Checklist results will be available once the visit is marked as "Completed".</p>
-                          </CardContent>
-                      </Card>
-                  )}
-
-                  {/* Proof Photos for User */}
-                  {selectedSanitationVisit?.proofUrls && selectedSanitationVisit.proofUrls.length > 0 && (
-                      <Card>
-                          <CardHeader className="pb-3">
-                              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                  <Camera className="h-4 w-4 text-primary" />
-                                  Proof of Service
-                              </CardTitle>
-                              <CardDescription className="text-xs">Photos of your sanitized equipment.</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                  {selectedSanitationVisit.proofUrls.map((url, idx) => (
-                                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border cursor-pointer hover:opacity-90 transition-opacity shadow-sm" onClick={() => setSelectedProofImg(url)}>
-                                          <Image src={url} alt={`Sanitation Proof ${idx + 1}`} fill className="object-cover" />
-                                          <div className="absolute inset-0 bg-black/10 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                                              <Eye className="text-white h-5 w-5" />
-                                          </div>
-                                      </div>
-                                  ))}
+                      <Card className="border-2 border-dashed rounded-3xl bg-white/50">
+                          <CardContent className="py-16 flex flex-col items-center justify-center text-center gap-4">
+                              <div className="p-4 rounded-full bg-slate-100 animate-pulse">
+                                <Hourglass className="h-10 w-10 text-slate-400" />
+                              </div>
+                              <div className="space-y-2">
+                                  <p className="text-xl font-black text-slate-900 uppercase tracking-tight">Visit Pending Execution</p>
+                                  <p className="text-sm font-bold text-slate-400 max-w-sm">
+                                      Detailed analytics and multi-point checklist results will be automatically populated once our quality officer completes the sanitation.
+                                  </p>
                               </div>
                           </CardContent>
                       </Card>
                   )}
+
+                  {/* Proof Photos Gallery */}
+                  {selectedSanitationVisit?.proofUrls && selectedSanitationVisit.proofUrls.length > 0 && (
+                      <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                              <Camera className="h-4 w-4 text-primary" />
+                              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Visual Verification Logs</h4>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              {selectedSanitationVisit.proofUrls.map((url, idx) => (
+                                  <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-white shadow-lg cursor-pointer group hover:scale-[1.02] transition-all" onClick={() => setSelectedProofImg(url)}>
+                                      <Image src={url} alt={`Sanitation Proof ${idx + 1}`} fill className="object-cover" />
+                                      <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <Eye className="text-white h-6 w-6 drop-shadow-md" />
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                  )}
                   
-                  <div className={cn("grid gap-4", (selectedSanitationVisit?.dispenserReports?.length || 0) <= 1 ? "grid-cols-1" : "md:grid-cols-2")}>
-                      {selectedSanitationVisit?.dispenserReports?.map(report => (
-                          <Card key={report.dispenserId}>
-                              <CardHeader>
-                                  <CardTitle className="text-base flex items-center gap-2">
-                                      <Droplet className="h-5 w-5 text-primary"/>
-                                      {report.dispenserName}
-                                      {report.dispenserCode && <Badge variant="secondary">{report.dispenserCode}</Badge>}
-                                  </CardTitle>
-                                   <CardDescription>Sanitation Checklist</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                  <Table>
-                                      <TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right w-24">Status</TableHead></TableRow></TableHeader>
-                                      <TableBody>
-                                          {report.checklist?.map((item, index) => (
-                                              <TableRow key={index} className={cn(!item.checked && "bg-destructive/5")}>
-                                                  <TableCell className="font-medium text-xs w-full">
-                                                      {item.item}
+                  {/* Detailed Checkpoint Cards */}
+                  <div className="space-y-6">
+                       <div className="flex items-center gap-3">
+                          <LayoutGrid className="h-4 w-4 text-primary" />
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Unit-by-Unit Checkpoints</h4>
+                      </div>
+                      <div className="grid gap-6">
+                          {selectedSanitationVisit?.dispenserReports?.map((report, rIdx) => (
+                              <Card key={report.dispenserId || rIdx} className="border-none shadow-md rounded-3xl overflow-hidden bg-white">
+                                  <CardHeader className="bg-muted/30 p-6 flex flex-row items-center justify-between">
+                                       <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-slate-100">
+                                                <Droplet className="h-5 w-5 text-primary"/>
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base font-black uppercase tracking-tight">{report.dispenserName}</CardTitle>
+                                                {report.dispenserCode && <CardDescription className="text-[10px] font-bold uppercase text-primary">Serial: {report.dispenserCode}</CardDescription>}
+                                            </div>
+                                       </div>
+                                       <Badge variant="secondary" className="bg-white text-[9px] font-black uppercase tracking-widest px-3 border shadow-none">{report.checklist?.length || 0} Points</Badge>
+                                  </CardHeader>
+                                   <CardContent className="p-0">
+                                       <div className="divide-y divide-slate-50">
+                                          {report.checklist?.map((item: any, index: number) => (
+                                              <div key={index} className={cn("p-4 flex items-start gap-4 transition-colors", !item.checked && "bg-destructive/5")}>
+                                                  <div className={cn(
+                                                      "mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0",
+                                                      item.checked ? "bg-green-100 text-green-600" : "bg-destructive/10 text-destructive"
+                                                  )}>
+                                                      {selectedSanitationVisit.status === 'Scheduled' ? <Hourglass className="h-3 w-3" /> : item.checked ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                                                  </div>
+                                                  <div className="space-y-1.5 flex-1">
+                                                      <p className="text-xs font-bold text-slate-900 leading-tight">{item.item}</p>
                                                       {selectedSanitationVisit.status === 'Completed' && !item.checked && item.remarks && (
-                                                          <p className="text-destructive text-xs mt-1 pl-2 border-l-2 border-destructive">
-                                                              <span className="font-bold">Remarks:</span> {item.remarks}
-                                                          </p>
+                                                          <div className="p-3 rounded-xl bg-white border border-destructive/10 text-[11px] font-medium text-destructive leading-relaxed shadow-sm italic">
+                                                              "{item.remarks}"
+                                                          </div>
                                                       )}
-                                                  </TableCell>
-                                                  <TableCell className="text-right">
-                                                      {selectedSanitationVisit.status === 'Scheduled' ? (
-                                                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 whitespace-nowrap"><Hourglass className="h-3 w-3 mr-1" /> Pending</Badge>
-                                                      ) : item.checked ? (
-                                                          <Badge variant="secondary" className="bg-green-100 text-green-800 whitespace-nowrap"><CheckCircle className="h-3 w-3 mr-1" /> Passed</Badge>
-                                                      ) : (
-                                                          <Badge variant="destructive" className="whitespace-nowrap"><AlertTriangle className="h-3 w-3 mr-1" />Failed</Badge>
-                                                      )}
-                                                  </TableCell>
-                                              </TableRow>
+                                                  </div>
+                                              </div>
                                           ))}
-                                      </TableBody>
-                                  </Table>
-                              </CardContent>
-                          </Card>
-                      ))}
+                                       </div>
+                                  </CardContent>
+                              </Card>
+                          ))}
+                      </div>
                   </div>
 
+                  {/* Authorization Section */}
                   {selectedSanitationVisit?.status === 'Completed' && (selectedSanitationVisit.officerSignature || selectedSanitationVisit.clientSignature) && (
-                  <Card>
-                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><Signature className="h-5 w-5" />Signatures</CardTitle></CardHeader>
-                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-none shadow-sm rounded-3xl bg-white">
+                      <CardHeader className="p-8 pb-4">
+                          <CardTitle className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
+                            <Signature className="h-4 w-4" /> Legal Attestation
+                          </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-8 pt-4 grid grid-cols-1 md:grid-cols-2 gap-10">
                           {selectedSanitationVisit.officerSignature && (
-                              <div className="space-y-2 text-center">
-                                  <p className="text-xs font-semibold">Quality Officer</p>
-                                  <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                                  <div className="text-xs text-muted-foreground">
-                                      <p>{selectedSanitationVisit.assignedTo}</p>
-                                      <p>{selectedSanitationVisit.officerSignatureDate ? format(new Date(selectedSanitationVisit.officerSignatureDate), 'PP') : ''}</p>
+                              <div className="space-y-4 text-center md:text-left">
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Authorized Officer</p>
+                                  <div className="relative aspect-[3/1] w-full bg-slate-50 rounded-2xl border border-slate-100 p-2 flex items-center justify-center">
+                                      <Image src={selectedSanitationVisit.officerSignature} alt="Officer Signature" fill className="object-contain p-4"/>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                      <p className="text-sm font-black text-slate-900">{selectedSanitationVisit.assignedTo}</p>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{selectedSanitationVisit.officerSignatureDate ? format(new Date(selectedSanitationVisit.officerSignatureDate), 'PPP p') : ''}</p>
                                   </div>
                               </div>
                           )}
                           {selectedSanitationVisit.clientSignature && (
-                              <div className="space-y-2 text-center">
-                                  <p className="text-xs font-semibold">Client Representative</p>
-                                  <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" width={200} height={75} className="rounded-md border bg-white mx-auto"/>
-                                  <div className="text-xs text-muted-foreground">
-                                      <p>{selectedSanitationVisit.clientRepName}</p>
-                                      <p>{selectedSanitationVisit.clientSignatureDate ? format(new Date(selectedSanitationVisit.clientSignatureDate), 'PP') : ''}</p>
+                              <div className="space-y-4 text-center md:text-left">
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Client Acknowledgment</p>
+                                  <div className="relative aspect-[3/1] w-full bg-slate-50 rounded-2xl border border-slate-100 p-2 flex items-center justify-center">
+                                      <Image src={selectedSanitationVisit.clientSignature} alt="Client Signature" fill className="object-contain p-4"/>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                      <p className="text-sm font-black text-slate-900">{selectedSanitationVisit.clientRepName}</p>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{selectedSanitationVisit.clientSignatureDate ? format(new Date(selectedSanitationVisit.clientSignatureDate), 'PPP p') : ''}</p>
                                   </div>
                               </div>
                           )}
                       </CardContent>
-                       <CardFooter className="justify-center text-center">
-                            <p className="text-xs text-muted-foreground">
-                                We ensure your water is safe to drink through rigorous testing and regular sanitation. For any concerns, please contact us at <a href="mailto:customer@riverph.com" className="text-primary hover:underline">customer@riverph.com</a>.
+                       <CardFooter className="p-8 pt-0 border-t border-slate-50 flex justify-center text-center">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight max-w-sm mt-6">
+                                This document serves as a digital record of the monthly sanitation audit. High-fidelity water safety is guaranteed by River PH.
                             </p>
                         </CardFooter>
                   </Card>
                   )}
               </div>
             </div>
-            <DialogFooter className="justify-between pt-6 border-t -mx-6 px-6 pb-6">
-                <div>
+            
+            <DialogFooter className="p-8 pt-4 bg-white border-t flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="w-full md:w-auto">
                   {selectedSanitationVisit?.reportUrl && (
-                      <Button variant="outline" asChild>
+                      <Button variant="outline" className="w-full md:w-auto rounded-xl h-11 px-8 font-black uppercase tracking-widest text-[10px] shadow-sm" asChild>
                           <a href={selectedSanitationVisit.reportUrl} target="_blank" rel="noopener noreferrer">
-                              <Eye className="mr-2 h-4 w-4" /> View Official Report
+                              <Eye className="mr-2 h-4 w-4" /> View Full Certificate
                           </a>
                       </Button>
                   )}
                 </div>
-                <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
+                <DialogClose asChild>
+                    <Button variant="ghost" className="w-full md:w-auto rounded-xl h-11 px-10 font-black uppercase tracking-widest text-[10px] text-slate-400 hover:text-slate-900">Close Report</Button>
+                </DialogClose>
             </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Image Preview for Proofs */}
+      {/* Full-size Image Preview for Proofs */}
       <Dialog open={!!selectedProofImg} onOpenChange={() => setSelectedProofImg(null)}>
-          <DialogContent className="sm:max-w-3xl p-0 overflow-hidden border-0">
+          <DialogContent className="sm:max-w-5xl p-0 overflow-hidden border-none bg-black/95 shadow-none rounded-none">
               <DialogHeader className="sr-only">
-                  <DialogTitle>Image Preview</DialogTitle>
-                  <DialogDescription>A larger preview of the selected proof image.</DialogDescription>
+                  <DialogTitle>Visual Evidence</DialogTitle>
+                  <DialogDescription>High-fidelity proof photo of the sanitation visit.</DialogDescription>
               </DialogHeader>
               {selectedProofImg && (
-                  <div className="relative aspect-video w-full bg-black flex items-center justify-center">
-                      <Image src={selectedProofImg} alt="Sanitation Proof Zoomed" fill className="object-contain" />
+                  <div className="relative aspect-video w-full flex items-center justify-center cursor-zoom-out" onClick={() => setSelectedProofImg(null)}>
+                      <Image src={selectedProofImg} alt="Visual Proof Zoomed" fill className="object-contain" priority />
+                      <div className="absolute top-6 right-6 p-2 rounded-full bg-white/10 backdrop-blur-xl text-white/50 border border-white/20">
+                          <XCircle className="h-6 w-6" />
+                      </div>
                   </div>
               )}
           </DialogContent>
@@ -517,3 +594,5 @@ export function ComplianceDialog({
     </>
   );
 }
+
+import { XCircle as XCircleIcon } from 'lucide-react';
