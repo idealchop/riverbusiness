@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { ArrowRight, Sparkles, Zap, ShieldCheck, Cpu } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const newFeatures = [
     {
