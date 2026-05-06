@@ -24,11 +24,11 @@ import { FullScreenLoader } from '@/components/ui/loader';
 import { Logo } from '@/components/icons';
 
 const navItems = [
-  { href: '/hr-employee', label: 'Overview', icon: LayoutDashboard },
-  { href: '/hr-employee/employees', label: 'Employees', icon: Users },
-  { href: '/hr-employee/attendance', label: 'Attendance', icon: Clock },
-  { href: '/hr-employee/payroll', label: 'Payroll', icon: DollarSign },
-  { href: '/hr-employee/leave', label: 'Leaves', icon: CalendarDays },
+  { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
+  { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
+  { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Clock },
+  { href: '/hr-dashboard/payroll', label: 'Payroll', icon: DollarSign },
+  { href: '/hr-dashboard/leave', label: 'Leaves', icon: CalendarDays },
 ];
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {

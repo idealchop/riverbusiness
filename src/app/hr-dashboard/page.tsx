@@ -65,7 +65,7 @@ export default function HRDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <Button 
-            onClick={() => router.push('/hr-employee/payroll')}
+            onClick={() => router.push('/hr-dashboard/payroll')}
             className="rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-green-200/50 bg-green-600 hover:bg-green-700"
           >
             Run Quick Payroll
@@ -108,7 +108,7 @@ export default function HRDashboard() {
                 <CardTitle className="text-lg font-black tracking-tight text-slate-900">Attendance Stream</CardTitle>
                 <CardDescription className="text-xs font-bold uppercase text-slate-400">Live operational log</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => router.push('/hr-employee/attendance')} className="text-[10px] font-black uppercase tracking-widest">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/hr-dashboard/attendance')} className="text-[10px] font-black uppercase tracking-widest">
                 Full Log <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </div>
@@ -164,7 +164,7 @@ export default function HRDashboard() {
                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                   <div className="h-full bg-white w-3/4" />
                 </div>
-                <Button onClick={() => router.push('/hr-employee/payroll')} className="w-full bg-white text-green-700 hover:bg-green-50 font-black text-[10px] uppercase tracking-widest h-10 rounded-2xl">
+                <Button onClick={() => router.push('/hr-dashboard/payroll')} className="w-full bg-white text-green-700 hover:bg-green-50 font-black text-[10px] uppercase tracking-widest h-10 rounded-2xl">
                   Run Computation
                 </Button>
               </CardContent>
@@ -175,10 +175,10 @@ export default function HRDashboard() {
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 pt-0">
-                <Button onClick={() => router.push('/hr-employee/employees')} variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
+                <Button onClick={() => router.push('/hr-dashboard/employees')} variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
                    Add New Staff <Users className="h-4 w-4 text-slate-300 group-hover:text-green-600" />
                 </Button>
-                <Button onClick={() => router.push('/hr-employee/attendance')} variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
+                <Button onClick={() => router.push('/hr-dashboard/attendance')} variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
                    Station Clock <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-600" />
                 </Button>
               </CardContent>

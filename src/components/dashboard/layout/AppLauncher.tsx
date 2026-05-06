@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils';
 const apps = [
   { id: '01', name: 'Water Logistic', href: '/dashboard', icon: Droplets, color: 'text-blue-500' },
   { id: '02', name: 'Workspace', href: '/workspace', icon: Briefcase, color: 'text-slate-600' },
-  { id: '03', name: 'HR & Employee', href: '/hr-employee', icon: Users, color: 'text-green-600' },
+  { id: '03', name: 'HR & Employee', href: '/hr-dashboard', icon: Users, color: 'text-green-600' },
   { id: '04', name: 'Customers', href: '/customers', icon: Target, color: 'text-red-500' },
   { id: '05', name: 'Solar Upgrades', href: '/solar-upgrades', icon: Sun, color: 'text-amber-500' },
   { id: '06', name: 'Business Insurance', href: '/business-insurance', icon: Umbrella, color: 'text-indigo-600' },
