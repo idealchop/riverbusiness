@@ -137,8 +137,8 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
       <div className="flex w-full flex-col lg:flex-row">
-        {/* Branding Side (Left) */}
-        <div className="relative w-full lg:w-[60%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
+        {/* Branding Side (Left) - Adjusted to 65% width */}
+        <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
             {/* Animated Mesh Gradient Background */}
             <div className="absolute inset-0 z-0">
                 {/* Floating Glows */}
@@ -186,7 +186,7 @@ export default function LoginPage() {
             </div>
         </div>
 
-        {/* Login Form Side (Right) */}
+        {/* Login Form Side (Right) - Will naturally take the remaining 35% */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
             <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
