@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -130,82 +130,86 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
-      <div className="flex w-full">
-        {/* Branding Side - Hidden on small mobile */}
-        <div className="hidden lg:flex flex-col relative w-1/2 p-12 bg-slate-950 text-white justify-between overflow-hidden">
+      <div className="flex w-full flex-col lg:flex-row">
+        {/* Branding Side */}
+        <div className="relative w-full lg:w-1/2 p-8 sm:p-12 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
             {/* Background Decorative Pattern */}
             <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
             
             <div className="relative z-10">
-                <Logo className="h-12 w-12 mb-8" />
+                <Logo className="h-10 w-10 mb-8" />
                 <div className="space-y-6 max-w-xl">
-                    <h1 className="text-5xl font-black tracking-tight leading-[1.1] text-white">
+                    <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1] text-white">
                         The definitive platform to run <span className="text-primary-light">essential needs</span> for your business.
                     </h1>
-                    <p className="text-xl text-slate-400 font-medium leading-relaxed">
-                        Turn everyday operational requirements into automated, connected experiences—from hydration to energy and HR.
+                    <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed max-w-lg">
+                        Turn everyday operational requirements into automated, connected experiences—from hydration to energy and beyond.
                     </p>
                 </div>
             </div>
 
-            <div className="relative z-10 space-y-10">
-                <div className="grid grid-cols-2 gap-x-8 gap-y-10">
+            <div className="relative z-10 space-y-8 mt-12 lg:mt-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-8">
                     <div className="flex gap-4">
-                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Droplets className="h-6 w-6 text-primary-light" />
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Droplets className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-sm uppercase tracking-wide">Water Logistics</h4>
-                            <p className="text-xs text-slate-400 mt-1 leading-relaxed">Smart refill fulfillment and consumption analytics.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Water Logistics</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Smart refill fulfillment and real-time tracking.</p>
                         </div>
                     </div>
                     <div className="flex gap-4">
-                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Users className="h-6 w-6 text-primary-light" />
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Users className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-sm uppercase tracking-wide">HR & Employee</h4>
-                            <p className="text-xs text-slate-400 mt-1 leading-relaxed">Centralized management for your growing workforce.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">HR & Employee</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Centralized management for your workforce.</p>
                         </div>
                     </div>
                     <div className="flex gap-4">
-                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Target className="h-6 w-6 text-primary-light" />
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Target className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-sm uppercase tracking-wide">Customer (CRM)</h4>
-                            <p className="text-xs text-slate-400 mt-1 leading-relaxed">Advanced relationship tracking and intelligence.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Customer (CRM)</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Advanced relationship tracking and intelligence.</p>
                         </div>
                     </div>
                     <div className="flex gap-4">
-                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Sun className="h-6 w-6 text-primary-light" />
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Sun className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-sm uppercase tracking-wide">Solar Upgrades</h4>
-                            <p className="text-xs text-slate-400 mt-1 leading-relaxed">Sustainable energy transitions for modern facilities.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Solar Upgrades</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Sustainable energy transitions for modern facilities.</p>
                         </div>
                     </div>
-                    <div className="flex gap-4 col-span-2">
-                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Umbrella className="h-6 w-6 text-primary-light" />
+                    <div className="flex gap-4">
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Umbrella className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-sm uppercase tracking-wide">Business Insurances</h4>
-                            <p className="text-xs text-slate-400 mt-1 leading-relaxed">Comprehensive risk protection tailored to your industry.</p>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Business Insurances</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Comprehensive risk protection and compliance.</p>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="h-1 w-1 rounded-full bg-primary-light animate-pulse" />
+                        And more to come
                     </div>
                 </div>
                 
-                <div className="pt-8 border-t border-white/10 flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    <span>Trusted by Corporate Partners</span>
+                <div className="pt-8 border-t border-white/10 flex items-center gap-4 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                    <span>Enterprise Operating System</span>
                     <div className="h-px bg-white/10 flex-1" />
-                    <span>River Philippines © 2025</span>
+                    <span>© 2025</span>
                 </div>
             </div>
 
             {/* Immersive Image Overlay */}
-            <div className="absolute inset-0 z-0 opacity-40 mix-blend-overlay">
+            <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
                 <Image
                     src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a"
                     alt="River Business Operations"
@@ -217,25 +221,25 @@ export default function LoginPage() {
         </div>
 
         {/* Login Form Side */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 md:p-20 bg-white">
-            <div className="w-full max-w-sm space-y-12">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white min-h-[500px]">
+            <div className="w-full max-w-sm space-y-10">
                 <div className="text-center lg:text-left space-y-2">
                     <div className="lg:hidden flex justify-center mb-8">
-                        <Logo className="h-20 w-20" />
+                        <Logo className="h-16 w-16" />
                     </div>
-                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Command Center Access</h2>
-                    <p className="text-slate-500 font-medium">Please enter your authorized business credentials.</p>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Access Portal</h2>
+                    <p className="text-slate-500 font-medium">Authorized business login required.</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Authorized Work Email</Label>
+                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Work Email Address</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="name@company.com"
-                                className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base px-4 font-medium"
+                                className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base px-4 font-medium rounded-xl shadow-none"
                                 {...register('email')}
                                 disabled={isSubmitting}
                             />
@@ -244,16 +248,16 @@ export default function LoginPage() {
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Security Password</Label>
+                                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Security Password</Label>
                                 <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
-                                    Forgot Access?
+                                    Recovery
                                 </button>
                             </div>
                             <div className="relative">
                                 <Input 
                                     id="password" 
                                     type={showPassword ? 'text' : 'password'} 
-                                    className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base pr-12 font-medium"
+                                    className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base pr-12 font-medium rounded-xl shadow-none"
                                     {...register('password')} 
                                     disabled={isSubmitting}
                                 />
@@ -280,14 +284,23 @@ export default function LoginPage() {
                     <p className="text-sm font-medium text-slate-500">
                         New corporate entity?{" "}
                         <Link href="/signup" className="text-primary font-black hover:underline">
-                            Request Onboarding
+                            Onboarding Request
                         </Link>
                     </p>
-                    <div className="pt-10 border-t border-slate-100 flex flex-col gap-3">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Enterprise Support Interface</p>
-                        <div className="flex flex-col gap-1">
-                             <a href="mailto:business@smartrefill.io" className="text-xs font-bold text-slate-600 hover:text-primary transition-colors">business@smartrefill.io</a>
-                             <p className="text-[9px] text-slate-400 font-bold uppercase">Manila • Singapore • Sydney</p>
+                    <div className="pt-10 border-t border-slate-100 flex flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Regional Support Interface</p>
+                             <a href="mailto:business@smartrefill.io" className="text-xs font-bold text-slate-600 hover:text-primary transition-colors flex items-center justify-center lg:justify-start gap-2">
+                                <Mail className="h-3 w-3" />
+                                business@smartrefill.io
+                             </a>
+                        </div>
+                        <div className="flex items-center justify-center lg:justify-start gap-3 opacity-40">
+                             <p className="text-[8px] font-black uppercase tracking-tighter">Manila</p>
+                             <div className="h-1 w-1 rounded-full bg-slate-400" />
+                             <p className="text-[8px] font-black uppercase tracking-tighter">Singapore</p>
+                             <div className="h-1 w-1 rounded-full bg-slate-400" />
+                             <p className="text-[8px] font-black uppercase tracking-tighter">Sydney</p>
                         </div>
                     </div>
                 </div>
@@ -306,7 +319,7 @@ export default function LoginPage() {
             </DialogHeader>
             <div className="py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Work Email Address</Label>
+                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Work Email Address</Label>
                     <Input
                         id="reset-email"
                         type="email"
@@ -314,7 +327,7 @@ export default function LoginPage() {
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
                         disabled={isResetting}
-                        className="h-12 bg-slate-50 border-slate-200"
+                        className="h-12 bg-slate-50 border-slate-200 rounded-xl"
                     />
                 </div>
             </div>
