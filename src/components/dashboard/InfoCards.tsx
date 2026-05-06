@@ -1,10 +1,10 @@
-
 'use client';
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { CheckCircle, ExternalLink, Gift, MapPin, Rocket, Users, Target, ArrowRight, Sparkles } from 'lucide-react';
 
