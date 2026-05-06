@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets, ArrowRight, Mail, Briefcase } from 'lucide-react';
+import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, ArrowRight, Mail, Briefcase } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +25,6 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -142,7 +141,7 @@ export default function LoginPage() {
                     <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1] text-white">
                         The definitive platform to run <span className="text-primary-light">essential needs</span> for your business.
                     </h1>
-                    <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed max-lg">
+                    <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed">
                         Turn everyday operational requirements into automated, connected experiences—from hydration to workspace optimization.
                     </p>
                 </div>
@@ -150,33 +149,18 @@ export default function LoginPage() {
 
             <div className="relative z-10 space-y-8 mt-12 lg:mt-0">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-8">
+                    {/* 1. Water Logistic */}
                     <div className="flex gap-4">
                         <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
                             <Droplets className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider">Water Logistics</h4>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Water Logistic</h4>
                             <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Smart refill fulfillment and real-time tracking.</p>
                         </div>
                     </div>
-                    <div className="flex gap-4">
-                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Users className="h-5 w-5 text-primary-light" />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider">HR & Employee</h4>
-                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Centralized management for your workforce.</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                            <Target className="h-5 w-5 text-primary-light" />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider">Customer (CRM)</h4>
-                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Advanced relationship tracking and intelligence.</p>
-                        </div>
-                    </div>
+
+                    {/* 2. Workspace */}
                     <div className="flex gap-4">
                         <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
                             <Briefcase className="h-5 w-5 text-primary-light" />
@@ -186,6 +170,30 @@ export default function LoginPage() {
                             <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Unified facility management and office optimization.</p>
                         </div>
                     </div>
+
+                    {/* 3. HR & Employee */}
+                    <div className="flex gap-4">
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Users className="h-5 w-5 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">HR & Employee</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Centralized management for your workforce.</p>
+                        </div>
+                    </div>
+
+                    {/* 4. Customers */}
+                    <div className="flex gap-4">
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Target className="h-5 w-5 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Customers</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Advanced relationship tracking and intelligence.</p>
+                        </div>
+                    </div>
+
+                    {/* 5. Solar Upgrades */}
                     <div className="flex gap-4">
                         <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
                             <Sun className="h-5 w-5 text-primary-light" />
@@ -195,18 +203,16 @@ export default function LoginPage() {
                             <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Sustainable energy transitions for modern facilities.</p>
                         </div>
                     </div>
+
+                    {/* 6. Business Insurance */}
                     <div className="flex gap-4">
                         <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
                             <Umbrella className="h-5 w-5 text-primary-light" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-xs uppercase tracking-wider">Business Insurances</h4>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Business Insurance</h4>
                             <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Comprehensive risk protection and compliance.</p>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                        <div className="h-1 w-1 rounded-full bg-primary-light animate-pulse" />
-                        And more to come
                     </div>
                 </div>
                 
@@ -322,11 +328,9 @@ export default function LoginPage() {
             <DialogContent className="sm:max-w-md rounded-2xl border-none shadow-2xl">
             <DialogHeader>
                 <DialogTitle className="text-xl font-bold">Account Access Recovery</DialogTitle>
-                <DialogHeader>
-                    <DialogDescription className="text-slate-600">
+                <DialogDescription className="text-slate-600">
                     Enter your registered business email and we'll send a secure authorization link to reset your password.
-                    </DialogDescription>
-                </DialogHeader>
+                </DialogDescription>
             </DialogHeader>
             <div className="py-4">
                 <div className="space-y-2">
