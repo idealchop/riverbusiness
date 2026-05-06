@@ -47,7 +47,7 @@ export function InfoCards() {
       <Dialog>
         <DialogTrigger asChild>
           <Card className="h-full cursor-pointer group transition-all border-none bg-white overflow-hidden flex flex-col active:scale-[0.98] shadow-none">
-            <div className="relative aspect-[3/4] w-full flex-1">
+            <div className="relative aspect-[3/3.6] w-full flex-1">
                 <Image 
                     src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fnew-features.png?alt=media&token=59678e26-137b-4d05-8501-14267e15fd44" 
                     alt="New Features" 
@@ -58,7 +58,7 @@ export function InfoCards() {
                 
                 {/* Overlaid Text - No gradients, no shadows */}
                 <div className="absolute top-0 left-0 right-0 p-8 pt-10 z-20 space-y-2">
-                    <h3 className="text-3xl font-black tracking-tight text-primary-light leading-tight">
+                    <h3 className="text-4xl font-black tracking-tight text-primary-light leading-tight">
                         Your App is <br/>Upgraded!
                     </h3>
                     <p className="text-sm font-bold text-primary-light uppercase tracking-[0.2em] flex items-center gap-2 group-hover:translate-x-1 transition-all">
