@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   Button } from "@/components/ui/button";
-import { FileText, ShieldCheck } from 'lucide-react';
+import { FileText, ShieldCheck, Headset } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import type { AppUser, Notification as NotificationType, ChatMessage, Payment } from '@/lib/types';
@@ -227,7 +227,12 @@ export default function DashboardLayout({
                   user={user}
                   chatMessages={chatMessages || []}
                   onMessageSubmit={handleMessageSubmit}
-              />
+              >
+                <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100">
+                  <Headset className="h-5 w-5 text-slate-600" />
+                  {(user?.hasUnreadAdminMessages) && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-background shadow-sm" />}
+                </Button>
+              </LiveSupportDialog>
               
               <Button asChild variant="ghost" size="icon" className="relative rounded-full hover:bg-slate-100 hidden sm:flex">
                 <Link href="/documentation" target="_blank"><FileText className="h-5 w-5 text-slate-600" /></Link>

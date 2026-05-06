@@ -18,13 +18,15 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
-import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Logo } from '@/components/icons';
 import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
+import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { signOut } from 'firebase/auth';
+import type { Notification as NotificationType } from '@/lib/types';
 
 const navItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -47,6 +49,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   );
   const { data: user, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
+  const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')) : null, [firestore, authUser]);
+  const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
+
   const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -64,6 +69,10 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     signOut(auth).then(() => {
       router.push('/login');
     })
+  }
+
+  const handleNotificationClick = (notification: NotificationType) => {
+    // Handle in-app navigation for notifications if needed
   }
 
   return (
@@ -119,13 +128,21 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
              </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <NotificationPopover 
+              notifications={notifications || []}
+              onNotificationClick={handleNotificationClick}
+            />
+            
+            <AppLauncher />
+
+            <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
+
             <UserMenu 
               user={user} 
               onOpenSettings={() => setIsAccountDialogOpen(true)} 
               onLogout={handleLogout} 
             />
-            <AppLauncher />
           </div>
         </header>
 
