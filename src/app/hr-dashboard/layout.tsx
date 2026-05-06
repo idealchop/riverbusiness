@@ -93,17 +93,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
         </div>
-
-        <div className="mt-auto p-6">
-          <div className="p-5 rounded-2xl border bg-slate-50 space-y-3 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-              <ShieldCheck className="h-16 w-16" />
-            </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Security protocol</p>
-            <h4 className="text-xs font-semibold leading-relaxed relative z-10 text-slate-600">Data is isolated by company protocol.</h4>
-            <Badge className="bg-green-500 text-white border-none text-[8px] font-bold uppercase">Verified Tenant</Badge>
-          </div>
-        </div>
       </aside>
 
       {/* Main Content */}
