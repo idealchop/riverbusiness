@@ -30,8 +30,10 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
-import { useFirestore, useToast } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Separator } from '@/components/ui/separator';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),

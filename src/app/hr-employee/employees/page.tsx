@@ -10,7 +10,8 @@ import {
   Phone,
   Briefcase,
   Calendar,
-  Filter
+  Filter,
+  DollarSign
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import {
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
+import { cn } from '@/lib/utils';
 
 export default function EmployeesPage() {
   const { user } = useUser();
