@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase } from 'lucide-react';
+import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase, Mail } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -34,12 +35,12 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const servicePillars = [
-  { id: '01', title: 'Water Logistic', icon: Droplets, desc: 'Smart refill fulfillment and tracking.' },
-  { id: '02', title: 'Workspace', icon: Briefcase, desc: 'Facility management and optimization.' },
-  { id: '03', title: 'HR & Employee', icon: Users, desc: 'Centralized workforce management.' },
-  { id: '04', title: 'Customers', icon: Target, desc: 'Advanced relationship tracking.' },
-  { id: '05', title: 'Solar Upgrades', icon: Sun, desc: 'Sustainable energy transitions.' },
-  { id: '06', title: 'Business Insurance', icon: Umbrella, desc: 'Comprehensive risk protection.' },
+  { id: '01', title: 'Water Logistic', icon: Droplets },
+  { id: '02', title: 'Workspace', icon: Briefcase },
+  { id: '03', title: 'HR & Employee', icon: Users },
+  { id: '04', title: 'Customers', icon: Target },
+  { id: '05', title: 'Solar Upgrades', icon: Sun },
+  { id: '06', title: 'Business Insurance', icon: Umbrella },
 ];
 
 export default function LoginPage() {
@@ -140,15 +141,15 @@ export default function LoginPage() {
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
       <div className="flex w-full flex-col lg:flex-row">
         {/* Branding Side (Left) */}
-        <div className="relative w-full lg:w-3/5 p-8 sm:p-12 md:p-16 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
-            {/* Advanced Background Movements */}
+        <div className="relative w-full lg:w-3/5 p-8 sm:p-12 md:p-20 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
+            {/* Subtle Drifting Background */}
             <div className="absolute inset-0 opacity-10 pointer-events-none animate-drift mix-blend-overlay" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
             
-            {/* Branding Image with Ken Burns Effect */}
+            {/* Ken Burns Image Effect */}
             <div className="absolute inset-0 z-0 opacity-30 mix-blend-screen">
                 <Image
                     src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a"
-                    alt="River Business Network"
+                    alt="River Business Platform"
                     fill
                     className="object-cover animate-slow-zoom"
                     priority
@@ -157,40 +158,35 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950/80 to-transparent z-0" />
 
             <div className="relative z-10">
-                <div className="inline-flex p-3 bg-white rounded-2xl mb-12 shadow-2xl shadow-blue-500/20">
+                <div className="inline-flex p-3 bg-white rounded-2xl mb-12 shadow-2xl shadow-blue-500/10">
                     <Logo className="h-10 w-10" />
                 </div>
-                <div className="space-y-6 max-w-2xl">
+                <div className="space-y-4 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
-                        The platform to run <span className="text-blue-400">essential needs</span> for business.
+                        The platform to run <span className="text-primary">essential needs</span> for business.
                     </h1>
-                    <p className="text-xl sm:text-2xl text-slate-400 font-bold leading-relaxed max-w-xl">
+                    <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed">
                         Everything in a single platform for Filipino businesses.
                     </p>
                 </div>
             </div>
 
             <div className="relative z-10 mt-16 lg:mt-0">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-12">
                     {servicePillars.map((pillar) => (
-                        <div key={pillar.id} className="group flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md transition-all hover:bg-white/10 hover:border-white/20">
-                            <div className="relative">
-                                <div className="p-2.5 h-11 w-11 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0 border border-blue-400/20 group-hover:scale-110 transition-transform">
-                                    <pillar.icon className="h-6 w-6 text-blue-400" />
-                                </div>
-                                <span className="absolute -top-2 -left-2 font-mono text-[8px] font-black text-blue-400/60">{pillar.id}</span>
+                        <div key={pillar.id} className="group flex flex-col gap-3 transition-all hover:translate-y-[-2px]">
+                            <div className="flex items-center gap-2">
+                                <pillar.icon className="h-5 w-5 text-primary" />
+                                <span className="font-mono text-[8px] font-black text-slate-500 tracking-widest">{pillar.id}</span>
                             </div>
-                            <div className="space-y-1">
-                                <h4 className="font-black text-xs uppercase tracking-widest text-white group-hover:text-blue-400 transition-colors">{pillar.title}</h4>
-                                <p className="text-[10px] text-slate-400 leading-relaxed font-medium">{pillar.desc}</p>
-                            </div>
+                            <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-white group-hover:text-primary transition-colors">{pillar.title}</h4>
                         </div>
                     ))}
                 </div>
                 
-                <div className="mt-12 pt-8 border-t border-white/10 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">
+                <div className="mt-16 pt-8 border-t border-white/5 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">
                     <span className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                         Operating System for Commerce
                     </span>
                     <div className="h-px bg-white/5 flex-1" />
@@ -207,7 +203,7 @@ export default function LoginPage() {
                         <Logo className="h-16 w-16" />
                     </div>
                     <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign In</h2>
-                    <p className="text-slate-500 font-bold text-lg">Access your business account.</p>
+                    <p className="text-slate-500 font-bold text-lg">Access your account.</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -228,8 +224,8 @@ export default function LoginPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between px-1">
                                 <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Password</Label>
-                                <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 hover:underline">
-                                    Forgot Password?
+                                <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                                    Forgot?
                                 </button>
                             </div>
                             <div className="relative">
@@ -254,15 +250,15 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 transition-all active:scale-[0.98] rounded-2xl bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+                    <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/10 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
                         {isSubmitting ? <Loader className="text-white" /> : 'Log In'}
                     </Button>
                 </form>
 
                 <div className="text-center space-y-6 pt-4">
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                        Don't have an account?{" "}
-                        <Link href="/signup" className="text-blue-600 font-black hover:underline">
+                        New here?{" "}
+                        <Link href="/signup" className="text-primary font-black hover:underline">
                             Sign Up
                         </Link>
                     </p>
@@ -277,7 +273,7 @@ export default function LoginPage() {
             <DialogHeader className="space-y-4">
                 <DialogTitle className="text-2xl font-black tracking-tight">Reset Password</DialogTitle>
                 <DialogDescription className="text-slate-500 font-bold leading-relaxed">
-                    Enter your email and we'll send you a link to restore your account access.
+                    Enter your email to receive a recovery link.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-6">
@@ -295,8 +291,8 @@ export default function LoginPage() {
                 </div>
             </div>
             <DialogFooter className="flex flex-col gap-3 sm:flex-col sm:gap-3 sm:justify-center">
-                <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="w-full h-14 font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-blue-500/10">
-                    {isResetting ? <Loader className="text-white" /> : 'Send Recovery Link'}
+                <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="w-full h-14 font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-primary/10">
+                    {isResetting ? <Loader className="text-white" /> : 'Send Link'}
                 </Button>
                 <DialogClose asChild>
                     <Button type="button" variant="ghost" disabled={isResetting} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Cancel</Button>
