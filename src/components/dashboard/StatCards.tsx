@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, Waves } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -40,19 +39,16 @@ const WaterTankVisual = ({ percentage, isUnlimited = false }: { percentage: numb
             <div className="absolute -top-1 left-0 right-0 h-2 bg-white/20 animate-pulse blur-[1px]" />
         )}
         
-        {/* Internal Bubbles/Details for high fidelity */}
-        <div className="absolute bottom-4 left-3 w-1 h-1 rounded-full bg-white/30 animate-bounce delay-700" />
-        <div className="absolute bottom-8 right-4 w-1.5 h-1.5 rounded-full bg-white/20 animate-bounce" />
+        {/* Internal Bubbles with enhanced movement */}
+        <div className="absolute bottom-2 left-4 w-1 h-1 rounded-full bg-white/40 animate-bubble-rise" style={{ animationDelay: '0s' }} />
+        <div className="absolute bottom-6 left-8 w-1.5 h-1.5 rounded-full bg-white/30 animate-bubble-rise" style={{ animationDelay: '1.5s' }} />
+        <div className="absolute bottom-1 left-10 w-1 h-1 rounded-full bg-white/20 animate-bubble-rise" style={{ animationDelay: '3s' }} />
+        <div className="absolute bottom-8 left-3 w-2 h-2 rounded-full bg-white/20 animate-bubble-rise" style={{ animationDelay: '0.8s' }} />
+        <div className="absolute bottom-3 left-6 w-1 h-1 rounded-full bg-white/30 animate-bubble-rise" style={{ animationDelay: '2.2s' }} />
       </div>
 
       {/* Glass Highlight */}
       <div className="absolute top-4 left-3 w-2 h-12 bg-white/30 rounded-full blur-[2px] z-30" />
-      
-      {isUnlimited && (
-          <div className="absolute inset-0 flex items-center justify-center z-40">
-              <Waves className="h-6 w-6 text-white/50 animate-pulse" />
-          </div>
-      )}
       
       {/* Scale markers */}
       <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-between py-4 z-30 opacity-20 group-hover:opacity-40 transition-opacity">
@@ -368,7 +364,7 @@ export function StatCards({
                     </Button>
                 ) : (
                     <Button variant="default" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900" onClick={onRequestRefillClick}>
-                        <CalendarIcon className="mr-2 h-3 w-3" /> Schedule One-Time
+                        <CalendarIcon className="mr-2 h-4 w-4" /> Schedule One-Time
                     </Button>
                 )}
               </div>

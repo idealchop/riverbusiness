@@ -137,6 +137,10 @@
   .animate-slide-down {
     animation: slide-down 10s linear infinite;
   }
+
+  .animate-bubble-rise {
+    animation: bubble-rise 4s infinite ease-in;
+  }
 }
 
 @keyframes dot-flow {
@@ -161,4 +165,11 @@
 @keyframes slide-down {
   from { transform: translateY(-100%); }
   to { transform: translateY(1000%); }
+}
+
+@keyframes bubble-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.4; }
+  100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
 }
