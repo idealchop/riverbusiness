@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
+import type { HRLeaveRequest } from '@/lib/types';
 
 export default function LeavePage() {
   const { user } = useUser();
@@ -37,12 +38,21 @@ export default function LeavePage() {
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   
   const companyId = user?.companyId || user?.clientId || 'default';
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   const leaveQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
-    [firestore, companyId]
+    () => {
+        if (!firestore || !companyId) return null;
+        const col = collection(firestore, 'hr_companies', companyId, 'leaveRequests');
+        if (isManagement) {
+            return query(col, orderBy('appliedAt', 'desc'));
+        } else {
+            return query(col, where('employeeId', '==', user?.id), orderBy('appliedAt', 'desc'));
+        }
+    },
+    [firestore, companyId, isManagement, user?.id]
   );
-  const { data: leaveRequests, isLoading } = useCollection(leaveQuery);
+  const { data: leaveRequests, isLoading } = useCollection<HRLeaveRequest>(leaveQuery);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
     if (!firestore || !companyId) return;
@@ -55,14 +65,16 @@ export default function LeavePage() {
     }
   };
 
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
-
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Leave Management</h1>
-          <p className="text-slate-500 font-medium">Review applications and manage team availability.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              {isManagement ? 'Leave Management' : 'My Leave Applications'}
+          </h1>
+          <p className="text-slate-500 font-medium">
+              {isManagement ? 'Review applications and manage team availability.' : 'Submit and track your time-off requests.'}
+          </p>
         </div>
         <Button 
             onClick={() => setIsLeaveDialogOpen(true)}
@@ -76,8 +88,12 @@ export default function LeavePage() {
          <CardHeader className="bg-slate-50/20 border-b p-6">
             <div className="flex items-center justify-between">
                 <div>
-                   <CardTitle className="text-lg font-bold text-slate-900">Request Queue</CardTitle>
-                   <CardDescription className="text-xs font-medium text-slate-500">Review pending team applications</CardDescription>
+                   <CardTitle className="text-lg font-bold text-slate-900">
+                       {isManagement ? 'Request Queue' : 'My Applications'}
+                   </CardTitle>
+                   <CardDescription className="text-xs font-medium text-slate-500">
+                       {isManagement ? 'Review pending team applications' : 'History of your leave requests'}
+                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-slate-200">
@@ -158,7 +174,7 @@ export default function LeavePage() {
                          <TableCell colSpan={5} className="text-center py-24">
                             <div className="flex flex-col items-center gap-3 opacity-20">
                                <Clock className="h-10 w-10 text-slate-400" />
-                               <p className="text-sm font-bold uppercase tracking-widest">The request queue is clear</p>
+                               <p className="text-sm font-bold uppercase tracking-widest">No leave requests found</p>
                             </div>
                          </TableCell>
                       </TableRow>

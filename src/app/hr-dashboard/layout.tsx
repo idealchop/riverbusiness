@@ -26,14 +26,20 @@ import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { signOut } from 'firebase/auth';
-import type { Notification as NotificationType } from '@/lib/types';
+import type { Notification as NotificationType, AppUser } from '@/lib/types';
 
-const navItems = [
+const managerNavItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
   { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Clock },
   { href: '/hr-dashboard/payroll', label: 'Payroll', icon: DollarSign },
   { href: '/hr-dashboard/leave', label: 'Leaves', icon: CalendarDays },
+];
+
+const employeeNavItems = [
+  { href: '/hr-dashboard', label: 'My Workspace', icon: LayoutDashboard },
+  { href: '/hr-dashboard/attendance', label: 'Station Clock', icon: Clock },
+  { href: '/hr-dashboard/leave', label: 'File Leave', icon: CalendarDays },
 ];
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {
@@ -47,7 +53,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     () => (firestore && authUser ? doc(firestore, 'users', authUser.uid) : null),
     [firestore, authUser]
   );
-  const { data: user, isLoading: isUserDocLoading } = useDoc(userDocRef);
+  const { data: user, isLoading: isUserDocLoading } = useDoc<AppUser>(userDocRef);
 
   const notificationsQuery = useMemoFirebase(() => (firestore && authUser) ? query(collection(firestore, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')) : null, [firestore, authUser]);
   const { data: notifications } = useCollection<NotificationType>(notificationsQuery);
@@ -71,9 +77,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     })
   }
 
-  const handleNotificationClick = (notification: NotificationType) => {
-    // Handle in-app navigation for notifications if needed
-  }
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+  const navItems = isManagement ? managerNavItems : employeeNavItems;
 
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
@@ -84,7 +89,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
             <div className="flex flex-col">
               <span className="font-bold text-base tracking-tight text-slate-900 leading-none">River Business</span>
-              <span className="text-xs font-medium text-green-600 mt-1">HR & Employee</span>
+              <span className="text-xs font-medium text-green-600 mt-1">
+                {isManagement ? 'Management' : 'My Workspace'}
+              </span>
             </div>
           </Link>
 
@@ -131,7 +138,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 sm:gap-4">
             <NotificationPopover 
               notifications={notifications || []}
-              onNotificationClick={handleNotificationClick}
+              onNotificationClick={() => {}}
             />
             
             <AppLauncher />
