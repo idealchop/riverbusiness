@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, Waves } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -17,6 +17,50 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
+
+/**
+ * A sophisticated vertical water tank visual component.
+ */
+const WaterTankVisual = ({ percentage, isUnlimited = false }: { percentage: number, isUnlimited?: boolean }) => {
+  return (
+    <div className="relative w-16 h-28 bg-slate-50 rounded-[1.5rem] border-2 border-slate-100 overflow-hidden shadow-inner shrink-0 group">
+      {/* Background reflection */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none z-20" />
+      
+      {/* Water Fill */}
+      <div 
+        className={cn(
+            "absolute bottom-0 left-0 right-0 bg-gradient-to-t transition-all duration-1000 ease-in-out z-10",
+            isUnlimited ? "from-blue-600 to-blue-400 h-full" : "from-primary to-primary-light"
+        )}
+        style={{ height: isUnlimited ? '100%' : `${Math.max(2, percentage)}%` }}
+      >
+        {/* Surface Wave Effect */}
+        {!isUnlimited && (
+            <div className="absolute -top-1 left-0 right-0 h-2 bg-white/20 animate-pulse blur-[1px]" />
+        )}
+        
+        {/* Internal Bubbles/Details for high fidelity */}
+        <div className="absolute bottom-4 left-3 w-1 h-1 rounded-full bg-white/30 animate-bounce delay-700" />
+        <div className="absolute bottom-8 right-4 w-1.5 h-1.5 rounded-full bg-white/20 animate-bounce" />
+      </div>
+
+      {/* Glass Highlight */}
+      <div className="absolute top-4 left-3 w-2 h-12 bg-white/30 rounded-full blur-[2px] z-30" />
+      
+      {isUnlimited && (
+          <div className="absolute inset-0 flex items-center justify-center z-40">
+              <Waves className="h-6 w-6 text-white/50 animate-pulse" />
+          </div>
+      )}
+      
+      {/* Scale markers */}
+      <div className="absolute right-2 top-0 bottom-0 flex flex-col justify-between py-4 z-30 opacity-20 group-hover:opacity-40 transition-opacity">
+          {[1,2,3,4].map(i => <div key={i} className="w-1.5 h-0.5 bg-slate-400" />)}
+      </div>
+    </div>
+  );
+};
 
 interface StatCardsProps {
   user: AppUser | null;
@@ -224,42 +268,54 @@ export function StatCards({
         </>
       ) : (
         <>
-          <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white">
+          <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white overflow-hidden relative">
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Available Credits</span>
-                <button onClick={onSaveLitersClick} className="text-primary hover:underline flex items-center gap-1">
+                <button onClick={onSaveLitersClick} className="text-primary hover:underline flex items-center gap-1 z-50">
                   <HelpCircle className="h-3 w-3" />
                 </button>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isFlowPlan || isBranchAccount ? (
-                <div>
-                   <p className="text-3xl font-extrabold text-slate-900">Unlimited</p>
-                   <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-1">Billed by usage (₱{user?.plan?.price}/L)</p>
+              <div className="flex items-center gap-6">
+                <WaterTankVisual 
+                    percentage={remainingBalancePercentage} 
+                    isUnlimited={isFlowPlan || isBranchAccount} 
+                />
+                
+                <div className="flex-1 space-y-4">
+                    {isFlowPlan || isBranchAccount ? (
+                        <div>
+                            <p className="text-3xl font-black text-slate-900 tracking-tight uppercase">Flow Access</p>
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
+                                Unlimited Supply 
+                                <span className="block text-primary">Billed by usage (₱{user?.plan?.price}/L)</span>
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <div className="flex items-baseline gap-1">
+                                    <p className="text-4xl font-black text-slate-900 tracking-tighter">{consumptionDetails.currentBalance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                                    <span className="text-sm font-black text-slate-400">L</span>
+                                </div>
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Remaining Tank Volume</p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 text-[9px] font-bold uppercase tracking-tight">
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                    <span className="text-slate-400">Monthly Plan</span>
+                                    <span className="text-slate-700">{(consumptionDetails.monthlyPlanLiters + consumptionDetails.bonusLiters).toLocaleString()}L</span>
+                                </div>
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50 border border-blue-100">
+                                    <span className="text-primary">Saved Rollover</span>
+                                    <span className="text-primary font-black">{consumptionDetails.rolloverLiters.toLocaleString()}L</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                        <p className="text-4xl font-extrabold text-slate-900">{consumptionDetails.currentBalance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                        <span className="text-sm font-bold text-muted-foreground">L</span>
-                    </div>
-                    <Progress value={remainingBalancePercentage} className="h-1.5 mt-3 bg-slate-100" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-tighter">
-                      <div className="p-2 rounded bg-muted/30">
-                        <span className="text-muted-foreground block mb-0.5">Plan Allocation</span>
-                        <span className="text-slate-900">{(consumptionDetails.monthlyPlanLiters + consumptionDetails.bonusLiters).toLocaleString()} L</span>
-                      </div>
-                      <div className="p-2 rounded bg-blue-50">
-                        <span className="text-primary block mb-0.5">Rollover</span>
-                        <span className="text-primary">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
-                      </div>
-                  </div>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
