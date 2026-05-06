@@ -53,6 +53,10 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     return <FullScreenLoader />;
   }
 
+  const handleOpenMyAccount = () => {
+    window.dispatchEvent(new CustomEvent('open-my-account'));
+  };
+
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
       {/* Sidebar */}
@@ -118,12 +122,11 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 px-3 py-1.5 rounded-full border bg-slate-50">
-              <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-slate-900 leading-none capitalize">{user?.hrRole || 'User'}</p>
-                <p className="text-[10px] font-medium text-slate-400 mt-0.5">{user?.name}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-slate-600">
+            <div 
+              className="items-center cursor-pointer group flex p-1 rounded-full hover:bg-slate-100 transition-colors"
+              onClick={handleOpenMyAccount}
+            >
+              <div className="h-8 w-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-slate-600 transition-transform group-hover:scale-105">
                  <UserCircle className="h-5 w-5" />
               </div>
             </div>
