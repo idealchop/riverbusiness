@@ -36,11 +36,11 @@ function SignupContent() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    defaultValues: {
-        email: initialEmail
-    }
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: initialEmail
+    }
   });
 
   const onSubmit = async (data: SignupFormValues) => {
