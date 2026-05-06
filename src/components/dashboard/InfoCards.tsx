@@ -46,7 +46,7 @@ export function InfoCards() {
     <div className="h-full">
       <Dialog>
         <DialogTrigger asChild>
-          <Card className="h-full cursor-pointer group hover:border-primary/50 transition-all shadow-sm border-none bg-white overflow-hidden flex flex-col active:scale-[0.98]">
+          <Card className="h-full cursor-pointer group transition-all border-none bg-white overflow-hidden flex flex-col active:scale-[0.98] shadow-none">
             <div className="relative aspect-[3/4] w-full flex-1">
                 <Image 
                     src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fnew-features.png?alt=media&token=59678e26-137b-4d05-8501-14267e15fd44" 
@@ -56,16 +56,13 @@ export function InfoCards() {
                     data-ai-hint="app upgrade"
                 />
                 
-                {/* Gradient for text contrast */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent z-10" />
-
-                {/* Overlaid Text */}
+                {/* Overlaid Text - No gradients, no shadows */}
                 <div className="absolute top-0 left-0 right-0 p-8 pt-10 z-20 space-y-2">
-                    <h3 className="text-2xl font-black tracking-tight text-white leading-tight drop-shadow-md">
-                        Your App is <br/><span className="text-primary-light">Upgraded!</span>
+                    <h3 className="text-3xl font-black tracking-tight text-primary-light leading-tight">
+                        Your App is <br/>Upgraded!
                     </h3>
-                    <p className="text-xs font-bold text-white/90 uppercase tracking-[0.2em] flex items-center gap-2 group-hover:text-white transition-colors">
-                        See Features <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    <p className="text-sm font-bold text-primary-light uppercase tracking-[0.2em] flex items-center gap-2 group-hover:translate-x-1 transition-all">
+                        See Features <ArrowRight className="h-4 w-4" />
                     </p>
                 </div>
             </div>
