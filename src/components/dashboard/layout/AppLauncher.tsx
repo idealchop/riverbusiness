@@ -19,7 +19,7 @@ import Image from 'next/image';
 const apps = [
   { 
     id: '01', 
-    name: 'Water Logistic', 
+    name: 'Water Refill', 
     href: '/dashboard', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fwater.svg?alt=media&token=fe3a77fb-7ae5-4568-93f7-7a3e2340288f' 
   },
@@ -31,7 +31,7 @@ const apps = [
   },
   { 
     id: '03', 
-    name: 'HR & Employee', 
+    name: 'Human Resources', 
     href: '/hr-dashboard', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
   },
@@ -43,7 +43,7 @@ const apps = [
   },
   { 
     id: '05', 
-    name: 'Solar Upgrades', 
+    name: 'Upgrades', 
     href: '/solar-upgrades', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
   },

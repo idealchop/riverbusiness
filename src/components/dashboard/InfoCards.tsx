@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -22,7 +21,7 @@ import Link from 'next/link';
 const apps = [
     { 
       id: '01', 
-      name: 'Water Logistic', 
+      name: 'Water Refill', 
       description: 'Your core hydration management engine.',
       features: [
           'Real-time consumption monitoring',
@@ -48,7 +47,7 @@ const apps = [
     },
     { 
       id: '03', 
-      name: 'HR & Employee', 
+      name: 'Human Resources', 
       description: 'Workforce intelligence command center.',
       features: [
           'Station-based biometric attendance',
@@ -74,7 +73,7 @@ const apps = [
     },
     { 
       id: '05', 
-      name: 'Solar Upgrades', 
+      name: 'Upgrades', 
       description: 'Renewable energy intelligence & logistics.',
       features: [
           'Transition readiness assessment',

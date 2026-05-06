@@ -25,7 +25,7 @@ export default function SolarUpgradesPage() {
 
         <div className="space-y-4">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-            Solar <span className="text-amber-500">Intelligence</span>
+            Upgrades <span className="text-amber-500">Intelligence</span>
           </h1>
           <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
             Renewable energy monitoring and upgrade logistics are in the design phase.
