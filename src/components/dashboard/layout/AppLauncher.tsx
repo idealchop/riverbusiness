@@ -72,7 +72,7 @@ export function AppLauncher() {
       <PopoverContent align="end" className="w-[360px] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none rounded-[2.8rem] bg-slate-100 animate-in fade-in zoom-in-95 duration-200">
         <div className="bg-white rounded-[2.5rem] p-6 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-8 px-1">
-              <h3 className="text-xl font-bold text-slate-800 tracking-tight">Your apps</h3>
+              <h3 className="text-xl font-bold text-slate-800 tracking-tight">Your Apps</h3>
           </div>
           
           <div className="grid grid-cols-3 gap-y-10 gap-x-2">
