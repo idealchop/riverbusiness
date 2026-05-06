@@ -139,7 +139,7 @@ export default function LoginPage() {
                 <Logo className="h-10 w-10 mb-8" />
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1] text-white">
-                        The platform to run <span className="text-primary-light">essential needs</span> for your business.
+                        The platform to run <span className="text-primary-light">essential needs</span> for business.
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed">
                         Everything in a single platform for your business needs.
