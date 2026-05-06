@@ -1,5 +1,3 @@
-
-
 {
   "entities": {
     "AppUser": {
@@ -15,6 +13,11 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
+        "notificationEmails": {
+          "type": "array",
+          "description": "A list of email addresses that will receive automated notifications (Billing, Deliveries, etc.).",
+          "items": { "type": "string", "format": "email" }
+        },
         "totalConsumptionLiters": { "type": "number", "description": "This field is deprecated for Parent/Prepaid accounts. For fixed plans, this represents rollover. For Parent accounts, balance is derived from topUpBalanceCredits." },
         "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
         "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
@@ -425,12 +428,3 @@
     }
   }
 }
-
-    
-
-    
-
-
-
-
-    

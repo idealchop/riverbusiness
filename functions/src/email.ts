@@ -1,10 +1,9 @@
-
 import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
 import { format } from 'date-fns';
 
 interface SendEmailOptions {
-  to: string;
+  to: string | string[];
   cc?: string | string[];
   bcc?: string | string[];
   subject: string;
@@ -75,7 +74,8 @@ export async function sendEmail({ to, cc, bcc, subject, text, html, attachments 
       },
     });
     
-    logger.info(`Attempting to send email to ${to}. CC: ${cc || 'None'}. BCC: ${bcc || 'None'}`);
+    const recipients = Array.isArray(to) ? to.join(', ') : to;
+    logger.info(`Attempting to send email to ${recipients}. CC: ${cc || 'None'}. BCC: ${bcc || 'None'}`);
 
     const info = await transporter.sendMail({
       from: '"River Philippines" <customers@riverph.com>',
@@ -169,13 +169,7 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
   `;
 }
 
-export function getWelcomeUnclaimedTemplate(
-  businessName: string,
-  clientId: string,
-  planName: string,
-  address: string,
-  schedule: string
-) {
+export function getWelcomeUnclaimedTemplate( businessName: string, clientId: string, planName: string, address: string, schedule: string) {
   const guideUrl = "https://prism-roadrunner-575.notion.site/Welcome-to-River-Philippines-2dfccd0e1c6280648d41d1eb44033f50?source=copy_link";
   const brandColor = BRAND_PRIMARY;
   const timestamp = Date.now();

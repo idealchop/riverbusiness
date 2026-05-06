@@ -1,4 +1,3 @@
-
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth } from 'date-fns';
@@ -181,7 +180,9 @@ async function generateInvoiceForUser(
             manualCharges: pendingCharges,
         };
 
-        if (user.accountType !== 'Branch' && user.email) {
+        const targetEmails = user.notificationEmails?.length > 0 ? user.notificationEmails : [user.email];
+
+        if (user.accountType !== 'Branch' && targetEmails.length > 0) {
             const sanitationSnap = await userRef.collection('sanitationVisits')
                 .where('scheduledDate', '>=', billingCycleStart.toISOString())
                 .where('scheduledDate', '<=', billingCycleEnd.toISOString())
@@ -201,7 +202,7 @@ async function generateInvoiceForUser(
             const bccList = getBCCList();
 
             sendEmail({
-                to: user.email,
+                to: targetEmails,
                 cc: ccList,
                 bcc: bccList,
                 subject: template.subject,

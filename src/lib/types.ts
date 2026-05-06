@@ -1,4 +1,3 @@
-
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
 export interface ConsumptionRecord {
@@ -95,6 +94,7 @@ export interface AppUser {
     businessName: string;
     address?: string;
     contactNumber?: string;
+    notificationEmails?: string[];
     // For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated.
     totalConsumptionLiters: number; 
     accountStatus: 'Active' | 'Inactive';

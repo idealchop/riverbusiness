@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,11 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AppUser, WaterStation, Payment } from '@/lib/types';
-import { FileText, Eye, ArrowUp, ArrowDown, Repeat } from 'lucide-react';
+import { FileText, Eye, ArrowUp, ArrowDown, Repeat, Plus, Trash2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { format } from 'date-fns';
+import { useFirestore } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -63,6 +65,10 @@ export function OverviewTab({
     onAssignParent,
     onSetIsChangePlanOpen,
 }: OverviewTabProps) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [newNotifEmail, setNewNotifEmail] = useState('');
+    const [isUpdatingEmails, setIsUpdatingEmails] = useState(false);
 
     const planDetails = user.customPlanDetails || {};
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
@@ -70,6 +76,38 @@ export function OverviewTab({
     const rolloverLiters = user.customPlanDetails?.lastMonthRollover || 0;
     const totalAllocation = monthlyPlanLiters + bonusLiters + rolloverLiters;
     const availableLiters = totalAllocation - consumedLitersThisMonth;
+
+    const handleAddNotifEmail = async () => {
+        if (!newNotifEmail || !newNotifEmail.includes('@') || !firestore) {
+            toast({ variant: 'destructive', title: 'Invalid Email' });
+            return;
+        }
+        setIsUpdatingEmails(true);
+        try {
+            const userRef = doc(firestore, 'users', user.id);
+            await updateDoc(userRef, { notificationEmails: arrayUnion(newNotifEmail.trim().toLowerCase()) });
+            setNewNotifEmail('');
+            toast({ title: 'Recipient Added' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Update Failed' });
+        } finally {
+            setIsUpdatingEmails(false);
+        }
+    };
+
+    const handleRemoveNotifEmail = async (email: string) => {
+        if (!firestore) return;
+        setIsUpdatingEmails(true);
+        try {
+            const userRef = doc(firestore, 'users', user.id);
+            await updateDoc(userRef, { notificationEmails: arrayRemove(email) });
+            toast({ title: 'Recipient Removed' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Update Failed' });
+        } finally {
+            setIsUpdatingEmails(false);
+        }
+    };
 
     return (
         <div className="relative px-8">
@@ -94,7 +132,7 @@ export function OverviewTab({
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 gap-y-2 text-sm pt-4">
-                                        <div><span className="font-medium text-muted-foreground">Email:</span> {user.email}</div>
+                                        <div><span className="font-medium text-muted-foreground">Login Email:</span> {user.email}</div>
                                         <div><span className="font-medium text-muted-foreground">Contact:</span> {user.contactNumber}</div>
                                         <div><span className="font-medium text-muted-foreground">Address:</span> {user.address}</div>
                                         {user.accountType === 'Branch' && (
@@ -175,9 +213,64 @@ export function OverviewTab({
                     </CarouselItem>
                     <CarouselItem>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-1">
+                            <Card className="flex flex-col">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Mail className="h-5 w-5 text-primary" />
+                                        Email Automation Recipients
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Specify which emails will receive automated billing, delivery, and compliance alerts.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4 flex-1">
+                                    <div className="flex gap-2">
+                                        <Input 
+                                            placeholder="e.g. accounting@company.com" 
+                                            value={newNotifEmail}
+                                            onChange={(e) => setNewNotifEmail(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAddNotifEmail()}
+                                            disabled={isUpdatingEmails}
+                                        />
+                                        <Button size="icon" onClick={handleAddNotifEmail} disabled={isUpdatingEmails || !newNotifEmail}>
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Recipients</Label>
+                                        <div className="rounded-md border bg-muted/30 max-h-40 overflow-y-auto">
+                                            {user.notificationEmails && user.notificationEmails.length > 0 ? (
+                                                <ul className="divide-y">
+                                                    {user.notificationEmails.map((email) => (
+                                                        <li key={email} className="flex items-center justify-between p-2 text-sm">
+                                                            <span className="truncate">{email}</span>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                onClick={() => handleRemoveNotifEmail(email)}
+                                                                disabled={isUpdatingEmails}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <div className="p-4 text-center text-xs text-muted-foreground italic">
+                                                    No specific recipients set. Notifications will go to the primary login email.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                                <CardFooter>
+                                    <p className="text-[10px] text-muted-foreground italic">Adding recipients here replaces the primary login email for automated broadcasts.</p>
+                                </CardFooter>
+                            </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>Plan &amp; Station</CardTitle>
+                                    <CardTitle>Plan & Station</CardTitle>
                                     <Button variant="outline" size="sm" onClick={() => onSetIsChangePlanOpen(true)}>
                                         <Repeat className="mr-2 h-4 w-4" />
                                         Change Plan
@@ -203,6 +296,10 @@ export function OverviewTab({
                                     </div>
                                 </CardContent>
                             </Card>
+                        </div>
+                    </CarouselItem>
+                    <CarouselItem>
+                        <div className="grid grid-cols-1 gap-6 p-1">
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Contract Management</CardTitle>

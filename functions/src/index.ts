@@ -60,6 +60,17 @@ async function createNotification(userId: string, notificationData: any) {
 }
 
 /**
+ * Determines the recipients for automated emails.
+ * Prioritizes notificationEmails array, falls back to login email.
+ */
+function getRecipients(user: any): string[] {
+    if (user.notificationEmails && Array.isArray(user.notificationEmails) && user.notificationEmails.length > 0) {
+        return user.notificationEmails;
+    }
+    return user.email ? [user.email] : [];
+}
+
+/**
  * Determines the CC list specifically for Financial documents (SOA, Invoices, Billing).
  * Client SC2500000001 (NEW BIG 4 J) gets specialized CC for these types only.
  */
@@ -382,7 +393,6 @@ export const onuserupdate = onDocumentUpdated("users/{userId}", async (event) =>
     if (before.email !== after.email && after.email) {
         logger.info(`Detected email change for user ${userId}: ${before.email} -> ${after.email}. Syncing to Auth...`);
         try {
-            // Admin SDK bypasses client-side re-authentication requirements.
             await getAuth().updateUser(userId, { email: after.email });
             logger.info(`Successfully synced new email to Auth for user ${userId}`);
         } catch (error) {
@@ -407,12 +417,10 @@ export const onpaymentremindercreate = onDocumentCreated({
     const user = userDoc.data();
     if (!user) return;
 
-    // Prioritize custom recipient email if provided and valid
-    const targetEmail = (recipientEmail && typeof recipientEmail === 'string' && recipientEmail.includes('@')) 
-        ? recipientEmail 
-        : user.email;
+    // Recipients broadcast
+    const targetEmails = recipientEmail ? [recipientEmail] : getRecipients(user);
 
-    if (!targetEmail) {
+    if (targetEmails.length === 0) {
         logger.error(`No target email found for reminder trigger ${event.params.reminderId}`);
         return;
     }
@@ -471,7 +479,7 @@ export const onpaymentremindercreate = onDocumentCreated({
 
     try {
         await sendEmail({
-            to: targetEmail,
+            to: targetEmails,
             cc: ccList,
             bcc: bccList,
             subject: template.subject,
@@ -482,9 +490,9 @@ export const onpaymentremindercreate = onDocumentCreated({
                 content: pdfBuffer
             }]
         });
-        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}. BCC: ${bccList}`);
+        logger.info(`Follow-up email with SOA successfully sent to ${targetEmails} for period ${selectedPeriod}. CC: ${ccList}. BCC: ${bccList}`);
     } catch (error) {
-        logger.error(`Failed to send follow-up to ${targetEmail}`, error);
+        logger.error(`Failed to send follow-up to ${targetEmails}`, error);
     }
 });
 
@@ -506,11 +514,12 @@ export const onmanualreceiptcreate = onDocumentCreated({
     const userData = userDoc.data();
     if (!userData) return;
 
-    const targetEmail = (requestData.recipientEmail && requestData.recipientEmail.includes('@')) 
-        ? requestData.recipientEmail 
-        : userData.email;
+    // Recipients broadcast
+    const targetEmails = (requestData.recipientEmail && requestData.recipientEmail.includes('@')) 
+        ? [requestData.recipientEmail] 
+        : getRecipients(userData);
 
-    if (!targetEmail) return;
+    if (targetEmails.length === 0) return;
 
     const invoiceDoc = await db.collection('users').doc(userId).collection('payments').doc(requestData.invoiceId).get();
     const invoiceData = invoiceDoc.data();
@@ -550,7 +559,7 @@ export const onmanualreceiptcreate = onDocumentCreated({
         const bccList = getBCCList();
 
         await sendEmail({
-            to: targetEmail,
+            to: targetEmails,
             cc: ccList,
             bcc: bccList,
             subject: `Receipt: ${template.subject}`,
@@ -563,7 +572,7 @@ export const onmanualreceiptcreate = onDocumentCreated({
         });
 
         await event.data.ref.update({ status: 'completed' });
-        logger.info(`Manual receipt dispatched to ${targetEmail}. BCC: ${bccList}`);
+        logger.info(`Manual receipt dispatched to ${targetEmails}. BCC: ${bccList}`);
 
     } catch (error) {
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
@@ -608,11 +617,12 @@ export const ondeliverycreate = onDocumentCreated({
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     
-    if (userData?.email && delivery.status === 'Delivered') {
-        const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0 && delivery.status === 'Delivered') {
+        const template = getDeliveryStatusTemplate(userData!.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: userData.email, 
+            to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
@@ -636,11 +646,12 @@ export const ondeliveryupdate = onDocumentUpdated({
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     
-    if (userData?.email && after.status === 'Delivered') {
-        const template = getDeliveryStatusTemplate(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0 && after.status === 'Delivered') {
+        const template = getDeliveryStatusTemplate(userData!.businessName, 'Delivered', deliveryId, after.volumeContainers);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: userData.email, 
+            to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
@@ -677,13 +688,15 @@ export const ontopuprequestupdate = onDocumentUpdated({
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    if (userData?.email) {
-        const template = getTopUpConfirmationTemplate(userData.businessName, after.amount);
+
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0) {
+        const template = getTopUpConfirmationTemplate(userData!.businessName, after.amount);
         // Financial CC restriction applied here
-        const ccList = getFinancialCCList(userData.clientId);
+        const ccList = getFinancialCCList(userData!.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: userData.email, 
+            to: targetEmails, 
             cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
@@ -712,11 +725,12 @@ export const onrefillrequestcreate = onDocumentCreated({
         data: { requestId } 
     });
 
-    if (userData?.email) {
-        const template = getRefillRequestTemplate(userData.businessName, 'Requested', requestId, request.requestedDate);
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0) {
+        const template = getRefillRequestTemplate(userData!.businessName, 'Requested', requestId, request.requestedDate);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: userData.email, 
+            to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Refill request received`, 
@@ -744,15 +758,16 @@ export const onrefillrequestupdate = onDocumentUpdated({
     await createNotification(userId, { 
         type: 'delivery', 
         title: `Refill ${after.status}`, 
-        description: `Your refill request is now ${after.status}.`,
+        description: `Your refill request is now ${after.status}.`, 
         data: { requestId } 
     });
 
-    if (userData?.email) {
-        const template = getRefillRequestTemplate(userData.businessName, after.status, requestId, after.requestedDate);
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0) {
+        const template = getRefillRequestTemplate(userData!.businessName, after.status, requestId, after.requestedDate);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: userData.email, 
+            to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Refill request updated`, 
@@ -771,12 +786,14 @@ export const onsanitationcreate = onDocumentCreated({
     const db = getFirestore();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    if (userData?.email && visit.status === 'Scheduled') {
+
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0 && visit.status === 'Scheduled') {
         const dateStr = format(toSafeDate(visit.scheduledDate), 'PPP');
-        const template = getSanitationScheduledTemplate(userData.businessName, visit.assignedTo, dateStr);
+        const template = getSanitationScheduledTemplate(userData!.businessName, visit.assignedTo, dateStr);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: userData.email, 
+            to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Visit scheduled`, 
@@ -824,12 +841,13 @@ export const onsanitationupdate = onDocumentUpdated({
             });
         }
 
-        // 3. Send Email Notification
-        if (userData?.email) {
-            const template = getSanitationReportTemplate(userData.businessName, after.assignedTo, dateStr, passRate);
+        // 3. Send Email Notification broadcast
+        const targetEmails = getRecipients(userData);
+        if (targetEmails.length > 0) {
+            const template = getSanitationReportTemplate(userData!.businessName, after.assignedTo, dateStr, passRate);
             const bccList = getBCCList();
             await sendEmail({ 
-                to: userData.email, 
+                to: targetEmails, 
                 bcc: bccList,
                 subject: template.subject, 
                 text: `Report ready. Score: ${passRate}`, 
