@@ -6,6 +6,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { doc, getDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { useToast } from '@/hooks/use-toast';
+import type { AppUser } from '@/lib/types';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -28,12 +29,17 @@ export default function OnboardingPage() {
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
-        // User has a profile, go to dashboard
-        router.push('/dashboard');
+        const userData = userDocSnap.data() as AppUser;
+        // Direct users based on their HR role
+        if (userData.hrRole === 'employee') {
+          router.push('/hr-dashboard/attendance');
+        } else {
+          router.push('/dashboard');
+        }
         return;
       }
 
-      // Check if user is an employee being invited
+      // Check if user is an employee being invited (Magic Claim)
       const employeeInviteQuery = query(
         collection(firestore, 'unclaimedEmployees'),
         where('email', '==', authUser.email?.toLowerCase().trim())
@@ -48,20 +54,24 @@ export default function OnboardingPage() {
           const batch = writeBatch(firestore);
           const newUserRef = doc(firestore, 'users', authUser.uid);
           
-          batch.set(newUserRef, {
+          const newUserData: AppUser = {
             ...inviteData,
             id: authUser.uid,
+            email: authUser.email!.toLowerCase().trim(),
             onboardingComplete: true,
             lastLogin: new Date().toISOString(),
             createdAt: new Date().toISOString(),
-          });
+            role: 'User',
+            hrRole: 'employee', // Explicitly ensure they are an employee
+          } as AppUser;
           
+          batch.set(newUserRef, newUserData);
           batch.delete(inviteDoc.ref);
           
           await batch.commit();
           
-          toast({ title: 'Welcome aboard!', description: 'Your employee profile has been activated.' });
-          router.push('/hr-dashboard');
+          toast({ title: 'Welcome to the team!', description: 'Your employee workspace has been activated.' });
+          router.push('/hr-dashboard/attendance');
           return;
         } catch (error) {
           console.error("Error claiming employee profile:", error);
@@ -69,7 +79,7 @@ export default function OnboardingPage() {
         }
       }
 
-      // User is new and needs to claim a client account (original flow)
+      // User is new and needs to claim a client account (Self-Claim)
       router.push('/claim-account');
     };
     
@@ -77,5 +87,5 @@ export default function OnboardingPage() {
 
   }, [authUser, isUserLoading, firestore, router, toast]);
 
-  return <FullScreenLoader text="Preparing your profile" />;
+  return <FullScreenLoader text="Initializing Workspace" />;
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -136,6 +135,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
             
             const { plan, planPrice, initialTopUp, parentId, ...rest } = values;
 
+            // Infrastructure alignment: Set default hrRole and companyId
             const profileData: any = {
                 ...rest, 
                 plan: {
@@ -146,6 +146,8 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
                 isPrepaid: values.isPrepaid,
                 customPlanDetails: { ...values.customPlanDetails },
                 role: 'User',
+                hrRole: 'owner', // Default to owner for the claiming client
+                companyId: values.clientId, // Link everything to this client ID
                 accountStatus: 'Active',
                 totalConsumptionLiters: (selectedAccountType !== 'Parent' && !plan.isConsumptionBased) ? (values.customPlanDetails?.litersPerMonth || 0) : 0,
                 topUpBalanceCredits: selectedAccountType === 'Parent' ? (initialTopUp || 0) : 0,
@@ -223,7 +225,7 @@ export function CreateUserDialog({ isOpen, onOpenChange, parentUsers }: CreateUs
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Add New Client</DialogTitle>
-                    <DialogDescription>Set up a new client profile.</DialogDescription>
+                    <DialogDescription>Set up a new client profile with infrastructure-aligned roles.</DialogDescription>
                 </DialogHeader>
                 <Form {...newUserForm}>
                     <form onSubmit={newUserForm.handleSubmit(handleCreateNewUser)}>

@@ -42,7 +42,7 @@ export default function ClaimAccountPage() {
 
   useEffect(() => {
     if (isUserLoading || !firestore) {
-        return; // Wait for firebase services and user auth state
+        return; 
     }
     
     if (!authUser) {
@@ -54,10 +54,8 @@ export default function ClaimAccountPage() {
         const userDocRef = doc(firestore, 'users', authUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-            // This user already has a profile. They should not be on this page.
             router.push('/dashboard');
         } else {
-            // No profile exists, it's safe to show the claim form.
             setIsCheckingProfile(false);
         }
     };
@@ -81,34 +79,39 @@ export default function ClaimAccountPage() {
       const unclaimedProfileSnap = await getDoc(unclaimedProfileRef);
 
       if (!unclaimedProfileSnap.exists()) {
-        toast({ variant: 'destructive', title: 'Claim Failed', description: 'The provided Client ID is invalid. Please check and try again.' });
+        toast({ variant: 'destructive', title: 'Claim Failed', description: 'The provided Client ID is invalid.' });
         return;
       }
       
       const batch = writeBatch(firestore);
 
-      const unclaimedData = unclaimedProfileSnap.data();
+      const unclaimedData = unclaimedProfileSnap.data() as Partial<AppUser>;
+      
+      // Explicitly set the infrastructure roles for the claiming client
       const newUserData: AppUser = {
-        ...(unclaimedData as AppUser),
+        ...unclaimedData,
         id: authUser.uid,
         email: authUser.email as string,
         onboardingComplete: true,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
         accountStatus: 'Active',
-      };
+        role: 'User',
+        hrRole: 'owner', // The person claiming the Client ID is the primary owner
+        companyId: clientId, // Client ID acts as the multi-tenant isolator
+      } as AppUser;
       
       batch.set(userProfileRef, newUserData);
       batch.delete(unclaimedProfileRef);
       
       await batch.commit();
 
-      toast({ title: 'Profile Claimed!', description: "Please review your account details below." });
+      toast({ title: 'Profile Claimed!', description: "Welcome to River Business." });
       setClaimedProfile(newUserData);
 
     } catch (error) {
       console.error("Error claiming profile: ", error);
-      toast({ variant: 'destructive', title: 'Claim Failed', description: 'An unexpected error occurred. Please contact support.' });
+      toast({ variant: 'destructive', title: 'Claim Failed', description: 'An unexpected error occurred.' });
     }
   };
 
@@ -119,49 +122,53 @@ export default function ClaimAccountPage() {
   if (claimedProfile) {
     return (
       <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-2xl">
-          <CardHeader className="text-center">
-            <CheckCircle className="h-16 w-16 mb-4 mx-auto text-green-500" />
-            <CardTitle>Welcome, {claimedProfile.businessName}!</CardTitle>
-            <CardDescription>
-              Your account has been successfully claimed. Please confirm the details below.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm space-y-4">
-            <div className="space-y-2 rounded-lg border p-4">
-                <h4 className="font-semibold">Business Details</h4>
-                <Separator />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                    <div><span className="font-medium text-muted-foreground">Client ID:</span> {claimedProfile.clientId}</div>
-                    <div><span className="font-medium text-muted-foreground">Business Name:</span> {claimedProfile.businessName}</div>
-                    <div><span className="font-medium text-muted-foreground">Contact Name:</span> {claimedProfile.name}</div>
-                    <div><span className="font-medium text-muted-foreground">Contact Number:</span> {claimedProfile.contactNumber}</div>
-                    <div className="md:col-span-2"><span className="font-medium text-muted-foreground">Address:</span> {claimedProfile.address}</div>
-                    {claimedProfile.accountType && claimedProfile.accountType !== 'Single' && (
-                       <div><span className="font-medium text-muted-foreground">Account Type:</span> {claimedProfile.accountType}</div>
-                    )}
+        <Card className="w-full max-w-2xl border-none shadow-2xl rounded-[2.5rem]">
+          <CardHeader className="text-center pt-10">
+            <div className="flex justify-center mb-4">
+                <div className="p-4 rounded-full bg-green-50">
+                    <CheckCircle className="h-12 w-12 text-green-500" />
                 </div>
             </div>
-             <div className="space-y-2 rounded-lg border p-4">
-                <h4 className="font-semibold">Plan Details</h4>
-                <Separator />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                    <div><span className="font-medium text-muted-foreground">Plan Name:</span> {claimedProfile.plan?.name}</div>
-                    {claimedProfile.plan?.isConsumptionBased ? (
-                         <div><span className="font-medium text-muted-foreground">Rate:</span> P{claimedProfile.plan?.price}/liter</div>
-                    ) : (
-                        <>
-                         <div><span className="font-medium text-muted-foreground">Monthly Fee:</span> P{claimedProfile.plan?.price?.toLocaleString()}</div>
-                         <div><span className="font-medium text-muted-foreground">Monthly Liters:</span> {claimedProfile.customPlanDetails?.litersPerMonth?.toLocaleString()} L</div>
-                        </>
-                    )}
-                    <div><span className="font-medium text-muted-foreground">Delivery Schedule:</span> {claimedProfile.customPlanDetails?.deliveryDay} at {claimedProfile.customPlanDetails?.deliveryTime}</div>
+            <CardTitle className="text-3xl font-bold">Welcome, {claimedProfile.businessName}!</CardTitle>
+            <CardDescription className="text-base">
+              Your business profile has been activated successfully.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 px-10">
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Business identity</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-medium">
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[9px] text-slate-400 uppercase font-bold mb-1">Client ID</p>
+                            <p className="text-slate-900">{claimedProfile.clientId}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[9px] text-slate-400 uppercase font-bold mb-1">Corporate Role</p>
+                            <p className="text-slate-900 capitalize">{claimedProfile.hrRole}</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 md:col-span-2">
+                            <p className="text-[9px] text-slate-400 uppercase font-bold mb-1">Assigned Address</p>
+                            <p className="text-slate-900">{claimedProfile.address}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Active plan</h4>
+                    <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-between">
+                        <div>
+                            <p className="font-bold text-slate-900">{claimedProfile.plan?.name}</p>
+                            <p className="text-xs text-blue-600 font-medium">Auto-Refill Logistics Enabled</p>
+                        </div>
+                        <Badge variant="outline" className="bg-white border-blue-200 text-blue-700">Verified</Badge>
+                    </div>
                 </div>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button onClick={() => router.push('/dashboard')} className="w-full">
-              Proceed to Dashboard
+          <CardFooter className="pb-10 px-10">
+            <Button onClick={() => router.push('/dashboard')} className="w-full h-14 rounded-2xl font-bold text-base shadow-lg shadow-primary/20">
+              Launch Dashboard
             </Button>
           </CardFooter>
         </Card>
@@ -171,38 +178,39 @@ export default function ClaimAccountPage() {
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <div className="flex flex-col items-center gap-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Logo className="h-16 w-16 mb-4 mx-auto" />
-            <CardTitle>Welcome to River Business!</CardTitle>
-            <CardDescription>
-              You're one step away from unlocking a smarter way to manage your water! We've sent the final piece—your Client ID—to your email. Please enter it below to activate your account.
+      <div className="flex flex-col items-center gap-6">
+        <Card className="w-full max-w-md border-none shadow-2xl rounded-[2.5rem] p-4">
+          <CardHeader className="text-center pt-8">
+            <Logo className="h-16 w-16 mb-6 mx-auto" />
+            <CardTitle className="text-2xl font-bold tracking-tight">Activate account</CardTitle>
+            <CardDescription className="text-base pt-2">
+              Enter your unique Client ID to link your business profile and unlock the Command Center.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="clientId">Client ID</Label>
+          <CardContent className="pt-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="clientId" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Client identification</Label>
                 <Input
                   id="clientId"
-                  placeholder="e.g. C-12345"
+                  placeholder="e.g. SC-12345"
+                  className="h-14 rounded-2xl bg-slate-50 border-slate-200 px-5 font-bold focus-visible:ring-primary/20"
                   {...register('clientId')}
                   disabled={isSubmitting}
                 />
-                {errors.clientId && <p className="text-sm text-destructive">{errors.clientId.message}</p>}
+                {errors.clientId && <p className="text-xs font-medium text-destructive mt-1 ml-1">{errors.clientId.message}</p>}
               </div>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader /> : 'Claim Profile'}
+              <Button type="submit" className="w-full h-14 rounded-2xl font-bold text-base shadow-xl shadow-primary/10" disabled={isSubmitting}>
+                {isSubmitting ? <Loader /> : 'Link Profile'}
               </Button>
             </form>
           </CardContent>
+          <CardFooter className="justify-center pb-8">
+             <p className="text-center text-xs text-muted-foreground font-medium">
+                Need help? Contact our sales executive or email <a href="mailto:support@riverph.com" className="font-bold text-primary hover:underline">support@riverph.com</a>.
+             </p>
+          </CardFooter>
         </Card>
-        <div className="text-center text-xs text-muted-foreground max-w-sm">
-          <p>
-            Trouble getting your account? Send us an email at <a href="mailto:customer@riverph.com" className="font-semibold text-primary hover:underline">customer@riverph.com</a> or reach out to your sales executive.
-          </p>
-        </div>
       </div>
     </main>
   );
