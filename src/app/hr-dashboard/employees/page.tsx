@@ -9,7 +9,7 @@ import {
   Briefcase, 
   Calendar,
   Filter,
-  DollarSign
+  ArrowRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,14 +65,14 @@ export default function EmployeesPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employee Directory</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employee directory</h1>
           <p className="text-slate-500 font-medium">Manage your workforce and employment details.</p>
         </div>
         <Button 
             onClick={() => setIsAddDialogOpen(true)}
             className="rounded-xl h-11 px-6 font-bold shadow-sm"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Employee
+          <Plus className="mr-2 h-4 w-4" /> Add employee
         </Button>
       </div>
 
@@ -100,7 +100,7 @@ export default function EmployeesPage() {
                 <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position</TableHead>
                 <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary Type</TableHead>
+                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary type</TableHead>
                 <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -139,26 +139,31 @@ export default function EmployeesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right pr-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900">
-                          <MoreHorizontal className="h-4 w-4" />
+                    <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-widest gap-2" onClick={() => setSelectedEmployee(emp)}>
+                            Details <ArrowRight className="h-3 w-3" />
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200 p-1">
-                        <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2">Management</DropdownMenuLabel>
-                        <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 cursor-pointer" onClick={() => setSelectedEmployee(emp)}>
-                            <Briefcase className="h-4 w-4 opacity-50" /> View full profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 cursor-pointer">
-                            <Calendar className="h-4 w-4 opacity-50" /> Attendance record
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-slate-50" />
-                        <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 text-red-600 focus:text-red-600 cursor-pointer">
-                            Terminated
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-900">
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200 p-1">
+                            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-bold text-slate-400 py-2">Management</DropdownMenuLabel>
+                            <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 cursor-pointer" onClick={() => setSelectedEmployee(emp)}>
+                                <Briefcase className="h-4 w-4 opacity-50" /> View full profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 cursor-pointer">
+                                <Calendar className="h-4 w-4 opacity-50" /> Attendance record
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-slate-50" />
+                            <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 text-red-600 focus:text-red-600 cursor-pointer">
+                                Terminate
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))) : (

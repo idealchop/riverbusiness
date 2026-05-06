@@ -4,17 +4,16 @@ import React, { useState } from 'react';
 import { 
   Clock, 
   MapPin, 
-  Calendar,
   CheckCircle2,
   AlertCircle,
   Timer,
   ScanLine
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -59,7 +58,7 @@ export default function AttendancePage() {
             status: status
         });
 
-        toast({ title: 'Clock-In Successful', description: `Good morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
+        toast({ title: 'Clock-in successful', description: `Good morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not clock in.' });
     } finally {
@@ -75,7 +74,7 @@ export default function AttendancePage() {
         await updateDoc(logRef, {
             timeOut: serverTimestamp()
         });
-        toast({ title: 'Clock-Out Successful', description: 'Have a great evening!' });
+        toast({ title: 'Clock-out successful', description: 'Have a great evening!' });
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not clock out.' });
     } finally {
@@ -86,7 +85,7 @@ export default function AttendancePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in duration-700">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Fulfillment Station Clock</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Fulfillment station clock</h1>
         <p className="text-slate-500 font-medium">{format(new Date(), 'EEEE, MMMM do yyyy')}</p>
       </div>
 
@@ -101,7 +100,7 @@ export default function AttendancePage() {
                  <h2 className="text-4xl font-bold text-slate-900 tabular-nums">
                     {format(new Date(), 'hh:mm a')}
                  </h2>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Standard Time Zone</p>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Standard time zone</p>
               </div>
 
               <div className="w-full space-y-4">
@@ -111,7 +110,7 @@ export default function AttendancePage() {
                         disabled={isProcessing}
                         className="w-full h-16 rounded-2xl font-bold uppercase tracking-wider text-xs shadow-md"
                     >
-                        {isProcessing ? 'Authenticating...' : 'Authorize Time-In'}
+                        {isProcessing ? 'Authenticating...' : 'Authorize time-in'}
                     </Button>
                   ) : !currentLog.timeOut ? (
                     <Button 
@@ -119,7 +118,7 @@ export default function AttendancePage() {
                         disabled={isProcessing}
                         className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase tracking-wider text-xs shadow-md"
                     >
-                        {isProcessing ? 'Processing...' : 'Time-Out Session'}
+                        {isProcessing ? 'Processing...' : 'Time-out session'}
                     </Button>
                   ) : (
                     <div className="p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-100 flex flex-col items-center gap-2">
@@ -183,15 +182,15 @@ export default function AttendancePage() {
 
             <Card className="border-none shadow-sm rounded-2xl bg-white">
                 <CardHeader className="pb-4">
-                    <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-400">Weekly summary</CardTitle>
+                    <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Weekly summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Days Present</span>
+                        <span className="text-xs font-semibold text-slate-600">Days present</span>
                         <span className="text-sm font-bold text-slate-900 tabular-nums">4 / 5</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Late Entries</span>
+                        <span className="text-xs font-semibold text-slate-600">Late entries</span>
                         <span className="text-sm font-bold text-amber-600 tabular-nums">1</span>
                     </div>
                     <div className="h-1 w-full bg-slate-50 rounded-full overflow-hidden mt-4">

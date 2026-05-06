@@ -5,8 +5,6 @@ import {
   Users, 
   Clock, 
   CalendarDays, 
-  TrendingUp, 
-  TrendingDown,
   Timer,
   AlertCircle,
   ArrowUpRight
@@ -15,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Timestamp } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -27,7 +25,6 @@ export default function HRDashboard() {
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
-  // Real data fetching for dashboard stats
   const employeesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
@@ -47,19 +44,18 @@ export default function HRDashboard() {
   const { data: todayAttendance } = useCollection(attendanceQuery);
 
   const stats = useMemo(() => [
-    { label: 'Total Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed staff', trendType: 'up' },
-    { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live attendance', trendType: 'up' },
-    { label: 'On Leave', value: '0', icon: CalendarDays, trend: 'Scheduled away', trendType: 'down' },
-    { label: 'Pending Requests', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action required', trendType: 'warn' },
+    { label: 'Total workforce', value: employees?.length || 0, icon: Users, trend: 'Managed staff', trendType: 'up' },
+    { label: 'Present today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live attendance', trendType: 'up' },
+    { label: 'On leave', value: '0', icon: CalendarDays, trend: 'Scheduled away', trendType: 'down' },
+    { label: 'Pending requests', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action required', trendType: 'warn' },
   ], [employees, todayAttendance, pendingLeaves]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
-      {/* Hero Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Workforce Intelligence
+            Workforce intelligence
           </h1>
           <p className="text-slate-500 font-medium text-base">Central control for {user?.businessName || 'your organization'}.</p>
         </div>
@@ -68,22 +64,21 @@ export default function HRDashboard() {
             onClick={() => router.push('/hr-dashboard/payroll')}
             className="rounded-xl h-11 px-6 font-bold shadow-sm"
           >
-            Run Quick Payroll
+            Run quick payroll
           </Button>
         </div>
       </div>
 
-      {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
-          <Card key={idx} className="border-none shadow-sm rounded-2xl group hover:shadow-md transition-all">
+          <Card key={idx} className="border-none shadow-sm rounded-2xl group hover:shadow-md transition-all bg-white">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="p-2.5 rounded-xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-colors">
                   <stat.icon className="h-5 w-5" />
                 </div>
                 <div className={cn(
-                  "flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider",
+                  "text-[9px] font-bold uppercase tracking-wider",
                   stat.trendType === 'up' ? "text-green-600" : stat.trendType === 'warn' ? "text-amber-600" : "text-slate-400"
                 )}>
                   {stat.trend}
@@ -91,7 +86,7 @@ export default function HRDashboard() {
               </div>
               <div className="space-y-1">
                 <p className="text-3xl font-bold text-slate-900 tabular-nums">{stat.value}</p>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-tight">{stat.label}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{stat.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -99,16 +94,15 @@ export default function HRDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity Feed */}
         <Card className="lg:col-span-2 border-none shadow-sm rounded-2xl overflow-hidden bg-white">
           <CardHeader className="bg-slate-50/30 pb-6 border-b">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-bold text-slate-900">Attendance Stream</CardTitle>
+                <CardTitle className="text-lg font-bold text-slate-900">Attendance stream</CardTitle>
                 <CardDescription className="text-xs font-medium text-slate-500">Live operational log for today</CardDescription>
               </div>
               <Button variant="ghost" size="sm" onClick={() => router.push('/hr-dashboard/attendance')} className="text-xs font-bold text-primary">
-                Full Log <ArrowUpRight className="ml-1 h-3 w-3" />
+                Full log <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </div>
           </CardHeader>
@@ -122,16 +116,16 @@ export default function HRDashboard() {
                         </div>
                         <div>
                            <p className="text-sm font-semibold text-slate-900">{log.employeeName}</p>
-                           <p className="text-xs text-slate-400 font-medium">{log.method} Verification</p>
+                           <p className="text-[10px] text-slate-400 font-bold uppercase">{log.method} Verification</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold text-slate-900">{log.timeIn ? format(log.timeIn.toDate(), 'hh:mm a') : '--:--'}</p>
                         <Badge variant="outline" className={cn(
-                            "text-[10px] h-5 font-semibold px-2",
+                            "text-[9px] h-5 font-bold uppercase px-2",
                             log.status === 'present' ? "bg-blue-50 text-blue-700 border-blue-100" : "bg-amber-50 text-amber-700 border-amber-100"
                         )}>
-                            {log.status === 'present' ? 'On Time' : 'Late'}
+                            {log.status === 'present' ? 'On time' : 'Late'}
                         </Badge>
                       </div>
                    </div>
@@ -145,7 +139,6 @@ export default function HRDashboard() {
           </CardContent>
         </Card>
 
-        {/* Reminders / Actions Column */}
         <div className="space-y-6">
            <Card className="border-none shadow-sm rounded-2xl bg-slate-900 text-white overflow-hidden relative group">
               <div className="absolute top-0 right-0 p-4 opacity-10 transition-transform group-hover:scale-110">
@@ -156,29 +149,29 @@ export default function HRDashboard() {
                 <CardDescription className="text-slate-400 font-medium">Standard work period</CardDescription>
               </CardHeader>
               <CardContent className="relative z-10 space-y-4">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <span>Cycle Status</span>
+                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span>Cycle status</span>
                   <span className="text-green-400">Active</span>
                 </div>
                 <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full bg-white w-3/4" />
                 </div>
-                <Button onClick={() => router.push('/hr-dashboard/payroll')} className="w-full bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs h-10 rounded-xl">
-                  Run Computation
+                <Button onClick={() => router.push('/hr-dashboard/payroll')} className="w-full bg-white text-slate-900 hover:bg-slate-100 font-bold text-[10px] uppercase tracking-widest h-10 rounded-xl">
+                  Run computation
                 </Button>
               </CardContent>
            </Card>
 
            <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-white">
               <CardHeader className="pb-4">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick actions</CardTitle>
+                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quick actions</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 pt-0">
                 <Button onClick={() => router.push('/hr-dashboard/employees')} variant="outline" className="justify-between border-slate-100 rounded-xl h-11 text-sm font-semibold group bg-slate-50/50 hover:bg-white transition-all">
-                   Add New Staff <Users className="h-4 w-4 text-slate-300 group-hover:text-primary" />
+                   Add new staff <Users className="h-4 w-4 text-slate-300 group-hover:text-primary" />
                 </Button>
                 <Button onClick={() => router.push('/hr-dashboard/attendance')} variant="outline" className="justify-between border-slate-100 rounded-xl h-11 text-sm font-semibold group bg-slate-50/50 hover:bg-white transition-all">
-                   Station Clock <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-500" />
+                   Station clock <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-500" />
                 </Button>
               </CardContent>
            </Card>

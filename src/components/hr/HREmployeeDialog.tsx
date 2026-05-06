@@ -29,11 +29,11 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
-import { Info } from 'lucide-react';
+import { Info, CheckCircle2, Mail, SendHorizontal } from 'lucide-react';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -58,6 +58,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSuccess, setIsSuccess] = React.useState(false);
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -79,7 +80,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       id: invitationRef.id,
       name: values.name,
       email: values.email.toLowerCase().trim(),
-      contactNumber: values.contactNumber || '',
+      contactNumber: values.contactNumber ?? '',
       businessName: 'Employee Profile',
       companyId: companyId,
       hrRole: 'employee',
@@ -89,7 +90,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       totalConsumptionLiters: 0,
       hrProfile: {
         firstName: values.name.split(' ')[0],
-        lastName: values.name.split(' ').slice(1).join(' '),
+        lastName: values.name.split(' ').slice(1).join(' ') || '',
         position: values.position,
         department: values.department,
         salaryType: values.salaryType,
@@ -99,32 +100,47 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       }
     };
 
-    setDoc(invitationRef, invitationData)
-      .then(() => {
-        toast({ 
-          title: 'Invitation generated', 
-          description: `An email invitation has been dispatched to ${values.email}.` 
-        });
-        onOpenChange(false);
-        form.reset();
-      })
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: invitationRef.path,
-          operation: 'create',
-          requestResourceData: invitationData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      })
-      .finally(() => {
-        setIsSubmitting(false);
+    try {
+      await setDoc(invitationRef, invitationData);
+      setIsSuccess(true);
+      toast({ 
+        title: 'Invitation generated', 
+        description: `An email invitation has been dispatched to ${values.email}.` 
       });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      toast({ variant: 'destructive', title: 'Operation failed', description: 'Could not send invitation.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    setTimeout(() => {
+        setIsSuccess(false);
+        form.reset();
+    }, 300);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-xl rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
-        <div className="p-8">
+        {isSuccess ? (
+          <div className="p-12 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
+            <div className="h-20 w-20 rounded-full bg-green-50 flex items-center justify-center mb-6">
+                <CheckCircle2 className="h-10 w-10 text-green-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2">Invitation dispatched</h3>
+            <p className="text-slate-500 mb-8 max-w-sm">
+                We've sent a secure signup link to <span className="font-bold text-slate-900">{form.getValues('email')}</span>. They can now join your workspace.
+            </p>
+            <Button onClick={handleClose} className="rounded-xl h-11 px-10 font-bold shadow-lg shadow-primary/10">
+                Continue to directory
+            </Button>
+          </div>
+        ) : (
+          <div className="p-8">
             <DialogHeader className="mb-8">
                 <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Add new employee</DialogTitle>
                 <DialogDescription className="text-slate-500 font-medium">Create an employment profile and dispatch an invitation.</DialogDescription>
@@ -164,7 +180,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-xs font-semibold text-slate-600">Position</FormLabel>
-                                <FormControl><Input placeholder="Operations Lead" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary" {...field} /></FormControl>
+                                <FormControl><Input placeholder="Operations lead" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -233,14 +249,15 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                     </div>
 
                     <DialogFooter className="pt-4">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-semibold px-6 rounded-xl">Cancel</Button>
+                        <Button type="button" variant="ghost" onClick={handleClose} className="text-sm font-semibold px-6 rounded-xl">Cancel</Button>
                         <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-sm shadow-lg shadow-blue-500/10">
                             {isSubmitting ? 'Processing...' : 'Send invitation'}
                         </Button>
                     </DialogFooter>
                 </form>
             </Form>
-        </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
