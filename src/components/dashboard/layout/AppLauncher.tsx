@@ -69,8 +69,8 @@ export function AppLauncher() {
           <LayoutGrid className="h-5 w-5 text-slate-600" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[360px] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none rounded-[2.8rem] bg-slate-100">
-        <div className="bg-white rounded-[2.5rem] p-6 shadow-sm">
+      <PopoverContent align="end" className="w-[360px] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none rounded-[2.8rem] bg-slate-100 animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-white rounded-[2.5rem] p-6 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between mb-8 px-1">
               <h3 className="text-xl font-bold text-slate-800 tracking-tight">Your apps</h3>
           </div>
@@ -84,9 +84,11 @@ export function AppLauncher() {
                   <div className="flex flex-col items-center justify-center gap-3">
                     <div className={cn(
                       "flex items-center justify-center h-16 w-16 rounded-full transition-all duration-300 relative",
-                      isActive ? "bg-primary/10" : "bg-slate-50 group-hover:bg-slate-100 group-focus:bg-slate-100"
+                      isActive 
+                        ? "bg-primary/10" 
+                        : "bg-slate-50 group-hover:bg-slate-100 group-hover:scale-105 group-focus:bg-slate-100"
                     )}>
-                      <div className="relative h-8 w-8 transition-transform duration-300 group-hover:scale-110">
+                      <div className="relative h-8 w-8 transition-transform duration-300">
                         <Image 
                           src={app.iconUrl} 
                           alt={app.name} 
@@ -95,7 +97,7 @@ export function AppLauncher() {
                         />
                       </div>
                       {isActive && (
-                        <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-primary/20">
+                        <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-md border border-primary/20 animate-in zoom-in-50">
                           <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                         </div>
                       )}
@@ -103,7 +105,7 @@ export function AppLauncher() {
                     <div className="text-center px-1">
                       <p className={cn(
                         "text-[10px] font-black leading-tight tracking-[0.05em] uppercase text-slate-700 transition-colors",
-                        isActive && "text-primary"
+                        isActive ? "text-primary" : "group-hover:text-slate-900"
                       )}>
                         {app.name}
                       </p>
@@ -115,7 +117,7 @@ export function AppLauncher() {
           </div>
           
           <div className="mt-12 pt-4 border-t border-slate-100 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">
+              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400">
                   River Command Center
               </p>
           </div>
