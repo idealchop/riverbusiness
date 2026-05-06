@@ -25,15 +25,15 @@ const apps = [
   },
   { 
     id: '02', 
-    name: 'Collaboration', 
-    href: '/workspace', 
-    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' 
+    name: 'HR Management', 
+    href: '/hr-dashboard', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
   },
   { 
     id: '03', 
-    name: 'Human Resources', 
-    href: '/hr-dashboard', 
-    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
+    name: 'Collaboration', 
+    href: '/workspace', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' 
   },
   { 
     id: '04', 
@@ -43,15 +43,15 @@ const apps = [
   },
   { 
     id: '05', 
-    name: 'Upgrades', 
-    href: '/solar-upgrades', 
-    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
-  },
-  { 
-    id: '06', 
     name: 'PS Vault', 
     href: '/business-insurance', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
+  },
+  { 
+    id: '06', 
+    name: 'Upgrades', 
+    href: '/solar-upgrades', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
   },
 ];
 

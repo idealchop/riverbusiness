@@ -34,6 +34,19 @@ const apps = [
     },
     { 
       id: '02', 
+      name: 'HR Management', 
+      description: 'Workforce intelligence command center.',
+      features: [
+          'Station-based biometric attendance',
+          'Automated payroll processing',
+          'Digital leave management',
+          '360° employee performance logs'
+      ],
+      href: '/hr-dashboard', 
+      iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
+    },
+    { 
+      id: '03', 
       name: 'Collaboration', 
       description: 'Next-gen office synchronization.',
       features: [
@@ -44,19 +57,6 @@ const apps = [
       ],
       href: '/workspace', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' 
-    },
-    { 
-      id: '03', 
-      name: 'Human Resources', 
-      description: 'Workforce intelligence command center.',
-      features: [
-          'Station-based biometric attendance',
-          'Automated payroll processing',
-          'Digital leave management',
-          '360° employee performance logs'
-      ],
-      href: '/hr-dashboard', 
-      iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
     },
     { 
       id: '04', 
@@ -73,19 +73,6 @@ const apps = [
     },
     { 
       id: '05', 
-      name: 'Upgrades', 
-      description: 'Renewable energy intelligence & logistics.',
-      features: [
-          'Transition readiness assessment',
-          'Solar energy output monitoring',
-          'Upgrade ROI calculations',
-          'Certified installation scheduling'
-      ],
-      href: '/solar-upgrades', 
-      iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
-    },
-    { 
-      id: '06', 
       name: 'PS Vault', 
       description: 'Automated corporate benefit systems.',
       features: [
@@ -96,6 +83,19 @@ const apps = [
       ],
       href: '/business-insurance', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
+    },
+    { 
+      id: '06', 
+      name: 'Upgrades', 
+      description: 'Business intelligence & logistics upgrades.',
+      features: [
+          'Solar energy infrastructure upgrades',
+          'Employee health benefit plan upgrades',
+          'Custom business scalability tools',
+          'Asset and facility modernization'
+      ],
+      href: '/solar-upgrades', 
+      iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
     },
 ];
 
