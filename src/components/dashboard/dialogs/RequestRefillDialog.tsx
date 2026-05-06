@@ -33,6 +33,7 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden shadow-none rounded-2xl border-none">
+        {/* Responsive Branding Header */}
         <div className="relative aspect-video w-full">
            <Image 
               src={brandingImage} 
@@ -51,6 +52,7 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
 
         <div className="p-5 space-y-6">
             <div className="grid gap-6">
+                {/* Step 1: Quantity */}
                 <div className="space-y-3">
                     <div className="flex items-center gap-2">
                         <div className="p-1 rounded-lg bg-blue-50 text-primary border border-blue-100">
@@ -76,6 +78,7 @@ export function RequestRefillDialog({ isOpen, onOpenChange, onSubmit, isSubmitti
                     </div>
                 </div>
 
+                {/* Step 2: Date */}
                 <div className="space-y-3">
                     <div className="flex items-center gap-2">
                         <div className="p-1 rounded-lg bg-blue-50 text-primary border border-blue-100">

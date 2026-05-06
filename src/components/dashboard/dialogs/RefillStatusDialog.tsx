@@ -23,6 +23,9 @@ const toSafeDate = (timestamp: any): Date | null => {
     return null;
 };
 
+/**
+ * Calculates the time duration between the initial request and completion.
+ */
 const getCompletionDuration = (request: RefillRequest) => {
     const start = toSafeDate(request.requestedAt);
     const completionEntry = request.statusHistory?.find(h => h.status === 'Completed');
@@ -108,6 +111,7 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
+  // Fetch past refill requests for the History view
   const historyQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     return query(
@@ -138,6 +142,7 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
         onOpenChange(open);
     }}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden shadow-none rounded-2xl border-none">
+        {/* Responsive Branding Header */}
         <div className="relative aspect-video w-full">
            <Image 
               src={brandingImage} 
@@ -165,10 +170,12 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
            </div>
         </div>
 
+        {/* View Switcher Content */}
         {view === 'tracker' ? (
           <>
             {activeRefillRequest ? (
               <div className="p-5 space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+                {/* Active Status Hero */}
                 <div className={cn("rounded-xl p-4 border flex items-center gap-4 transition-all", config.bg, "border-white shadow-none")}>
                     <div className={cn("p-2.5 rounded-full bg-white border border-slate-100", config.color)}>
                         <Icon className="h-5 w-5" />
@@ -179,6 +186,7 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
                     </div>
                 </div>
 
+                {/* Timeline Section */}
                 <div className="relative pl-1">
                     <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-100" />
                     <div className="space-y-6 relative">
@@ -280,6 +288,7 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
           </div>
         )}
 
+        {/* Footer Actions */}
         <DialogFooter className="bg-slate-50 p-5 pt-4 border-t flex items-center justify-between gap-4">
             {view === 'tracker' ? (
                 <>
