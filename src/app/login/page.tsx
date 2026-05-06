@@ -14,7 +14,6 @@ import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
-import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -31,15 +30,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-
-const servicePillars = [
-  { id: '01', title: 'Water Refill', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fwater.svg?alt=media&token=fe3a77fb-7ae5-4568-93f7-7a3e2340288f' },
-  { id: '02', title: 'HR Management', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' },
-  { id: '03', title: 'Collaboration', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' },
-  { id: '04', title: 'Files', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FFiles.svg?alt=media&token=7f746199-877e-455f-a96f-91b619f9c66a' },
-  { id: '05', title: 'PS Vault', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' },
-  { id: '06', title: 'Upgrades', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -166,27 +156,6 @@ export default function LoginPage() {
                     <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-md">
                         Everything in a single platform for Filipino businesses.
                     </p>
-                </div>
-            </div>
-
-            <div className="relative z-10 mt-16 lg:mt-0 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-x-12 sm:gap-y-16">
-                    {servicePillars.map((pillar) => (
-                        <div key={pillar.id} className="group flex flex-col gap-3 transition-all">
-                            <div className="flex items-center gap-3">
-                                <div className="relative h-5 w-5 transition-transform duration-300 group-hover:scale-110">
-                                    <Image 
-                                      src={pillar.iconUrl} 
-                                      alt={pillar.title} 
-                                      fill 
-                                      className="object-contain"
-                                    />
-                                </div>
-                                <span className="font-mono text-[9px] font-black text-slate-600 tracking-widest">{pillar.id}</span>
-                            </div>
-                            <h4 className="font-bold text-[11px] tracking-[0.1em] text-white/90 group-hover:text-primary transition-colors">{pillar.title}</h4>
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>
