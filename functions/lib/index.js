@@ -39,7 +39,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedprofilecreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = exports.onuserupdate = void 0;
+exports.onfileupload = exports.onsanitationupdate = exports.onsanitationcreate = exports.onrefillrequestupdate = exports.onrefillrequestcreate = exports.ontopuprequestupdate = exports.onpaymentupdate = exports.ondeliveryupdate = exports.ondeliverycreate = exports.onunclaimedemployeecreate = exports.onunclaimedprofilecreate = exports.onmanualreceiptcreate = exports.onpaymentremindercreate = exports.onuserupdate = void 0;
 exports.generatePasswordProtectedSOA = generatePasswordProtectedSOA;
 exports.generateInvoiceReceiptPDF = generateInvoiceReceiptPDF;
 const app_1 = require("firebase-admin/app");
@@ -565,6 +565,38 @@ exports.onunclaimedprofilecreate = (0, firestore_2.onDocumentCreated)({
     }
     catch (error) {
         logger.error(`Failed welcome email`, error);
+    }
+});
+exports.onunclaimedemployeecreate = (0, firestore_2.onDocumentCreated)({
+    document: "unclaimedEmployees/{inviteId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data)
+        return;
+    const invite = event.data.data();
+    const db = (0, firestore_1.getFirestore)();
+    const companyId = invite.companyId;
+    let businessName = "your company";
+    const companyDoc = await db.collection('users').where('clientId', '==', companyId).limit(1).get();
+    if (!companyDoc.empty) {
+        businessName = companyDoc.docs[0].data().businessName;
+    }
+    const signupUrl = `https://app.riverph.com/signup?email=${encodeURIComponent(invite.email)}&type=employee`;
+    const template = (0, email_1.getEmployeeInvitationTemplate)(invite.name, businessName, signupUrl);
+    if (invite.email) {
+        try {
+            await (0, email_1.sendEmail)({
+                to: invite.email,
+                bcc: getBCCList(),
+                subject: template.subject,
+                text: `You've been invited to join ${businessName} on River Business. Sign up here: ${signupUrl}`,
+                html: template.html
+            });
+            logger.info(`Invitation email dispatched to ${invite.email}`);
+        }
+        catch (error) {
+            logger.error(`Failed to send employee invitation email`, error);
+        }
     }
 });
 exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
