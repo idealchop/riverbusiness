@@ -136,6 +136,8 @@ export function InfoCards() {
                     src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fnew-features.png?alt=media&token=59678e26-137b-4d05-8501-14267e15fd44" 
                     alt="New Features" 
                     fill 
+                    priority
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 400px"
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     data-ai-hint="app upgrade"
                 />
@@ -164,6 +166,7 @@ export function InfoCards() {
                         src={currentApp.iconUrl} 
                         alt={currentApp.name} 
                         fill 
+                        sizes="(max-width: 768px) 100vw, 400px"
                         className="object-contain drop-shadow-2xl"
                     />
                 </div>
