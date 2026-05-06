@@ -24,7 +24,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -39,13 +39,13 @@ export default function LeavePage() {
   const companyId = user?.companyId || user?.clientId || 'default';
 
   const leaveQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc')) : null,
     [firestore, companyId]
   );
   const { data: leaveRequests, isLoading } = useCollection(leaveQuery);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
-    if (!firestore) return;
+    if (!firestore || !companyId) return;
     try {
         const leaveRef = doc(firestore, 'hr_companies', companyId, 'leaveRequests', requestId);
         await updateDoc(leaveRef, { status: newStatus });
@@ -61,27 +61,27 @@ export default function LeavePage() {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Leave Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Leave Management</h1>
           <p className="text-slate-500 font-medium">Review applications and manage team availability.</p>
         </div>
         <Button 
             onClick={() => setIsLeaveDialogOpen(true)}
-            className="rounded-2xl h-11 px-6 font-black uppercase tracking-widest text-[10px] bg-slate-900"
+            className="rounded-xl h-11 px-6 font-bold shadow-sm"
         >
           <Plus className="mr-2 h-4 w-4" /> File Leave
         </Button>
       </div>
 
-      <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-         <CardHeader className="bg-slate-50/50 border-b p-6">
+      <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
+         <CardHeader className="bg-slate-50/20 border-b p-6">
             <div className="flex items-center justify-between">
                 <div>
-                   <CardTitle className="text-lg font-black tracking-tight text-slate-900">Request Queue</CardTitle>
-                   <CardDescription className="text-xs font-bold uppercase text-slate-400">Pending team applications</CardDescription>
+                   <CardTitle className="text-lg font-bold text-slate-900">Request Queue</CardTitle>
+                   <CardDescription className="text-xs font-medium text-slate-500">Review pending team applications</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-black uppercase tracking-widest">
-                       <LayoutGrid className="h-3.5 w-3.5 mr-2" /> Calendar View
+                    <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-slate-200">
+                       <LayoutGrid className="h-3.5 w-3.5 mr-2 opacity-50" /> Calendar View
                     </Button>
                 </div>
             </div>
@@ -90,39 +90,39 @@ export default function LeavePage() {
             <Table>
                 <TableHeader className="bg-slate-50/50">
                    <TableRow>
-                     <TableHead className="pl-6 font-bold uppercase tracking-widest text-[10px] text-slate-400">Employee</TableHead>
-                     <TableHead className="font-bold uppercase tracking-widest text-[10px] text-slate-400">Type & Period</TableHead>
-                     <TableHead className="font-bold uppercase tracking-widest text-[10px] text-slate-400">Reason</TableHead>
-                     <TableHead className="font-bold uppercase tracking-widest text-[10px] text-slate-400">Status</TableHead>
-                     <TableHead className="text-right pr-6 font-bold uppercase tracking-widest text-[10px] text-slate-400">Review</TableHead>
+                     <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Type & Period</TableHead>
+                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
+                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
+                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Actions</TableHead>
                    </TableRow>
                 </TableHeader>
                 <TableBody>
                    {isLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-bold uppercase tracking-widest text-[10px]">Processing Request Data...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing Request Data...</TableCell></TableRow>
                    ) : leaveRequests && leaveRequests.length > 0 ? (
                       leaveRequests.map(request => (
-                        <TableRow key={request.id} className="hover:bg-slate-50/50 transition-colors">
+                        <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0">
                            <TableCell className="pl-6 py-5">
                               <div className="flex items-center gap-3">
-                                 <div className="h-9 w-9 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs uppercase">
+                                 <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
                                     {request.employeeName.charAt(0)}
                                  </div>
-                                 <p className="text-sm font-bold text-slate-900">{request.employeeName}</p>
+                                 <p className="text-sm font-semibold text-slate-900">{request.employeeName}</p>
                               </div>
                            </TableCell>
                            <TableCell>
-                              <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{request.type}</p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d')}</p>
+                              <p className="text-xs font-bold text-slate-900">{request.type}</p>
+                              <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">{format(new Date(request.startDate), 'MMM d')} - {format(new Date(request.endDate), 'MMM d')}</p>
                            </TableCell>
                            <TableCell>
-                              <p className="text-[11px] text-slate-500 font-medium italic max-w-[200px] truncate">"{request.reason || 'No reason provided'}"</p>
+                              <p className="text-xs text-slate-500 font-medium italic max-w-[200px] truncate">"{request.reason || 'No reason provided'}"</p>
                            </TableCell>
                            <TableCell>
                               <Badge className={cn(
-                                 "text-[8px] font-black uppercase border-none px-2",
-                                 request.status === 'approved' ? "bg-green-100 text-green-700" : 
-                                 request.status === 'pending' ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"
+                                 "text-[9px] font-bold uppercase border-none px-2 h-5",
+                                 request.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                 request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
                               )}>
                                  {request.status}
                               </Badge>
@@ -134,7 +134,7 @@ export default function LeavePage() {
                                         onClick={() => handleStatusUpdate(request.id, 'approved')}
                                         variant="outline" 
                                         size="sm" 
-                                        className="h-8 w-8 p-0 rounded-lg text-green-600 border-green-200 hover:bg-green-50"
+                                        className="h-8 w-8 p-0 rounded-lg text-green-600 border-green-100 hover:bg-green-50"
                                     >
                                        <CheckCircle2 className="h-4 w-4" />
                                     </Button>
@@ -142,7 +142,7 @@ export default function LeavePage() {
                                         onClick={() => handleStatusUpdate(request.id, 'rejected')}
                                         variant="outline" 
                                         size="sm" 
-                                        className="h-8 w-8 p-0 rounded-lg text-red-600 border-red-200 hover:bg-red-50"
+                                        className="h-8 w-8 p-0 rounded-lg text-red-600 border-red-100 hover:bg-red-50"
                                     >
                                        <XCircle className="h-4 w-4" />
                                     </Button>
@@ -158,7 +158,7 @@ export default function LeavePage() {
                          <TableCell colSpan={5} className="text-center py-24">
                             <div className="flex flex-col items-center gap-3 opacity-20">
                                <Clock className="h-10 w-10 text-slate-400" />
-                               <p className="text-xs font-black uppercase tracking-widest">The request queue is clear</p>
+                               <p className="text-sm font-bold uppercase tracking-widest">The request queue is clear</p>
                             </div>
                          </TableCell>
                       </TableRow>

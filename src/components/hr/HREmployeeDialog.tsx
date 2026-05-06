@@ -100,12 +100,12 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
 
       await setDoc(employeeRef, employeeData);
       
-      toast({ title: 'Employee Created', description: `${values.name} has been added to your workforce.` });
+      toast({ title: 'Employee created', description: `${values.name} has been added to your workforce.` });
       onOpenChange(false);
       form.reset();
     } catch (error) {
       console.error("Error creating employee:", error);
-      toast({ variant: 'destructive', title: 'Action Failed' });
+      toast({ variant: 'destructive', title: 'Operation failed' });
     } finally {
       setIsSubmitting(false);
     }
@@ -113,115 +113,117 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl rounded-3xl border-none">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-black tracking-tight uppercase">New Hire Entry</DialogTitle>
-          <DialogDescription className="text-slate-500 font-bold">Register a new member to your company workforce.</DialogDescription>
-        </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Full Name</FormLabel>
-                    <FormControl><Input placeholder="John Doe" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Personal Email</FormLabel>
-                    <FormControl><Input placeholder="john@example.com" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+      <DialogContent className="sm:max-w-xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+        <div className="p-8">
+            <DialogHeader className="mb-6">
+                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">New Hire Entry</DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium">Register a new member to your company workforce.</DialogDescription>
+            </DialogHeader>
+            
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</FormLabel>
+                                <FormControl><Input placeholder="John Doe" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</FormLabel>
+                                <FormControl><Input placeholder="john@company.com" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="position"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Job Position</FormLabel>
-                    <FormControl><Input placeholder="Manager" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="department"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Department</FormLabel>
-                    <FormControl><Input placeholder="Operations" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <FormField
+                            control={form.control}
+                            name="position"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Position</FormLabel>
+                                <FormControl><Input placeholder="Manager" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="department"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Department</FormLabel>
+                                <FormControl><Input placeholder="Operations" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
 
-            <Separator />
+                    <Separator className="bg-slate-100" />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="salaryType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cycle Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="rounded-xl"><SelectItem value="daily">Daily</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="rate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pay Rate (PHP)</FormLabel>
-                    <FormControl><Input type="number" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hire Date</FormLabel>
-                    <FormControl><Input type="date" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <FormField
+                            control={form.control}
+                            name="salaryType"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cycle</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-100"><SelectValue /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="rounded-xl"><SelectItem value="daily">Daily</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="rate"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rate (PHP)</FormLabel>
+                                <FormControl><Input type="number" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="startDate"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Hire Date</FormLabel>
+                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
 
-            <DialogFooter className="pt-6">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-[10px] font-black uppercase tracking-widest">Cancel</Button>
-              <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-11 px-8 font-black uppercase tracking-widest text-[10px] bg-green-600 hover:bg-green-700">
-                {isSubmitting ? 'Syncing...' : 'Authorize New Staff'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                    <DialogFooter className="pt-4">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-6">Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-xs shadow-md">
+                            {isSubmitting ? 'Syncing...' : 'Authorize New Hire'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );

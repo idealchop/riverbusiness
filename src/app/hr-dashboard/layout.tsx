@@ -54,15 +54,15 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50/50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
       {/* Sidebar */}
       <aside className="hidden md:flex w-72 flex-col border-r bg-white shrink-0">
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center gap-2 group mb-8">
             <Logo className="h-8 w-8 transition-transform group-hover:scale-110" />
             <div className="flex flex-col">
-              <span className="font-black text-sm tracking-tight text-slate-900 leading-none">River Business</span>
-              <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest mt-1">HR & Employee</span>
+              <span className="font-bold text-base tracking-tight text-slate-900 leading-none">River Business</span>
+              <span className="text-xs font-medium text-green-600 mt-1">HR & Employee</span>
             </div>
           </Link>
 
@@ -73,16 +73,16 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
               return (
                 <Link key={item.href} href={item.href}>
                   <div className={cn(
-                    "flex items-center justify-between px-4 py-3 rounded-2xl transition-all group",
+                    "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
                     isActive 
-                      ? "bg-green-50 text-green-700 shadow-sm shadow-green-200/50" 
+                      ? "bg-slate-100 text-slate-900 shadow-sm" 
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                   )}>
                     <div className="flex items-center gap-3">
-                      <Icon className={cn("h-5 w-5", isActive ? "text-green-600" : "group-hover:text-slate-900")} />
-                      <span className="text-sm font-bold tracking-tight">{item.label}</span>
+                      <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "group-hover:text-slate-900")} />
+                      <span className="text-sm font-semibold tracking-tight">{item.label}</span>
                     </div>
-                    {isActive && <ChevronRight className="h-4 w-4" />}
+                    {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
                   </div>
                 </Link>
               );
@@ -91,13 +91,13 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="mt-auto p-6">
-          <div className="p-4 rounded-3xl bg-slate-900 text-white space-y-3 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+          <div className="p-5 rounded-2xl border bg-slate-50 space-y-3 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
               <ShieldCheck className="h-16 w-16" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Your Security</p>
-            <h4 className="text-xs font-bold leading-relaxed relative z-10">Data is isolated by Company Protocol.</h4>
-            <Badge className="bg-green-500 text-white border-none text-[8px] font-black uppercase">Verified Tenant</Badge>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Security protocol</p>
+            <h4 className="text-xs font-semibold leading-relaxed relative z-10 text-slate-600">Data is isolated by company protocol.</h4>
+            <Badge className="bg-green-500 text-white border-none text-[8px] font-bold uppercase">Verified Tenant</Badge>
           </div>
         </div>
       </aside>
@@ -110,8 +110,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                 <Logo className="h-8 w-8" />
              </div>
              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Environment:</span>
-                <Badge variant="outline" className="text-[10px] font-black bg-blue-50 text-blue-700 border-blue-200">
+                <span className="text-xs font-medium text-slate-400">Environment:</span>
+                <Badge variant="outline" className="text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200">
                     {user?.businessName || 'Standard'}
                 </Badge>
              </div>
@@ -120,8 +120,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-full border bg-slate-50">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-black text-slate-900 leading-none capitalize">{user?.hrRole || 'User'}</p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mt-0.5">{user?.name}</p>
+                <p className="text-xs font-bold text-slate-900 leading-none capitalize">{user?.hrRole || 'User'}</p>
+                <p className="text-[10px] font-medium text-slate-400 mt-0.5">{user?.name}</p>
               </div>
               <div className="h-8 w-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-slate-600">
                  <UserCircle className="h-5 w-5" />
@@ -131,7 +131,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6 md:p-10">
+        <main className="flex-1 overflow-auto p-6 md:p-8">
           <div className="max-w-6xl mx-auto">
             {children}
           </div>

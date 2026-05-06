@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { 
   Form, 
   FormControl, 
@@ -55,7 +54,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
   });
 
   const onSubmit = async (values: PayrollFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !companyId) return;
     setIsSubmitting(true);
     
     try {
@@ -65,13 +64,12 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
       const employees = employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       if (employees.length === 0) {
-        toast({ variant: 'destructive', title: 'No Employees', description: 'No active staff found for this cycle.' });
+        toast({ variant: 'destructive', title: 'No active staff found', description: 'Add employees to your directory before running payroll.' });
         setIsSubmitting(false);
         return;
       }
 
-      // 2. Simulated Computation (In a real system, you'd fetch attendance logs here)
-      // For the prototype, we calculate based on the employee's base rate.
+      // 2. Simulated Computation
       const totalNet = employees.reduce((sum, emp: any) => sum + (emp.hrProfile?.rate || 0), 0);
 
       // 3. Create Payroll Run Record
@@ -85,11 +83,11 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         createdAt: serverTimestamp()
       });
 
-      toast({ title: 'Payroll Authorized', description: `Successfully processed disbursements for ${employees.length} employees.` });
+      toast({ title: 'Payroll authorized', description: `Successfully processed disbursements for ${employees.length} employees.` });
       onOpenChange(false);
     } catch (error) {
       console.error("Error running payroll:", error);
-      toast({ variant: 'destructive', title: 'Action Failed' });
+      toast({ variant: 'destructive', title: 'Operation failed' });
     } finally {
       setIsSubmitting(false);
     }
@@ -97,57 +95,59 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-none">
-        <DialogHeader>
-          <div className="p-3 w-fit rounded-2xl bg-blue-50 text-blue-600 mb-4">
-            <DollarSign className="h-6 w-6" />
-          </div>
-          <DialogTitle className="text-xl font-black tracking-tight uppercase">Authorize Payroll</DialogTitle>
-          <DialogDescription className="text-slate-500 font-bold">Initiate salary computation for the current work period.</DialogDescription>
-        </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="periodStart"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Period Start</FormLabel>
-                    <FormControl><Input type="date" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="periodEnd"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Period End</FormLabel>
-                    <FormControl><Input type="date" className="h-11 rounded-xl" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+      <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-2xl">
+        <div className="p-8">
+            <DialogHeader className="mb-6">
+                <div className="p-3 w-fit rounded-2xl bg-blue-50 text-primary mb-4">
+                    <DollarSign className="h-6 w-6" />
+                </div>
+                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Authorize Payroll</DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium">Initiate salary computation for the current work period.</DialogDescription>
+            </DialogHeader>
+            
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="periodStart"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period start</FormLabel>
+                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="periodEnd"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period end</FormLabel>
+                                <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
 
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-                <ShieldAlert className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[10px] font-bold text-amber-800/80 leading-relaxed uppercase tracking-tight">
-                    Running payroll will generate disbursement orders and finalize attendance logs for this period. this action is logged for audit.
-                </p>
-            </div>
+                    <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-4">
+                        <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                        <p className="text-[11px] font-semibold text-slate-500 leading-relaxed uppercase tracking-tight">
+                            Authorizing payroll will generate disbursement orders and finalize logs for audit.
+                        </p>
+                    </div>
 
-            <DialogFooter className="pt-6">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-[10px] font-black uppercase tracking-widest">Cancel</Button>
-              <Button type="submit" disabled={isSubmitting} className="rounded-2xl h-11 px-8 font-black uppercase tracking-widest text-[10px] bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200/50">
-                {isSubmitting ? 'Computing...' : 'Finalize & Disburse'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                    <DialogFooter className="pt-4">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-6">Cancel</Button>
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-xs shadow-md">
+                            {isSubmitting ? 'Computing...' : 'Finalize & Disburse'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );
