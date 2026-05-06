@@ -25,10 +25,13 @@ import {
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
+import { cn } from '@/lib/utils';
 
 export default function PayrollPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -38,6 +41,13 @@ export default function PayrollPage() {
   );
   const { data: payrollRuns, isLoading } = useCollection(payrollQuery);
 
+  const totalDisbursed = useMemo(() => {
+    if (!payrollRuns) return 0;
+    return payrollRuns.reduce((sum, run) => sum + (run.totalNetSalary || 0), 0);
+  }, [payrollRuns]);
+
+  const isOwner = user?.hrRole === 'owner';
+
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -45,11 +55,14 @@ export default function PayrollPage() {
           <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Payroll Engine</h1>
           <p className="text-slate-500 font-medium">Automated salary computation and disbursement logs.</p>
         </div>
-        <Button 
-            className="rounded-2xl h-12 px-8 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-200/50 bg-blue-600 hover:bg-blue-700"
-        >
-          <PlayCircle className="mr-2 h-4 w-4" /> Run New Period
-        </Button>
+        {isOwner && (
+            <Button 
+                onClick={() => setIsPayrollDialogOpen(true)}
+                className="rounded-2xl h-12 px-8 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-200/50 bg-blue-600 hover:bg-blue-700"
+            >
+            <PlayCircle className="mr-2 h-4 w-4" /> Run New Period
+            </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -59,12 +72,12 @@ export default function PayrollPage() {
                     <DollarSign className="h-6 w-6 text-green-400" />
                 </div>
                 <div className="space-y-1">
-                    <p className="text-2xl font-black tracking-tighter">₱428,500.00</p>
-                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Total Net Disbursement (June)</p>
+                    <p className="text-2xl font-black tracking-tighter">₱{totalDisbursed.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Lifetime Disbursements</p>
                 </div>
                 <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                     <TrendingUp className="h-3 w-3 text-green-400" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">+4.2% vs last month</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Verified Cycles</span>
                 </div>
             </CardContent>
           </Card>
@@ -99,7 +112,7 @@ export default function PayrollPage() {
                         <TableRow key={run.id} className="hover:bg-slate-50/50 transition-colors">
                           <TableCell className="pl-6 py-4">
                             <p className="text-sm font-bold text-slate-900">{format(new Date(run.periodStart), 'MMM d')} - {format(new Date(run.periodEnd), 'MMM d, yyyy')}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Processed: {format(run.createdAt.toDate(), 'PP')}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Processed: {run.createdAt ? format(run.createdAt.toDate(), 'PP') : 'Today'}</p>
                           </TableCell>
                           <TableCell>
                             <Badge className={cn(
@@ -135,6 +148,12 @@ export default function PayrollPage() {
             </CardContent>
           </Card>
       </div>
+
+      <RunPayrollDialog
+        isOpen={isPayrollDialogOpen}
+        onOpenChange={setIsPayrollDialogOpen}
+        companyId={companyId}
+      />
     </div>
   );
 }

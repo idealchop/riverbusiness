@@ -36,15 +36,18 @@ import {
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
+import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
 import { cn } from '@/lib/utils';
+import type { AppUser } from '@/lib/types';
 
 export default function EmployeesPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
 
-  const companyId = user?.clientId || 'default';
+  const companyId = user?.companyId || user?.clientId || 'default';
 
   const employeesQuery = useMemoFirebase(
     () => firestore ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
@@ -144,11 +147,11 @@ export default function EmployeesPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 rounded-xl border-slate-200">
                         <DropdownMenuLabel className="text-[10px] uppercase tracking-widest font-black text-slate-400">Employee Management</DropdownMenuLabel>
-                        <DropdownMenuItem className="gap-2 font-bold text-xs py-2.5">
+                        <DropdownMenuItem className="gap-2 font-bold text-xs py-2.5" onClick={() => setSelectedEmployee(emp)}>
                             <Briefcase className="h-3.5 w-3.5" /> View Profile
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2 font-bold text-xs py-2.5">
-                            <Clock className="h-3.5 w-3.5" /> Attendance Record
+                            <Calendar className="h-3.5 w-3.5" /> Attendance Record
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="gap-2 font-bold text-xs py-2.5 text-red-600 focus:text-red-600">
@@ -177,6 +180,12 @@ export default function EmployeesPage() {
         isOpen={isAddDialogOpen} 
         onOpenChange={setIsAddDialogOpen} 
         companyId={companyId}
+      />
+
+      <EmployeeDetailsDialog
+        employee={selectedEmployee}
+        isOpen={!!selectedEmployee}
+        onOpenChange={(open) => !open && setSelectedEmployee(null)}
       />
     </div>
   );

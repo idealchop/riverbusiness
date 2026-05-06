@@ -28,11 +28,13 @@ import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/fire
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 
 export default function LeavePage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   
   const companyId = user?.companyId || user?.clientId || 'default';
 
@@ -53,6 +55,8 @@ export default function LeavePage() {
     }
   };
 
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -60,7 +64,10 @@ export default function LeavePage() {
           <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Leave Management</h1>
           <p className="text-slate-500 font-medium">Review applications and manage team availability.</p>
         </div>
-        <Button className="rounded-2xl h-11 px-6 font-black uppercase tracking-widest text-[10px] bg-slate-900">
+        <Button 
+            onClick={() => setIsLeaveDialogOpen(true)}
+            className="rounded-2xl h-11 px-6 font-black uppercase tracking-widest text-[10px] bg-slate-900"
+        >
           <Plus className="mr-2 h-4 w-4" /> File Leave
         </Button>
       </div>
@@ -121,7 +128,7 @@ export default function LeavePage() {
                               </Badge>
                            </TableCell>
                            <TableCell className="text-right pr-6">
-                              {request.status === 'pending' ? (
+                              {(request.status === 'pending' && isManagement) ? (
                                  <div className="flex items-center justify-end gap-2">
                                     <Button 
                                         onClick={() => handleStatusUpdate(request.id, 'approved')}
@@ -160,6 +167,12 @@ export default function LeavePage() {
             </Table>
          </CardContent>
       </Card>
+      
+      <FileLeaveDialog
+        isOpen={isLeaveDialogOpen}
+        onOpenChange={setIsLeaveDialogOpen}
+        user={user}
+      />
     </div>
   );
 }

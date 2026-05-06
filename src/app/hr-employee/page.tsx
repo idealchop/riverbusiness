@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Users, 
   Clock, 
@@ -18,13 +18,16 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function HRDashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
-  const companyId = user?.clientId || 'default';
+  const companyId = user?.companyId || user?.clientId || 'default';
 
+  // Real data fetching for dashboard stats
   const employeesQuery = useMemoFirebase(
     () => firestore ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
     [firestore, companyId]
@@ -36,13 +39,19 @@ export default function HRDashboard() {
     [firestore, companyId]
   );
   const { data: pendingLeaves } = useCollection(leavesQuery);
+  
+  const attendanceQuery = useMemoFirebase(
+    () => firestore ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', format(new Date(), 'yyyy-MM-dd'))) : null,
+    [firestore, companyId]
+  );
+  const { data: todayAttendance } = useCollection(attendanceQuery);
 
-  const stats = [
-    { label: 'Total Workforce', value: employees?.length || 0, icon: Users, trend: '+2 this month', trendType: 'up' },
-    { label: 'Present Today', value: '18', icon: Clock, trend: '92% attendance', trendType: 'up' },
-    { label: 'On Leave', value: '3', icon: CalendarDays, trend: 'Decreasing', trendType: 'down' },
+  const stats = useMemo(() => [
+    { label: 'Total Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed staff', trendType: 'up' },
+    { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live attendance', trendType: 'up' },
+    { label: 'On Leave', value: '0', icon: CalendarDays, trend: 'Scheduled away', trendType: 'down' },
     { label: 'Pending Requests', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action required', trendType: 'warn' },
-  ];
+  ], [employees, todayAttendance, pendingLeaves]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -55,7 +64,10 @@ export default function HRDashboard() {
           <p className="text-slate-500 font-bold text-lg">Central control for {user?.businessName || 'your organization'}.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button className="rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-green-200/50 bg-green-600 hover:bg-green-700">
+          <Button 
+            onClick={() => router.push('/hr-employee/payroll')}
+            className="rounded-2xl h-12 px-6 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-green-200/50 bg-green-600 hover:bg-green-700"
+          >
             Run Quick Payroll
           </Button>
         </div>
@@ -96,28 +108,40 @@ export default function HRDashboard() {
                 <CardTitle className="text-lg font-black tracking-tight text-slate-900">Attendance Stream</CardTitle>
                 <CardDescription className="text-xs font-bold uppercase text-slate-400">Live operational log</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest">
+              <Button variant="ghost" size="sm" onClick={() => router.push('/hr-employee/attendance')} className="text-[10px] font-black uppercase tracking-widest">
                 Full Log <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
              <div className="divide-y">
-                {[1, 2, 3, 4].map((i) => (
-                   <div key={i} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                {todayAttendance && todayAttendance.length > 0 ? todayAttendance.map((log) => (
+                   <div key={log.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">JS</div>
+                        <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-600 uppercase">
+                            {log.employeeName.charAt(0)}
+                        </div>
                         <div>
-                           <p className="text-sm font-bold text-slate-900">John Santos</p>
-                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Time-In • Office HQ</p>
+                           <p className="text-sm font-bold text-slate-900">{log.employeeName}</p>
+                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Time-In • {log.method} ID</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-slate-900">08:42 AM</p>
-                        <Badge variant="outline" className="text-[8px] h-4 font-black bg-blue-50 text-blue-700 border-blue-200 uppercase">On Time</Badge>
+                        <p className="text-sm font-black text-slate-900">{log.timeIn ? format(log.timeIn.toDate(), 'hh:mm a') : '--:--'}</p>
+                        <Badge variant="outline" className={cn(
+                            "text-[8px] h-4 font-black uppercase",
+                            log.status === 'present' ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                        )}>
+                            {log.status === 'present' ? 'On Time' : 'Late'}
+                        </Badge>
                       </div>
                    </div>
-                ))}
+                )) : (
+                    <div className="p-20 text-center opacity-20">
+                        <Clock className="h-10 w-10 mx-auto mb-2" />
+                        <p className="text-xs font-black uppercase tracking-widest">No attendance records yet today</p>
+                    </div>
+                )}
              </div>
           </CardContent>
         </Card>
@@ -130,18 +154,18 @@ export default function HRDashboard() {
               </div>
               <CardHeader className="relative z-10">
                 <CardTitle className="text-lg font-black tracking-tight uppercase">Payroll Window</CardTitle>
-                <CardDescription className="text-green-100 font-bold">Period: June 15 - 30</CardDescription>
+                <CardDescription className="text-green-100 font-bold">Standard Work Period</CardDescription>
               </CardHeader>
               <CardContent className="relative z-10 space-y-4">
                 <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                  <span>Days Remaining</span>
-                  <span>4 Days</span>
+                  <span>Cycle Status</span>
+                  <span>Active</span>
                 </div>
                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                   <div className="h-full bg-white w-3/4" />
                 </div>
-                <Button className="w-full bg-white text-green-700 hover:bg-green-50 font-black text-[10px] uppercase tracking-widest h-10 rounded-2xl">
-                  Prepare Summary
+                <Button onClick={() => router.push('/hr-employee/payroll')} className="w-full bg-white text-green-700 hover:bg-green-50 font-black text-[10px] uppercase tracking-widest h-10 rounded-2xl">
+                  Run Computation
                 </Button>
               </CardContent>
            </Card>
@@ -151,11 +175,11 @@ export default function HRDashboard() {
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 pt-0">
-                <Button variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
+                <Button onClick={() => router.push('/hr-employee/employees')} variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
                    Add New Staff <Users className="h-4 w-4 text-slate-300 group-hover:text-green-600" />
                 </Button>
-                <Button variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
-                   Manual Time-In <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-600" />
+                <Button onClick={() => router.push('/hr-employee/attendance')} variant="outline" className="justify-between border-slate-100 rounded-2xl h-12 text-sm font-bold group">
+                   Station Clock <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-600" />
                 </Button>
               </CardContent>
            </Card>
