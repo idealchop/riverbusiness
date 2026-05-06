@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -39,14 +38,14 @@ export function DashboardHeader({
             <button 
                 onClick={onPartnerNoticeClick}
                 className={cn(
-                    "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full transition-all border",
+                    "flex items-center justify-center h-6 w-6 rounded-full transition-all border shadow-sm hover:scale-110 active:scale-95",
                     isMaintenance 
                         ? "bg-amber-50 text-amber-600 border-amber-200 animate-pulse" 
                         : "bg-green-50 text-green-600 border-green-200"
                 )}
+                title={`Station Status: ${stationStatus || 'Operational'}`}
             >
-                {isMaintenance ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
-                Station: {stationStatus || 'Operational'}
+                {isMaintenance ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
             </button>
         </div>
       </div>
