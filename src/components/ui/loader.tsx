@@ -1,17 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { cn } from "@/lib/utils";
-
-// Technical status messages to cycle through
-const LOADING_STATUSES = [
-  "Initializing secure session...",
-  "Loading business modules...",
-  "Syncing consumption data...",
-  "Verifying station compliance...",
-  "Optimizing dashboard layout...",
-  "Preparing your environment..."
-];
+import { Logo } from '@/components/icons';
 
 export function Loader({ className }: { className?: string }) {
   return (
@@ -24,102 +15,35 @@ export function Loader({ className }: { className?: string }) {
 }
 
 export function FullScreenLoader({ text }: { text?: string }) {
-  const [statusIndex, setStatusIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    // Cycle status messages
-    const statusInterval = setInterval(() => {
-      setStatusIndex((prev) => (prev + 1) % LOADING_STATUSES.length);
-    }, 2000);
-
-    // Simulated progress build
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) return prev; // Hold near end until actually ready
-        return prev + Math.random() * 5;
-      });
-    }, 150);
-
-    return () => {
-      clearInterval(statusInterval);
-      clearInterval(progressInterval);
-    };
-  }, []);
-
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background overflow-hidden">
       {/* Background Atmosphere */}
       <div className="absolute inset-0 z-0">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
-          <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift" 
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full bg-primary/5 blur-[120px]" />
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none animate-drift" 
                style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-              <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent absolute left-0 animate-slide-down" />
-          </div>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
-        {/* Advanced Circular Building Animation */}
-        <div className="relative h-24 w-24">
-          {/* Inner Pulsing Core */}
-          <div className="absolute inset-4 rounded-full bg-primary/10 animate-pulse flex items-center justify-center">
-            <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_15px_rgba(59,130,246,0.4)]" />
-          </div>
-          
-          {/* Rotating Progress Track */}
-          <svg className="h-full w-full -rotate-90">
-            <circle
-              cx="48"
-              cy="48"
-              r="44"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="transparent"
-              className="text-slate-100"
-            />
-            <circle
-              cx="48"
-              cy="48"
-              r="44"
-              stroke="currentColor"
-              strokeWidth="3"
-              fill="transparent"
-              strokeDasharray={276}
-              strokeDashoffset={276 - (276 * progress) / 100}
-              strokeLinecap="round"
-              className="text-primary transition-all duration-300 ease-out shadow-[0_0_10px_rgba(59,130,246,0.3)]"
-            />
-          </svg>
-          
-          {/* Decorative Outer Rings */}
-          <div className="absolute inset-0 border border-primary/20 rounded-full animate-[spin_4s_linear_infinite]" />
-          <div className="absolute -inset-2 border border-dashed border-slate-200 rounded-full animate-[spin_8s_linear_infinite_reverse]" />
+      <div className="relative z-10 flex flex-col items-center text-center space-y-6 animate-in fade-in zoom-in-95 duration-700">
+        {/* Simplified Pulsing Logo/Core */}
+        <div className="relative h-20 w-20 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-2 border-primary/10 animate-ping duration-[3000ms]" />
+          <div className="absolute inset-0 rounded-full border border-primary/20 animate-[spin_4s_linear_infinite]" />
+          <Logo className="h-10 w-10 animate-pulse transition-all duration-1000" />
         </div>
 
-        <div className="space-y-3">
-          <div className="h-6 overflow-hidden px-4">
-            <p className="text-sm font-black uppercase tracking-[0.3em] text-slate-900 animate-in slide-in-from-bottom-2 duration-500" key={statusIndex}>
-              {text || LOADING_STATUSES[statusIndex]}
-            </p>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-             <div className="w-48 h-[2px] bg-slate-100 rounded-full overflow-hidden">
-               <div 
-                className="h-full bg-primary transition-all duration-300 ease-out"
-                style={{ width: `${progress}%` }}
-               />
-             </div>
-             <span className="text-[10px] font-mono text-slate-400 tabular-nums uppercase tracking-widest">
-               Environment Build • {Math.floor(progress)}%
-             </span>
+        <div className="space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-900 opacity-80">
+            {text || "Preparing Environment"}
+          </p>
+          <div className="flex justify-center">
+            <Loader className="opacity-40" />
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-12 flex flex-col items-center gap-2 opacity-30">
+      <div className="absolute bottom-12 flex flex-col items-center gap-2 opacity-20">
           <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-900">RIVER PHILIPPINES</span>
-          <div className="h-1 w-1 rounded-full bg-primary" />
       </div>
     </div>
   );
