@@ -104,7 +104,7 @@ const statusConfig: Record<RefillRequestStatus, {
 const statusOrder: RefillRequestStatus[] = ['Requested', 'In Production', 'Out for Delivery', 'Completed'];
 
 export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }: RefillStatusDialogProps) {
-  const [view, setView] = useState<'tracker' | 'history'>('status');
+  const [view, setView] = useState<'tracker' | 'history'>('tracker');
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
@@ -220,10 +220,10 @@ export function RefillStatusDialog({ isOpen, onOpenChange, activeRefillRequest }
                 </div>
 
                 {isWeekendRequest && currentStatus === 'Requested' && (
-                    <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+                    <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-1">
                         <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-[10px] font-bold uppercase tracking-tight text-amber-800/80 leading-relaxed">
-                            Note: Requests made on weekends are processed on the next business day.
+                            Hydration Note: We don't dispatch on weekends. Your request will be processed for Monday delivery.
                         </p>
                     </div>
                 )}
