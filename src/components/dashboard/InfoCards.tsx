@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { ArrowRight, ChevronLeft, ChevronRight, Droplets, MessageSquare, Users, FileText, Sun, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -143,10 +143,10 @@ export function InfoCards() {
                 
                 <div className="absolute top-0 left-0 right-0 p-8 pt-10 z-20 space-y-2">
                     <h3 className="text-4xl font-black tracking-tight text-primary leading-tight">
-                        Your App is <br/>Upgraded!
+                        Your app is <br/>upgraded!
                     </h3>
                     <p className="text-sm font-bold text-primary uppercase tracking-[0.2em] flex items-center gap-2 group-hover:translate-x-1 transition-all">
-                        See Features <ArrowRight className="h-4 w-4" />
+                        See features <ArrowRight className="h-4 w-4" />
                     </p>
                 </div>
             </div>
@@ -178,14 +178,14 @@ export function InfoCards() {
                         <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-black text-[10px] uppercase tracking-[0.2em] px-3 py-1">
                             App {currentStep + 1} of {apps.length}
                         </Badge>
-                        <h2 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
+                        <h2 className="text-4xl font-black tracking-tighter text-slate-900">
                             {currentApp.name}
                         </h2>
                         <p className="text-lg font-bold text-slate-400">{currentApp.description}</p>
                     </div>
 
                     <div className="space-y-4 pt-4 border-t border-slate-50">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Core Capabilities</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Core capabilities</h4>
                         <ul className="grid gap-3">
                             {currentApp.features.map((feature, i) => (
                                 <li key={i} className="flex items-center gap-3 group">

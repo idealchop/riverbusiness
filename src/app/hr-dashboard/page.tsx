@@ -95,7 +95,7 @@ export default function HRDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            {isManagement ? 'Workforce Intelligence' : 'My Workspace'}
+            {isManagement ? 'Workforce intelligence' : 'My workspace'}
           </h1>
           <p className="text-slate-500 font-medium text-base">
             {isManagement ? `Central control for ${user?.businessName || 'your organization'}.` : `Hello, ${user?.name?.split(' ')[0] || 'Employee'}. Here is your shift summary.`}

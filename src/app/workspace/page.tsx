@@ -37,8 +37,8 @@ export default function WorkspacePage() {
         </div>
 
         <div className="space-y-4">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-            Collaboration <span className="text-primary">Intelligence</span>
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+            Collaboration <span className="text-primary">intelligence</span>
           </h1>
           <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
             We are currently building the next generation of office management tools. Stay tuned.
@@ -49,19 +49,19 @@ export default function WorkspacePage() {
           <CardContent className="p-8 space-y-6">
             <div className="flex flex-col items-center gap-2">
               <Rocket className="h-6 w-6 text-primary animate-bounce" />
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Status: Building Module</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Status: Building module</p>
             </div>
             <div className="w-full h-[2px] bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full bg-primary w-[40%] animate-pulse" />
             </div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Estimated Arrival: Q4 2025</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Estimated arrival: Q4 2025</p>
           </CardContent>
         </Card>
 
         <div className="flex items-center justify-center gap-4">
           <Button asChild variant="outline" className="rounded-full font-bold px-8 h-12 shadow-sm bg-white border-slate-200">
             <Link href="/dashboard">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Core
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to core
             </Link>
           </Button>
           <AppLauncher />

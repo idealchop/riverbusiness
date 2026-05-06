@@ -114,7 +114,7 @@ function SignupContent() {
                         <div className="relative h-5 w-5">
                           <Image src={pillar.iconUrl} alt={pillar.title} fill className="object-contain" />
                         </div>
-                        <h4 className="text-[11px] font-bold uppercase tracking-widest">{pillar.title}</h4>
+                        <h4 className="text-[11px] font-bold tracking-tight">{pillar.title}</h4>
                     </div>
                 ))}
             </div>
@@ -122,7 +122,7 @@ function SignupContent() {
 
         {/* Signup Form Side (Right) */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 bg-white">
-            <div className="w-full max-w-sm space-y-10 animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-full max-sm space-y-10 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
                     {isInvited ? (
                         <>

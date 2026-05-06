@@ -184,7 +184,7 @@ export default function LoginPage() {
                                 </div>
                                 <span className="font-mono text-[9px] font-black text-slate-600 tracking-widest">{pillar.id}</span>
                             </div>
-                            <h4 className="font-black text-[11px] uppercase tracking-[0.25em] text-white/90 group-hover:text-primary transition-colors">{pillar.title}</h4>
+                            <h4 className="font-bold text-[11px] tracking-[0.1em] text-white/90 group-hover:text-primary transition-colors">{pillar.title}</h4>
                         </div>
                     ))}
                 </div>
@@ -195,7 +195,7 @@ export default function LoginPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
             <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign In</h2>
+                    <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign in</h2>
                     <p className="text-slate-500 font-bold text-lg">Welcome back! Please enter your details.</p>
                 </div>
 
@@ -244,7 +244,7 @@ export default function LoginPage() {
                     </div>
 
                     <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Sign In'}
+                        {isSubmitting ? <Loader className="text-white" /> : 'Sign in'}
                     </Button>
                 </form>
 
@@ -252,7 +252,7 @@ export default function LoginPage() {
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                         Don't have an account?{" "}
                         <Link href="/signup" className="text-primary font-black hover:underline underline-offset-4">
-                            Sign Up
+                            Sign up
                         </Link>
                     </p>
                 </div>
@@ -264,7 +264,7 @@ export default function LoginPage() {
       <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
             <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-8">
             <DialogHeader className="space-y-4">
-                <DialogTitle className="text-2xl font-black tracking-tight">Reset Password</DialogTitle>
+                <DialogTitle className="text-2xl font-black tracking-tight">Reset password</DialogTitle>
                 <DialogDescription className="text-slate-500 font-bold leading-relaxed">
                     Enter your email address and we'll send you a link to reset your password.
                 </DialogDescription>
@@ -285,7 +285,7 @@ export default function LoginPage() {
             </div>
             <DialogFooter className="flex flex-col gap-3 sm:flex-col sm:gap-3 sm:justify-center">
                 <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="w-full h-14 font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-primary/10">
-                    {isResetting ? <Loader className="text-white" /> : 'Send Reset Link'}
+                    {isResetting ? <Loader className="text-white" /> : 'Send reset link'}
                 </Button>
                 <DialogClose asChild>
                     <Button type="button" variant="ghost" disabled={isResetting} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Cancel</Button>

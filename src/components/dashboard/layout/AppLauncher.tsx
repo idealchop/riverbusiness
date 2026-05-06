@@ -104,7 +104,7 @@ export function AppLauncher() {
                     </div>
                     <div className="text-center px-1">
                       <p className={cn(
-                        "text-[10px] font-black leading-tight tracking-[0.05em] uppercase text-slate-700 transition-colors",
+                        "text-[10px] font-bold leading-tight tracking-[0.02em] text-slate-700 transition-colors",
                         isActive ? "text-primary" : "group-hover:text-slate-900"
                       )}>
                         {app.name}
@@ -117,7 +117,7 @@ export function AppLauncher() {
           </div>
           
           <div className="mt-12 pt-4 border-t border-slate-100 text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400">
+              <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">
                   River Command Center
               </p>
           </div>
