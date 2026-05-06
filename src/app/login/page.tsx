@@ -137,14 +137,17 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
       <div className="flex w-full flex-col lg:flex-row">
-        {/* Branding Side (Left) - Adjusted to 65% width */}
+        {/* Branding Side (Left) - 65% width */}
         <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
             {/* Animated Mesh Gradient Background */}
             <div className="absolute inset-0 z-0">
-                {/* Floating Glows */}
-                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-blue-900/10 blur-[120px] animate-pulse delay-1000" />
+                {/* Moving Glow Blobs */}
+                <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
                 
+                {/* Spotlight lighter area behind the main text */}
+                <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[50%] h-[50%] rounded-full bg-primary/5 blur-[140px] pointer-events-none" />
+
                 {/* Subtle Drifting Background Grid */}
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
                      style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
@@ -186,7 +189,7 @@ export default function LoginPage() {
             </div>
         </div>
 
-        {/* Login Form Side (Right) - Will naturally take the remaining 35% */}
+        {/* Login Form Side (Right) - 35% width */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
             <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
