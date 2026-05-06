@@ -258,12 +258,8 @@ export default function DashboardLayout({
                 onOpenChange={setIsAccountDialogOpen}
                 initialTab={initialAccountDialogTab}
               >
-                <div className="items-center gap-3 cursor-pointer group hidden sm:flex pl-2 py-1 pr-1 rounded-full hover:bg-slate-100 transition-colors">
-                  <div className="flex flex-col items-end">
-                    <p className="font-bold text-xs text-slate-900 leading-tight">{user?.businessName}</p>
-                    <p className="text-[10px] text-muted-foreground leading-tight">{user?.email}</p>
-                  </div>
-                  <Avatar className="h-8 w-8 border border-slate-200 shadow-sm">
+                <div className="items-center cursor-pointer group hidden sm:flex p-1 rounded-full hover:bg-slate-100 transition-colors">
+                  <Avatar className="h-8 w-8 border border-slate-200 shadow-sm transition-transform group-hover:scale-105">
                       <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
                       <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">{user?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>

@@ -195,13 +195,9 @@ export default function AdminLayout({
 
           <Button
             variant="ghost"
-            className="flex items-center gap-3 pl-2 py-1 pr-1 rounded-full hover:bg-slate-100 transition-colors group"
+            className="flex items-center p-1 rounded-full hover:bg-slate-100 transition-colors group"
             onClick={handleOpenMyAccount}
           >
-            <div className="hidden sm:flex flex-col items-end">
-              <p className="font-bold text-xs text-slate-900 leading-tight">Administrator</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">{adminUser?.email}</p>
-            </div>
             <Avatar className="h-8 w-8 border border-slate-200 shadow-sm transition-transform group-hover:scale-105">
               <AvatarImage src={adminUser?.photoURL ?? undefined} alt="Admin" />
               <AvatarFallback className="bg-slate-900 text-white font-bold text-xs"><User className="h-4 w-4" /></AvatarFallback>
