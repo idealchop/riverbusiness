@@ -13,6 +13,55 @@ import { cn } from '@/lib/utils';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
+// Custom Bar Shape for "Water Tank" look in charts
+const LiquidBar = (props: any) => {
+    const { x, y, width, height } = props;
+
+    if (!height || height <= 0) return null;
+
+    return (
+        <g>
+            {/* The main liquid fill with gradient */}
+            <rect 
+                x={x} 
+                y={y} 
+                width={width} 
+                height={height} 
+                fill="url(#barLiquidGradient)" 
+                rx={6} 
+                className="transition-all duration-500 ease-out"
+            />
+            
+            {/* Glossy highlight on the side */}
+            <rect 
+                x={x + 2} 
+                y={y + 4} 
+                width={width / 4} 
+                height={height - 8} 
+                fill="white" 
+                fillOpacity="0.15" 
+                rx={2} 
+            />
+
+            {/* Top surface highlight */}
+            <rect 
+                x={x} 
+                y={y} 
+                width={width} 
+                height={3} 
+                fill="white" 
+                fillOpacity="0.3" 
+                rx={1} 
+            />
+
+            {/* Tiny animated-looking bubbles */}
+            <circle cx={x + width * 0.3} cy={y + height * 0.7} r={1.5} fill="white" fillOpacity="0.4" className="animate-pulse" />
+            <circle cx={x + width * 0.7} cy={y + height * 0.4} r={1} fill="white" fillOpacity="0.3" style={{ animationDelay: '0.5s' }} className="animate-pulse" />
+            <circle cx={x + width * 0.5} cy={y + height * 0.2} r={1.2} fill="white" fillOpacity="0.2" style={{ animationDelay: '1s' }} className="animate-pulse" />
+        </g>
+    );
+};
+
 const CustomTooltip = ({ active, payload, label, isParent }: { active?: boolean, payload?: any[], label?: string, isParent?: boolean }) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
@@ -187,6 +236,12 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
       <CardContent className="h-80 pt-10">
         <ResponsiveContainer width="100%" height="100%">
             <BarChart data={consumptionChartData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                    <linearGradient id="barLiquidGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary-light))" />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" />
+                    </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                     dataKey="displayName" 
@@ -211,8 +266,7 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
                 />
                 <Bar 
                     dataKey="value" 
-                    radius={[8, 8, 0, 0]} 
-                    fill="hsl(var(--primary))" 
+                    shape={<LiquidBar />}
                     barSize={isParent ? 32 : 40}
                 />
             </BarChart>
@@ -227,4 +281,3 @@ export function ConsumptionAnalytics({ deliveries, onHistoryClick, isParent = fa
     </Card>
   );
 }
-
