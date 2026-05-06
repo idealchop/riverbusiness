@@ -22,6 +22,7 @@ import { NotificationPopover } from '@/components/dashboard/layout/NotificationP
 import { MobileNav } from '@/components/dashboard/layout/MobileNav';
 import { PaymentDialog } from '@/components/dashboard/dialogs/PaymentDialog';
 import { Logo } from '@/components/icons';
+import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 
 export default function DashboardLayout({
   children,
@@ -240,6 +241,8 @@ export default function DashboardLayout({
               <Button variant="ghost" size="icon" className="sm:hidden rounded-full hover:bg-slate-100" onClick={handleComplianceClick}>
                 <ShieldCheck className="h-5 w-5 text-slate-600" />
               </Button>
+
+              <AppLauncher />
 
               <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block bg-slate-200" />
 

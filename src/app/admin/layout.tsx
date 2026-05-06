@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
+import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 
 const NOTIFICATION_ICONS: { [key: string]: React.ElementType } = {
   payment: Receipt,
@@ -187,6 +188,8 @@ export default function AdminLayout({
               </div>
             </PopoverContent>
           </Popover>
+
+          <AppLauncher />
 
           <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
