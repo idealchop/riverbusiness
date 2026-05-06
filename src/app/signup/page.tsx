@@ -10,11 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase, MailCheck } from 'lucide-react';
-import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from '@/components/ui/loader';
-import { collection, query, where } from 'firebase/firestore';
 
 const signupSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -36,7 +35,6 @@ function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -54,13 +52,6 @@ function SignupContent() {
     }
   });
 
-  // Check for company name if it's an employee invitation
-  const inviteQuery = useMemoFirebase(
-    () => (firestore && initialEmail) ? query(collection(firestore, 'unclaimedEmployees'), where('email', '==', initialEmail)) : null,
-    [firestore, initialEmail]
-  );
-  const { data: inviteData } = useCollection(inviteQuery);
-
   const onSubmit = async (data: SignupFormValues) => {
     if (!auth) {
         toast({
@@ -73,14 +64,14 @@ function SignupContent() {
 
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
-      toast({ title: "Account Created", description: "Taking you to your new account..." });
+      toast({ title: "Account created", description: "Taking you to your new workspace..." });
       router.push('/onboarding');
     } catch (error: any) {
-        let title = 'Sign Up Failed';
+        let title = 'Sign up failed';
         let description = 'Could not create your account. Please try again.';
 
         if (error.code === 'auth/email-already-in-use') {
-            title = 'Account Exists';
+            title = 'Account exists';
             description = 'This email is already in use. Please sign in instead.';
         }
 
@@ -93,138 +84,121 @@ function SignupContent() {
   };
 
   return (
-    <div className="flex w-full flex-col lg:flex-row">
-        {/* Branding Side (Left) - 65% width */}
-        <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
-            {/* Animated Mesh Gradient Background */}
+    <div className="flex w-full flex-col lg:flex-row min-h-screen bg-background">
+        {/* Branding Side (Left) */}
+        <div className="relative w-full lg:w-[60%] p-8 sm:p-12 md:p-20 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[400px] lg:min-h-screen">
             <div className="absolute inset-0 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
-                <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[50%] h-[50%] rounded-full bg-primary/5 blur-[140px] pointer-events-none" />
-                <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
-                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-                    <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent absolute left-0 animate-slide-down shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
-                </div>
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_50%)]" />
+                <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_70%_80%,rgba(30,58,138,0.15),transparent_50%)]" />
+                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #fff 1px, transparent 0)', backgroundSize: '40px 40px' }} />
             </div>
 
-            <div className="relative z-10 animate-in fade-in slide-in-from-left-4 duration-700">
-                <div className="mb-16">
-                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/80">RIVER PHILIPPINES</span>
+            <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-4 duration-700">
+                <div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-blue-400">River Philippines</span>
                 </div>
                 <div className="space-y-6 max-w-xl">
-                    <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
-                        The platform to run <span className="text-primary">essential needs</span> for business.
+                    <h1 className="text-4xl sm:text-6xl font-bold tracking-tight leading-[1.1]">
+                        The platform to run <span className="text-blue-500">essential needs</span> for business.
                     </h1>
-                    <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-w-md">
-                        Everything in a single platform for Filipino businesses.
+                    <p className="text-lg text-slate-400 font-medium leading-relaxed max-w-md">
+                        Simplified management for modern Filipino organizations.
                     </p>
                 </div>
             </div>
 
-            <div className="relative z-10 mt-16 lg:mt-0 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-x-12 sm:gap-y-16">
-                    {servicePillars.map((pillar) => (
-                        <div key={pillar.id} className="group flex flex-col gap-3 transition-all">
-                            <div className="flex items-center gap-3">
-                                <div className="p-0 transition-transform duration-300 group-hover:scale-110">
-                                    <pillar.icon className="h-5 w-5 text-primary" />
-                                </div>
-                                <span className="font-mono text-[9px] font-black text-slate-600 tracking-widest">{pillar.id}</span>
-                            </div>
-                            <h4 className="font-black text-[11px] uppercase tracking-[0.25em] text-white/90 group-hover:text-primary transition-colors">{pillar.title}</h4>
-                        </div>
-                    ))}
-                </div>
+            <div className="relative z-10 mt-16 lg:mt-0 grid grid-cols-2 sm:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                {servicePillars.map((pillar) => (
+                    <div key={pillar.id} className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
+                        <pillar.icon className="h-5 w-5 text-blue-500" />
+                        <h4 className="text-[11px] font-bold uppercase tracking-widest">{pillar.title}</h4>
+                    </div>
+                ))}
             </div>
         </div>
 
-        {/* Signup Form Side (Right) - 35% width */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
-            <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
+        {/* Signup Form Side (Right) */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 bg-white">
+            <div className="w-full max-w-sm space-y-10 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
                     {isInvited ? (
                         <>
-                            <div className="flex items-center gap-2 text-primary mb-4">
-                                <MailCheck className="h-6 w-6" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Invitation Detected</span>
+                            <div className="flex items-center gap-2 text-blue-600 mb-4 px-3 py-1 rounded-full bg-blue-50 w-fit">
+                                <MailCheck className="h-4 w-4" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Invitation detected</span>
                             </div>
-                            <h2 className="text-4xl font-black tracking-tight text-slate-900">Welcome to the team!</h2>
-                            <p className="text-slate-500 font-bold text-lg">Joining organization profile.</p>
+                            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Join your team</h2>
+                            <p className="text-slate-500 font-medium">Create your password to activate your profile.</p>
                         </>
                     ) : (
                         <>
-                            <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign Up</h2>
-                            <p className="text-slate-500 font-bold text-lg">Create your account to get started.</p>
+                            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Create account</h2>
+                            <p className="text-slate-500 font-medium">Start your journey with River Business.</p>
                         </>
                     )}
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                    <div className="space-y-6">
-                        <div className="space-y-2 group">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Email</Label>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-xs font-semibold text-slate-500">Email address</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="name@company.com"
-                                className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base px-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
+                                className="h-11 bg-slate-50 border-slate-100 rounded-xl font-medium focus-visible:ring-blue-500/20"
                                 {...register('email')}
                                 disabled={isSubmitting || isInvited}
                             />
-                            {errors.email && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.email.message}</p>}
+                            {errors.email && <p className="text-xs font-medium text-destructive mt-1">{errors.email.message}</p>}
                         </div>
 
-                        <div className="space-y-2 group">
-                            <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Password</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="password" className="text-xs font-semibold text-slate-500">Create password</Label>
                             <div className="relative">
                                 <Input 
                                     id="password" 
                                     type={showPassword ? 'text' : 'password'} 
                                     placeholder="••••••••"
-                                    className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base pr-14 pl-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
+                                    className="h-11 bg-slate-50 border-slate-100 rounded-xl font-medium pr-10 focus-visible:ring-blue-500/20"
                                     {...register('password')} 
                                     disabled={isSubmitting}
                                 />
-                                <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-slate-400 hover:text-primary hover:bg-transparent transition-colors" 
-                                    onClick={() => setShowPassword(!showPassword)} 
+                                <button 
                                     type="button"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    onClick={() => setShowPassword(!showPassword)}
                                 >
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                </Button>
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
                             </div>
-                            {errors.password && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.password.message}</p>}
+                            {errors.password && <p className="text-xs font-medium text-destructive mt-1">{errors.password.message}</p>}
                         </div>
                     </div>
 
-                    <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Create Account'}
+                    <Button type="submit" className="w-full h-11 rounded-xl font-bold shadow-lg shadow-blue-500/10" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader className="text-white" /> : 'Activate account'}
                     </Button>
                 </form>
 
-                <div className="text-center space-y-6 pt-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <div className="text-center pt-4">
+                    <p className="text-sm text-slate-500 font-medium">
                         Already have an account?{" "}
-                        <Link href="/login" className="text-primary font-black hover:underline underline-offset-4">
-                            Log In
+                        <Link href="/login" className="text-blue-600 font-bold hover:underline underline-offset-4">
+                            Sign in
                         </Link>
                     </p>
                 </div>
             </div>
         </div>
-      </div>
+    </div>
   );
 }
 
 export default function SignupPage() {
   return (
-    <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
-        <Suspense fallback={<Loader />}>
-            <SignupContent />
-        </Suspense>
-    </main>
+    <Suspense fallback={<Loader />}>
+        <SignupContent />
+    </Suspense>
   );
 }

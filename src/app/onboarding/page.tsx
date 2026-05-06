@@ -40,6 +40,7 @@ export default function OnboardingPage() {
       }
 
       // Check if user is an employee being invited (Magic Claim)
+      // This is the highest priority claim for invited staff
       const employeeInviteQuery = query(
         collection(firestore, 'unclaimedEmployees'),
         where('email', '==', authUser.email?.toLowerCase().trim())
@@ -62,7 +63,7 @@ export default function OnboardingPage() {
             lastLogin: new Date().toISOString(),
             createdAt: new Date().toISOString(),
             role: 'User',
-            hrRole: 'employee', // Explicitly ensure they are an employee
+            hrRole: 'employee',
           } as AppUser;
           
           batch.set(newUserRef, newUserData);
@@ -79,7 +80,7 @@ export default function OnboardingPage() {
         }
       }
 
-      // User is new and needs to claim a client account (Self-Claim)
+      // If no invitation found, proceed to standard client claim
       router.push('/claim-account');
     };
     
@@ -87,5 +88,5 @@ export default function OnboardingPage() {
 
   }, [authUser, isUserLoading, firestore, router, toast]);
 
-  return <FullScreenLoader text="Initializing Workspace" />;
+  return <FullScreenLoader text="Initializing your workspace" />;
 }

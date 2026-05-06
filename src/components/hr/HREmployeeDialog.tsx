@@ -33,6 +33,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
+import { Mail, Info } from 'lucide-react';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -73,8 +74,6 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
     setIsSubmitting(true);
     
     try {
-      // Instead of creating a user directly, we create an invitation in unclaimedEmployees.
-      // When the user signs up with this email, the onboarding page will "claim" it.
       const invitationRef = collection(firestore, 'unclaimedEmployees');
       
       const invitationData = {
@@ -104,7 +103,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       
       toast({ 
         title: 'Invitation generated', 
-        description: `Tell ${values.name} to sign up using ${values.email} to activate their account.` 
+        description: `An email invitation has been dispatched to ${values.email}.` 
       });
       onOpenChange(false);
       form.reset();
@@ -118,11 +117,11 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl rounded-3xl border-none shadow-2xl p-0 overflow-hidden bg-white">
+      <DialogContent className="sm:max-w-xl rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
         <div className="p-8">
-            <DialogHeader className="mb-6">
+            <DialogHeader className="mb-8">
                 <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Add new employee</DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium">Create an employment profile and generate an invitation.</DialogDescription>
+                <DialogDescription className="text-slate-500 font-medium">Create an employment profile and dispatch an invitation.</DialogDescription>
             </DialogHeader>
             
             <Form {...form}>
@@ -144,7 +143,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="email"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-semibold text-slate-600">Corporate email</FormLabel>
+                                <FormLabel className="text-xs font-semibold text-slate-600">Email address</FormLabel>
                                 <FormControl><Input placeholder="john@company.com" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -158,8 +157,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             name="position"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-xs font-semibold text-slate-600">Job position</FormLabel>
-                                <FormControl><Input placeholder="Operations Manager" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary" {...field} /></FormControl>
+                                <FormLabel className="text-xs font-semibold text-slate-600">Position</FormLabel>
+                                <FormControl><Input placeholder="Operations Lead" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none focus-visible:ring-primary" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                             )}
@@ -220,10 +219,17 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                         />
                     </div>
 
+                    <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-4">
+                        <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-xs font-medium text-blue-800/80 leading-relaxed">
+                            An automated invitation will be sent to the employee. They will be linked to this organization upon signing up.
+                        </p>
+                    </div>
+
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-sm font-semibold px-6 rounded-xl">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-sm shadow-md">
-                            {isSubmitting ? 'Processing...' : 'Add to directory'}
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-sm shadow-lg shadow-blue-500/10">
+                            {isSubmitting ? 'Processing...' : 'Send invitation'}
                         </Button>
                     </DialogFooter>
                 </form>
