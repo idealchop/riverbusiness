@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, ArrowRight, Mail, Briefcase } from 'lucide-react';
+import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -302,22 +302,6 @@ export default function LoginPage() {
                             Onboarding Request
                         </Link>
                     </p>
-                    <div className="pt-10 border-t border-slate-100 flex flex-col gap-4">
-                        <div className="flex flex-col gap-1.5">
-                             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Regional Support Interface</p>
-                             <a href="mailto:business@smartrefill.io" className="text-xs font-bold text-slate-600 hover:text-primary transition-colors flex items-center justify-center lg:justify-start gap-2">
-                                <Mail className="h-3 w-3" />
-                                business@smartrefill.io
-                             </a>
-                        </div>
-                        <div className="flex items-center justify-center lg:justify-start gap-3 opacity-40">
-                             <p className="text-[8px] font-black uppercase tracking-tighter">Manila</p>
-                             <div className="h-1 w-1 rounded-full bg-slate-400" />
-                             <p className="text-[8px] font-black uppercase tracking-tighter">Singapore</p>
-                             <div className="h-1 w-1 rounded-full bg-slate-400" />
-                             <p className="text-[8px] font-black uppercase tracking-tighter">Sydney</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
