@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -7,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -54,9 +55,12 @@ export function StatCards({
         rolloverLiters: 0,
         totalLitersForMonth: 0,
         consumedLitersThisMonth: 0,
+        consumedLitersLastMonth: 0,
         currentBalance: 0,
         consumedPercentage: 0,
         estimatedCost: 0,
+        trend: 'same' as 'increase' | 'decrease' | 'same',
+        diff: 0
     };
 
     if (!user || !user.plan || !deliveries) {
@@ -65,18 +69,23 @@ export function StatCards({
 
     const cycleStart = startOfMonth(now);
     const cycleEnd = endOfMonth(now);
+    const lastStart = startOfMonth(subMonths(now, 1));
+    const lastEnd = endOfMonth(subMonths(now, 1));
     const monthsToBill = 1;
     
     const deliveriesThisCycle = deliveries.filter(d => isWithinInterval(new Date(d.date), { start: cycleStart, end: cycleEnd }));
     const consumedLitersThisCycle = deliveriesThisCycle.reduce((acc, d) => acc + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
+
+    const consumedLitersLastMonth = deliveries
+        .filter(d => isWithinInterval(new Date(d.date), { start: lastStart, end: lastEnd }))
+        .reduce((sum, d) => sum + (d.liters ?? containerToLiter(d.volumeContainers)), 0);
+
+    const diff = consumedLitersLastMonth === 0 ? (consumedLitersThisCycle > 0 ? 100 : 0) : ((consumedLitersThisCycle - consumedLitersLastMonth) / consumedLitersLastMonth) * 100;
+    const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
         
     let monthlyEquipmentCost = 0;
-    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') {
-      monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
-    }
-    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') {
-      monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
-    }
+    if (user.customPlanDetails?.gallonPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.gallonPrice || 0);
+    if (user.customPlanDetails?.dispenserPaymentType === 'Monthly') monthlyEquipmentCost += (user.customPlanDetails?.dispenserPrice || 0);
 
     const equipmentCostForPeriod = monthlyEquipmentCost * monthsToBill;
 
@@ -85,22 +94,21 @@ export function StatCards({
         return {
             ...emptyState,
             consumedLitersThisMonth: consumedLitersThisCycle,
+            consumedLitersLastMonth,
             currentBalance: 0, 
-            estimatedCost: consumptionCost + equipmentCostForPeriod, 
+            estimatedCost: consumptionCost + equipmentCostForPeriod,
+            trend,
+            diff: Math.abs(diff)
         };
     }
     
     const planDetails = user.customPlanDetails || {};
-    
     const monthlyPlanLiters = planDetails.litersPerMonth || 0;
     const bonusLiters = planDetails.bonusLiters || 0;
     const rolloverLiters = user.customPlanDetails?.lastMonthRollover || 0;
-    
     const totalLitersForMonth = monthlyPlanLiters + bonusLiters + rolloverLiters;
 
-    // The remaining balance is the total allocation for the month minus what's been consumed.
     const remainingBalance = totalLitersForMonth - consumedLitersThisCycle;
-    
     const consumedPercentage = totalLitersForMonth > 0 ? (consumedLitersThisCycle / totalLitersForMonth) * 100 : 0;
     
     return {
@@ -109,331 +117,198 @@ export function StatCards({
         rolloverLiters,
         totalLitersForMonth,
         consumedLitersThisMonth: consumedLitersThisCycle,
+        consumedLitersLastMonth,
         currentBalance: remainingBalance,
         consumedPercentage,
         estimatedCost: (user.plan.price || 0) * monthsToBill + equipmentCostForPeriod,
+        trend,
+        diff: Math.abs(diff)
     };
   }, [user, deliveries]);
 
 
   const handleToggleConfirmation = () => {
     if (toggleTargetState === null || !user?.id || !firestore) return;
-
-    const userDocRef = doc(firestore, 'users', user.id);
-    
-    updateDoc(userDocRef, {
-        'customPlanDetails.autoRefillEnabled': toggleTargetState,
-    }).then(() => {
-        toast({
-            title: toggleTargetState ? "Auto-Refill Enabled" : "Auto-Refill Disabled",
-            description: toggleTargetState ? "Your next delivery will be scheduled automatically." : "Please remember to schedule your deliveries manually.",
-        });
-    }).catch((error) => {
-        console.error("Failed to update auto-refill status:", error);
-        toast({
-            variant: "destructive",
-            title: "Update Failed",
-            description: "Could not update your auto-refill preference.",
-        });
+    const userRef = doc(firestore, 'users', user.id);
+    updateDoc(userRef, { 'customPlanDetails.autoRefillEnabled': toggleTargetState }).then(() => {
+        toast({ title: toggleTargetState ? "Auto-Refill Active" : "Auto-Refill Paused" });
     }).finally(() => {
         setIsConfirmingToggle(false);
         setToggleTargetState(null);
     });
   };
 
-  const onSwitchChange = (checked: boolean) => {
-    setToggleTargetState(checked);
-    setIsConfirmingToggle(true);
-  }
-  
-  const planDetails = user?.customPlanDetails || user?.plan?.customPlanDetails;
+  const planDetails = user?.customPlanDetails || {};
   const autoRefill = planDetails?.autoRefillEnabled ?? true;
   const nextRefillDay = planDetails?.deliveryDay || 'Not set';
-  const weeklyContainers = planDetails?.gallonQuantity || 0;
-  const estimatedWeeklyLiters = containerToLiter(weeklyContainers);
 
   const isFlowPlan = user?.plan?.isConsumptionBased;
   const isBranchAccount = user?.accountType === 'Branch';
   const isParentAccount = user?.accountType === 'Parent';
-  const isPrepaidPlan = user?.isPrepaid;
-
-  const startingBalance = useMemo(() => {
-    if (isFlowPlan || isBranchAccount) return 0;
-    return consumptionDetails.totalLitersForMonth;
-  }, [isFlowPlan, isBranchAccount, consumptionDetails.totalLitersForMonth]);
 
   const remainingBalancePercentage = useMemo(() => {
-      if (startingBalance <= 0) {
-          return 0; 
-      }
-      const percentage = (consumptionDetails.currentBalance / startingBalance) * 100;
-      return Math.max(0, Math.min(100, percentage)); 
-  }, [consumptionDetails.currentBalance, startingBalance]);
-
-  const handleManageBranches = () => {
-    window.dispatchEvent(new CustomEvent('open-branches-dialog'));
-  };
+      if (consumptionDetails.totalLitersForMonth <= 0) return 0;
+      return Math.max(0, Math.min(100, (consumptionDetails.currentBalance / consumptionDetails.totalLitersForMonth) * 100));
+  }, [consumptionDetails]);
 
   return (
     <>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {isParentAccount ? (
         <>
-            <Card>
+            <Card className="border-none shadow-sm bg-gradient-to-br from-blue-600 to-blue-700 text-white overflow-hidden group">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet className="h-4 w-4"/>Credit Balance</CardTitle>
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-blue-100 flex items-center justify-between">
+                        <span className="flex items-center gap-2"><Wallet className="h-4 w-4"/>Central Wallet</span>
+                        <Badge variant="outline" className="text-white border-blue-400 bg-white/10">Authorized</Badge>
+                    </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className={cn("text-2xl md:text-4xl font-bold mb-1", parentCalculatedBalances.displayedCreditBalance < 0 && "text-destructive")}>
-                        {parentCalculatedBalances.displayedCreditBalance < 0 ? '-' : ''}
+                    <p className="text-4xl font-extrabold mb-1 tracking-tight">
                         ₱{Math.abs(parentCalculatedBalances.displayedCreditBalance).toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                        Equals approx.{' '}
-                        <span className={cn(parentCalculatedBalances.displayedAvailableLiters < 0 && "text-destructive font-semibold")}>
-                           {parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} L
-                        </span> available
-                    </p>
-                </CardContent>
-            </Card>
-            <Card onClick={onConsumptionHistoryClick} className="cursor-pointer hover:border-primary">
-                 <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/>Total Branch Consumption</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-2xl md:text-3xl font-bold mb-1">{parentCalculatedBalances.totalConsumptionLiters.toLocaleString(undefined, {maximumFractionDigits:1})} L</p>
-                    <p className="text-xs text-muted-foreground">All-time consumption</p>
-                </CardContent>
-                 <CardFooter>
-                    <p className="text-xs font-medium text-primary">Click to view history</p>
-                </CardFooter>
-            </Card>
-            <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4"/>Locations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-2xl md:text-3xl font-bold mb-1">{user?.customPlanDetails?.branchCount || 0}</p>
-                    <Button variant="link" className="p-0 h-auto text-xs" onClick={handleManageBranches}>View & Manage</Button>
-                </CardContent>
-            </Card>
-        </>
-      ) : isFlowPlan ? (
-        <>
-          <Card className="flex flex-col col-span-1 md:col-span-2">
-              <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                      <Droplets className="h-5 w-5 text-primary" />
-                      {user?.plan?.name || 'Consumption Plan'}
-                  </CardTitle>
-                  <CardDescription>
-                      Your bill is based on your water usage at a rate of <strong>₱{(user?.plan?.price || 0).toFixed(2)} per liter</strong>.
-                  </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 grid grid-cols-2 gap-6 items-center">
-                  <div>
-                      <Label className="text-xs">Consumed This Month</Label>
-                      <p className="text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
-                  </div>
-                  <div>
-                      <Label className="text-xs">Estimated Cost for {format(new Date(), 'MMMM')}</Label>
-                      <p className="text-3xl font-bold">
-                      ₱{consumptionDetails.estimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                      </p>
-                  </div>
-              </CardContent>
-              <CardFooter>
-                  <p className="text-xs text-muted-foreground">Equipment rental fees will be added to your final monthly bill.</p>
-              </CardFooter>
-          </Card>
-          <Card className="col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="auto-refill" className="font-bold text-base">Auto Refill</Label>
-                <Switch id="auto-refill" checked={autoRefill} onCheckedChange={onSwitchChange} />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
-              </p>
-              <div className="border-t pt-3 space-y-2">
-                {autoRefill ? (
-                  <div className="grid sm:grid-cols-2 gap-2 items-center">
-                    <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
-                      <p className="font-semibold text-sm">{nextRefillDay !== 'Not set' ? `Next ${nextRefillDay}` : 'Not set'}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Delivery</p>
-                      <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
-                    </div>
-                    <Button variant="outline" size="sm" className="w-full mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Customize
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 items-center text-center">
-                    <p className="text-xs text-muted-foreground sm:text-sm">
-                        Need water sooner? Schedule a one-time delivery with an exact date and quantity.
-                    </p>
-                    <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      <span className="sm:hidden">Schedule</span>
-                      <span className="hidden sm:inline">Schedule Refill</span>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : isBranchAccount || isPrepaidPlan ? (
-        <>
-            <Card className="flex flex-col col-span-1 md:col-span-2">
-                <CardHeader className="pb-2">
-                <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                    {isBranchAccount
-                    ? `Consumed this Month (${user?.businessName})`
-                    : `Available Liters`}
-                </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1">
-                <p className="text-2xl md:text-3xl font-bold mb-2">
-                    {isBranchAccount
-                        ? `${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`
-                        : `${(user?.totalConsumptionLiters || 0).toLocaleString()} L`
-                    }
-                </p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between">
-                    {isBranchAccount
-                    ? <span>Total usage this period</span>
-                    : <span>Consumed this period:</span>
-                    }
-                    <span>
-                        {`${consumptionDetails.consumedLitersThisMonth.toLocaleString()} L`}
-                    </span>
-                    </div>
-                </div>
-                </CardContent>
-                <CardFooter className="pt-0">
-                    {isBranchAccount ? (
-                        <p className="text-xs text-muted-foreground">Consumption is deducted from your parent account's balance.</p>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">This is your account's water credit balance.</p>
-                    )}
-                </CardFooter>
-            </Card>
-            <Card className="col-span-1">
-                <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="auto-refill-other" className="font-bold text-base">Auto Refill</Label>
-                    <Switch id="auto-refill-other" checked={autoRefill} onCheckedChange={onSwitchChange} />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                    {autoRefill ? "System will auto-schedule based on your recurring schedule." : "Your deliveries are paused. Schedule a delivery manually."}
-                </p>
-                <div className="border-t pt-3 space-y-2">
-                    {autoRefill ? (
-                    <div className="grid sm:grid-cols-2 gap-2 items-center">
-                        <div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
-                        <p className="font-semibold text-sm">{nextRefillDay !== 'Not set' ? `Next ${nextRefillDay}` : 'Not set'}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1"><History className="h-3 w-3" />Est. Delivery</p>
-                        <p className="font-semibold text-sm">{estimatedWeeklyLiters.toLocaleString()} Liters</p>
-                        </div>
-                        <Button variant="outline" size="sm" className="w-full mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Customize
-                        </Button>
-                    </div>
-                    ) : (
-                    <div className="flex flex-col gap-2 items-center text-center">
-                        <p className="text-xs text-muted-foreground sm:text-sm">
-                            Need water sooner? Schedule a one-time delivery with an exact date and quantity.
+                    <div className="flex items-center justify-between pt-2">
+                        <p className="text-xs text-blue-100 font-medium">
+                            ≈ {parentCalculatedBalances.displayedAvailableLiters.toLocaleString(undefined, { maximumFractionDigits: 0 })} Liters available
                         </p>
-                        <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        <span className="sm:hidden">Schedule</span>
-                        <span className="hidden sm:inline">Schedule Refill</span>
+                        <Button variant="link" className="text-white p-0 h-auto text-xs font-bold gap-1 group-hover:translate-x-1 transition-transform">
+                            Manage Balance <ArrowRight className="h-3 w-3" />
                         </Button>
                     </div>
-                    )}
-                </div>
                 </CardContent>
+            </Card>
+
+            <Card onClick={onConsumptionHistoryClick} className="border-none shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.99] group bg-white">
+                 <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-primary"/>Network Consumption
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-baseline gap-2">
+                        <p className="text-3xl font-extrabold text-slate-900">{parentCalculatedBalances.totalConsumptionLiters.toLocaleString(undefined, {maximumFractionDigits:1})}</p>
+                        <span className="text-sm font-bold text-muted-foreground">LITERS</span>
+                    </div>
+                    <div className={cn(
+                        "flex items-center text-[10px] font-bold uppercase mt-2",
+                        consumptionDetails.trend === 'increase' ? 'text-red-500' : 'text-green-500'
+                    )}>
+                        {consumptionDetails.trend === 'increase' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                        {consumptionDetails.diff.toFixed(0)}% vs last month
+                    </div>
+                </CardContent>
+                 <CardFooter className="pt-2">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary group-hover:underline">Click for branch history</p>
+                </CardFooter>
+            </Card>
+
+            <Card className="border-none shadow-sm bg-white">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary"/>Active Locations
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-3xl font-extrabold text-slate-900 mb-1">{user?.customPlanDetails?.branchCount || 0}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Linked multi-branch accounts</p>
+                </CardContent>
+                <CardFooter className="pt-2">
+                    <Button variant="link" className="p-0 h-auto text-[10px] font-bold uppercase tracking-widest" onClick={() => window.dispatchEvent(new CustomEvent('open-branches-dialog'))}>View Detailed Map</Button>
+                </CardFooter>
             </Card>
         </>
       ) : (
         <>
-          <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
+          <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white">
             <CardHeader className="pb-2">
-              <CardTitle className="flex justify-between items-center text-sm font-medium text-muted-foreground">
-                Available Liters
-                <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={onSaveLitersClick}>
-                  <HelpCircle className="mr-1 h-3 w-3" /> What is this?
-                </Button>
+              <CardTitle className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Available Credits</span>
+                <button onClick={onSaveLitersClick} className="text-primary hover:underline flex items-center gap-1">
+                  <HelpCircle className="h-3 w-3" />
+                </button>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-2xl md:text-3xl font-bold mb-2">{consumptionDetails.currentBalance.toLocaleString()} L</p>
-               <div className="space-y-1 text-xs text-muted-foreground">
-                  <div className="flex justify-between"><span>Plan Liters:</span> <span>{consumptionDetails.monthlyPlanLiters.toLocaleString()} L</span></div>
-                  <div className="flex justify-between"><span>Bonus Liters:</span> <span>{consumptionDetails.bonusLiters.toLocaleString()} L</span></div>
-                  <div className="flex justify-between"><span>Rollover:</span> <span>{consumptionDetails.rolloverLiters.toLocaleString()} L</span></div>
-              </div>
-            </CardContent>
-             <CardFooter className="pt-0">
-               <Progress value={remainingBalancePercentage} className="h-2" />
-            </CardFooter>
-          </Card>
-
-          <Card className="flex flex-col col-span-1 md:col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Consumed this Month</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-2">
-              <p className="text-2xl md:text-3xl font-bold">{consumptionDetails.consumedLitersThisMonth.toLocaleString()} L</p>
-              <Progress value={consumptionDetails.consumedPercentage} className="h-2" />
-            </CardContent>
-            <CardFooter>
-              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onConsumptionHistoryClick}>View History</Button>
-            </CardFooter>
-          </Card>
-
-          <Card className="col-span-1 md:col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Auto Refill</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="auto-refill-main" className="font-bold text-base">Auto Refill</Label>
-                <Switch id="auto-refill-main" checked={autoRefill} onCheckedChange={onSwitchChange} />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {autoRefill ? "Deliveries will be auto-scheduled based on your plan." : "Deliveries are paused. Schedule manually."}
-              </p>
-              <div className="border-t pt-3 space-y-2">
-                {autoRefill ? (
-                   <div className="grid sm:grid-cols-2 gap-2 items-center">
-                    <div>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarIcon className="h-3 w-3" />Next Refill</p>
-                      <p className="font-semibold text-sm">Next {nextRefillDay}</p>
+            <CardContent>
+              {isFlowPlan || isBranchAccount ? (
+                <div>
+                   <p className="text-3xl font-extrabold text-slate-900">Unlimited</p>
+                   <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight mt-1">Billed by usage (₱{user?.plan?.price}/L)</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-baseline gap-1">
+                        <p className="text-4xl font-extrabold text-slate-900">{consumptionDetails.currentBalance.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                        <span className="text-sm font-bold text-muted-foreground">L</span>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full text-xs mt-2 sm:mt-0" onClick={onUpdateScheduleClick}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Customize
-                    </Button>
+                    <Progress value={remainingBalancePercentage} className="h-1.5 mt-3 bg-slate-100" />
                   </div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-tighter">
+                      <div className="p-2 rounded bg-muted/30">
+                        <span className="text-muted-foreground block mb-0.5">Plan Allocation</span>
+                        <span className="text-slate-900">{(consumptionDetails.monthlyPlanLiters + consumptionDetails.bonusLiters).toLocaleString()} L</span>
+                      </div>
+                      <div className="p-2 rounded bg-blue-50">
+                        <span className="text-primary block mb-0.5">Rollover</span>
+                        <span className="text-primary">{consumptionDetails.rolloverLiters.toLocaleString()} L</span>
+                      </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm col-span-1 md:col-span-2 lg:col-span-1 bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />Current Consumption
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex items-baseline gap-1">
+                    <p className="text-4xl font-extrabold text-slate-900">{consumptionDetails.consumedLitersThisMonth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                    <span className="text-sm font-bold text-muted-foreground">L</span>
+                </div>
+                <div className={cn(
+                    "flex items-center text-[10px] font-bold uppercase mt-2",
+                    consumptionDetails.trend === 'increase' ? 'text-red-500' : 'text-green-500'
+                )}>
+                    {consumptionDetails.trend === 'increase' ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                    {consumptionDetails.diff.toFixed(0)}% vs last month
+                </div>
+              </div>
+              <div className="pt-2 border-t flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estimated overhead</span>
+                  <span className="text-sm font-extrabold text-slate-900">₱{consumptionDetails.estimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm col-span-1 bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
+                <span className="flex items-center gap-2"><Repeat className="h-4 w-4 text-primary" />Auto-Refill Status</span>
+                <Switch checked={autoRefill} onCheckedChange={onSwitchChange} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className={cn(
+                    "p-3 rounded-xl border flex flex-col gap-1 transition-all",
+                    autoRefill ? "bg-blue-50 border-blue-100" : "bg-muted/40 border-slate-200 opacity-60"
+                )}>
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{autoRefill ? "Next Dispatch" : "Service Paused"}</p>
+                   <p className="text-sm font-extrabold text-slate-900">{autoRefill ? `Every ${nextRefillDay}` : "Manual Only"}</p>
+                </div>
+                {autoRefill ? (
+                    <Button variant="outline" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest" onClick={onUpdateScheduleClick}>
+                        <Edit className="mr-2 h-3 w-3" /> Customize Delivery
+                    </Button>
                 ) : (
-                  <Button variant="default" size="sm" className="w-full" onClick={onRequestRefillClick}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span className="sm:hidden">Schedule</span>
-                    <span className="hidden sm:inline">Schedule Refill</span>
-                  </Button>
+                    <Button variant="default" size="sm" className="w-full h-8 text-[10px] font-bold uppercase tracking-widest bg-slate-900" onClick={onRequestRefillClick}>
+                        <CalendarIcon className="mr-2 h-3 w-3" /> Schedule One-Time
+                    </Button>
                 )}
               </div>
             </CardContent>
@@ -441,28 +316,29 @@ export function StatCards({
         </>
       )}
     </div>
+
     <AlertDialog open={isConfirmingToggle} onOpenChange={setIsConfirmingToggle}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
             <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to {toggleTargetState ? 'enable' : 'disable'} Auto-Refill?</AlertDialogTitle>
-                <AlertDialogDescription>
+                <AlertDialogTitle className="text-xl font-bold">Adjust Auto-Refill Preferences?</AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-600 leading-relaxed pt-2">
                     {toggleTargetState ? (
                         <>
-                            By enabling this, we will automatically schedule deliveries for you based on your plan:
-                            <strong className="block mt-2">{nextRefillDay}, {planDetails?.deliveryTime}</strong>
-                            You can customize this schedule at any time.
+                            Re-activating auto-refill will resume your recurring schedule:
+                            <strong className="block mt-3 text-slate-900 text-base">→ Next {nextRefillDay} at {planDetails?.deliveryTime || 'morning'}</strong>
+                            Our fulfillment team will be notified immediately.
                         </>
                     ) : (
                         <>
-                            By disabling this, all automatic deliveries will be paused. You will need to manually request refills to receive water.
+                            Pausing auto-refill will stop all automatic dispatches. You will need to manually request water when your inventory is low.
                         </>
                     )}
                 </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setToggleTargetState(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleToggleConfirmation}>
-                    {toggleTargetState ? 'Yes, Enable Auto-Refill' : 'Yes, Disable Auto-Refill'}
+            <AlertDialogFooter className="pt-4">
+                <AlertDialogCancel className="rounded-full font-bold" onClick={() => setToggleTargetState(null)}>Keep Current</AlertDialogCancel>
+                <AlertDialogAction className="rounded-full font-bold" onClick={handleToggleConfirmation}>
+                    {toggleTargetState ? 'Enable Auto-Refill' : 'Confirm Pause'}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

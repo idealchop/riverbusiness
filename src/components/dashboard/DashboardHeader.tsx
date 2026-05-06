@@ -2,8 +2,9 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { BellRing, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { BellRing, ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface DashboardHeaderProps {
   greeting: string;
@@ -27,40 +28,49 @@ export function DashboardHeader({
   const isMaintenance = stationStatus === 'Under Maintenance';
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          {greeting}, {userName}. Here is an overview of your water consumption.
-        </p>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-2">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{greeting}, {userName}!</h1>
+        <div className="flex items-center gap-2">
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Here is your hydration snapshot for today.
+            </p>
+            <div className="h-1 w-1 rounded-full bg-slate-300 hidden sm:block" />
+            <button 
+                onClick={onPartnerNoticeClick}
+                className={cn(
+                    "flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full transition-all border",
+                    isMaintenance 
+                        ? "bg-amber-50 text-amber-600 border-amber-200 animate-pulse" 
+                        : "bg-green-50 text-green-600 border-green-200"
+                )}
+            >
+                {isMaintenance ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                Station: {stationStatus || 'Operational'}
+            </button>
+        </div>
       </div>
-      <div className="hidden sm:flex items-center gap-2">
+      
+      <div className="flex items-center gap-3 w-full sm:w-auto">
         <Button
-          variant="default"
-          className="w-auto h-auto px-4 py-2"
+          variant={hasPendingRefill ? "secondary" : "default"}
+          className={cn(
+            "flex-1 sm:flex-none rounded-full h-11 px-6 font-bold shadow-lg transition-transform active:scale-95",
+            !hasPendingRefill && "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+          )}
           onClick={onRefillRequest}
         >
-          <BellRing className="mr-2 h-4 w-4" />
-          {hasPendingRefill ? 'View Status' : 'Request Refill'}
+          <BellRing className={cn("mr-2 h-4 w-4", hasPendingRefill && "text-blue-500")} />
+          {hasPendingRefill ? 'Refill Status' : 'Request Refill'}
         </Button>
         <Button
-          variant="default"
-          className="w-auto h-auto px-4 py-2"
+          variant="outline"
+          className="flex-1 sm:flex-none rounded-full h-11 px-6 font-bold bg-background shadow-sm border-slate-200 hover:bg-slate-50 transition-transform active:scale-95"
           onClick={onComplianceClick}
         >
-          <ShieldCheck className="h-4 w-4 sm:mr-2" />
-          <span className="hidden sm:inline">Compliance &amp; Sanitation</span>
-        </Button>
-        <Button
-          variant={isMaintenance ? 'secondary' : 'default'}
-          size="icon"
-          onClick={onPartnerNoticeClick}
-          className={cn(
-            isMaintenance && 'bg-yellow-400 hover:bg-yellow-500 text-yellow-900 animate-pulse'
-          )}
-        >
-            <AlertTriangle className="h-4 w-4" />
-            <span className="sr-only">Partner Station Notice</span>
+          <ShieldCheck className="h-4 w-4 sm:mr-2 text-primary" />
+          <span className="hidden sm:inline">Compliance & Sanitation</span>
+          <span className="sm:hidden text-xs">Quality</span>
         </Button>
       </div>
     </div>
