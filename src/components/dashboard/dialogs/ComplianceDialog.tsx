@@ -9,11 +9,27 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
 import { WaterStation, ComplianceReport, SanitationVisit } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Eye, FileText, Hourglass, CheckCircle, AlertTriangle, Droplet, Signature, History, Camera, ChevronRight, ClipboardCheck, Microscope, ShieldCheck } from 'lucide-react';
+import { 
+  Eye, 
+  FileText, 
+  Hourglass, 
+  CheckCircle, 
+  AlertTriangle, 
+  Droplet, 
+  Signature, 
+  History, 
+  Camera, 
+  ChevronRight, 
+  ClipboardCheck, 
+  Microscope, 
+  ShieldCheck,
+  LayoutGrid,
+  XCircle
+} from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Image from 'next/image';
 
@@ -340,7 +356,7 @@ export function ComplianceDialog({
                                       visit.status === 'Completed' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
                                   )}>{visit.status}</Badge>
                               </div>
-                              <Button variant="outline" size="sm" className="w-full h-9 text-[10px] uppercase font-bold tracking-widest">
+                              <Button variant="outline" size="sm" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest">
                                   Open Analysis Report
                               </Button>
                           </CardContent>
@@ -594,5 +610,3 @@ export function ComplianceDialog({
     </>
   );
 }
-
-import { XCircle as XCircleIcon } from 'lucide-react';
