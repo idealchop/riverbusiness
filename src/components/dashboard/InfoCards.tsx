@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { 
   Dialog, 
   DialogContent, 
@@ -12,8 +12,9 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { ArrowRight, Sparkles, Zap, ShieldCheck, Cpu } from 'lucide-react';
+import { ArrowRight, Zap, ShieldCheck, Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const newFeatures = [
@@ -46,7 +47,7 @@ export function InfoCards() {
       <Dialog>
         <DialogTrigger asChild>
           <Card className="h-full cursor-pointer group hover:border-primary/50 transition-all shadow-sm border-none bg-white overflow-hidden flex flex-col active:scale-[0.98]">
-            <div className="relative aspect-[3/4] w-full flex-shrink-0">
+            <div className="relative aspect-[3/4] w-full flex-1">
                 <Image 
                     src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fnew-features.png?alt=media&token=59678e26-137b-4d05-8501-14267e15fd44" 
                     alt="New Features" 
@@ -54,21 +55,20 @@ export function InfoCards() {
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     data-ai-hint="app upgrade"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
-            </div>
-            <CardContent className="p-8 pt-0 flex flex-col items-center text-center -mt-10 relative z-10 flex-1">
-                <div className="p-3 rounded-2xl bg-white shadow-xl mb-6 border border-slate-50 group-hover:rotate-6 transition-transform duration-300">
-                    <Sparkles className="h-8 w-8 text-primary" />
-                </div>
-                <div className="space-y-2">
-                    <h3 className="text-2xl font-black tracking-tight text-slate-900 leading-tight">
-                        Your App is <br/><span className="text-primary">Upgraded!</span>
+                
+                {/* Gradient for text contrast */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent z-10" />
+
+                {/* Overlaid Text */}
+                <div className="absolute top-0 left-0 right-0 p-8 pt-10 z-20 space-y-2">
+                    <h3 className="text-2xl font-black tracking-tight text-white leading-tight drop-shadow-md">
+                        Your App is <br/><span className="text-primary-light">Upgraded!</span>
                     </h3>
-                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2 group-hover:text-primary transition-colors">
-                        See Features <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    <p className="text-xs font-bold text-white/90 uppercase tracking-[0.2em] flex items-center gap-2 group-hover:text-white transition-colors">
+                        See Features <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                     </p>
                 </div>
-            </CardContent>
+            </div>
           </Card>
         </DialogTrigger>
         <DialogContent className="sm:max-w-xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white">
@@ -110,12 +110,4 @@ export function InfoCards() {
       </Dialog>
     </div>
   );
-}
-
-function Badge({ children, className, variant }: any) {
-    return (
-        <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", className)}>
-            {children}
-        </div>
-    );
 }
