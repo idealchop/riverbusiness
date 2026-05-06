@@ -51,9 +51,10 @@ export default function AdminPage() {
     }
     
     return (
-        <div className="flex flex-col gap-6 font-sans">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold">{greeting}, Admin!</h1>
+        <div className="flex flex-col gap-8 font-sans pb-10">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">{greeting}, Admin!</h1>
+                <p className="text-muted-foreground">Welcome back to the River Business Command Center.</p>
             </div>
             <AdminDashboard isAdmin={isAdmin} />
         </div>

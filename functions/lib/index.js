@@ -87,6 +87,16 @@ async function createNotification(userId, notificationData) {
     }
 }
 /**
+ * Determines the recipients for automated emails.
+ * Prioritizes notificationEmails array, falls back to login email.
+ */
+function getRecipients(user) {
+    if (user.notificationEmails && Array.isArray(user.notificationEmails) && user.notificationEmails.length > 0) {
+        return user.notificationEmails;
+    }
+    return user.email ? [user.email] : [];
+}
+/**
  * Determines the CC list specifically for Financial documents (SOA, Invoices, Billing).
  * Client SC2500000001 (NEW BIG 4 J) gets specialized CC for these types only.
  */
@@ -385,11 +395,9 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const user = userDoc.data();
     if (!user)
         return;
-    // Prioritize custom recipient email if provided and valid
-    const targetEmail = (recipientEmail && typeof recipientEmail === 'string' && recipientEmail.includes('@'))
-        ? recipientEmail
-        : user.email;
-    if (!targetEmail) {
+    // Recipients broadcast
+    const targetEmails = recipientEmail ? [recipientEmail] : getRecipients(user);
+    if (targetEmails.length === 0) {
         logger.error(`No target email found for reminder trigger ${event.params.reminderId}`);
         return;
     }
@@ -439,7 +447,7 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
     const bccList = getBCCList();
     try {
         await (0, email_1.sendEmail)({
-            to: targetEmail,
+            to: targetEmails,
             cc: ccList,
             bcc: bccList,
             subject: template.subject,
@@ -450,10 +458,10 @@ exports.onpaymentremindercreate = (0, firestore_2.onDocumentCreated)({
                     content: pdfBuffer
                 }]
         });
-        logger.info(`Follow-up email with SOA successfully sent to ${targetEmail} for period ${selectedPeriod}. CC: ${ccList}. BCC: ${bccList}`);
+        logger.info(`Follow-up email with SOA successfully sent to ${targetEmails} for period ${selectedPeriod}. CC: ${ccList}. BCC: ${bccList}`);
     }
     catch (error) {
-        logger.error(`Failed to send follow-up to ${targetEmail}`, error);
+        logger.error(`Failed to send follow-up to ${targetEmails}`, error);
     }
 });
 /**
@@ -473,10 +481,11 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
     const userData = userDoc.data();
     if (!userData)
         return;
-    const targetEmail = (requestData.recipientEmail && requestData.recipientEmail.includes('@'))
-        ? requestData.recipientEmail
-        : userData.email;
-    if (!targetEmail)
+    // Recipients broadcast
+    const targetEmails = (requestData.recipientEmail && requestData.recipientEmail.includes('@'))
+        ? [requestData.recipientEmail]
+        : getRecipients(userData);
+    if (targetEmails.length === 0)
         return;
     const invoiceDoc = await db.collection('users').doc(userId).collection('payments').doc(requestData.invoiceId).get();
     const invoiceData = invoiceDoc.data();
@@ -512,7 +521,7 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
         const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: targetEmail,
+            to: targetEmails,
             cc: ccList,
             bcc: bccList,
             subject: `Receipt: ${template.subject}`,
@@ -524,7 +533,7 @@ exports.onmanualreceiptcreate = (0, firestore_2.onDocumentCreated)({
                 }]
         });
         await event.data.ref.update({ status: 'completed' });
-        logger.info(`Manual receipt dispatched to ${targetEmail}. BCC: ${bccList}`);
+        logger.info(`Manual receipt dispatched to ${targetEmails}. BCC: ${bccList}`);
     }
     catch (error) {
         logger.error(`Failed to generate/send manual receipt for user ${userId}`, error);
@@ -571,11 +580,12 @@ exports.ondeliverycreate = (0, firestore_2.onDocumentCreated)({
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
-    if ((userData === null || userData === void 0 ? void 0 : userData.email) && delivery.status === 'Delivered') {
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0 && delivery.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: userData.email,
+            to: targetEmails,
             bcc: bccList,
             subject: template.subject,
             text: `Delivery complete`,
@@ -599,11 +609,12 @@ exports.ondeliveryupdate = (0, firestore_2.onDocumentUpdated)({
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
-    if ((userData === null || userData === void 0 ? void 0 : userData.email) && after.status === 'Delivered') {
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0 && after.status === 'Delivered') {
         const template = (0, email_1.getDeliveryStatusTemplate)(userData.businessName, 'Delivered', deliveryId, after.volumeContainers);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: userData.email,
+            to: targetEmails,
             bcc: bccList,
             subject: template.subject,
             text: `Delivery complete`,
@@ -638,13 +649,14 @@ exports.ontopuprequestupdate = (0, firestore_2.onDocumentUpdated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    if (userData === null || userData === void 0 ? void 0 : userData.email) {
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0) {
         const template = (0, email_1.getTopUpConfirmationTemplate)(userData.businessName, after.amount);
         // Financial CC restriction applied here
         const ccList = getFinancialCCList(userData.clientId);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: userData.email,
+            to: targetEmails,
             cc: ccList,
             bcc: bccList,
             subject: template.subject,
@@ -671,11 +683,12 @@ exports.onrefillrequestcreate = (0, firestore_2.onDocumentCreated)({
         description: `We have received your ${request.requestedDate ? 'scheduled' : 'ASAP'} refill request.`,
         data: { requestId }
     });
-    if (userData === null || userData === void 0 ? void 0 : userData.email) {
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, 'Requested', requestId, request.requestedDate);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: userData.email,
+            to: targetEmails,
             bcc: bccList,
             subject: template.subject,
             text: `Refill request received`,
@@ -704,11 +717,12 @@ exports.onrefillrequestupdate = (0, firestore_2.onDocumentUpdated)({
         description: `Your refill request is now ${after.status}.`,
         data: { requestId }
     });
-    if (userData === null || userData === void 0 ? void 0 : userData.email) {
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0) {
         const template = (0, email_1.getRefillRequestTemplate)(userData.businessName, after.status, requestId, after.requestedDate);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: userData.email,
+            to: targetEmails,
             bcc: bccList,
             subject: template.subject,
             text: `Refill request updated`,
@@ -727,12 +741,13 @@ exports.onsanitationcreate = (0, firestore_2.onDocumentCreated)({
     const db = (0, firestore_1.getFirestore)();
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
-    if ((userData === null || userData === void 0 ? void 0 : userData.email) && visit.status === 'Scheduled') {
+    const targetEmails = getRecipients(userData);
+    if (targetEmails.length > 0 && visit.status === 'Scheduled') {
         const dateStr = (0, date_fns_1.format)(toSafeDate(visit.scheduledDate), 'PPP');
         const template = (0, email_1.getSanitationScheduledTemplate)(userData.businessName, visit.assignedTo, dateStr);
         const bccList = getBCCList();
         await (0, email_1.sendEmail)({
-            to: userData.email,
+            to: targetEmails,
             bcc: bccList,
             subject: template.subject,
             text: `Visit scheduled`,
@@ -775,12 +790,13 @@ exports.onsanitationupdate = (0, firestore_2.onDocumentUpdated)({
                 data: { userId: userId, visitId: visitId }
             });
         }
-        // 3. Send Email Notification
-        if (userData === null || userData === void 0 ? void 0 : userData.email) {
+        // 3. Send Email Notification broadcast
+        const targetEmails = getRecipients(userData);
+        if (targetEmails.length > 0) {
             const template = (0, email_1.getSanitationReportTemplate)(userData.businessName, after.assignedTo, dateStr, passRate);
             const bccList = getBCCList();
             await (0, email_1.sendEmail)({
-                to: userData.email,
+                to: targetEmails,
                 bcc: bccList,
                 subject: template.subject,
                 text: `Report ready. Score: ${passRate}`,
@@ -810,3 +826,4 @@ exports.onfileupload = (0, storage_2.onObjectFinalized)({ memory: "256MiB" }, as
         }
     }
 });
+//# sourceMappingURL=index.js.map

@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { UserPlus, Building, PlusCircle, Users } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AppUser, WaterStation, RefillRequest, Payment } from '@/lib/types';
@@ -17,6 +16,7 @@ import { StationManagementTab } from './tabs/StationManagementTab';
 import { CreateUserDialog } from './dialogs/CreateUserDialog';
 import { StationProfileDialog } from './dialogs/StationProfileDialog';
 import { UserDetailsDialog } from './dialogs/UserDetailsDialog';
+import { cn } from '@/lib/utils';
 
 
 export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
@@ -52,6 +52,20 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
+
+    const stats = useMemo(() => {
+        const totalClients = (appUsers?.length || 0) + (unclaimedProfiles?.length || 0);
+        const activeRefills = refillRequests?.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length || 0;
+        const pendingPayments = allPayments?.filter(p => p.status === 'Pending Review' || p.status === 'Overdue').length || 0;
+        const operationalStations = waterStations?.filter(s => s.status === 'Operational').length || 0;
+
+        return [
+            { title: 'Total Clients', value: totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+            { title: 'Active Refills', value: activeRefills, icon: Droplets, color: 'text-amber-500', bg: 'bg-amber-50' },
+            { title: 'Pending Actions', value: pendingPayments, icon: Receipt, color: 'text-purple-500', bg: 'bg-purple-50' },
+            { title: 'Operational Stations', value: operationalStations, icon: Activity, color: 'text-green-500', bg: 'bg-green-50' },
+        ];
+    }, [appUsers, unclaimedProfiles, refillRequests, allPayments, waterStations]);
 
     React.useEffect(() => {
         const openAccountDialog = () => setIsAccountDialogOpen(true);
@@ -94,13 +108,42 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <>
-        <div className="space-y-6">
-            <Tabs defaultValue="user-management">
-                <TabsList>
-                    <TabsTrigger value="user-management"><Users className="mr-2 h-4 w-4"/>User Management</TabsTrigger>
-                    <TabsTrigger value="station-management"><Building className="mr-2 h-4 w-4" />Station Management</TabsTrigger>
-                </TabsList>
-                <TabsContent value="user-management">
+        <div className="space-y-8">
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {stats.map((stat, idx) => (
+                    <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-shadow">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                            <div className={cn("p-2 rounded-lg transition-colors", stat.bg)}>
+                                <stat.icon className={cn("h-4 w-4", stat.color)} />
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stat.value}</div>
+                            <p className="text-[10px] text-muted-foreground mt-1 flex items-center">
+                                Updated just now <ArrowUpRight className="ml-1 h-2 w-2" />
+                            </p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <Tabs defaultValue="user-management" className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <TabsList className="bg-muted/50 p-1">
+                        <TabsTrigger value="user-management" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                            <Users className="mr-2 h-4 w-4"/>
+                            Clients
+                        </TabsTrigger>
+                        <TabsTrigger value="station-management" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                            <Building className="mr-2 h-4 w-4" />
+                            Stations
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+                
+                <TabsContent value="user-management" className="mt-0">
                     <UserManagementTab 
                         appUsers={appUsers}
                         unclaimedProfiles={unclaimedProfiles}
@@ -111,7 +154,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         onAddNewClientClick={() => setIsCreateUserOpen(true)}
                     />
                 </TabsContent>
-                <TabsContent value="station-management">
+                <TabsContent value="station-management" className="mt-0">
                    <StationManagementTab 
                         waterStations={waterStations}
                         isAdmin={isAdmin}

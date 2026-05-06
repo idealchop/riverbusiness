@@ -122,7 +122,7 @@ exports.generateMonthlyInvoices = functions.runWith({
     return null;
 });
 async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycleStart, billingCycleEnd, monthsToBill = 1, isFirstInvoice) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     if (!user.plan)
         return;
     const db = admin.firestore();
@@ -189,7 +189,8 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             status: user.accountType === 'Branch' ? 'Covered by Parent Account' : 'Upcoming',
             manualCharges: pendingCharges,
         };
-        if (user.accountType !== 'Branch' && user.email) {
+        const targetEmails = ((_h = user.notificationEmails) === null || _h === void 0 ? void 0 : _h.length) > 0 ? user.notificationEmails : [user.email];
+        if (user.accountType !== 'Branch' && targetEmails.length > 0) {
             const sanitationSnap = await userRef.collection('sanitationVisits')
                 .where('scheduledDate', '>=', billingCycleStart.toISOString())
                 .where('scheduledDate', '<=', billingCycleEnd.toISOString())
@@ -205,7 +206,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
             const ccList = getCCList(user.clientId);
             const bccList = getBCCList();
             (0, email_1.sendEmail)({
-                to: user.email,
+                to: targetEmails,
                 cc: ccList,
                 bcc: bccList,
                 subject: template.subject,
