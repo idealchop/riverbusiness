@@ -65,7 +65,7 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       if (user) {
-        toast({ title: "Authorized!", description: "Accessing Command Center..." });
+        toast({ title: "Welcome back!", description: "Logging you in..." });
 
         if (user.email === 'admin@riverph.com') {
           router.push('/admin');
@@ -76,20 +76,20 @@ export default function LoginPage() {
 
     } catch (error: any) {
         let title = 'Login Failed';
-        let description = 'An unexpected error occurred. Please try again.';
+        let description = 'Something went wrong. Please try again.';
 
         switch (error.code) {
             case 'auth/invalid-credential':
-                title = 'Invalid Credentials';
-                description = 'The email or password you entered is incorrect. Please check your details.';
+                title = 'Wrong Details';
+                description = 'The email or password you entered is incorrect.';
                 break;
             case 'auth/too-many-requests':
                 title = 'Too Many Attempts';
-                description = 'Access temporarily disabled. You can reset your password or try again later.';
+                description = 'Try again later or reset your password.';
                 break;
             case 'auth/user-disabled':
                 title = 'Account Disabled';
-                description = 'This account has been disabled. Please contact support for assistance.';
+                description = 'Your account has been disabled. Please contact support.';
                 break;
         }
 
@@ -109,14 +109,14 @@ export default function LoginPage() {
     setIsResetting(true);
     try {
         await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: 'Check Your Inbox!', description: 'A password reset link has been sent to your email address.' });
+        toast({ title: 'Email Sent!', description: 'Check your inbox for a link to reset your password.' });
         setIsForgotPasswordOpen(false);
         setResetEmail('');
     } catch (error: any) {
         toast({ 
             variant: 'destructive', 
             title: 'Request Failed', 
-            description: 'An unexpected error occurred. Please try again.' 
+            description: 'Something went wrong. Please try again.' 
         });
     } finally {
         setIsResetting(false);
@@ -242,14 +242,14 @@ export default function LoginPage() {
                     <div className="lg:hidden flex justify-center mb-8">
                         <Logo className="h-16 w-16" />
                     </div>
-                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Access Portal</h2>
-                    <p className="text-slate-500 font-medium">Authorized business login required.</p>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Sign In</h2>
+                    <p className="text-slate-500 font-medium">Enter your details to log in to your account.</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Work Email Address</Label>
+                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -263,9 +263,9 @@ export default function LoginPage() {
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Security Password</Label>
+                                <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Password</Label>
                                 <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
-                                    Recovery
+                                    Forgot Password?
                                 </button>
                             </div>
                             <div className="relative">
@@ -291,15 +291,15 @@ export default function LoginPage() {
                     </div>
 
                     <Button type="submit" className="w-full h-12 text-xs font-black uppercase tracking-widest shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-xl" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Authorize & Sign In'}
+                        {isSubmitting ? <Loader className="text-white" /> : 'Log In'}
                     </Button>
                 </form>
 
                 <div className="text-center space-y-6">
                     <p className="text-sm font-medium text-slate-500">
-                        New corporate entity?{" "}
+                        Don't have an account?{" "}
                         <Link href="/signup" className="text-primary font-black hover:underline">
-                            Onboarding Request
+                            Sign Up
                         </Link>
                     </p>
                 </div>
@@ -311,14 +311,14 @@ export default function LoginPage() {
       <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
             <DialogContent className="sm:max-w-md rounded-2xl border-none shadow-2xl">
             <DialogHeader>
-                <DialogTitle className="text-xl font-bold">Account Access Recovery</DialogTitle>
+                <DialogTitle className="text-xl font-bold">Reset Password</DialogTitle>
                 <DialogDescription className="text-slate-600">
-                    Enter your registered business email and we'll send a secure authorization link to reset your password.
+                    Enter your email and we'll send you a link to reset your password.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Work Email Address</Label>
+                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</Label>
                     <Input
                         id="reset-email"
                         type="email"
@@ -335,7 +335,7 @@ export default function LoginPage() {
                     <Button type="button" variant="ghost" disabled={isResetting} className="text-[10px] font-bold uppercase tracking-widest">Cancel</Button>
                 </DialogClose>
                 <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="font-bold text-[10px] uppercase tracking-widest px-8 rounded-xl h-11">
-                    {isResetting ? <Loader className="text-white" /> : 'Send Auth Link'}
+                    {isResetting ? <Loader className="text-white" /> : 'Send Link'}
                 </Button>
             </DialogFooter>
             </DialogContent>
