@@ -86,7 +86,7 @@ const apps = [
     },
     { 
       id: '06', 
-      name: 'Benefits', 
+      name: 'PS Vault', 
       description: 'Automated corporate benefit systems.',
       features: [
           'Health coverage administration',

@@ -23,7 +23,7 @@ export default function BusinessInsurancePage() {
             <div className="relative h-16 w-16 transition-transform duration-500 group-hover:scale-110">
               <Image 
                 src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c"
-                alt="Benefits"
+                alt="PS Vault"
                 fill
                 className="object-contain"
               />
@@ -33,10 +33,10 @@ export default function BusinessInsurancePage() {
 
         <div className="space-y-4">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-            Corporate <span className="text-blue-700">Benefits</span>
+            PS <span className="text-blue-700">Vault</span>
           </h1>
           <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
-            Automated health coverage and employee benefit systems are in the design phase.
+            Automated corporate record protection and employee benefit systems are in the design phase.
           </p>
         </div>
 

@@ -49,7 +49,7 @@ const apps = [
   },
   { 
     id: '06', 
-    name: 'Benefits', 
+    name: 'PS Vault', 
     href: '/business-insurance', 
     iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
   },
