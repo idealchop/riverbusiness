@@ -11,11 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { Card } from '@/components/ui/card';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
 import {
   Dialog,
@@ -67,7 +66,7 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       if (user) {
-        toast({ title: "Login Successful", description: "Welcome back! Redirecting..." });
+        toast({ title: "Welcome back!", description: "Accessing Command Center..." });
 
         if (user.email === 'admin@riverph.com') {
           router.push('/admin');
@@ -83,27 +82,16 @@ export default function LoginPage() {
         switch (error.code) {
             case 'auth/invalid-credential':
                 title = 'Invalid Credentials';
-                description = 'The email or password you entered is incorrect. Please check your details and try again.';
-                break;
-            case 'auth/user-not-found': // This is less common now but good to keep as a fallback
-                 title = 'No Account Found';
-                 description = 'There is no account associated with this email. Would you like to sign up?';
-                 break;
-            case 'auth/wrong-password': // Also less common
-                title = 'Incorrect Password';
-                description = 'The password you entered is incorrect. Please try again.';
+                description = 'The email or password you entered is incorrect. Please check your details.';
                 break;
             case 'auth/too-many-requests':
                 title = 'Too Many Attempts';
-                description = 'Access to this account has been temporarily disabled due to many failed login attempts. You can reset your password or try again later.';
+                description = 'Access temporarily disabled. You can reset your password or try again later.';
                 break;
             case 'auth/user-disabled':
                 title = 'Account Disabled';
                 description = 'This account has been disabled. Please contact support for assistance.';
                 break;
-            default:
-                 console.error('Login Error:', error);
-                 break;
         }
 
         toast({
@@ -126,149 +114,204 @@ export default function LoginPage() {
         setIsForgotPasswordOpen(false);
         setResetEmail('');
     } catch (error: any) {
-        console.error("Password Reset Error:", error);
-
-        if (error.code === 'auth/user-not-found') {
-            // To prevent email enumeration, we show the same generic success message.
-            // This is a security best practice.
-            toast({ 
-                title: 'Check Your Inbox!', 
-                description: 'A password reset link has been sent to your email address.' 
-            });
-            setIsForgotPasswordOpen(false);
-            setResetEmail('');
-        } else {
-            let title = 'Request Failed';
-            let description = 'An unexpected error occurred. Please try again.';
-
-            if (error.code === 'auth/invalid-email') {
-                title = 'Invalid Email';
-                description = 'The email address you entered is not valid.';
-            } else if (error.code === 'auth/too-many-requests') {
-                title = 'Too Many Requests';
-                description = 'Access has been temporarily disabled due to many requests. Please try again later.';
-            } else if (error.code === 'auth/operation-not-allowed' || (error.message && error.message.includes('is not authorized'))) {
-                 title = 'Domain Not Authorized';
-                 description = 'This app\'s domain is not authorized for this action. Please add it in your Firebase project\'s authentication settings.';
-            }
-    
-            toast({
-                variant: 'destructive',
-                title: title,
-                description: description,
-            });
-        }
+        toast({ 
+            variant: 'destructive', 
+            title: 'Request Failed', 
+            description: 'An unexpected error occurred. Please try again.' 
+        });
     } finally {
         setIsResetting(false);
     }
   };
 
-  // Do not render the form until the auth service is available
   if (!auth) {
-      return (
-        <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-            <FullScreenLoader />
-        </main>
-      );
+      return <FullScreenLoader />;
   }
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-5xl shadow-2xl overflow-hidden rounded-2xl">
-          <div className="grid lg:grid-cols-2">
-            <div className="flex flex-col items-center justify-center p-6 sm:p-12">
-              <div className="mx-auto grid w-full max-w-sm gap-6">
-                <div className="grid gap-2 text-center justify-center">
-                  <Logo className="h-20 w-20 mb-4 mx-auto" />
-                  <h1 className="text-3xl font-bold">Sign In</h1>
-                  <p className="text-balance text-muted-foreground">
-                    Welcome back! Please enter your details.
-                  </p>
+    <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
+      <div className="flex w-full">
+        {/* Visual / Branding Side */}
+        <div className="hidden lg:flex flex-col relative w-1/2 p-12 bg-slate-950 text-white justify-between overflow-hidden">
+            {/* Background Decorative Pattern */}
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+            
+            <div className="relative z-10">
+                <Logo className="h-12 w-12 mb-8" />
+                <div className="space-y-6 max-w-xl">
+                    <h1 className="text-5xl font-black tracking-tight leading-[1.1]">
+                        The definitive platform to run <span className="text-primary-light">essential needs</span> for your business.
+                    </h1>
+                    <p className="text-xl text-slate-400 font-medium leading-relaxed">
+                        Turn everyday operational requirements into automated, connected experiences.
+                    </p>
                 </div>
-                <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      {...register('email')}
-                      disabled={isSubmitting}
-                    />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                  </div>
-                  <div className="grid gap-2">
-                    <div className="flex items-center">
-                        <Label htmlFor="password">Password</Label>
-                        <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="ml-auto inline-block text-sm underline">
-                            Forgot your password?
-                        </button>
-                    </div>
-                    <div className="relative">
-                      <Input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} disabled={isSubmitting}/>
-                      <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)} type="button">
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                    {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader /> : 'Sign in'}
-                  </Button>
-                </form>
-                <div className="mt-4 text-center text-sm">
-                  Don&apos;t have an account?{" "}
-                  <Link href="/signup" className="underline">
-                    Sign up
-                  </Link>
-                </div>
-                <div className="mt-4 text-center text-xs text-muted-foreground">
-                  <p>For questions or inquiries, contact us at:</p>
-                  <a href="mailto:business@smartrefill.io" className="font-semibold text-primary hover:underline">business@smartrefill.io</a>
-                </div>
-              </div>
             </div>
-            <div className="hidden lg:flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-800">
-              <div className="relative w-full h-full min-h-[400px]">
-                  <Image
+
+            <div className="relative z-10 space-y-8">
+                <div className="grid grid-cols-2 gap-8">
+                    <div className="flex gap-4">
+                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                            <Zap className="h-6 w-6 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold">Instant Fulfillment</h4>
+                            <p className="text-sm text-slate-400">Zero-friction replenishment cycles.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                            <BarChart3 className="h-6 w-6 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold">Real-time Analytics</h4>
+                            <p className="text-sm text-slate-400">Full visibility into consumption.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="h-6 w-6 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold">Audit Ready</h4>
+                            <p className="text-sm text-slate-400">DOH compliance & legal records.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="p-3 h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+                            <Globe className="h-6 w-6 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold">Multi-Site Scale</h4>
+                            <p className="text-sm text-slate-400">Manage all locations centrally.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="pt-8 border-t border-white/10 flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+                    <span>Trusted by Corporate Partners</span>
+                    <div className="h-px bg-white/10 flex-1" />
+                    <span>River Philippines © 2025</span>
+                </div>
+            </div>
+
+            {/* Immersive Image Overlay */}
+            <div className="absolute inset-0 z-0 opacity-40 mix-blend-overlay">
+                <Image
                     src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a"
                     alt="River Business Marketing Material"
                     fill
-                    className="object-contain dark:brightness-[0.2] dark:grayscale"
-                  />
-              </div>
-            </div>
-          </div>
-      </Card>
-        <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
-            <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>Reset Password</DialogTitle>
-                <DialogDescription>
-                Enter your email address and we'll send you a link to reset your password.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                <Label htmlFor="reset-email">Email</Label>
-                <Input
-                    id="reset-email"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    disabled={isResetting}
+                    className="object-cover"
                 />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950/80 to-transparent z-0" />
+        </div>
+
+        {/* Login Form Side */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 md:p-20 bg-white">
+            <div className="w-full max-w-sm space-y-10">
+                <div className="text-center lg:text-left space-y-2">
+                    <div className="lg:hidden flex justify-center mb-6">
+                        <Logo className="h-16 w-16" />
+                    </div>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900">Command Center Access</h2>
+                    <p className="text-slate-500 font-medium">Please enter your authorized credentials.</p>
+                </div>
+
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-xs font-black uppercase tracking-widest text-slate-500">Authorized Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="name@company.com"
+                                className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base"
+                                {...register('email')}
+                                disabled={isSubmitting}
+                            />
+                            {errors.email && <p className="text-xs font-bold text-destructive mt-1 uppercase tracking-tighter">{errors.email.message}</p>}
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-slate-500">Security Password</Label>
+                                <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                                    Forgot Access?
+                                </button>
+                            </div>
+                            <div className="relative">
+                                <Input 
+                                    id="password" 
+                                    type={showPassword ? 'text' : 'password'} 
+                                    className="h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base pr-10"
+                                    {...register('password')} 
+                                    disabled={isSubmitting}
+                                />
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-slate-400 hover:text-slate-600" 
+                                    onClick={() => setShowPassword(!showPassword)} 
+                                    type="button"
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                            {errors.password && <p className="text-xs font-bold text-destructive mt-1 uppercase tracking-tighter">{errors.password.message}</p>}
+                        </div>
+                    </div>
+
+                    <Button type="submit" className="w-full h-12 text-sm font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-[0.98]" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader className="text-white" /> : 'Authorize & Sign In'}
+                    </Button>
+                </form>
+
+                <div className="text-center space-y-4">
+                    <p className="text-sm font-medium text-slate-500">
+                        New corporate entity?{" "}
+                        <Link href="/signup" className="text-primary font-black hover:underline">
+                            Request Onboarding
+                        </Link>
+                    </p>
+                    <div className="pt-8 border-t border-slate-100 flex flex-col gap-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Corporate Support Interface</p>
+                        <a href="mailto:business@smartrefill.io" className="text-xs font-bold text-slate-600 hover:text-primary transition-colors">business@smartrefill.io</a>
+                    </div>
                 </div>
             </div>
-            <DialogFooter>
+        </div>
+      </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
+            <DialogContent className="sm:max-w-md rounded-2xl">
+            <DialogHeader>
+                <DialogTitle className="text-xl font-bold">Account Access Recovery</DialogTitle>
+                <DialogDescription className="text-slate-600">
+                Enter your registered business email and we'll send a secure authorization link to reset your password.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Work Email Address</Label>
+                    <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="name@company.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        disabled={isResetting}
+                        className="h-11 bg-slate-50"
+                    />
+                </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
                 <DialogClose asChild>
-                <Button type="button" variant="secondary" disabled={isResetting}>
-                    Cancel
-                </Button>
+                    <Button type="button" variant="ghost" disabled={isResetting} className="text-xs font-bold uppercase tracking-widest">Cancel</Button>
                 </DialogClose>
-                <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail}>
-                {isResetting ? <Loader /> : 'Send Reset Email'}
+                <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="font-bold text-xs uppercase tracking-widest px-6">
+                    {isResetting ? <Loader className="text-white" /> : 'Send Auth Link'}
                 </Button>
             </DialogFooter>
             </DialogContent>
