@@ -58,15 +58,15 @@ export default function SignupPage() {
 
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
-      toast({ title: "Account Created", description: "Directing to onboarding..." });
+      toast({ title: "Account Created", description: "Taking you to your new account..." });
       router.push('/claim-account');
     } catch (error: any) {
-        let title = 'Registration Failed';
-        let description = 'Could not create your account at this time.';
+        let title = 'Sign Up Failed';
+        let description = 'Could not create your account. Please try again.';
 
         if (error.code === 'auth/email-already-in-use') {
             title = 'Account Exists';
-            description = 'This email is already registered. Please sign in instead.';
+            description = 'This email is already in use. Please sign in instead.';
         }
 
         toast({
@@ -133,14 +133,14 @@ export default function SignupPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
             <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900">Create Account</h2>
-                    <p className="text-slate-500 font-bold text-lg">Initialize your entity profile.</p>
+                    <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign Up</h2>
+                    <p className="text-slate-500 font-bold text-lg">Create your account to get started.</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                     <div className="space-y-6">
                         <div className="space-y-2 group">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Work Email Address</Label>
+                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -153,7 +153,7 @@ export default function SignupPage() {
                         </div>
 
                         <div className="space-y-2 group">
-                            <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Security Password</Label>
+                            <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Password</Label>
                             <div className="relative">
                                 <Input 
                                     id="password" 
@@ -178,15 +178,15 @@ export default function SignupPage() {
                     </div>
 
                     <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Authorize & Create'}
+                        {isSubmitting ? <Loader className="text-white" /> : 'Create Account'}
                     </Button>
                 </form>
 
                 <div className="text-center space-y-6 pt-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        Already Registered?{" "}
+                        Already have an account?{" "}
                         <Link href="/login" className="text-primary font-black hover:underline underline-offset-4">
-                            Sign In
+                            Log In
                         </Link>
                     </p>
                 </div>

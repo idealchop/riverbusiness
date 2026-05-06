@@ -73,7 +73,7 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       if (user) {
-        toast({ title: "Verification Successful", description: "Directing to Command Center..." });
+        toast({ title: "Success", description: "Signing you in..." });
 
         if (user.email === 'admin@riverph.com') {
           router.push('/admin');
@@ -83,21 +83,21 @@ export default function LoginPage() {
       }
 
     } catch (error: any) {
-        let title = 'Authentication Failed';
-        let description = 'Internal verification error. Please retry.';
+        let title = 'Login Failed';
+        let description = 'Something went wrong. Please try again.';
 
         switch (error.code) {
             case 'auth/invalid-credential':
-                title = 'Invalid Credentials';
-                description = 'The email or password provided is incorrect.';
+                title = 'Incorrect Details';
+                description = 'The email or password you entered is incorrect.';
                 break;
             case 'auth/too-many-requests':
-                title = 'Security Lockout';
-                description = 'Excessive attempts detected. Access suspended temporarily.';
+                title = 'Too Many Attempts';
+                description = 'Access is temporarily locked. Please try again later.';
                 break;
             case 'auth/user-disabled':
-                title = 'Access Denied';
-                description = 'Your account has been deactivated. Contact administration.';
+                title = 'Account Disabled';
+                description = 'Your account has been deactivated. Please contact support.';
                 break;
         }
 
@@ -111,20 +111,20 @@ export default function LoginPage() {
   
   const handlePasswordReset = async () => {
     if (!auth || !resetEmail) {
-        toast({ variant: 'destructive', title: 'Email required', description: 'Enter an email to initiate recovery.' });
+        toast({ variant: 'destructive', title: 'Email required', description: 'Enter your email to reset your password.' });
         return;
     }
     setIsResetting(true);
     try {
         await sendPasswordResetEmail(auth, resetEmail);
-        toast({ title: 'Recovery Dispatched', description: 'Check your inbox for the reset synchronization link.' });
+        toast({ title: 'Email Sent', description: 'Check your inbox for a link to reset your password.' });
         setIsForgotPasswordOpen(false);
         setResetEmail('');
     } catch (error: any) {
         toast({ 
             variant: 'destructive', 
-            title: 'Dispatch Failed', 
-            description: 'Could not send recovery email. Verify address and retry.' 
+            title: 'Error', 
+            description: 'Could not send reset email. Please try again.' 
         });
     } finally {
         setIsResetting(false);
@@ -192,13 +192,13 @@ export default function LoginPage() {
             <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
                     <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign In</h2>
-                    <p className="text-slate-500 font-bold text-lg">Access your account center.</p>
+                    <p className="text-slate-500 font-bold text-lg">Welcome back! Please enter your details.</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                     <div className="space-y-6">
                         <div className="space-y-2 group">
-                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Email Address</Label>
+                            <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 transition-colors group-focus-within:text-primary">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -214,7 +214,7 @@ export default function LoginPage() {
                             <div className="flex items-center justify-between px-1">
                                 <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors group-focus-within:text-primary">Password</Label>
                                 <button type="button" onClick={() => setIsForgotPasswordOpen(true)} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline underline-offset-4">
-                                    Forgot?
+                                    Forgot password?
                                 </button>
                             </div>
                             <div className="relative">
@@ -240,15 +240,15 @@ export default function LoginPage() {
                     </div>
 
                     <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.3em] shadow-2xl shadow-primary/20 transition-all active:scale-[0.98] rounded-2xl bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader className="text-white" /> : 'Authorize & Log In'}
+                        {isSubmitting ? <Loader className="text-white" /> : 'Sign In'}
                     </Button>
                 </form>
 
                 <div className="text-center space-y-6 pt-4">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        New Entity?{" "}
+                        Don't have an account?{" "}
                         <Link href="/signup" className="text-primary font-black hover:underline underline-offset-4">
-                            Create Account
+                            Sign Up
                         </Link>
                     </p>
                 </div>
@@ -260,14 +260,14 @@ export default function LoginPage() {
       <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
             <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-8">
             <DialogHeader className="space-y-4">
-                <DialogTitle className="text-2xl font-black tracking-tight">Account Recovery</DialogTitle>
+                <DialogTitle className="text-2xl font-black tracking-tight">Reset Password</DialogTitle>
                 <DialogDescription className="text-slate-500 font-bold leading-relaxed">
-                    Enter your registered email address to receive a recovery synchronization link.
+                    Enter your email address and we'll send you a link to reset your password.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-6">
                 <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</Label>
+                    <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</Label>
                     <Input
                         id="reset-email"
                         type="email"
@@ -281,10 +281,10 @@ export default function LoginPage() {
             </div>
             <DialogFooter className="flex flex-col gap-3 sm:flex-col sm:gap-3 sm:justify-center">
                 <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail} className="w-full h-14 font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-primary/10">
-                    {isResetting ? <Loader className="text-white" /> : 'Send Recovery Link'}
+                    {isResetting ? <Loader className="text-white" /> : 'Send Reset Link'}
                 </Button>
                 <DialogClose asChild>
-                    <Button type="button" variant="ghost" disabled={isResetting} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Discard</Button>
+                    <Button type="button" variant="ghost" disabled={isResetting} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Cancel</Button>
                 </DialogClose>
             </DialogFooter>
             </DialogContent>
