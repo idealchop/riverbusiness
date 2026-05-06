@@ -142,7 +142,7 @@ export default function LoginPage() {
                         The definitive platform to run <span className="text-primary-light">essential needs</span> for your business.
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed">
-                        Turn everyday operational requirements into automated, connected experiences—from hydration to workspace optimization.
+                        Everything in a single platform for your business needs.
                     </p>
                 </div>
             </div>
