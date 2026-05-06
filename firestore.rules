@@ -13,63 +13,41 @@ service cloud.firestore {
       return request.auth == null || (request.auth != null && request.auth.token.email == 'admin@riverph.com');
     }
 
+    function isOrgOwner() {
+        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hrRole == 'owner';
+    }
+
     // Admins have global read/write access to all documents for management purposes.
-    // This rule is essential for Cloud Functions running with admin privileges.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
     match /users/{userId} {
       allow get: if true;
-      
-      // Allow the owner or an admin to update any field in the user profile.
-      // This ensures the email update is saved to Firestore.
       allow update: if isOwner(userId) || isAdmin();
-
       allow delete: if isOwner(userId) || isAdmin();
-      
-      allow create: if request.auth != null && 
-                      get(/databases/$(database)/documents/unclaimedProfiles/$(request.resource.data.clientId)) != null &&
-                      !exists(/databases/$(database)/documents/users/$(request.auth.uid));
-
+      allow create: if request.auth != null;
       allow list, read: if isOwner(userId) || isAdmin() || 
                        (request.auth != null && resource.data.parentId == request.auth.uid) ||
                        (request.auth != null && request.query.where.get('parentId')[2] == request.auth.uid);
-    }
-    
-    match /users/{userId}/transactions/{transactionId} {
-      allow read, list: if isOwner(userId) || isAdmin();
-    }
-    
-    match /users/{userId}/chatMessages/{messageId} {
-        allow read, write: if isOwner(userId) || isAdmin();
-    }
-
-    match /users/{userId}/payments/{paymentId} {
-      allow read, list: if isOwner(userId) || isAdmin() ||
-                         (request.auth != null && get(/databases/$(database)/documents/users/$(userId)).data.parentId == request.auth.uid);
-      allow write, create, update, delete: if isOwner(userId) || isAdmin();
     }
     
     match /unclaimedProfiles/{clientId} {
       allow read, delete: if request.auth != null;
     }
 
-    match /waterStations/{stationId} {
-      allow read: if request.auth != null;
-    }
-    match /waterStations/{stationId}/{document=**} {
-        allow read, list: if request.auth != null;
-    }
-    match /schedules/currentSchedule {
-      allow read: if request.auth != null;
+    match /unclaimedEmployees/{inviteId} {
+      allow read, delete: if request.auth != null;
+      // Allow Org Owners to create invitations for their team
+      allow create: if request.auth != null && (isAdmin() || isOrgOwner());
+      allow list: if isAdmin() || (request.auth != null && request.query.where.get('email')[2] == request.auth.token.email);
     }
 
-    match /{path=**}/payments/{paymentId} {
-      allow list: if isAdmin();
-    }
-    match /{path=**}/refillRequests/{requestId} {
-      allow list: if isAdmin();
+    match /waterStations/{stationId} {
+      allow read: if request.auth != null;
+      match /{document=**} {
+          allow read, list: if request.auth != null;
+      }
     }
 
     match /publicSanitationLinks/{linkId} {
@@ -77,15 +55,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /users/{userId}/sanitationVisits/{visitId} {
-      allow write, delete: if isOwner(userId) || isAdmin();
-      allow read: if true;
-      allow update: if (request.auth == null || isAdmin()) && request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature', 'clientRepName', 'officerSignatureDate', 'clientSignatureDate']);
-    }
-
-    // The generic isAdmin() rule at the top-level handles Cloud Function access.
-    // This rule allows the document owner to perform any action on their own subcollections.
+    // Allow the document owner OR an admin to perform any action on user subcollections.
      match /users/{userId}/{subcollection}/{docId} {
       allow read, write, create, update, delete: if isOwner(userId) || isAdmin();
     }

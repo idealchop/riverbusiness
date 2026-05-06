@@ -29,11 +29,11 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
-import { Mail, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -73,46 +73,52 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
     if (!firestore || !companyId) return;
     setIsSubmitting(true);
     
-    try {
-      const invitationRef = collection(firestore, 'unclaimedEmployees');
-      
-      const invitationData = {
-        name: values.name,
-        email: values.email.toLowerCase().trim(),
-        contactNumber: values.contactNumber,
-        businessName: 'Employee Profile',
-        companyId: companyId,
-        hrRole: 'employee',
-        role: 'User',
-        accountStatus: 'Active',
-        createdAt: serverTimestamp(),
-        totalConsumptionLiters: 0,
-        hrProfile: {
-          firstName: values.name.split(' ')[0],
-          lastName: values.name.split(' ').slice(1).join(' '),
-          position: values.position,
-          department: values.department,
-          salaryType: values.salaryType,
-          rate: values.rate,
-          startDate: values.startDate,
-          status: 'Active'
-        }
-      };
+    const invitationRef = doc(collection(firestore, 'unclaimedEmployees'));
+    
+    const invitationData = {
+      id: invitationRef.id,
+      name: values.name,
+      email: values.email.toLowerCase().trim(),
+      contactNumber: values.contactNumber || '',
+      businessName: 'Employee Profile',
+      companyId: companyId,
+      hrRole: 'employee',
+      role: 'User',
+      accountStatus: 'Active',
+      createdAt: serverTimestamp(),
+      totalConsumptionLiters: 0,
+      hrProfile: {
+        firstName: values.name.split(' ')[0],
+        lastName: values.name.split(' ').slice(1).join(' '),
+        position: values.position,
+        department: values.department,
+        salaryType: values.salaryType,
+        rate: values.rate,
+        startDate: values.startDate,
+        status: 'Active'
+      }
+    };
 
-      await addDoc(invitationRef, invitationData);
-      
-      toast({ 
-        title: 'Invitation generated', 
-        description: `An email invitation has been dispatched to ${values.email}.` 
+    setDoc(invitationRef, invitationData)
+      .then(() => {
+        toast({ 
+          title: 'Invitation generated', 
+          description: `An email invitation has been dispatched to ${values.email}.` 
+        });
+        onOpenChange(false);
+        form.reset();
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: invitationRef.path,
+          operation: 'create',
+          requestResourceData: invitationData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-      onOpenChange(false);
-      form.reset();
-    } catch (error) {
-      console.error("Error creating employee invitation:", error);
-      toast({ variant: 'destructive', title: 'Operation failed' });
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
