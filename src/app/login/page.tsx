@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets, ArrowRight, Mail } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -142,7 +142,7 @@ export default function LoginPage() {
                     <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1] text-white">
                         The definitive platform to run <span className="text-primary-light">essential needs</span> for your business.
                     </h1>
-                    <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed max-w-lg">
+                    <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed max-lg">
                         Turn everyday operational requirements into automated, connected experiences—from hydration to energy and beyond.
                     </p>
                 </div>
