@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets, ArrowRight, Mail } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, Zap, BarChart3, Globe, Users, Target, Sun, Umbrella, Droplets, ArrowRight, Mail, Briefcase } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -143,7 +143,7 @@ export default function LoginPage() {
                         The definitive platform to run <span className="text-primary-light">essential needs</span> for your business.
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-400 font-medium leading-relaxed max-lg">
-                        Turn everyday operational requirements into automated, connected experiences—from hydration to energy and beyond.
+                        Turn everyday operational requirements into automated, connected experiences—from hydration to workspace optimization.
                     </p>
                 </div>
             </div>
@@ -175,6 +175,15 @@ export default function LoginPage() {
                         <div>
                             <h4 className="font-bold text-xs uppercase tracking-wider">Customer (CRM)</h4>
                             <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Advanced relationship tracking and intelligence.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="p-2.5 h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                            <Briefcase className="h-5 w-5 text-primary-light" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-xs uppercase tracking-wider">Workspace</h4>
+                            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Unified facility management and office optimization.</p>
                         </div>
                     </div>
                     <div className="flex gap-4">
@@ -313,9 +322,11 @@ export default function LoginPage() {
             <DialogContent className="sm:max-w-md rounded-2xl border-none shadow-2xl">
             <DialogHeader>
                 <DialogTitle className="text-xl font-bold">Account Access Recovery</DialogTitle>
-                <DialogDescription className="text-slate-600">
-                Enter your registered business email and we'll send a secure authorization link to reset your password.
-                </DialogDescription>
+                <DialogHeader>
+                    <DialogDescription className="text-slate-600">
+                    Enter your registered business email and we'll send a secure authorization link to reset your password.
+                    </DialogDescription>
+                </DialogHeader>
             </DialogHeader>
             <div className="py-4">
                 <div className="space-y-2">
