@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase, Mail } from 'lucide-react';
+import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -160,7 +160,7 @@ export default function LoginPage() {
                 <div className="mb-16">
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-white">River Philippines</span>
                 </div>
-                <div className="space-y-4 max-w-xl">
+                <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
                         The platform to run <span className="text-primary">essential needs</span> for business.
                     </h1>
@@ -181,15 +181,6 @@ export default function LoginPage() {
                             <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-white group-hover:text-primary transition-colors">{pillar.title}</h4>
                         </div>
                     ))}
-                </div>
-                
-                <div className="mt-16 pt-8 border-t border-white/5 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">
-                    <span className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                        Operating System for Commerce
-                    </span>
-                    <div className="h-px bg-white/5 flex-1" />
-                    <span>Est. 2025</span>
                 </div>
             </div>
         </div>
