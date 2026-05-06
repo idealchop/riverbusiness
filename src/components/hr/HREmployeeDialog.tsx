@@ -29,11 +29,11 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Separator } from '@/components/ui/separator';
-import { Info, CheckCircle2, Mail, SendHorizontal } from 'lucide-react';
+import { CheckCircle2, Mail } from 'lucide-react';
 
 const employeeSchema = z.object({
   name: z.string().min(1, 'Full name is required'),
@@ -70,7 +70,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
     }
   });
 
-  const onSubmit = async (values: EmployeeFormValues) => {
+  const onSubmit = (values: EmployeeFormValues) => {
     if (!firestore || !companyId) return;
     setIsSubmitting(true);
     
@@ -78,8 +78,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
     
     const invitationData = {
       id: invitationRef.id,
-      name: values.name,
-      email: values.email.toLowerCase().trim(),
+      name: values.name ?? '',
+      email: values.email?.toLowerCase().trim() ?? '',
       contactNumber: values.contactNumber ?? '',
       businessName: 'Employee Profile',
       companyId: companyId,
@@ -89,30 +89,32 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
       createdAt: serverTimestamp(),
       totalConsumptionLiters: 0,
       hrProfile: {
-        firstName: values.name.split(' ')[0],
-        lastName: values.name.split(' ').slice(1).join(' ') || '',
-        position: values.position,
-        department: values.department,
-        salaryType: values.salaryType,
-        rate: values.rate,
-        startDate: values.startDate,
+        firstName: values.name?.split(' ')[0] ?? '',
+        lastName: values.name?.split(' ').slice(1).join(' ') || '',
+        position: values.position ?? 'Staff',
+        department: values.department ?? 'General',
+        salaryType: values.salaryType ?? 'monthly',
+        rate: Number(values.rate) || 0,
+        startDate: values.startDate ?? new Date().toISOString().split('T')[0],
         status: 'Active'
       }
     };
 
-    try {
-      await setDoc(invitationRef, invitationData);
-      setIsSuccess(true);
-      toast({ 
-        title: 'Invitation generated', 
-        description: `An email invitation has been dispatched to ${values.email}.` 
+    // Follow the Non-Blocking Mutation Pattern
+    setDoc(invitationRef, invitationData)
+      .then(() => {
+        setIsSuccess(true);
+        setIsSubmitting(false);
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: invitationRef.path,
+            operation: 'create',
+            requestResourceData: invitationData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setIsSubmitting(false);
       });
-    } catch (error) {
-      console.error("Error creating invitation:", error);
-      toast({ variant: 'destructive', title: 'Operation failed', description: 'Could not send invitation.' });
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleClose = () => {
@@ -239,13 +241,6 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
                             </FormItem>
                             )}
                         />
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-start gap-4">
-                        <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                        <p className="text-xs font-medium text-blue-800/80 leading-relaxed">
-                            An automated invitation will be sent to the employee. They will be linked to this organization upon signing up.
-                        </p>
                     </div>
 
                     <DialogFooter className="pt-4">
