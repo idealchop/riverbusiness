@@ -2,14 +2,15 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight } from 'lucide-react';
+import { UserPlus, Building, PlusCircle, Users, Droplets, Receipt, Activity, ArrowUpRight, DollarSign, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppUser, WaterStation, RefillRequest, Payment } from '@/lib/types';
+import type { AppUser, WaterStation, RefillRequest, Payment, Delivery } from '@/lib/types';
 import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, where, collectionGroup, doc, Timestamp } from 'firebase/firestore';
 import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
 import { AdminDashboardSkeleton } from './AdminDashboardSkeleton';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 
 import { UserManagementTab } from './tabs/UserManagementTab';
 import { StationManagementTab } from './tabs/StationManagementTab';
@@ -18,6 +19,16 @@ import { StationProfileDialog } from './dialogs/StationProfileDialog';
 import { UserDetailsDialog } from './dialogs/UserDetailsDialog';
 import { cn } from '@/lib/utils';
 
+const toSafeDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
+    if (timestamp instanceof Timestamp) return timestamp.toDate();
+    if (typeof timestamp === 'string') {
+        const date = new Date(timestamp);
+        if (!isNaN(date.getTime())) return date;
+    }
+    if (typeof timestamp === 'object' && 'seconds' in timestamp) return new Date(timestamp.seconds * 1000);
+    return null;
+};
 
 export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const { user: authUser } = useUser();
@@ -35,6 +46,9 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const refillRequestsQuery = useMemoFirebase(() => (firestore && isAdmin) ? query(collectionGroup(firestore, 'refillRequests')) : null, [firestore, isAdmin]);
     const { data: refillRequests, isLoading: refillRequestsLoading } = useCollection<RefillRequest>(refillRequestsQuery);
     
+    const allDeliveriesQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'deliveries') : null, [firestore]);
+    const { data: allDeliveries, isLoading: allDeliveriesLoading } = useCollection<Delivery>(allDeliveriesQuery);
+
     const allPaymentsQuery = useMemoFirebase(() => firestore ? collectionGroup(firestore, 'payments') : null, [firestore]);
     const { data: allPayments, isLoading: allPaymentsLoading } = useCollection<Payment & { parentId: string }>(allPaymentsQuery, {
         idField: 'parentId'
@@ -53,19 +67,81 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     const adminUserDocRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: adminUser } = useDoc<AppUser>(adminUserDocRef);
 
+    const salesMetrics = useMemo(() => {
+        if (!allDeliveries) return { currentMonthSales: 0, lifetimeSales: 0, diff: 0, trend: 'same' };
+
+        const now = new Date();
+        const curStart = startOfMonth(now);
+        const curEnd = endOfMonth(now);
+        const lastStart = startOfMonth(subMonths(now, 1));
+        const lastEnd = endOfMonth(subMonths(now, 1));
+
+        let current = 0;
+        let last = 0;
+        let lifetime = 0;
+
+        allDeliveries.forEach(d => {
+            const dDate = toSafeDate(d.date);
+            const amt = d.amount || 0;
+            lifetime += amt;
+            if (dDate) {
+                if (isWithinInterval(dDate, { start: curStart, end: curEnd })) current += amt;
+                if (isWithinInterval(dDate, { start: lastStart, end: lastEnd })) last += amt;
+            }
+        });
+
+        const diff = last === 0 ? (current > 0 ? 100 : 0) : ((current - last) / last) * 100;
+        const trend = diff > 0 ? 'increase' : (diff < 0 ? 'decrease' : 'same');
+
+        return {
+            currentMonthSales: current,
+            lifetimeSales: lifetime,
+            diff: Math.abs(diff),
+            trend
+        };
+    }, [allDeliveries]);
+
     const stats = useMemo(() => {
         const totalClients = (appUsers?.length || 0) + (unclaimedProfiles?.length || 0);
         const activeRefills = refillRequests?.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length || 0;
-        const pendingPayments = allPayments?.filter(p => p.status === 'Pending Review' || p.status === 'Overdue').length || 0;
-        const operationalStations = waterStations?.filter(s => s.status === 'Operational').length || 0;
 
         return [
-            { title: 'Total Clients', value: totalClients, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { title: 'Active Refills', value: activeRefills, icon: Droplets, color: 'text-amber-500', bg: 'bg-amber-50' },
-            { title: 'Pending Actions', value: pendingPayments, icon: Receipt, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { title: 'Operational Stations', value: operationalStations, icon: Activity, color: 'text-green-500', bg: 'bg-green-50' },
+            { 
+                title: 'Total Clients', 
+                value: totalClients.toLocaleString(), 
+                icon: Users, 
+                color: 'text-blue-500', 
+                bg: 'bg-blue-50',
+                description: 'Total active and pending profiles'
+            },
+            { 
+                title: 'Active Refills', 
+                value: activeRefills, 
+                icon: Droplets, 
+                color: 'text-amber-500', 
+                bg: 'bg-amber-50',
+                description: 'Requests in production or transit'
+            },
+            { 
+                title: 'Current Total Sales', 
+                value: `₱${salesMetrics.currentMonthSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
+                icon: DollarSign, 
+                color: 'text-purple-500', 
+                bg: 'bg-purple-50',
+                trend: salesMetrics.trend,
+                diff: salesMetrics.diff,
+                description: salesMetrics.trend === 'increase' ? 'Performance is up vs last month' : salesMetrics.trend === 'decrease' ? 'Performance is down vs last month' : 'No change vs last month'
+            },
+            { 
+                title: 'Lifetime Sales', 
+                value: `₱${salesMetrics.lifetimeSales.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
+                icon: Activity, 
+                color: 'text-green-500', 
+                bg: 'bg-green-50',
+                description: 'Total revenue since inception'
+            },
         ];
-    }, [appUsers, unclaimedProfiles, refillRequests, allPayments, waterStations]);
+    }, [appUsers, unclaimedProfiles, refillRequests, salesMetrics]);
 
     React.useEffect(() => {
         const openAccountDialog = () => setIsAccountDialogOpen(true);
@@ -102,7 +178,7 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
     };
 
 
-    if (usersLoading || stationsLoading || unclaimedProfilesLoading) {
+    if (usersLoading || stationsLoading || unclaimedProfilesLoading || allDeliveriesLoading) {
         return <AdminDashboardSkeleton />;
     }
 
@@ -121,9 +197,24 @@ export function AdminDashboard({ isAdmin }: { isAdmin: boolean }) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stat.value}</div>
-                            <p className="text-[10px] text-muted-foreground mt-1 flex items-center">
-                                Updated just now <ArrowUpRight className="ml-1 h-2 w-2" />
-                            </p>
+                            <div className="flex items-center mt-1 gap-2">
+                                {stat.trend && (
+                                    <div className={cn(
+                                        "flex items-center text-[10px] font-bold uppercase",
+                                        stat.trend === 'increase' && 'text-green-600',
+                                        stat.trend === 'decrease' && 'text-red-600',
+                                        stat.trend === 'same' && 'text-muted-foreground'
+                                    )}>
+                                        {stat.trend === 'increase' && <TrendingUp className="h-3 w-3 mr-0.5" />}
+                                        {stat.trend === 'decrease' && <TrendingDown className="h-3 w-3 mr-0.5" />}
+                                        {stat.trend === 'same' && <Minus className="h-3 w-3 mr-0.5" />}
+                                        {stat.diff !== undefined && `${stat.diff.toFixed(0)}%`}
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-muted-foreground truncate">
+                                    {stat.description}
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
                 ))}
