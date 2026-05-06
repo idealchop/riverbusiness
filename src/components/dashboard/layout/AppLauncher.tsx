@@ -9,8 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { 
   LayoutGrid, 
-  CheckCircle2,
-  Pencil
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -70,12 +69,9 @@ export function AppLauncher() {
           <LayoutGrid className="h-5 w-5 text-slate-600" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[320px] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none rounded-[2.5rem] bg-[#f8faff]">
-        <div className="flex items-center justify-between mb-8">
+      <PopoverContent align="end" className="w-[320px] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none rounded-[2.5rem] bg-white">
+        <div className="flex items-center justify-between mb-8 px-1">
             <h3 className="text-xl font-medium text-slate-800 tracking-tight">Your apps</h3>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
-                <Pencil className="h-5 w-5" />
-            </Button>
         </div>
         
         <div className="grid grid-cols-3 gap-y-8 gap-x-2">
@@ -87,7 +83,7 @@ export function AppLauncher() {
                 <div className="flex flex-col items-center justify-center gap-3">
                   <div className={cn(
                     "flex items-center justify-center h-16 w-16 rounded-full transition-all duration-300 relative",
-                    isActive ? "bg-primary/20" : "group-hover:bg-slate-200/50 group-focus:bg-slate-200/50"
+                    isActive ? "bg-primary/10" : "group-hover:bg-slate-50 group-focus:bg-slate-50"
                   )}>
                     <div className="relative h-8 w-8 transition-transform duration-300 group-hover:scale-110">
                       <Image 
