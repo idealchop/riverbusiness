@@ -18,10 +18,13 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { Logo } from '@/components/icons';
+import { UserMenu } from '@/components/dashboard/layout/UserMenu';
+import { MyAccountDialog } from '@/components/MyAccountDialog';
+import { signOut } from 'firebase/auth';
 
 const navItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -34,6 +37,7 @@ const navItems = [
 export default function HRLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const auth = useAuth();
   const { user: authUser, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -42,6 +46,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     [firestore, authUser]
   );
   const { data: user, isLoading: isUserDocLoading } = useDoc(userDocRef);
+
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!isUserLoading && !authUser) {
@@ -53,9 +59,12 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     return <FullScreenLoader />;
   }
 
-  const handleOpenMyAccount = () => {
-    window.dispatchEvent(new CustomEvent('open-my-account'));
-  };
+  const handleLogout = () => {
+    if (!auth) return;
+    signOut(auth).then(() => {
+      router.push('/login');
+    })
+  }
 
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
@@ -111,14 +120,11 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <div 
-              className="items-center cursor-pointer group flex p-1 rounded-full hover:bg-slate-100 transition-colors"
-              onClick={handleOpenMyAccount}
-            >
-              <div className="h-8 w-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-slate-600 transition-transform group-hover:scale-105">
-                 <UserCircle className="h-5 w-5" />
-              </div>
-            </div>
+            <UserMenu 
+              user={user} 
+              onOpenSettings={() => setIsAccountDialogOpen(true)} 
+              onLogout={handleLogout} 
+            />
             <AppLauncher />
           </div>
         </header>
@@ -129,6 +135,18 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+      
+      <MyAccountDialog
+        user={user}
+        authUser={authUser}
+        planImage={null}
+        paymentHistory={[]}
+        paymentsLoading={false}
+        onLogout={handleLogout}
+        onPayNow={() => {}}
+        isOpen={isAccountDialogOpen}
+        onOpenChange={setIsAccountDialogOpen}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { MobileNav } from '@/components/dashboard/layout/MobileNav';
 import { PaymentDialog } from '@/components/dashboard/dialogs/PaymentDialog';
 import { Logo } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
+import { UserMenu } from '@/components/dashboard/layout/UserMenu';
 
 export default function DashboardLayout({
   children,
@@ -206,7 +207,6 @@ export default function DashboardLayout({
       window.dispatchEvent(new CustomEvent('open-compliance', { detail: { tab: 'compliance' } }));
   }
 
-  const displayPhoto = user?.photoURL;
   const userFirstName = user?.name?.split(' ')[0] || 'friend';
 
   return (
@@ -246,6 +246,12 @@ export default function DashboardLayout({
 
               <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block bg-slate-200" />
 
+              <UserMenu 
+                user={user} 
+                onOpenSettings={() => setIsAccountDialogOpen(true)} 
+                onLogout={handleLogout} 
+              />
+              
               <MyAccountDialog
                 user={user}
                 authUser={authUser}
@@ -257,14 +263,7 @@ export default function DashboardLayout({
                 isOpen={isAccountDialogOpen}
                 onOpenChange={setIsAccountDialogOpen}
                 initialTab={initialAccountDialogTab}
-              >
-                <div className="items-center cursor-pointer group hidden sm:flex p-1 rounded-full hover:bg-slate-100 transition-colors">
-                  <Avatar className="h-8 w-8 border border-slate-200 shadow-sm transition-transform group-hover:scale-105">
-                      <AvatarImage src={displayPhoto ?? undefined} alt={user?.name || ''} />
-                      <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">{user?.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                </div>
-              </MyAccountDialog>
+              />
             </div>
           </header>
 

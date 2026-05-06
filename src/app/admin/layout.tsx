@@ -17,6 +17,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/icons';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
+import { UserMenu } from '@/components/dashboard/layout/UserMenu';
+import { AdminMyAccountDialog } from '@/components/AdminMyAccountDialog';
+import { signOut } from 'firebase/auth';
 
 const NOTIFICATION_ICONS: { [key: string]: React.ElementType } = {
   payment: Receipt,
@@ -51,6 +54,7 @@ export default function AdminLayout({
   const hasUnreadChatMessages = useMemo(() => (usersWithUnreadMessages?.length || 0) > 0, [usersWithUnreadMessages]);
   
   const [unreadNotifications, setUnreadNotifications] = useState<NotificationType[]>([]);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   
   useEffect(() => {
     if (notifications) {
@@ -83,9 +87,12 @@ export default function AdminLayout({
     }
   }, [authUser, isUserLoading, router]);
 
-  const handleOpenMyAccount = () => {
-    window.dispatchEvent(new CustomEvent('admin-open-my-account'));
-  };
+  const handleLogout = () => {
+    if (!auth) return;
+    signOut(auth).then(() => {
+      router.push('/login');
+    })
+  }
 
   if (!isMounted || !auth || isUserLoading) {
     return <FullScreenLoader />;
@@ -193,16 +200,17 @@ export default function AdminLayout({
 
           <Separator orientation="vertical" className="h-6 mx-1 bg-slate-200" />
 
-          <Button
-            variant="ghost"
-            className="flex items-center p-1 rounded-full hover:bg-slate-100 transition-colors group"
-            onClick={handleOpenMyAccount}
-          >
-            <Avatar className="h-8 w-8 border border-slate-200 shadow-sm transition-transform group-hover:scale-105">
-              <AvatarImage src={adminUser?.photoURL ?? undefined} alt="Admin" />
-              <AvatarFallback className="bg-slate-900 text-white font-bold text-xs"><User className="h-4 w-4" /></AvatarFallback>
-            </Avatar>
-          </Button>
+          <UserMenu 
+            user={adminUser} 
+            onOpenSettings={() => setIsAccountDialogOpen(true)} 
+            onLogout={handleLogout} 
+          />
+          
+          <AdminMyAccountDialog
+            adminUser={adminUser}
+            isOpen={isAccountDialogOpen}
+            onOpenChange={setIsAccountDialogOpen}
+          />
         </div>
       </header>
       <main className="flex-1 p-4 sm:p-6 overflow-auto">
