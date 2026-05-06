@@ -21,7 +21,8 @@ import {
     getWelcomeUnclaimedTemplate,
     getSanitationScheduledTemplate,
     getSanitationReportTemplate,
-    getPaymentReminderTemplate
+    getPaymentReminderTemplate,
+    getEmployeeInvitationTemplate
 } from './email';
 
 // Export all billing functions
@@ -602,6 +603,41 @@ export const onunclaimedprofilecreate = onDocumentCreated({
             html: template.html 
         });
     } catch (error) { logger.error(`Failed welcome email`, error); }
+});
+
+export const onunclaimedemployeecreate = onDocumentCreated({
+    document: "unclaimedEmployees/{inviteId}",
+    secrets: ["BREVO_API_KEY"]
+}, async (event) => {
+    if (!event.data) return;
+    const invite = event.data.data();
+    const db = getFirestore();
+    
+    const companyId = invite.companyId;
+    let businessName = "your company";
+    
+    const companyDoc = await db.collection('users').where('clientId', '==', companyId).limit(1).get();
+    if (!companyDoc.empty) {
+        businessName = companyDoc.docs[0].data().businessName;
+    }
+
+    const signupUrl = `https://app.riverph.com/signup?email=${encodeURIComponent(invite.email)}&type=employee`;
+    const template = getEmployeeInvitationTemplate(invite.name, businessName, signupUrl);
+
+    if (invite.email) {
+        try {
+            await sendEmail({
+                to: invite.email,
+                bcc: getBCCList(),
+                subject: template.subject,
+                text: `You've been invited to join ${businessName} on River Business. Sign up here: ${signupUrl}`,
+                html: template.html
+            });
+            logger.info(`Invitation email dispatched to ${invite.email}`);
+        } catch (error) {
+            logger.error(`Failed to send employee invitation email`, error);
+        }
+    }
 });
 
 export const ondeliverycreate = onDocumentCreated({

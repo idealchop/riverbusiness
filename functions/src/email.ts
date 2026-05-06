@@ -420,118 +420,30 @@ export function getRefillRequestTemplate(businessName: string, status: string, r
   };
 }
 
-export function getSanitationScheduledTemplate(businessName: string, officerName: string, date: string) {
+export function getEmployeeInvitationTemplate(employeeName: string, businessName: string, signupUrl: string) {
   const content = `
-    <p class="greeting">Scheduled: Your Office Sanitation Visit 🗓️</p>
+    <p class="greeting">Hello ${employeeName}, 👋</p>
     <p class="body-text">
-      Hi ${businessName}, we've scheduled a professional sanitation visit for your office water equipment. Keeping your dispensers clean is a core part of our quality guarantee.
+      You've been invited to join the <strong>${businessName}</strong> team on River Business.
     </p>
-    <div class="status-badge">
-      <span class="badge" style="background-color: ${BRAND_PRIMARY}15; color: ${BRAND_PRIMARY}; border: 1.5px solid ${BRAND_PRIMARY};">
-        Visit Scheduled
-      </span>
+    <p class="body-text">
+      River is our centralized platform for managing team operations. Once you join, you'll be able to:
+    </p>
+    <ul style="color: #475569; font-size: 14px; line-height: 1.8; margin-bottom: 24px;">
+      <li>Clock in and out from the station</li>
+      <li>File and track leave applications</li>
+      <li>View your 360 employment profile and logs</li>
+    </ul>
+    <div class="btn-container">
+      <a href="${signupUrl}" class="btn">Activate my account</a>
     </div>
-    <div class="details-box">
-      <h3 class="details-title">Appointment Details</h3>
-      <div class="detail-item">
-        <div class="detail-icon">📅</div>
-        <div>
-          <p class="detail-label">Scheduled Date</p>
-          <p class="detail-value">${date}</p>
-        </div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-icon">🧑‍🔧</div>
-        <div>
-          <p class="detail-label">Assigned Officer</p>
-          <p class="detail-value">${officerName || 'TBD'}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        Our officer will perform a comprehensive cleaning and safety check. You don't need to do anything—just keep the area accessible.
-      </p>
-    </div>
+    <p class="next-step">
+      Click the button above to set up your password and launch your workspace. Please ensure you use this email address during sign-up.
+    </p>
   `;
 
   return {
-    subject: `Confirmed: Sanitation Visit Scheduled for ${date} 🗓️`,
-    html: getEmailWrapper(content, 'Sanitation Visit Scheduled')
-  };
-}
-
-export function getSanitationReportTemplate(businessName: string, officerName: string, date: string, scoreRate: string) {
-  const content = `
-    <p class="greeting">Quality Certified, ${businessName}! ✨</p>
-    <p class="body-text">
-      Your office water sanitation visit is complete. Our quality officer, <strong>${officerName}</strong>, has performed a thorough cleaning and inspection of your equipment to ensure it meets our strict hygiene standards.
-    </p>
-    <div class="status-badge">
-      <span class="badge" style="background-color: #10b98115; color: #10b981; border: 1.5px solid #10b981;">
-        Sanitation Completed
-      </span>
-    </div>
-    <div class="details-box">
-      <h3 class="details-title">Service Results</h3>
-      <div class="detail-item">
-        <div class="detail-icon">📈</div>
-        <div>
-          <p class="detail-label">Sanitation Score</p>
-          <p class="detail-value" style="color: ${BRAND_PRIMARY}; font-size: 24px;">${scoreRate}</p>
-        </div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-icon">📅</div>
-        <div>
-          <p class="detail-label">Service Date</p>
-          <p class="detail-value">${date}</p>
-        </div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-icon">🧑‍🔧</div>
-        <div>
-          <p class="detail-label">Quality Officer</p>
-          <p class="detail-value">${officerName}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        The full sanitation checklist and digital sign-off are now available in your dashboard. Keeping your equipment clean is part of our commitment to your team's wellness.
-      </p>
-    </div>
-  `;
-
-  return {
-    subject: `Certified: Your Office Water Sanitation is Complete (${scoreRate}) ✨`,
-    html: getEmailWrapper(content, 'Equipment Quality Check')
-  };
-}
-
-export function getPaymentReminderTemplate(businessName: string, amount: string, period: string) {
-  const content = `
-    <p class="greeting">Hi ${businessName}, 📄</p>
-    <p class="body-text">
-      This is a friendly reminder from our operating system regarding your account statement for <strong>${period}</strong>. To ensure your automated hydration service continues without delay, please settle your outstanding balance.
-    </p>
-    <div class="details-box">
-      <h3 class="details-title">Statement Overview</h3>
-      <div class="detail-item">
-        <div class="detail-icon">💰</div>
-        <div>
-          <p class="detail-label">Balance Due</p>
-          <p class="detail-value">₱${amount}</p>
-        </div>
-      </div>
-      <p class="next-step" style="border-bottom: 1px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 16px;">
-        <strong>Security Notice:</strong> For your privacy, the attached Statement of Account is password-protected. Please use your <strong>Client ID</strong> to open the file.
-      </p>
-      <p class="body-text" style="font-size: 13px; margin-bottom: 0;">
-        Follow the instructions below to pay via QR or Bank Transfer.
-      </p>
-    </div>
-    ${PAYMENT_OPTIONS_BLOCK}
-  `;
-
-  return {
-    subject: `Quick heads-up: Your statement for ${period} is ready 📑`,
-    html: getEmailWrapper(content, 'Account Statement Reminder')
+    subject: `Invitation: Join ${businessName} on River Business 🌊`,
+    html: getEmailWrapper(content, 'Welcome to the Team')
   };
 }

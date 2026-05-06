@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase } from 'lucide-react';
-import { useAuth } from '@/firebase';
+import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase, MailCheck } from 'lucide-react';
+import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from '@/components/ui/loader';
+import { collection, query, where } from 'firebase/firestore';
 
 const signupSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -31,11 +32,16 @@ const servicePillars = [
   { id: '06', title: 'Business Insurance', icon: Umbrella },
 ];
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+
+  const initialEmail = searchParams.get('email') || '';
+  const isInvited = !!initialEmail;
 
   const {
     register,
@@ -43,7 +49,17 @@ export default function SignupPage() {
     formState: { errors, isSubmitting },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+        email: initialEmail
+    }
   });
+
+  // Check for company name if it's an employee invitation
+  const inviteQuery = useMemoFirebase(
+    () => (firestore && initialEmail) ? query(collection(firestore, 'unclaimedEmployees'), where('email', '==', initialEmail)) : null,
+    [firestore, initialEmail]
+  );
+  const { data: inviteData } = useCollection(inviteQuery);
 
   const onSubmit = async (data: SignupFormValues) => {
     if (!auth) {
@@ -58,7 +74,7 @@ export default function SignupPage() {
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
       toast({ title: "Account Created", description: "Taking you to your new account..." });
-      router.push('/claim-account');
+      router.push('/onboarding');
     } catch (error: any) {
         let title = 'Sign Up Failed';
         let description = 'Could not create your account. Please try again.';
@@ -77,24 +93,16 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
-      <div className="flex w-full flex-col lg:flex-row">
+    <div className="flex w-full flex-col lg:flex-row">
         {/* Branding Side (Left) - 65% width */}
         <div className="relative w-full lg:w-[65%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
             {/* Animated Mesh Gradient Background */}
             <div className="absolute inset-0 z-0">
-                {/* Moving Glow Blobs */}
                 <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-pulse transition-all duration-[4000ms]" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px] animate-pulse delay-1000 transition-all duration-[6000ms]" />
-                
-                {/* Spotlight lighter area behind the main text */}
                 <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[50%] h-[50%] rounded-full bg-primary/5 blur-[140px] pointer-events-none" />
-
-                {/* Subtle Drifting Background Grid */}
                 <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
                      style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-                
-                {/* Digital "Scan" Line */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
                     <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent absolute left-0 animate-slide-down shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
                 </div>
@@ -135,8 +143,21 @@ export default function SignupPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
             <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
-                    <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign Up</h2>
-                    <p className="text-slate-500 font-bold text-lg">Create your account to get started.</p>
+                    {isInvited ? (
+                        <>
+                            <div className="flex items-center gap-2 text-primary mb-4">
+                                <MailCheck className="h-6 w-6" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Invitation Detected</span>
+                            </div>
+                            <h2 className="text-4xl font-black tracking-tight text-slate-900">Welcome to the team!</h2>
+                            <p className="text-slate-500 font-bold text-lg">Joining organization profile.</p>
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign Up</h2>
+                            <p className="text-slate-500 font-bold text-lg">Create your account to get started.</p>
+                        </>
+                    )}
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -149,7 +170,7 @@ export default function SignupPage() {
                                 placeholder="name@company.com"
                                 className="h-14 bg-slate-50 border-slate-200 focus:bg-white transition-all text-base px-5 font-bold rounded-2xl shadow-none ring-offset-transparent focus-visible:ring-primary/20"
                                 {...register('email')}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isInvited}
                             />
                             {errors.email && <p className="text-[10px] font-black text-destructive mt-2 uppercase tracking-tighter ml-1">{errors.email.message}</p>}
                         </div>
@@ -195,6 +216,15 @@ export default function SignupPage() {
             </div>
         </div>
       </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
+        <Suspense fallback={<Loader />}>
+            <SignupContent />
+        </Suspense>
     </main>
   );
 }
