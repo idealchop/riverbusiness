@@ -135,7 +135,13 @@
         "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
         "plan": { "type": "object", "description": "User's subscription plan details." },
         "isPrepaid": { "type": "boolean", "description": "Indicates if the user is on a prepaid (credit-based) plan." },
-        "customPlanDetails": { "type": "object", "description": "Details of the user's custom plan." },
+        "customPlanDetails": {
+          "type": "object",
+          "description": "Details of the user's custom plan.",
+          "properties": {
+               "branchCount": { "type": "number" }
+          }
+        },
         "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
         "parentId": { "type": "string" },
         "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of monetary credits." }
