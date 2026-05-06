@@ -79,11 +79,14 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId }: HREmployee
         id: employeeId,
         name: values.name,
         email: values.email,
+        businessName: 'Employee Profile', // Default for identification
         companyId: companyId,
         hrRole: 'employee',
         role: 'User',
         accountStatus: 'Active',
         createdAt: serverTimestamp(),
+        totalConsumptionLiters: 0,
+        lastLogin: new Date().toISOString(),
         hrProfile: {
           firstName: values.name.split(' ')[0],
           lastName: values.name.split(' ').slice(1).join(' '),
