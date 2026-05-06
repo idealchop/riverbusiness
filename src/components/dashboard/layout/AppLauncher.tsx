@@ -69,54 +69,56 @@ export function AppLauncher() {
           <LayoutGrid className="h-5 w-5 text-slate-600" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[320px] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none rounded-[2.5rem] bg-white">
-        <div className="flex items-center justify-between mb-8 px-1">
-            <h3 className="text-xl font-medium text-slate-800 tracking-tight">Your apps</h3>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-y-8 gap-x-2">
-          {apps.map((app) => {
-            const isActive = pathname === app.href || (app.href === '/dashboard' && pathname.startsWith('/admin'));
-            
-            return (
-              <Link key={app.id} href={app.href} className="group outline-none">
-                <div className="flex flex-col items-center justify-center gap-3">
-                  <div className={cn(
-                    "flex items-center justify-center h-16 w-16 rounded-full transition-all duration-300 relative",
-                    isActive ? "bg-primary/10" : "group-hover:bg-slate-50 group-focus:bg-slate-50"
-                  )}>
-                    <div className="relative h-8 w-8 transition-transform duration-300 group-hover:scale-110">
-                      <Image 
-                        src={app.iconUrl} 
-                        alt={app.name} 
-                        fill 
-                        className="object-contain"
-                      />
-                    </div>
-                    {isActive && (
-                      <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center px-1">
-                    <p className={cn(
-                      "text-[11px] font-bold leading-tight tracking-tight text-slate-700 transition-colors",
-                      isActive && "text-primary"
+      <PopoverContent align="end" className="w-[360px] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-none rounded-[2.8rem] bg-slate-100">
+        <div className="bg-white rounded-[2.5rem] p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-8 px-1">
+              <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase italic">Platform</h3>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-y-10 gap-x-2">
+            {apps.map((app) => {
+              const isActive = pathname === app.href || (app.href === '/dashboard' && pathname.startsWith('/admin'));
+              
+              return (
+                <Link key={app.id} href={app.href} className="group outline-none">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className={cn(
+                      "flex items-center justify-center h-16 w-16 rounded-full transition-all duration-300 relative",
+                      isActive ? "bg-primary/10" : "bg-slate-50 group-hover:bg-slate-100 group-focus:bg-slate-100"
                     )}>
-                      {app.name}
-                    </p>
+                      <div className="relative h-8 w-8 transition-transform duration-300 group-hover:scale-110">
+                        <Image 
+                          src={app.iconUrl} 
+                          alt={app.name} 
+                          fill 
+                          className="object-contain"
+                        />
+                      </div>
+                      {isActive && (
+                        <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-primary/20">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center px-1">
+                      <p className={cn(
+                        "text-[10px] font-black leading-tight tracking-[0.05em] uppercase text-slate-700 transition-colors",
+                        isActive && "text-primary"
+                      )}>
+                        {app.name}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-        
-        <div className="mt-10 pt-4 border-t border-slate-100 text-center">
-            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-slate-400">
-                River Command Center
-            </p>
+                </Link>
+              );
+            })}
+          </div>
+          
+          <div className="mt-12 pt-4 border-t border-slate-100 text-center">
+              <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-slate-400">
+                  River Command Center
+              </p>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
