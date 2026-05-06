@@ -9,11 +9,12 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Users, Target, Sun, Umbrella, Droplets, Briefcase, MailCheck } from 'lucide-react';
+import { Eye, EyeOff, MailCheck } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from '@/components/ui/loader';
+import Image from 'next/image';
 
 const signupSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -23,12 +24,12 @@ const signupSchema = z.object({
 type SignupFormValues = z.infer<typeof signupSchema>;
 
 const servicePillars = [
-  { id: '01', title: 'Water Logistic', icon: Droplets },
-  { id: '02', title: 'Workspace', icon: Briefcase },
-  { id: '03', title: 'HR & Employee', icon: Users },
-  { id: '04', title: 'Customers', icon: Target },
-  { id: '05', title: 'Solar Upgrades', icon: Sun },
-  { id: '06', title: 'Business Insurance', icon: Umbrella },
+  { id: '01', title: 'Water Logistic', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fwater.svg?alt=media&token=fe3a77fb-7ae5-4568-93f7-7a3e2340288f' },
+  { id: '02', title: 'Collaboration', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' },
+  { id: '03', title: 'HR & Employee', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' },
+  { id: '04', title: 'Customers', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fcustomers.svg?alt=media&token=33c27f8f-7a05-4133-bf25-ec3949110bcb' },
+  { id: '05', title: 'Solar Upgrades', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' },
+  { id: '06', title: 'Benefits', iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' },
 ];
 
 function SignupContent() {
@@ -110,7 +111,9 @@ function SignupContent() {
             <div className="relative z-10 mt-16 lg:mt-0 grid grid-cols-2 sm:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
                 {servicePillars.map((pillar) => (
                     <div key={pillar.id} className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
-                        <pillar.icon className="h-5 w-5 text-blue-500" />
+                        <div className="relative h-5 w-5">
+                          <Image src={pillar.iconUrl} alt={pillar.title} fill className="object-contain" />
+                        </div>
                         <h4 className="text-[11px] font-bold uppercase tracking-widest">{pillar.title}</h4>
                     </div>
                 ))}

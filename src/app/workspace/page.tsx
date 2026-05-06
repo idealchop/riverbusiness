@@ -3,9 +3,10 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, ArrowLeft, Rocket } from 'lucide-react';
+import { ArrowLeft, Rocket } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
+import Image from 'next/image';
 
 export default function WorkspacePage() {
   return (
@@ -23,14 +24,21 @@ export default function WorkspacePage() {
       <div className="relative z-10 w-full max-w-2xl text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
         <div className="flex justify-center">
           <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10 shadow-2xl relative group overflow-hidden">
-            <Briefcase className="h-16 w-16 text-primary transition-transform duration-500 group-hover:scale-110" />
+            <div className="relative h-16 w-16 transition-transform duration-500 group-hover:scale-110">
+              <Image 
+                src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9"
+                alt="Collaboration"
+                fill
+                className="object-contain"
+              />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
 
         <div className="space-y-4">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-            Workspace <span className="text-primary">Intelligence</span>
+            Collaboration <span className="text-primary">Intelligence</span>
           </h1>
           <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
             We are currently building the next generation of office management tools. Stay tuned.

@@ -3,9 +3,10 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Umbrella, ArrowLeft, Rocket } from 'lucide-react';
+import { ArrowLeft, Rocket } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
+import Image from 'next/image';
 
 export default function BusinessInsurancePage() {
   return (
@@ -19,16 +20,23 @@ export default function BusinessInsurancePage() {
       <div className="relative z-10 w-full max-w-2xl text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
         <div className="flex justify-center">
           <div className="p-6 rounded-3xl bg-blue-700/5 border border-blue-700/10 shadow-2xl relative group">
-            <Umbrella className="h-16 w-16 text-blue-700 transition-transform duration-500 group-hover:scale-110" />
+            <div className="relative h-16 w-16 transition-transform duration-500 group-hover:scale-110">
+              <Image 
+                src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c"
+                alt="Benefits"
+                fill
+                className="object-contain"
+              />
+            </div>
           </div>
         </div>
 
         <div className="space-y-4">
           <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">
-            Corporate <span className="text-blue-700">Protection</span>
+            Corporate <span className="text-blue-700">Benefits</span>
           </h1>
           <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
-            Automated liability and asset protection workflows are being standardized.
+            Automated health coverage and employee benefit systems are in the design phase.
           </p>
         </div>
 

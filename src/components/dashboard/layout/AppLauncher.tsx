@@ -9,26 +9,51 @@ import {
 import { Button } from "@/components/ui/button";
 import { 
   LayoutGrid, 
-  Droplets, 
-  Briefcase, 
-  Users, 
-  Target, 
-  Sun, 
-  Umbrella, 
   CheckCircle2,
   Pencil
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const apps = [
-  { id: '01', name: 'Water Logistic', href: '/dashboard', icon: Droplets, color: 'text-blue-500' },
-  { id: '02', name: 'Workspace', href: '/workspace', icon: Briefcase, color: 'text-slate-600' },
-  { id: '03', name: 'HR & Employee', href: '/hr-dashboard', icon: Users, color: 'text-green-600' },
-  { id: '04', name: 'Customers', href: '/customers', icon: Target, color: 'text-red-500' },
-  { id: '05', name: 'Solar Upgrades', href: '/solar-upgrades', icon: Sun, color: 'text-amber-500' },
-  { id: '06', name: 'Business Insurance', href: '/business-insurance', icon: Umbrella, color: 'text-indigo-600' },
+  { 
+    id: '01', 
+    name: 'Water Logistic', 
+    href: '/dashboard', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fwater.svg?alt=media&token=fe3a77fb-7ae5-4568-93f7-7a3e2340288f' 
+  },
+  { 
+    id: '02', 
+    name: 'Collaboration', 
+    href: '/workspace', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' 
+  },
+  { 
+    id: '03', 
+    name: 'HR & Employee', 
+    href: '/hr-dashboard', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
+  },
+  { 
+    id: '04', 
+    name: 'Customers', 
+    href: '/customers', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fcustomers.svg?alt=media&token=33c27f8f-7a05-4133-bf25-ec3949110bcb' 
+  },
+  { 
+    id: '05', 
+    name: 'Solar Upgrades', 
+    href: '/solar-upgrades', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
+  },
+  { 
+    id: '06', 
+    name: 'Benefits', 
+    href: '/business-insurance', 
+    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
+  },
 ];
 
 export function AppLauncher() {
@@ -55,7 +80,6 @@ export function AppLauncher() {
         
         <div className="grid grid-cols-3 gap-y-8 gap-x-2">
           {apps.map((app) => {
-            const Icon = app.icon;
             const isActive = pathname === app.href || (app.href === '/dashboard' && pathname.startsWith('/admin'));
             
             return (
@@ -65,11 +89,13 @@ export function AppLauncher() {
                     "flex items-center justify-center h-16 w-16 rounded-full transition-all duration-300 relative",
                     isActive ? "bg-primary/20" : "group-hover:bg-slate-200/50 group-focus:bg-slate-200/50"
                   )}>
-                    <div className={cn(
-                      "transition-transform duration-300 group-hover:scale-110",
-                      isActive ? "text-primary" : app.color
-                    )}>
-                      <Icon className="h-8 w-8" />
+                    <div className="relative h-8 w-8 transition-transform duration-300 group-hover:scale-110">
+                      <Image 
+                        src={app.iconUrl} 
+                        alt={app.name} 
+                        fill 
+                        className="object-contain"
+                      />
                     </div>
                     {isActive && (
                       <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
@@ -79,8 +105,8 @@ export function AppLauncher() {
                   </div>
                   <div className="text-center px-1">
                     <p className={cn(
-                      "text-xs font-medium leading-tight tracking-tight text-slate-700 transition-colors",
-                      isActive && "text-primary font-bold"
+                      "text-[11px] font-bold leading-tight tracking-tight text-slate-700 transition-colors",
+                      isActive && "text-primary"
                     )}>
                       {app.name}
                     </p>
