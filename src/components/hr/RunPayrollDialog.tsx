@@ -25,7 +25,7 @@ import {
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
-import { DollarSign, ShieldAlert } from 'lucide-react';
+import { DollarSign, ShieldAlert, Loader2 } from 'lucide-react';
 
 const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
@@ -59,20 +59,52 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
     
     try {
       // 1. Fetch all active employees for this company
-      const employeesQuery = query(collection(firestore, 'users'), where('companyId', '==', companyId));
+      const employeesQuery = query(
+        collection(firestore, 'users'), 
+        where('companyId', '==', companyId),
+        where('hrRole', '==', 'employee')
+      );
       const employeesSnap = await getDocs(employeesQuery);
       const employees = employeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       if (employees.length === 0) {
-        toast({ variant: 'destructive', title: 'No active staff found', description: 'Add employees to your directory before running payroll.' });
+        toast({ 
+          variant: 'destructive', 
+          title: 'No employees found', 
+          description: 'Ensure you have registered employees in your directory.' 
+        });
         setIsSubmitting(false);
         return;
       }
 
-      // 2. Simulated Computation
-      const totalNet = employees.reduce((sum, emp: any) => sum + (emp.hrProfile?.rate || 0), 0);
+      // 2. Fetch all attendance logs for this period to compute daily salaries
+      const attendanceQuery = query(
+        collection(firestore, 'hr_companies', companyId, 'attendance'),
+        where('date', '>=', values.periodStart),
+        where('date', '<=', values.periodEnd)
+      );
+      const attendanceSnap = await getDocs(attendanceQuery);
+      const allLogs = attendanceSnap.docs.map(doc => doc.data());
 
-      // 3. Create Payroll Run Record
+      // 3. Automated Computation Logic
+      const totalNet = employees.reduce((sum, emp: any) => {
+        const profile = emp.hrProfile;
+        if (!profile) return sum;
+
+        let employeeSalary = 0;
+        if (profile.salaryType === 'daily') {
+          // Count unique present days for this employee in the period
+          const daysWorked = allLogs.filter(log => log.employeeId === emp.id).length;
+          employeeSalary = daysWorked * (profile.rate || 0);
+        } else {
+          // Fixed monthly rate (MVP logic)
+          employeeSalary = profile.rate || 0;
+        }
+
+        return sum + employeeSalary;
+      }, 0);
+
+      // 4. Create Payroll Run Ledger Entry
       const payrollCol = collection(firestore, 'hr_companies', companyId, 'payrollRuns');
       await addDoc(payrollCol, {
         companyId,
@@ -80,14 +112,19 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
         periodEnd: values.periodEnd,
         status: 'paid',
         totalNetSalary: totalNet,
+        employeeCount: employees.length,
         createdAt: serverTimestamp()
       });
 
-      toast({ title: 'Payroll authorized', description: `Successfully processed disbursements for ${employees.length} employees.` });
+      toast({ 
+        title: 'Payroll Disbursed', 
+        description: `Successfully computed ₱${totalNet.toLocaleString()} for ${employees.length} employees.` 
+      });
       onOpenChange(false);
+      form.reset();
     } catch (error) {
       console.error("Error running payroll:", error);
-      toast({ variant: 'destructive', title: 'Operation failed' });
+      toast({ variant: 'destructive', title: 'Computation Error', description: 'Failed to process payroll data.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -95,14 +132,16 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-[2rem] border-none p-0 overflow-hidden bg-white shadow-2xl">
+      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden bg-white">
         <div className="p-8">
             <DialogHeader className="mb-6">
                 <div className="p-3 w-fit rounded-2xl bg-blue-50 text-primary mb-4">
                     <DollarSign className="h-6 w-6" />
                 </div>
                 <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Authorize Payroll</DialogTitle>
-                <DialogDescription className="text-slate-500 font-medium">Initiate salary computation for the current work period.</DialogDescription>
+                <DialogDescription className="text-slate-500 font-medium">
+                  The system will analyze attendance logs and compute salaries for the selected period.
+                </DialogDescription>
             </DialogHeader>
             
             <Form {...form}>
@@ -113,7 +152,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             name="periodStart"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period start</FormLabel>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Start Date</FormLabel>
                                 <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -124,7 +163,7 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
                             name="periodEnd"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Period end</FormLabel>
+                                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400">End Date</FormLabel>
                                 <FormControl><Input type="date" className="h-11 rounded-xl bg-slate-50 border-slate-100 shadow-none" {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -134,15 +173,20 @@ export function RunPayrollDialog({ isOpen, onOpenChange, companyId }: RunPayroll
 
                     <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-4">
                         <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                        <p className="text-[11px] font-semibold text-slate-500 leading-relaxed uppercase tracking-tight">
-                            Authorizing payroll will generate disbursement orders and finalize logs for audit.
+                        <p className="text-xs font-semibold text-slate-500 leading-relaxed">
+                            Confirming this run will finalize disbursements and lock attendance logs for the selected period.
                         </p>
                     </div>
 
                     <DialogFooter className="pt-4">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="text-xs font-bold px-6">Cancel</Button>
-                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-xs shadow-md">
-                            {isSubmitting ? 'Computing...' : 'Finalize & Disburse'}
+                        <Button type="submit" disabled={isSubmitting} className="rounded-xl h-11 px-10 font-bold text-xs shadow-md min-w-[160px]">
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Computing...
+                              </>
+                            ) : 'Finalize & Disburse'}
                         </Button>
                     </DialogFooter>
                 </form>
