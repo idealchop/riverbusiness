@@ -1,5 +1,3 @@
-
-
 {
   "entities": {
     "AppUser": {
@@ -15,350 +13,78 @@
         "businessName": { "type": "string", "description": "User's business name." },
         "address": { "type": "string", "description": "User's address." },
         "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "This field is deprecated for Parent/Prepaid accounts. For fixed plans, this represents rollover. For Parent accounts, balance is derived from topUpBalanceCredits." },
-        "accountStatus": { "type": "string", "enum": ["Active", "Inactive"], "description": "Status of the user's account." },
-        "lastLogin": { "type": "string", "format": "date-time", "description": "Timestamp of the last login." },
-        "role": { "type": "string", "enum": ["Admin", "User"], "description": "User's role in the application." },
-        "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the user was created." },
-        "onboardingComplete": { "type": "boolean", "description": "Flag indicating if user has completed onboarding." },
-        "plan": { "type": "object", "description": "User's subscription plan details." },
-        "isPrepaid": { "type": "boolean", "description": "Indicates if the user is on a prepaid (credit-based) plan." },
-        "lastBilledDate": { "type": "string", "format": "date-time", "description": "Timestamp of the last time a monthly invoice was generated for this user."},
-        "customPlanDetails": {
-          "type": "object",
-          "description": "Details for a user's custom plan.",
-          "properties": {
-            "litersPerMonth": { "type": "number" },
-            "bonusLiters": { "type": "number" },
-            "gallonQuantity": { "type": "number" },
-            "gallonPrice": { "type": "number" },
-            "gallonPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
-            "dispenserQuantity": { "type": "number" },
-            "dispenserPrice": { "type": "number" },
-            "dispenserPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
-            "sanitationPrice": { "type": "number" },
-            "sanitationPaymentType": { "type": "string", "enum": ["Monthly", "One-Time"] },
-            "deliveryFrequency": { "type": "string" },
-            "deliveryDay": { "type": "string" },
-            "deliveryTime": { "type": "string" },
-            "autoRefillEnabled": { "type": "boolean" },
-            "lastMonthRollover": { "type": "number" },
-            "branchCount": { "type": "number" }
-          }
-        },
-        "currentContractUrl": { "type": "string", "format": "uri", "description": "URL to the user's latest contract document." },
-        "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
-        "contractStatus": { "type": "string", "description": "Status of the user's contract." },
-        "contractUploadedDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the contract was uploaded." },
-        "pendingPlan": { "type": "object", "description": "Details of a pending plan change." },
-        "planChangeEffectiveDate": { "type": "string", "format": "date-time", "description": "The date when the pending plan change will take effect." },
-        "lastChatMessage": { "type": "string", "description": "The last message sent in the chat." },
-        "lastChatTimestamp": { "type": "string", "format": "date-time", "description": "Timestamp of the last chat message." },
-        "hasUnreadAdminMessages": { "type": "boolean", "description": "True if the user has unread messages from an admin." },
-        "hasUnreadUserMessages": { "type": "boolean", "description": "True if the admin has unread messages from the user." },
-        "supportProfile": {
-          "type": "object",
-          "description": "Public-facing profile for support agents.",
-          "properties": {
-            "displayName": { "type": "string", "description": "Public display name for the support agent in chat." },
-            "description": { "type": "string", "description": "Public description for the support agent (e.g., 'Customer Support')." },
-            "photoURL": { "type": "string", "format": "uri", "description": "URL to the public support agent's profile photo." }
-          }
-        },
-        "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"], "description": "The type of account, used for multi-branch functionality." },
-        "parentId": { "type": "string", "description": "If accountType is 'Branch', this is the ID of the parent account." },
-        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the central, shared balance of monetary credits (e.g., in PHP)." },
-        "pendingCharges": {
-            "type": "array",
-            "description": "A list of one-off charges to be added to the next invoice.",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "type": "string" },
-                "description": { "type": "string" },
-                "amount": { "type": "number" },
-                "dateAdded": { "type": "string", "format": "date-time" }
-              }
-            }
-        }
-      },
-      "required": ["id", "name", "email", "businessName", "role", "createdAt", "clientId"]
-    },
-    "Transaction": {
-        "title": "Transaction",
-        "type": "object",
-        "description": "Represents a credit or debit transaction for a Parent account's top-up balance.",
-        "properties": {
-            "id": { "type": "string" },
-            "date": { "type": "string", "format": "date-time" },
-            "type": { "type": "string", "enum": ["Credit", "Debit"] },
-            "amountCredits": { "type": "number" },
-            "description": { "type": "string" },
-            "branchId": { "type": "string", "description": "ID of the branch user if it's a debit from a delivery." },
-            "branchName": { "type": "string", "description": "Name of the branch if it's a debit from a delivery." }
-        },
-        "required": ["id", "date", "type", "amountCredits", "description"]
-    },
-     "TopUpRequest": {
-        "title": "TopUpRequest",
-        "type": "object",
-        "description": "Represents a user's request to top-up their balance, pending admin approval.",
-        "properties": {
-            "id": { "type": "string" },
-            "userId": { "type": "string" },
-            "amount": { "type": "number" },
-            "status": { "type": "string", "enum": ["Pending Review", "Approved", "Rejected", "Approved (Initial Balance)"] },
-            "requestedAt": { "type": "string", "format": "date-time" },
-            "proofOfPaymentUrl": { "type": "string", "format": "uri" },
-            "rejectionReason": { "type": "string" }
-        },
-        "required": ["id", "userId", "amount", "status", "requestedAt"]
-    },
-    "UnclaimedProfile": {
-      "title": "UnclaimedProfile",
-      "type": "object",
-      "description": "Represents a pre-configured user profile created by an admin, waiting to be claimed by a new user. The document ID is the clientId.",
-      "properties": {
-        "clientId": { "type": "string", "description": "Manually assigned client identifier. This is the primary key." },
-        "name": { "type": "string", "description": "User's full name." },
-        "businessEmail": { "type": "string", "format": "email", "description": "User's business contact email address." },
-        "businessName": { "type": "string", "description": "User's business name." },
-        "address": { "type": "string", "description": "User's address." },
-        "contactNumber": { "type": "string", "description": "User's phone number." },
-        "totalConsumptionLiters": { "type": "number", "description": "Initial water credit in liters for fixed plans. Deprecated for prepaid/parent." },
-        "role": { "type": "string", "enum": ["User"], "description": "User's role, defaults to 'User'." },
-        "assignedWaterStationId": { "type": "string", "description": "ID of the assigned water station." },
-        "adminCreatedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the admin created this profile." },
-        "plan": { "type": "object", "description": "User's subscription plan details." },
-        "isPrepaid": { "type": "boolean", "description": "Indicates if the user is on a prepaid (credit-based) plan." },
-        "customPlanDetails": { 
-            "type": "object", 
-            "description": "Details of the user's custom plan.",
+        "totalConsumptionLiters": { "type": "number" },
+        "accountStatus": { "type": "string", "enum": ["Active", "Inactive"] },
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "role": { "type": "string", "enum": ["Admin", "User"] },
+        "hrRole": { "type": "string", "enum": ["owner", "admin", "employee"], "description": "Role within the HR module." },
+        "companyId": { "type": "string", "description": "Tenant ID for multi-tenant isolation." },
+        "assignedWaterStationId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "onboardingComplete": { "type": "boolean" },
+        "plan": { "type": "object" },
+        "customPlanDetails": { "type": "object" },
+        "hrProfile": {
+            "type": "object",
             "properties": {
-                 "branchCount": { "type": "number" }
+                "firstName": { "type": "string" },
+                "lastName": { "type": "string" },
+                "salaryType": { "type": "string", "enum": ["daily", "monthly"] },
+                "rate": { "type": "number" },
+                "startDate": { "type": "string", "format": "date" },
+                "position": { "type": "string" },
+                "department": { "type": "string" }
             }
-        },
-        "accountType": { "type": "string", "enum": ["Single", "Parent", "Branch"] },
-        "parentId": { "type": "string" },
-        "topUpBalanceCredits": { "type": "number", "description": "For 'Parent' accounts, this is the initial central, shared balance of monetary credits." }
+        }
       },
-      "required": ["clientId", "name", "businessName", "plan", "adminCreatedAt", "accountType"]
+      "required": ["id", "name", "email", "role", "createdAt"]
     },
-    "ChatMessage": {
-        "title": "ChatMessage",
+    "HRAttendanceLog": {
+        "title": "HRAttendanceLog",
         "type": "object",
-        "description": "Represents a single message in a chat conversation.",
         "properties": {
             "id": { "type": "string" },
-            "text": { "type": "string", "description": "The text content of the message. Optional if there is an attachment." },
-            "role": { "type": "string", "enum": ["user", "admin"] },
-            "timestamp": { "type": "string", "format": "date-time" },
-            "attachmentUrl": { "type": "string", "format": "uri", "description": "URL to an uploaded attachment." },
-            "attachmentType": { "type": "string", "description": "MIME type of the attachment (e.g., 'image/png')." }
+            "companyId": { "type": "string" },
+            "employeeId": { "type": "string" },
+            "employeeName": { "type": "string" },
+            "date": { "type": "string", "format": "date" },
+            "timeIn": { "type": "string", "format": "date-time" },
+            "timeOut": { "type": "string", "format": "date-time" },
+            "method": { "type": "string", "enum": ["QR", "manual"] },
+            "status": { "type": "string", "enum": ["present", "late", "absent", "leave"] }
         },
-        "required": ["id", "role", "timestamp"]
+        "required": ["companyId", "employeeId", "date", "timeIn"]
     },
-    "WaterStation": {
-      "title": "WaterStation",
-      "type": "object",
-      "description": "Represents a water refilling station.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the station." },
-        "name": { "type": "string", "description": "Name of the station." },
-        "location": { "type": "string", "description": "Location of the station." },
-        "partnershipAgreementUrl": { "type": "string", "format": "uri", "description": "URL to the signed partnership agreement." }
-      },
-      "required": ["id", "name", "location"]
-    },
-    "Delivery": {
-      "title": "Delivery",
-      "type": "object",
-      "description": "Represents a water delivery record.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the delivery, can be used as a tracking number." },
-        "userId": { "type": "string", "description": "ID of the user receiving the delivery." },
-        "parentId": { "type": "string", "description": "ID of the parent account, if applicable." },
-        "date": { "type": "string", "format": "date-time", "description": "Date of the delivery." },
-        "volumeContainers": { "type": "number", "description": "Volume of water delivered in containers. This is used for deduction." },
-        "status": { "type": "string", "enum": ["Delivered", "In Transit", "Pending"] },
-        "proofOfDeliveryUrl": { "type": "string", "format": "uri", "description": "URL to the proof of delivery image." },
-        "adminNotes": { "type": "string", "description": "Notes from the admin about the delivery." }
-      },
-      "required": ["id", "userId", "date", "volumeContainers", "status"]
-    },
-    "Payment": {
-      "title": "Payment",
-      "type": "object",
-      "description": "Represents a payment or invoice.",
-      "properties": {
-        "id": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "description": { "type": "string" },
-        "amount": { "type": "number" },
-        "status": { "type": "string", "enum": ["Paid", "Upcoming", "Overdue", "Pending Review", "Covered by Parent Account"] },
-        "proofOfPaymentUrl": { "type": "string", "format": "uri" },
-        "rejectionReason": { "type": "string", "description": "Reason provided by admin for rejecting a payment." },
-        "manualCharges": {
-          "type": "array",
-          "description": "A list of one-off charges included in this invoice.",
-          "items": {
-             "type": "object",
-              "properties": {
-                "id": { "type": "string" },
-                "description": { "type": "string" },
-                "amount": { "type": "number" },
-                "dateAdded": { "type": "string", "format": "date-time" }
-              }
-          }
-        }
-      },
-      "required": ["id", "date", "description", "amount", "status"]
-    },
-    "ComplianceReport": {
-      "title": "ComplianceReport",
-      "type": "object",
-      "description": "Represents a water quality compliance report.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string", "description": "Name of the report (e.g., 'DOH Bacteriological Test - June 2024')." },
-        "reportType": { "type": "string", "enum": ["DOH Bacteriological Test (Monthly)", "DOH Bacteriological Test (Semi-Annual)", "Sanitary Permit", "Business Permit"], "description": "The type of compliance report." },
-        "resultId": { "type": "string", "description": "The official result ID number from the testing body." },
-        "date": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Passed", "Failed", "Pending Review"] },
-        "reportUrl": { "type": "string", "format": "uri" },
-        "results": { "type": "string", "description": "Admin-entered notes or results of the inspection." }
-      },
-      "required": ["id", "name", "reportType", "resultId", "date", "status"]
-    },
-    "SanitationChecklistItem": {
-        "title": "SanitationChecklistItem",
+    "HRLeaveRequest": {
+        "title": "HRLeaveRequest",
         "type": "object",
-        "description": "Represents a single item in a sanitation checklist.",
-        "properties": {
-            "item": { "type": "string", "description": "The text of the checklist item." },
-            "checked": { "type": "boolean", "description": "Whether the item has been checked off." },
-            "remarks": { "type": "string", "description": "Optional remarks for the checklist item." }
-        },
-        "required": ["item", "checked"]
-    },
-    "DispenserReport": {
-      "title": "DispenserReport",
-      "type": "object",
-      "description": "Represents the full sanitation report for a single dispenser.",
-      "properties": {
-        "dispenserId": { "type": "string", "description": "Unique ID for this dispenser report instance." },
-        "dispenserName": { "type": "string", "description": "The admin-assigned name for the dispenser (e.g., 'Lobby Unit')." },
-        "dispenserCode": { "type": "string", "description": "A special code to uniquely identify the equipment." },
-        "checklist": {
-            "type": "array",
-            "items": { "$ref": "#/entities/SanitationChecklistItem" }
-        }
-      },
-      "required": ["dispenserId", "dispenserName", "checklist"]
-    },
-    "SanitationVisit": {
-      "title": "SanitationVisit",
-      "type": "object",
-      "description": "Represents a sanitation visit record for a client's office.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string", "description": "ID of the user whose office is being visited." },
-        "scheduledDate": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["Completed", "Scheduled", "Cancelled"] },
-        "assignedTo": { "type": "string" },
-        "reportUrl": { "type": "string", "format": "uri", "description": "URL to a potential summary sanitation report attachment." },
-        "shareableLink": { "type": "string", "format": "uri", "description": "A public, shareable link to the report." },
-        "officerSignature": { "type": "string", "format": "uri", "description": "Data URI of the officer's signature." },
-        "clientSignature": { "type": "string", "format": "uri", "description": "Data URI of the client's signature." },
-        "clientRepName": { "type": "string", "description": "Name of the client representative who signed." },
-        "officerSignatureDate": { "type": "string", "format": "date-time", "description": "Date the officer signed." },
-        "clientSignatureDate": { "type": "string", "format": "date-time", "description": "Date the client signed." },
-        "dispenserReports": {
-            "type": "array",
-            "description": "An array of reports, one for each dispenser inspected during the visit.",
-            "items": { "$ref": "#/entities/DispenserReport" }
-        }
-      },
-      "required": ["id", "userId", "scheduledDate", "status"]
-    },
-    "PublicSanitationLink": {
-        "title": "PublicSanitationLink",
-        "type": "object",
-        "description": "Maps a unique, unguessable ID to a sanitation visit for public access.",
         "properties": {
             "id": { "type": "string" },
-            "userId": { "type": "string" },
-            "visitId": { "type": "string" },
-            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the link was created, used for expiration." }
+            "companyId": { "type": "string" },
+            "employeeId": { "type": "string" },
+            "employeeName": { "type": "string" },
+            "type": { "type": "string", "enum": ["Vacation", "Sick", "Emergency", "Maternity/Paternity"] },
+            "startDate": { "type": "string", "format": "date" },
+            "endDate": { "type": "string", "format": "date" },
+            "reason": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+            "appliedAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["userId", "visitId", "createdAt"]
+        "required": ["companyId", "employeeId", "type", "startDate", "endDate", "status"]
     },
-    "Schedule": {
-      "title": "Schedule",
-      "type": "object",
-      "description": "Represents the global delivery schedule.",
-      "properties": {
-        "deliveryDate": { "type": "string", "format": "date" },
-        "cutOffTime": { "type": "string", "format": "time" },
-        "notes": { "type": "string" }
-      }
-    },
-    "ConsumptionHistory": {
-      "title": "ConsumptionHistory",
-      "type": "object",
-      "description": "Represents a single water consumption entry for a user.",
-      "properties": {
-        "date": { "type": "string", "format": "date-time" },
-        "amountLiters": { "type": "number" },
-        "metric": { "type": "string", "enum": ["liters", "gallons"] }
-      }
-    },
-    "StatusHistoryEntry": {
-        "title": "StatusHistoryEntry",
+    "HRPayrollRun": {
+        "title": "HRPayrollRun",
         "type": "object",
         "properties": {
-            "status": { "type": "string", "enum": ["Requested", "In Production", "Out for Delivery", "Completed", "Cancelled"] },
-            "timestamp": { "type": "string", "format": "date-time" }
+            "id": { "type": "string" },
+            "companyId": { "type": "string" },
+            "periodStart": { "type": "string", "format": "date" },
+            "periodEnd": { "type": "string", "format": "date" },
+            "status": { "type": "string", "enum": ["draft", "processed", "paid"] },
+            "totalNetSalary": { "type": "number" },
+            "createdAt": { "type": "string", "format": "date-time" }
         },
-        "required": ["status", "timestamp"]
-    },
-    "RefillRequest": {
-      "title": "RefillRequest",
-      "type": "object",
-      "description": "Represents a user's request for a one-time water refill.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the refill request." },
-        "userId": { "type": "string", "description": "ID of the user requesting the refill." },
-        "userName": { "type": "string", "description": "Name of the user." },
-        "businessName": { "type": "string", "description": "Business name of the user." },
-        "clientId": { "type": "string", "description": "Client ID of the user." },
-        "requestedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the request was made." },
-        "status": { "type": "string", "enum": ["Requested", "In Production", "Out for Delivery", "Completed", "Cancelled"], "description": "The current status of the refill request." },
-        "statusHistory": {
-            "type": "array",
-            "items": { "$ref": "#/entities/StatusHistoryEntry" }
-        },
-        "volumeContainers": { "type": "number", "description": "The number of containers requested for the refill." },
-        "requestedDate": { "type": "string", "format": "date-time", "description": "The specific date the user requested the delivery for." }
-      },
-      "required": ["id", "userId", "userName", "businessName", "clientId", "requestedAt", "status"]
-    },
-    "Notification": {
-      "title": "Notification",
-      "type": "object",
-      "description": "Represents a user notification.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "type": { "type": "string", "enum": ["delivery", "compliance", "sanitation", "payment", "general", "top-up"] },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "isRead": { "type": "boolean" },
-        "data": { "type": "object", "description": "Optional data related to the notification." }
-      },
-      "required": ["id", "userId", "type", "title", "description", "date", "isRead"]
+        "required": ["companyId", "periodStart", "periodEnd", "status"]
     }
   },
   "auth": {
@@ -367,76 +93,19 @@
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/AppUser" },
-      "description": "Stores user profile information."
+      "description": "Stores user and employee profile information."
     },
-    "/users/{userId}/deliveries/{deliveryId}": {
-      "schema": { "$ref": "#/entities/Delivery" },
-      "description": "Subcollection for a user's delivery records."
+    "/hr_companies/{companyId}/attendance/{logId}": {
+        "schema": { "$ref": "#/entities/HRAttendanceLog" },
+        "description": "Daily attendance logs for a company."
     },
-    "/users/{userId}/branchDeliveries/{deliveryId}": {
-      "schema": { "$ref": "#/entities/Delivery" },
-      "description": "For Parent accounts, this is a subcollection containing copies of all deliveries made to their linked Branch accounts."
+    "/hr_companies/{companyId}/leaveRequests/{requestId}": {
+        "schema": { "$ref": "#/entities/HRLeaveRequest" },
+        "description": "Leave applications from employees."
     },
-    "/users/{userId}/payments/{paymentId}": {
-      "schema": { "$ref": "#/entities/Payment" },
-      "description": "Subcollection for a user's payment history."
-    },
-     "/users/{userId}/topUpRequests/{requestId}": {
-      "schema": { "$ref": "#/entities/TopUpRequest" },
-      "description": "Subcollection for a Parent account's top-up requests."
-    },
-    "/users/{userId}/transactions/{transactionId}": {
-        "schema": { "$ref": "#/entities/Transaction" },
-        "description": "For Parent accounts, logs all top-ups and branch consumption."
-    },
-    "/users/{userId}/consumptionHistory/{historyId}": {
-      "schema": { "$ref": "#/entities/ConsumptionHistory" },
-      "description": "Subcollection for a user's consumption history."
-    },
-    "/users/{userId}/notifications/{notificationId}": {
-      "schema": { "$ref": "#/entities/Notification" },
-      "description": "Subcollection for user-specific notifications."
-    },
-    "/users/{userId}/sanitationVisits/{visitId}": {
-      "schema": { "$ref": "#/entities/SanitationVisit" },
-      "description": "Subcollection for a client's scheduled office sanitation visits."
-    },
-    "/users/{userId}/refillRequests/{requestId}": {
-      "schema": { "$ref": "#/entities/RefillRequest" },
-      "description": "Subcollection for user's one-time refill requests."
-    },
-    "/users/{userId}/chatMessages/{messageId}": {
-        "schema": { "$ref": "#/entities/ChatMessage" },
-        "description": "Subcollection for a user's live chat messages."
-    },
-    "/waterStations/{stationId}": {
-      "schema": { "$ref": "#/entities/WaterStation" },
-      "description": "Top-level collection for all water stations."
-    },
-    "/waterStations/{stationId}/complianceReports/{reportId}": {
-      "schema": { "$ref": "#/entities/ComplianceReport" },
-      "description": "Subcollection for a station's compliance reports."
-    },
-    "/schedules/currentSchedule": {
-      "schema": { "$ref": "#/entities/Schedule" },
-      "description": "A single document to hold the current global delivery schedule."
-    },
-    "/unclaimedProfiles/{clientId}": {
-      "schema": { "$ref": "#/entities/UnclaimedProfile" },
-      "description": "Stores pre-configured profiles created by an admin, waiting to be claimed. The document ID is the clientId."
-    },
-    "/publicSanitationLinks/{linkId}": {
-      "schema": { "$ref": "#/entities/PublicSanitationLink" },
-      "description": "Stores mappings for public sanitation report links."
+    "/hr_companies/{companyId}/payrollRuns/{runId}": {
+        "schema": { "$ref": "#/entities/HRPayrollRun" },
+        "description": "Historical records of payroll processing."
     }
   }
 }
-
-    
-
-    
-
-
-
-
-    

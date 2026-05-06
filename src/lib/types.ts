@@ -1,8 +1,88 @@
 import {FieldValue, Timestamp} from 'firebase/firestore';
 
-export interface ConsumptionRecord {
-  date: string;
-  consumptionContainers: number;
+export interface AppUser {
+    id: string;
+    clientId?: string;
+    name: string;
+    email: string;
+    businessEmail?: string;
+    businessName: string;
+    address?: string;
+    contactNumber?: string;
+    notificationEmails?: string[];
+    totalConsumptionLiters: number; 
+    accountStatus: 'Active' | 'Inactive';
+    lastLogin: string;
+    role: 'Admin' | 'User';
+    hrRole?: 'owner' | 'admin' | 'employee';
+    companyId?: string;
+    assignedWaterStationId?: string;
+    createdAt: any;
+    lastBilledDate?: any;
+    onboardingComplete?: boolean;
+    plan?: {
+        name: string;
+        price: number;
+        isConsumptionBased: boolean;
+    };
+    customPlanDetails?: any;
+    photoURL?: string;
+    hrProfile?: HREmployeeProfile;
+    pendingCharges?: any[];
+    accountType?: 'Single' | 'Parent' | 'Branch';
+    parentId?: string;
+    topUpBalanceCredits?: number;
+    hasUnreadAdminMessages?: boolean;
+    hasUnreadUserMessages?: boolean;
+    supportDisplayName?: string;
+    supportDescription?: string;
+    supportPhotoURL?: string;
+}
+
+export interface HREmployeeProfile {
+    firstName: string;
+    lastName: string;
+    salaryType: 'daily' | 'monthly';
+    rate: number;
+    startDate: string;
+    position: string;
+    department: string;
+    status: 'Active' | 'Terminated' | 'On Leave';
+}
+
+export interface HRAttendanceLog {
+    id: string;
+    companyId: string;
+    employeeId: string;
+    employeeName: string;
+    date: string;
+    timeIn: any;
+    timeOut?: any;
+    method: 'QR' | 'manual';
+    status: 'present' | 'late' | 'absent' | 'leave';
+}
+
+export interface HRLeaveRequest {
+    id: string;
+    companyId: string;
+    employeeId: string;
+    employeeName: string;
+    type: 'Vacation' | 'Sick' | 'Emergency' | 'Maternity/Paternity';
+    startDate: string;
+    endDate: string;
+    reason: string;
+    status: 'pending' | 'approved' | 'rejected';
+    appliedAt: any;
+}
+
+export interface HRPayrollRun {
+    id: string;
+    companyId: string;
+    periodStart: string;
+    periodEnd: string;
+    status: 'draft' | 'processed' | 'paid';
+    totalNetSalary: number;
+    createdAt: any;
 }
 
 export interface Delivery {
@@ -18,159 +98,6 @@ export interface Delivery {
   amount?: number;
 }
 
-export interface ComplianceReport {
-  id:string;
-  name: string;
-  reportType: 'DOH Bacteriological Test (Monthly)' | 'DOH Bacteriological Test (Semi-Annual)' | 'Sanitary Permit' | 'Business Permit';
-  resultId: string;
-  date: any;
-  status: 'Passed' | 'Failed' | 'Pending Review';
-  reportUrl?: string;
-  results?: string;
-}
-
-export interface SanitationChecklistItem {
-    item: string;
-    checked: boolean;
-    remarks: string;
-}
-
-export interface DispenserReport {
-    dispenserId: string;
-    dispenserName: string;
-    dispenserCode?: string;
-    checklist: SanitationChecklistItem[];
-}
-
-export interface SanitationVisit {
-  id: string;
-  userId: string;
-  scheduledDate: string;
-  status: 'Completed' | 'Scheduled' | 'Cancelled';
-  assignedTo: string;
-  reportUrl?: string; // This might be a summary report URL now
-  dispenserReports?: DispenserReport[]; // Replaces single checklist
-  shareableLink?: string;
-  officerSignature?: string;
-  clientSignature?: string;
-  clientRepName?: string;
-  officerSignatureDate?: string;
-  clientSignatureDate?: string;
-  proofUrls?: string[];
-}
-
-export interface WaterStation {
-  id:string;
-  name: string;
-  location: string;
-  partnershipAgreementUrl?: string;
-  status: 'Operational' | 'Under Maintenance';
-  statusMessage?: string;
-}
-
-export type Permission = 
-  | 'view_dashboard' 
-  | 'view_payments' 
-  | 'manage_deliveries' 
-  | 'view_quality_reports' 
-  | 'manage_users' 
-  | 'access_admin_panel';
-
-export type AccountType = 'Single' | 'Parent' | 'Branch';
-
-export interface ManualCharge {
-  id: string;
-  description: string;
-  amount: number;
-  dateAdded: FieldValue | Timestamp;
-}
-
-export interface AppUser {
-    id: string; // This is the Firebase Auth UID
-    clientId?: string; // This is the manually entered client ID
-    name: string;
-    email: string; // Login email
-    businessEmail?: string; // Contact email
-    businessName: string;
-    address?: string;
-    contactNumber?: string;
-    notificationEmails?: string[];
-    // For fixed plans, this is the running balance. For Parent/Prepaid, this is deprecated.
-    totalConsumptionLiters: number; 
-    accountStatus: 'Active' | 'Inactive';
-    lastLogin: string;
-    permissions?: Permission[];
-    role: 'Admin' | 'User';
-    assignedWaterStationId?: string;
-    createdAt: any;
-    lastBilledDate?: any;
-    onboardingComplete?: boolean;
-    plan?: {
-        name: string;
-        price: number;
-        isConsumptionBased: boolean;
-    };
-    clientType?: string | null;
-    isPrepaid?: boolean;
-    customPlanDetails?: {
-        litersPerMonth?: number;
-        bonusLiters?: number;
-        pricePerLiter?: number;
-        gallonQuantity?: number;
-        gallonPrice?: number;
-        gallonPaymentType?: 'Monthly' | 'One-Time';
-        dispenserQuantity?: number;
-        dispenserPrice?: number;
-        dispenserPaymentType?: 'Monthly' | 'One-Time';
-        sanitationPrice?: number;
-        sanitationPaymentType?: 'Monthly' | 'One-Time';
-        deliveryFrequency?: string;
-        deliveryDay?: string;
-        deliveryTime?: string;
-        autoRefillEnabled?: boolean;
-        lastMonthRollover?: number;
-        branchCount?: number;
-    };
-    currentContractUrl?: string;
-    photoURL?: string;
-    contractStatus?: string;
-    contractUploadedDate?: any;
-    lastDeliveryStatus?: 'Delivered' | 'In Transit' | 'Pending' | 'No Delivery';
-    pendingPlan?: any;
-    planChangeEffectiveDate?: any;
-    lastChatMessage?: string;
-    lastChatTimestamp?: FieldValue | Timestamp;
-    hasUnreadAdminMessages?: boolean;
-    hasUnreadUserMessages?: boolean;
-    supportDisplayName?: string;
-    supportDescription?: string;
-    supportPhotoURL?: string;
-    // New fields for multi-branch feature
-    accountType?: AccountType;
-    parentId?: string;
-    topUpBalanceCredits?: number;
-    pendingCharges?: ManualCharge[];
-}
-
-export interface LoginLog {
-  id: string;
-  userId: string;
-  userName: string;
-  timestamp: string;
-  ipAddress: string;
-  status: 'Success' | 'Failure';
-}
-
-export interface Feedback {
-  id: string;
-  userId: string;
-  userName: string;
-  timestamp: string;
-  feedback: string;
-  rating: number;
-  read: boolean;
-}
-
 export interface Payment {
   id: string;
   date: string;
@@ -179,56 +106,7 @@ export interface Payment {
   status: 'Paid' | 'Upcoming' | 'Overdue' | 'Pending Review' | 'Covered by Parent Account';
   proofOfPaymentUrl?: string;
   rejectionReason?: string;
-  manualCharges?: ManualCharge[];
-}
-
-export type ImagePlaceholder = {
-  id: string;
-  description: string;
-  imageUrl: string;
-  imageHint: string;
-};
-
-export type PaymentOption = {
-    name: string;
-    qr?: ImagePlaceholder | null;
-    details?: {
-        bankName?: string;
-        accountName: string;
-        accountNumber: string;
-    }
-}
-
-export interface Schedule {
-  deliveryDate: string;
-  cutOffTime: string;
-  notes: string;
-}
-
-export interface ConsumptionHistory {
-  date: FieldValue;
-  amountLiters: number;
-  metric: 'liters' | 'gallons';
-}
-
-export type RefillRequestStatus = 'Requested' | 'In Production' | 'Out for Delivery' | 'Completed' | 'Cancelled';
-
-export interface StatusHistoryEntry {
-    status: RefillRequestStatus;
-    timestamp: FieldValue | Timestamp;
-}
-
-export interface RefillRequest {
-  id: string;
-  userId: string;
-  userName: string;
-  businessName: string;
-  clientId: string;
-  requestedAt: FieldValue | Timestamp;
-  status: RefillRequestStatus;
-  statusHistory?: StatusHistoryEntry[];
-  volumeContainers?: number;
-  requestedDate?: string;
+  manualCharges?: any[];
 }
 
 export interface Notification {
@@ -241,7 +119,7 @@ export interface Notification {
   isRead: boolean;
   data?: any;
 }
-    
+
 export interface ChatMessage {
   id: string;
   text?: string;
@@ -251,31 +129,37 @@ export interface ChatMessage {
   attachmentType?: string;
 }
 
-export interface Transaction {
-    id: string;
-    date: FieldValue | Timestamp;
-    type: 'Credit' | 'Debit';
-    amountCredits: number;
-    description: string;
-    branchId?: string;
-    branchName?: string;
+export interface WaterStation {
+  id:string;
+  name: string;
+  location: string;
+  partnershipAgreementUrl?: string;
+  status: 'Operational' | 'Under Maintenance';
+  statusMessage?: string;
 }
 
-export interface TopUpRequest {
+export interface ComplianceReport {
+  id:string;
+  name: string;
+  reportType: string;
+  resultId: string;
+  date: any;
+  status: string;
+  reportUrl?: string;
+}
+
+export interface SanitationVisit {
   id: string;
   userId: string;
-  amount: number;
-  status: 'Pending Review' | 'Approved' | 'Rejected' | 'Approved (Initial Balance)';
-  requestedAt: FieldValue | Timestamp;
-  proofOfPaymentUrl?: string;
-  rejectionReason?: string;
-}
-
-export interface ManualReceiptRequest {
-    id: string;
-    userId: string;
-    invoiceId: string;
-    amount: number;
-    requestedAt: FieldValue | Timestamp;
-    status: 'pending' | 'completed';
+  scheduledDate: string;
+  status: string;
+  assignedTo: string;
+  dispenserReports?: any[];
+  shareableLink?: string;
+  officerSignature?: string;
+  clientSignature?: string;
+  clientRepName?: string;
+  officerSignatureDate?: string;
+  clientSignatureDate?: string;
+  proofUrls?: string[];
 }
