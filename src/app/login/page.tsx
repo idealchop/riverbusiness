@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -139,22 +138,22 @@ export default function LoginPage() {
     <main className="flex min-h-screen w-full bg-background overflow-hidden font-sans">
       <div className="flex w-full flex-col lg:flex-row">
         {/* Branding Side (Left) */}
-        <div className="relative w-full lg:w-[60%] p-8 sm:p-12 md:p-20 bg-slate-950 text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
-            {/* Subtle Drifting Background Grid */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none animate-drift mix-blend-overlay" 
-                 style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '30px 30px' }} />
-            
-            {/* Advanced Background Image Layer */}
-            <div className="absolute inset-0 z-0 opacity-20">
-                <Image
-                    src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/Sales%20Portal%2FMarketing%20Mats%2FPlans%2Flanding%20page%20image.png?alt=media&token=4b8d98bc-e6e8-4710-b10e-e84e75839c7a"
-                    alt="River Platform"
-                    fill
-                    className="object-cover animate-slow-zoom"
-                    priority
-                />
+        <div className="relative w-full lg:w-[60%] p-8 sm:p-12 md:p-20 bg-[#020617] text-white flex flex-col justify-between overflow-hidden min-h-[500px] lg:min-h-screen">
+            {/* Animated Mesh Gradient Background */}
+            <div className="absolute inset-0 z-0">
+                {/* Floating Glows */}
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-blue-900/10 blur-[120px] animate-pulse delay-1000" />
+                
+                {/* Subtle Drifting Background Grid */}
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none animate-drift mix-blend-overlay" 
+                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+                
+                {/* Digital "Scan" Line */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+                    <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent absolute left-0 animate-slide-down shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+                </div>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-950/90 to-slate-900/40 z-0" />
 
             <div className="relative z-10 animate-in fade-in slide-in-from-left-4 duration-700">
                 <div className="mb-16">

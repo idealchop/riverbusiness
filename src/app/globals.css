@@ -133,6 +133,10 @@
   .animate-drift {
     animation: drift 20s infinite linear;
   }
+
+  .animate-slide-down {
+    animation: slide-down 10s linear infinite;
+  }
 }
 
 @keyframes dot-flow {
@@ -152,4 +156,9 @@
 @keyframes drift {
   from { background-position: 0 0; }
   to { background-position: 40px 40px; }
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(1000%); }
 }
