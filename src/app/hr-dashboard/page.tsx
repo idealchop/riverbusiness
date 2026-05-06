@@ -9,7 +9,8 @@ import {
   AlertCircle,
   ArrowUpRight,
   TrendingUp,
-  FileCheck
+  FileCheck,
+  UserCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,8 +90,6 @@ export default function HRDashboard() {
     }
   }, [isManagement, employees, todayAttendance, pendingLeaves, myAttendance, myLeaves]);
 
-  const UserCircle = () => <Users className="h-5 w-5" />; // Fallback icon
-
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -151,7 +150,7 @@ export default function HRDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold text-slate-900">
-                    {isManagement ? 'Attendance Stream' : 'My Recent Logs'}
+                    {isManagement ? 'Attendance stream' : 'My recent logs'}
                 </CardTitle>
                 <CardDescription className="text-xs font-medium text-slate-500">
                     {isManagement ? 'Live operational log for today' : 'Your shift history summary'}
@@ -172,7 +171,7 @@ export default function HRDashboard() {
                         </div>
                         <div>
                            <p className="text-sm font-semibold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date), 'MMM d, yyyy')}</p>
-                           <p className="text-[10px] text-slate-400 font-bold uppercase">{log.method} Verification</p>
+                           <p className="text-[10px] text-slate-400 font-bold uppercase">{log.method} verification</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -202,7 +201,7 @@ export default function HRDashboard() {
                     <Timer className="h-24 w-24 -mr-8 -mt-8" />
                   </div>
                   <CardHeader className="relative z-10">
-                    <CardTitle className="text-lg font-bold tracking-tight">Payroll Window</CardTitle>
+                    <CardTitle className="text-lg font-bold tracking-tight">Payroll window</CardTitle>
                     <CardDescription className="text-slate-400 font-medium">Standard work period</CardDescription>
                   </CardHeader>
                   <CardContent className="relative z-10 space-y-4">
@@ -224,7 +223,7 @@ export default function HRDashboard() {
                     <CalendarDays className="h-24 w-24 -mr-8 -mt-8" />
                   </div>
                   <CardHeader className="relative z-10">
-                    <CardTitle className="text-lg font-bold tracking-tight">Leave Balance</CardTitle>
+                    <CardTitle className="text-lg font-bold tracking-tight">Leave balance</CardTitle>
                     <CardDescription className="text-slate-400 font-medium">Annual availability</CardDescription>
                   </CardHeader>
                   <CardContent className="relative z-10 space-y-4">
@@ -236,7 +235,7 @@ export default function HRDashboard() {
                       <div className="h-full bg-white w-1/4" />
                     </div>
                     <Button onClick={() => router.push('/hr-dashboard/leave')} className="w-full bg-white text-slate-900 hover:bg-slate-100 font-bold text-[10px] uppercase tracking-widest h-10 rounded-xl">
-                      File Leave Application
+                      File leave application
                     </Button>
                   </CardContent>
                </Card>
@@ -244,16 +243,16 @@ export default function HRDashboard() {
 
            <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-white">
               <CardHeader className="pb-4">
-                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quick Actions</CardTitle>
+                <CardTitle className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quick actions</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 pt-0">
                 {isManagement && (
                     <Button onClick={() => router.push('/hr-dashboard/employees')} variant="outline" className="justify-between border-slate-100 rounded-xl h-11 text-sm font-semibold group bg-slate-50/50 hover:bg-white transition-all">
-                        Add New Staff <Users className="h-4 w-4 text-slate-300 group-hover:text-primary" />
+                        Add new staff <Users className="h-4 w-4 text-slate-300 group-hover:text-primary" />
                     </Button>
                 )}
                 <Button onClick={() => router.push('/hr-dashboard/attendance')} variant="outline" className="justify-between border-slate-100 rounded-xl h-11 text-sm font-semibold group bg-slate-50/50 hover:bg-white transition-all">
-                   Station Clock <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-500" />
+                   Station clock <Clock className="h-4 w-4 text-slate-300 group-hover:text-blue-500" />
                 </Button>
               </CardContent>
            </Card>

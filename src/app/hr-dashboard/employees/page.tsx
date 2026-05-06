@@ -11,7 +11,7 @@ import {
   Filter,
   ArrowRight
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -96,12 +96,12 @@ export default function EmployeesPage() {
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-slate-50/50">
-              <TableRow>
-                <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Position</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
-                <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Salary type</TableHead>
-                <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Actions</TableHead>
+              <TableRow className="border-none">
+                <TableHead className="pl-6 font-bold text-xs text-slate-400">Employee</TableHead>
+                <TableHead className="font-bold text-xs text-slate-400">Position</TableHead>
+                <TableHead className="font-bold text-xs text-slate-400">Status</TableHead>
+                <TableHead className="font-bold text-xs text-slate-400">Salary type</TableHead>
+                <TableHead className="text-right pr-6 font-bold text-xs text-slate-400">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
