@@ -36,7 +36,6 @@ const managerNavItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
   { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database },
-  { href: '/hr-dashboard/modules', label: 'Learning Hub', icon: BookOpen },
   { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign },
   { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays },
 ];
@@ -44,7 +43,6 @@ const managerNavItems = [
 const employeeNavItems = [
   { href: '/hr-dashboard', label: 'My Workspace', icon: LayoutDashboard },
   { href: '/hr-dashboard/attendance', label: 'My Records', icon: Database },
-  { href: '/hr-dashboard/modules', label: 'Training Hub', icon: BookOpen },
   { href: '/hr-dashboard/leave', label: 'File Leave', icon: CalendarDays },
 ];
 
@@ -90,8 +88,9 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
       {/* Sidebar */}
       <aside className="hidden md:flex w-72 flex-col border-r bg-white shrink-0">
-        <div className="flex flex-col h-full overflow-y-auto">
-            <div className="p-6">
+        <div className="flex flex-col h-full overflow-hidden">
+            {/* Top Navigation area */}
+            <div className="p-6 flex-1 overflow-y-auto">
                 <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
                     <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
                     <div className="flex flex-col">
@@ -100,7 +99,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                     </div>
                 </Link>
 
-                <nav className="space-y-1 mb-8">
+                <nav className="space-y-1">
                     {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
@@ -122,8 +121,10 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                     );
                     })}
                 </nav>
+            </div>
 
-                {/* Learning Hub Card in Sidebar */}
+            {/* Bottom Card Area */}
+            <div className="p-6 mt-auto">
                 <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
                     <Link href="/hr-dashboard/modules">
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
