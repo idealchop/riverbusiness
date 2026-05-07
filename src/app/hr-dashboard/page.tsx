@@ -16,7 +16,8 @@ import {
   ShieldCheck,
   MapPin,
   ScanLine,
-  Database
+  Database,
+  LogIn
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -196,7 +197,7 @@ export default function HRDashboard() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">
             {isManagement ? 'Workforce Intelligence' : 'My Workspace'}
@@ -205,26 +206,54 @@ export default function HRDashboard() {
             {isManagement ? `Central Control For ${user?.businessName || 'Organization'}` : `Hello, ${user?.name?.split(' ')[0] || 'Employee'} • Shift Control`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-            <Button onClick={() => router.push('/hr-dashboard/attendance')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200">
-                <Database className="mr-2 h-4 w-4" /> Master Ledger
+        <div className="flex flex-wrap items-center gap-3">
+            {/* Minimal Station Clock */}
+            <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end shadow-inner min-w-[100px]">
+                <p className="text-sm font-black tabular-nums leading-none text-slate-900">
+                    {currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}
+                </p>
+                {currentLog && !currentLog.timeOut && (
+                    <p className="text-[8px] font-black text-primary uppercase tracking-widest mt-1">
+                        Active: {liveDuration}
+                    </p>
+                )}
+            </div>
+
+            {/* Authorize Button */}
+            {!currentLog ? (
+                <Button onClick={handleTimeIn} disabled={isProcessing} className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20 text-xs uppercase tracking-widest gap-2">
+                    <LogIn className="h-4 w-4" /> Clock In
+                </Button>
+            ) : !currentLog.timeOut ? (
+                <Button onClick={handleTimeOut} disabled={isProcessing} variant="destructive" className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-destructive/20 text-xs uppercase tracking-widest gap-2">
+                    <LogOut className="h-4 w-4" /> Clock Out
+                </Button>
+            ) : (
+                <div className="h-11 px-5 bg-green-50 text-green-700 border border-green-200 rounded-xl flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Shift Secured</span>
+                </div>
+            )}
+
+            <Button onClick={() => router.push('/hr-dashboard/attendance')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
+                <Database className="mr-2 h-4 w-4 text-slate-400" /> Attendance
             </Button>
+            
             {isManagement && (
-                <Button onClick={() => router.push('/hr-dashboard/payroll')} className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20 text-xs uppercase tracking-widest">
-                    Run Payroll
+                <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
+                    Payroll
                 </Button>
             )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className={cn("md:col-span-2", isManagement && "md:col-span-3")}>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 gap-8">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-sm rounded-2xl bg-white">
+                    <Card key={idx} className="border-none shadow-sm rounded-2xl bg-white group hover:shadow-md transition-shadow">
                         <CardContent className="p-6">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-900">
+                                <div className="p-2.5 rounded-xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-colors">
                                     <stat.icon className="h-5 w-5" />
                                 </div>
                                 <div className={cn("text-[9px] font-bold uppercase tracking-wider", stat.trendType === 'up' ? "text-green-600" : "text-amber-600")}>
@@ -232,7 +261,7 @@ export default function HRDashboard() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-3xl font-black text-slate-900 tabular-nums">{stat.value}</p>
+                                <p className="text-3xl font-black text-slate-900 tabular-nums tracking-tight">{stat.value}</p>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">{stat.label}</p>
                             </div>
                         </CardContent>
@@ -240,126 +269,79 @@ export default function HRDashboard() {
                 ))}
             </div>
 
-            <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-                <CardHeader className="bg-slate-50/30 pb-6 border-b">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-lg font-black uppercase tracking-tight">Recent Activity Feed</CardTitle>
-                            <CardDescription className="text-xs font-medium text-slate-500">Real-Time Operational Summary</CardDescription>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+                    <CardHeader className="bg-slate-50/30 pb-6 border-b">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-lg font-black uppercase tracking-tight">Recent Activity Feed</CardTitle>
+                                <CardDescription className="text-xs font-medium text-slate-500">Real-Time Operational Summary</CardDescription>
+                            </div>
                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="divide-y divide-slate-50">
-                        {(isManagement ? todayAttendance : myAttendance)?.slice(0, 5).map((log) => {
-                            const timeInDate = toSafeDate(log.timeIn);
-                            return (
-                                <div key={log.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-sm">{log.employeeName?.charAt(0)}</div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date), 'MMM d, yyyy')}</p>
-                                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{log.method} Verification</p>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="divide-y divide-slate-50">
+                            {(isManagement ? todayAttendance : myAttendance)?.slice(0, 8).map((log) => {
+                                const timeInDate = toSafeDate(log.timeIn);
+                                return (
+                                    <div key={log.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-sm">{log.employeeName?.charAt(0)}</div>
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date), 'MMMM d, yyyy')}</p>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{log.method} Verification</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-black text-slate-900">{timeInDate ? format(timeInDate, 'hh:mm a') : '--:--'}</p>
+                                            <Badge className={cn("text-[9px] h-5 font-black uppercase px-2 shadow-none border-none", log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
+                                                {log.status}
+                                            </Badge>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-black text-slate-900">{timeInDate ? format(timeInDate, 'hh:mm a') : '--:--'}</p>
-                                        <Badge className={cn("text-[9px] h-5 font-black uppercase px-2 shadow-none", log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700")}>
-                                            {log.status}
-                                        </Badge>
-                                    </div>
+                                );
+                            })}
+                            {!(isManagement ? todayAttendance : myAttendance)?.length && (
+                                <div className="py-24 text-center opacity-20">
+                                    <Activity className="h-12 w-12 mx-auto mb-3" />
+                                    <p className="text-sm font-black uppercase tracking-[0.2em]">No Activity Logs Found</p>
                                 </div>
-                            );
-                        })}
-                        {!(isManagement ? todayAttendance : myAttendance)?.length && (
-                            <div className="py-20 text-center opacity-20">
-                                <Activity className="h-10 w-10 mx-auto mb-2" />
-                                <p className="text-sm font-black uppercase tracking-widest">No Activity Found</p>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-
-        {/* --- STATION CLOCK SIDEBAR --- */}
-        <div className="md:col-span-2 lg:col-span-1 space-y-6">
-            <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white group">
-                <CardContent className="p-8 flex flex-col items-center text-center space-y-8 relative">
-                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-                    
-                    <div className="h-28 w-28 rounded-full bg-slate-50 border-4 border-white flex items-center justify-center relative shadow-xl z-10">
-                        <div className="absolute inset-0 rounded-full border-2 border-primary/10 animate-ping opacity-20" />
-                        <Clock className="h-10 w-10 text-primary" />
-                    </div>
-
-                    <div className="space-y-1 z-10">
-                        <h2 className="text-4xl font-black text-slate-900 tabular-nums tracking-tighter">
-                            {currentTime ? format(currentTime, 'hh:mm:ss') : '--:--:--'}
-                            <span className="text-lg ml-1 text-slate-400 font-bold uppercase">{currentTime ? format(currentTime, 'a') : ''}</span>
-                        </h2>
-                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.4em] pt-2">Precision Time-Sync</p>
-                    </div>
-
-                    {currentLog && currentLog.timeIn && !currentLog.timeOut && (
-                        <div className="w-full bg-slate-900 rounded-[2rem] p-6 text-white space-y-4 animate-in zoom-in-95 shadow-2xl shadow-slate-900/20">
-                            <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-2">
-                                    <Activity className="h-4 w-4 text-green-400 animate-pulse" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Active</span>
-                                </div>
-                                <Badge variant="outline" className="border-white/20 text-white font-mono text-[9px] h-6 px-3">
-                                    In: {format(toSafeDate(currentLog.timeIn) || new Date(), 'hh:mm a')}
-                                </Badge>
-                            </div>
-                            <p className="text-3xl font-black tracking-tighter tabular-nums">{liveDuration}</p>
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/30">Current Duration</p>
+                            )}
                         </div>
-                    )}
+                    </CardContent>
+                </Card>
 
-                    <div className="w-full space-y-4 z-10">
-                        {!currentLog ? (
-                            <Button onClick={handleTimeIn} disabled={isProcessing} className="w-full h-16 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
-                                Authorize Shift Entry
-                            </Button>
-                        ) : !currentLog.timeOut ? (
-                            <Button onClick={handleTimeOut} disabled={isProcessing} className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-slate-900/20">
-                                <LogOut className="mr-2 h-4 w-4" /> Authorize Shift Exit
-                            </Button>
-                        ) : (
-                            <div className="p-8 rounded-[2rem] bg-green-50 border-2 border-dashed border-green-100 flex flex-col items-center gap-3">
-                                <CheckCircle2 className="h-8 w-8 text-green-500" />
-                                <div>
-                                    <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Shift Secured</p>
-                                    <p className="text-[9px] font-bold text-green-600/70 uppercase">Daily Logs Finalized.</p>
+                <div className="space-y-6">
+                    <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
+                        <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
+                        <CardHeader><CardTitle className="text-lg font-black tracking-tight uppercase">Operational Protocol</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-green-400"><Timer className="h-5 w-5" /></div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-white">Shift Accuracy</p>
+                                    <p className="text-[9px] text-white/50 font-bold leading-relaxed">Logs After 09:00 AM Are Flagged For Manual Review.</p>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
+                            <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
+                                <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-blue-400"><MapPin className="h-5 w-5" /></div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-white">Station Verification</p>
+                                    <p className="text-[9px] text-white/50 font-bold leading-relaxed">IP And Geolocation Verified For Every Authorization.</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-            <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
-                <CardHeader><CardTitle className="text-lg font-black tracking-tight uppercase">Operational Protocol</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
-                        <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center"><Timer className="h-5 w-5 text-green-400" /></div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-white">Shift Accuracy</p>
-                            <p className="text-[9px] text-white/50 font-bold leading-relaxed">Logs After 09:00 AM Are Flagged For Manual Review.</p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
-                        <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center"><MapPin className="h-5 w-5 text-blue-400" /></div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-white">Station Verification</p>
-                            <p className="text-[9px] text-white/50 font-bold leading-relaxed">IP And Geolocation Verified For Every Authorization.</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                    <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden border border-slate-100">
+                        <CardHeader className="pb-3"><CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Shift Support</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                             <p className="text-xs font-bold text-slate-600 leading-relaxed">Having issues with your station entry? Contact your Organization Admin or use the Live Support button in the top navigation bar.</p>
+                             <Button variant="outline" className="w-full rounded-xl h-10 font-bold text-xs uppercase tracking-widest" onClick={() => window.dispatchEvent(new CustomEvent('open-live-support'))}>Contact Desk</Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
       </div>
     </div>
   );
