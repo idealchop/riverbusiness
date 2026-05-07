@@ -1,26 +1,40 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
+  Database, 
+  Search, 
   Clock, 
-  MapPin, 
+  CalendarDays, 
+  DollarSign, 
+  Filter,
+  Download,
   CheckCircle2,
   AlertCircle,
-  Timer,
-  ScanLine,
-  ShieldCheck,
-  Activity,
-  LogOut
+  FileText,
+  History,
+  TrendingUp
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, addDoc, serverTimestamp, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import type { HRAttendanceLog } from '@/lib/types';
+import { FullScreenLoader } from '@/components/ui/loader';
+import type { HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/lib/types';
 
 const toSafeDate = (val: any): Date | null => {
     if (!val) return null;
@@ -30,277 +44,273 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
-export default function AttendancePage() {
-  const { user } = useUser();
+export default function AttendanceDatabasePage() {
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [liveDuration, setLiveDuration] = useState<string>('00:00:00');
-
-  useEffect(() => {
-    setCurrentTime(new Date());
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCategory, setActiveTab] = useState('attendance');
 
   const companyId = user?.companyId || user?.clientId || 'default';
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
-  const todayLogQuery = useMemoFirebase(
-    () => (firestore && user?.id && companyId) ? query(
-        collection(firestore, 'hr_companies', companyId, 'attendance'),
-        where('employeeId', '==', user.id),
-        where('date', '==', today)
-    ) : null,
-    [firestore, companyId, user?.id, today]
+  // --- Data Queries ---
+  const attendanceQuery = useMemoFirebase(
+    () => {
+        if (!firestore || !companyId) return null;
+        const col = collection(firestore, 'hr_companies', companyId, 'attendance');
+        if (isManagement) return query(col, orderBy('date', 'desc'));
+        return query(col, where('employeeId', '==', user?.id || ''), orderBy('date', 'desc'));
+    },
+    [firestore, companyId, isManagement, user?.id]
   );
-  const { data: attendanceLogs } = useCollection<HRAttendanceLog>(todayLogQuery);
-  const currentLog = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs[0] : null;
+  const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (currentLog && currentLog.timeIn && !currentLog.timeOut) {
-      const startTime = toSafeDate(currentLog.timeIn);
-      if (startTime) {
-        interval = setInterval(() => {
-          const now = new Date();
-          const diffMs = now.getTime() - startTime.getTime();
-          const diffHrs = Math.floor(diffMs / 3600000);
-          const diffMins = Math.floor((diffMs % 3600000) / 60000);
-          const diffSecs = Math.floor((diffMs % 60000) / 1000);
-          setLiveDuration(
-            `${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`
-          );
-        }, 1000);
-      }
-    } else {
-        setLiveDuration('00:00:00');
-    }
-    return () => clearInterval(interval);
-  }, [currentLog]);
+  const leaveQuery = useMemoFirebase(
+    () => {
+        if (!firestore || !companyId) return null;
+        const col = collection(firestore, 'hr_companies', companyId, 'leaveRequests');
+        if (isManagement) return query(col, orderBy('appliedAt', 'desc'));
+        return query(col, where('employeeId', '==', user?.id || ''), orderBy('appliedAt', 'desc'));
+    },
+    [firestore, companyId, isManagement, user?.id]
+  );
+  const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
 
-  const handleTimeIn = async () => {
-    if (!firestore || !user?.id || !companyId) {
-        toast({ variant: 'destructive', title: 'System error', description: 'Could not resolve employee identity.' });
-        return;
-    }
-    setIsProcessing(true);
-    try {
-        const attendanceCol = collection(firestore, 'hr_companies', companyId, 'attendance');
-        const now = new Date();
-        const hour = now.getHours();
-        // Standard shift start is 9:00 AM
-        const status = hour >= 9 ? 'late' : 'present';
+  const payrollQuery = useMemoFirebase(
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
+    [firestore, companyId]
+  );
+  const { data: payrollRuns, isLoading: loadingPayroll } = useCollection<HRPayrollRun>(payrollQuery);
 
-        await addDoc(attendanceCol, {
-            companyId,
-            employeeId: user.id,
-            employeeName: user.name || 'Anonymous Employee',
-            date: today,
-            timeIn: serverTimestamp(),
-            method: 'QR',
-            status: status
-        });
+  // --- Filtering Logic ---
+  const filteredAttendance = useMemo(() => {
+    if (!attendanceLogs) return [];
+    if (!searchTerm) return attendanceLogs;
+    return attendanceLogs.filter(log => 
+        log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        log.date.includes(searchTerm)
+    );
+  }, [attendanceLogs, searchTerm]);
 
-        toast({ title: 'Clock-in successful', description: `Good morning, ${user.name?.split(' ')[0] || 'Employee'}!` });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not clock in.' });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
-
-  const handleTimeOut = async () => {
-    if (!firestore || !currentLog || !companyId) return;
-    setIsProcessing(true);
-    try {
-        const startTime = toSafeDate(currentLog.timeIn);
-        const endTime = new Date();
-        let totalMinutes = 0;
-        
-        if (startTime) {
-            totalMinutes = Math.floor((endTime.getTime() - startTime.getTime()) / 60000);
-        }
-
-        const logRef = doc(firestore, 'hr_companies', companyId, 'attendance', currentLog.id);
-        await updateDoc(logRef, {
-            timeOut: serverTimestamp(),
-            totalMinutes: totalMinutes
-        });
-        toast({ title: 'Clock-out successful', description: 'Have a great evening!' });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not clock out.' });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
+  if (isUserLoading) return <FullScreenLoader text="Accessing workforce vault..." />;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in duration-700">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">
-            Fulfillment <span className="text-primary">Station</span> Clock
-        </h1>
-        <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">{format(new Date(), 'EEEE, MMMM do yyyy')}</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card className="border-none shadow-2xl rounded-[3rem] overflow-hidden bg-white group">
-           <CardContent className="p-8 md:p-12 flex flex-col items-center text-center space-y-8 relative">
-              <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-              
-              <div className="h-32 w-32 rounded-full bg-slate-50 border-4 border-white flex items-center justify-center relative shadow-xl z-10 transition-transform group-hover:scale-105">
-                  <div className="absolute inset-0 rounded-full border-2 border-primary/10 animate-ping opacity-20" />
-                  <Clock className="h-12 w-12 text-primary" />
-              </div>
-
-              <div className="space-y-1 z-10">
-                 <h2 className="text-5xl font-black text-slate-900 tabular-nums tracking-tighter">
-                    {currentTime ? format(currentTime, 'hh:mm:ss') : '--:--:--'}
-                    <span className="text-xl ml-1 text-slate-400 font-bold uppercase">{currentTime ? format(currentTime, 'a') : ''}</span>
-                 </h2>
-                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] pt-2">Operational Time-Sync</p>
-              </div>
-
-              {currentLog && currentLog.timeIn && !currentLog.timeOut && (
-                <div className="w-full bg-slate-900 rounded-[2rem] p-6 text-white space-y-4 animate-in zoom-in-95 shadow-2xl shadow-slate-900/20">
-                    <div className="flex items-center justify-between px-2">
-                        <div className="flex items-center gap-2">
-                            <Activity className="h-4 w-4 text-green-400 animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Shift Active</span>
-                        </div>
-                        <Badge variant="outline" className="border-white/20 text-white font-mono text-[10px] h-6 px-3">
-                            In: {format(toSafeDate(currentLog.timeIn) || new Date(), 'hh:mm a')}
-                        </Badge>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-4xl font-black tracking-tighter tabular-nums text-white">
-                            {liveDuration}
-                        </p>
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 mt-2">Current Duration</p>
-                    </div>
-                </div>
-              )}
-
-              <div className="w-full space-y-4 z-10">
-                  {!currentLog ? (
-                    <Button 
-                        onClick={handleTimeIn}
-                        disabled={isProcessing}
-                        className="w-full h-16 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 text-white"
-                    >
-                        {isProcessing ? 'Authenticating...' : 'Authorize Shift Entry'}
-                    </Button>
-                  ) : !currentLog.timeOut ? (
-                    <Button 
-                        onClick={handleTimeOut}
-                        disabled={isProcessing}
-                        className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-slate-900/20"
-                    >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        {isProcessing ? 'Processing...' : 'Authorize Shift Exit'}
-                    </Button>
-                  ) : (
-                    <div className="p-8 rounded-[2rem] bg-green-50 border-2 border-dashed border-green-100 flex flex-col items-center gap-3 animate-in zoom-in-95">
-                        <div className="p-3 rounded-full bg-white shadow-sm">
-                            <CheckCircle2 className="h-8 w-8 text-green-500" />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Shift Secured</p>
-                            <p className="text-[10px] font-bold text-green-600/70 uppercase">Daily logs finalized and stored.</p>
-                            {currentLog.totalMinutes && (
-                                <p className="text-[10px] font-black text-slate-900 mt-1">Total: {Math.floor(currentLog.totalMinutes / 60)}h {currentLog.totalMinutes % 60}m</p>
-                            )}
-                        </div>
-                    </div>
-                  )}
-              </div>
-              
-              <div className="flex items-center gap-8 pt-4 z-10">
-                <div className="text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Entry Status</p>
-                    <Badge variant="outline" className={cn(
-                        "mt-2 text-[10px] font-black uppercase px-3 py-0.5 shadow-sm",
-                        currentLog?.status === 'present' ? "bg-green-50 text-green-600 border-green-200" :
-                        currentLog?.status === 'late' ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-400 border-slate-200"
-                    )}>
-                        {currentLog?.status || 'Waiting'}
-                    </Badge>
-                </div>
-                <div className="h-10 w-px bg-slate-100" />
-                <div className="text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Auth Method</p>
-                    <div className="flex items-center gap-1.5 mt-2">
-                        <ShieldCheck className="h-3.5 w-3.5 text-blue-500" />
-                        <p className="text-[10px] font-black text-slate-900 uppercase">Station ID</p>
-                    </div>
-                </div>
-              </div>
-           </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-            <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-8 opacity-10 transition-transform group-hover:scale-110">
-                    <ScanLine className="h-24 w-24" />
-                </div>
-                <CardHeader>
-                    <CardTitle className="text-lg font-black tracking-tight uppercase">Operational Protocol</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
-                        <div className="h-12 w-12 shrink-0 rounded-xl bg-white/10 flex items-center justify-center">
-                            <Timer className="h-6 w-6 text-green-400" />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-black uppercase tracking-wider">Shift Accuracy</p>
-                            <p className="text-[10px] text-white/50 font-bold leading-relaxed">
-                                Logs after 09:00 AM are automatically flagged. Early entries are credited to overtime pool.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
-                        <div className="h-12 w-12 shrink-0 rounded-xl bg-white/10 flex items-center justify-center">
-                            <MapPin className="h-6 w-6 text-blue-400" />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-black uppercase tracking-wider">Geofence Verified</p>
-                            <p className="text-[10px] text-white/50 font-bold leading-relaxed">
-                                System verifies station IP and location metadata before authorizing entry.
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter className="pt-0 pb-6">
-                    <div className="flex items-center gap-2 px-6 pt-4 text-[9px] font-black uppercase tracking-[0.3em] text-white/20">
-                        <AlertCircle className="h-3 w-3" /> Station Logs strictly audited
-                    </div>
-                </CardFooter>
-            </Card>
-
-            <Card className="border-none shadow-sm rounded-3xl bg-white">
-                <CardHeader className="pb-4">
-                    <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Weekly Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">Fulfillment Streak</span>
-                        <span className="text-sm font-black text-slate-900 tabular-nums uppercase">4 / 5 Shifts</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">Late Deviations</span>
-                        <span className="text-sm font-black text-amber-600 tabular-nums">1</span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden mt-4 border border-slate-100 shadow-inner">
-                        <div className="h-full bg-primary w-4/5 rounded-full" />
-                    </div>
-                </CardContent>
-            </Card>
+    <div className="space-y-10 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">
+             Workforce <span className="text-primary">Ledger</span>
+          </h1>
+          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+             Historical record database • {isManagement ? 'Company-wide' : 'Personal Profile'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+            <Button variant="outline" className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 border-slate-200">
+                <Download className="mr-2 h-4 w-4" /> Export DB
+            </Button>
+            <Button className="rounded-xl font-bold text-xs uppercase tracking-widest h-11 shadow-lg shadow-primary/20">
+                <Filter className="mr-2 h-4 w-4" /> Advanced Filter
+            </Button>
         </div>
       </div>
+
+      <Tabs value={activeCategory} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-slate-100 p-1 rounded-2xl h-14 border shadow-inner w-full md:w-auto">
+          <TabsTrigger value="attendance" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <History className="mr-2 h-4 w-4" /> Attendance
+          </TabsTrigger>
+          <TabsTrigger value="leaves" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <CalendarDays className="mr-2 h-4 w-4" /> Leave Logs
+          </TabsTrigger>
+          <TabsTrigger value="payroll" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <DollarSign className="mr-2 h-4 w-4" /> Payroll
+          </TabsTrigger>
+        </TabsList>
+
+        <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+          <CardHeader className="bg-slate-50/30 p-6 border-b">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="relative w-full md:w-96">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input 
+                  placeholder="Search records by name, date or ID..." 
+                  className="pl-10 h-11 bg-white border-slate-200 rounded-xl font-medium shadow-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50/50 rounded-xl border border-blue-100">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">Live Data Stream Active</span>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="p-0">
+            {/* --- ATTENDANCE CONTENT --- */}
+            <TabsContent value="attendance" className="m-0">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none">
+                    <TableHead className="pl-6 font-black text-[10px] uppercase tracking-wider text-slate-400">Log Date</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Time-In</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Time-Out</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Duration</TableHead>
+                    <TableHead className="text-right pr-6 font-black text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingAttendance ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-bold text-slate-300 uppercase tracking-widest">Processing Logs...</TableCell></TableRow>
+                  ) : filteredAttendance.length > 0 ? (
+                    filteredAttendance.map((log) => {
+                      const timeIn = toSafeDate(log.timeIn);
+                      const timeOut = toSafeDate(log.timeOut);
+                      return (
+                        <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
+                          <TableCell className="pl-6 py-5">
+                             <div className="flex flex-col">
+                                <span className="font-bold text-slate-900 text-sm">{format(new Date(log.date), 'MMM d, yyyy')}</span>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">REF: {log.id.substring(0, 8)}</span>
+                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs uppercase">
+                                {log.employeeName?.charAt(0) || 'E'}
+                              </div>
+                              <p className="text-sm font-bold text-slate-700">{log.employeeName}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm font-semibold text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
+                          <TableCell className="text-sm font-semibold text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                          <TableCell>
+                            <span className="text-[10px] font-black tabular-nums text-slate-900">
+                                {log.totalMinutes ? `${Math.floor(log.totalMinutes / 60)}h ${log.totalMinutes % 60}m` : '--'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right pr-6">
+                            <Badge className={cn(
+                              "text-[9px] font-bold uppercase border-none px-3 h-6 shadow-sm",
+                              log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                            )}>
+                              {log.status === 'present' ? 'Standard' : (log.status || 'N/A')}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-32 opacity-20">
+                        <Clock className="h-12 w-12 mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-sm">No Attendance records found</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            {/* --- LEAVES CONTENT --- */}
+            <TabsContent value="leaves" className="m-0">
+               <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none">
+                    <TableHead className="pl-6 font-black text-[10px] uppercase tracking-wider text-slate-400">Period</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Category</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Reason</TableHead>
+                    <TableHead className="text-right pr-6 font-black text-[10px] uppercase tracking-wider text-slate-400">Outcome</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingLeaves ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-bold text-slate-300 uppercase tracking-widest">Processing Data...</TableCell></TableRow>
+                  ) : leaveRequests && leaveRequests.length > 0 ? (
+                    leaveRequests.map(req => (
+                      <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                        <TableCell className="pl-6 py-5">
+                          <p className="text-sm font-bold text-slate-900">{format(new Date(req.startDate), 'MMM d')} - {format(new Date(req.endDate), 'MMM d')}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Applied {req.appliedAt ? format(toSafeDate(req.appliedAt) || new Date(), 'PP') : ''}</p>
+                        </TableCell>
+                        <TableCell className="text-sm font-bold text-slate-700">{req.employeeName}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[9px] font-black uppercase bg-slate-50">{req.type}</Badge></TableCell>
+                        <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
+                        <TableCell className="text-right pr-6">
+                            <Badge className={cn(
+                                "text-[9px] font-bold uppercase border-none px-3 h-6",
+                                req.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                req.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                            )}>
+                                {req.status}
+                            </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-32 opacity-20">
+                        <CalendarDays className="h-12 w-12 mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-sm">No leave history found</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            {/* --- PAYROLL CONTENT --- */}
+            <TabsContent value="payroll" className="m-0">
+               <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-none">
+                    <TableHead className="pl-6 font-black text-[10px] uppercase tracking-wider text-slate-400">Statement Period</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Total Net Disbursed</TableHead>
+                    <TableHead className="font-black text-[10px] uppercase tracking-wider text-slate-400">Processing Date</TableHead>
+                    <TableHead className="text-right pr-6 font-black text-[10px] uppercase tracking-wider text-slate-400">Payslips</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingPayroll ? (
+                    <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-bold text-slate-300 uppercase tracking-widest">Accessing Ledger...</TableCell></TableRow>
+                  ) : payrollRuns && payrollRuns.length > 0 ? (
+                    payrollRuns.map(run => (
+                      <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                        <TableCell className="pl-6 py-5">
+                          <p className="text-sm font-bold text-slate-900">{format(new Date(run.periodStart), 'MMM d')} - {format(new Date(run.periodEnd), 'MMM d, yyyy')}</p>
+                          <Badge variant="outline" className="text-[8px] font-black uppercase bg-green-50 text-green-700 border-green-100">Settled</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-base font-black text-slate-900 tabular-nums">₱{run.totalNetSalary.toLocaleString()}</span>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-slate-400 uppercase">
+                           {run.createdAt ? format(toSafeDate(run.createdAt) || new Date(), 'MMM d, p') : 'Pending'}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                            <Button size="sm" variant="ghost" className="h-9 font-black uppercase text-[10px] tracking-widest gap-2 text-primary hover:bg-primary/5">
+                                <FileText className="h-3.5 w-3.5" />
+                                View Payslips
+                            </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-32 opacity-20">
+                        <DollarSign className="h-12 w-12 mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-sm">No payroll history found</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+          </CardContent>
+        </Card>
+      </Tabs>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -5,13 +6,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Users, 
-  Clock, 
+  Database, 
   DollarSign, 
   CalendarDays, 
   LayoutDashboard, 
   ChevronRight,
   ShieldCheck,
-  UserCircle
+  UserCircle,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,14 +33,14 @@ import type { Notification as NotificationType, AppUser } from '@/lib/types';
 const managerNavItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
-  { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Clock },
-  { href: '/hr-dashboard/payroll', label: 'Payroll', icon: DollarSign },
-  { href: '/hr-dashboard/leave', label: 'Leaves', icon: CalendarDays },
+  { href: '/hr-dashboard/attendance', label: 'Attendance Ledger', icon: Database },
+  { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign },
+  { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays },
 ];
 
 const employeeNavItems = [
   { href: '/hr-dashboard', label: 'My Workspace', icon: LayoutDashboard },
-  { href: '/hr-dashboard/attendance', label: 'Station Clock', icon: Clock },
+  { href: '/hr-dashboard/attendance', label: 'My Records', icon: Database },
   { href: '/hr-dashboard/leave', label: 'File Leave', icon: CalendarDays },
 ];
 
