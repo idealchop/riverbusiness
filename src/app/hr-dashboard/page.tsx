@@ -353,29 +353,6 @@ export default function HRDashboard() {
                 </Card>
 
                 <div className="space-y-6">
-                    <Card asChild className="border-none shadow-xl rounded-[2.5rem] bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
-                        <Link href="/hr-dashboard/modules">
-                            <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                                <BookOpen className="h-32 w-32" />
-                            </div>
-                            <CardHeader className="pt-10">
-                                <div className="p-3 rounded-2xl bg-white/10 w-fit mb-4">
-                                    <BookOpen className="h-6 w-6" />
-                                </div>
-                                <CardTitle className="text-2xl font-black uppercase tracking-tight">Learning Hub</CardTitle>
-                                <CardDescription className="text-white/60 font-bold text-xs uppercase tracking-widest">Training & Company Modules</CardDescription>
-                            </CardHeader>
-                            <CardContent className="pb-10">
-                                <p className="text-xs font-medium text-white/80 leading-relaxed mb-6">
-                                    Access exclusive company modules, technical documentation, and video training materials authorized for your team.
-                                </p>
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
-                                    Browse Library <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                                </div>
-                            </CardContent>
-                        </Link>
-                    </Card>
-
                     <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
                         <CardHeader><CardTitle className="text-lg font-black tracking-tight uppercase">Operational Protocol</CardTitle></CardHeader>

@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   UserCircle,
   Clock,
-  BookOpen
+  BookOpen,
+  ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import { MyAccountDialog } from '@/components/MyAccountDialog';
 import { NotificationPopover } from '@/components/dashboard/layout/NotificationPopover';
 import { signOut } from 'firebase/auth';
 import type { Notification as NotificationType, AppUser } from '@/lib/types';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 const managerNavItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -88,37 +90,63 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
       {/* Sidebar */}
       <aside className="hidden md:flex w-72 flex-col border-r bg-white shrink-0">
-        <div className="p-6">
-          <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
-            <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
-            <div className="flex flex-col">
-              <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">HR</span>
-              <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Management</span>
-            </div>
-          </Link>
-
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link key={item.href} href={item.href}>
-                  <div className={cn(
-                    "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
-                    isActive 
-                      ? "bg-slate-100 text-slate-900 shadow-sm" 
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  )}>
-                    <div className="flex items-center gap-3">
-                      <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "group-hover:text-slate-900")} />
-                      <span className="text-sm font-semibold tracking-tight">{item.label}</span>
+        <div className="flex flex-col h-full overflow-y-auto">
+            <div className="p-6">
+                <Link href="/dashboard" className="flex items-center gap-3 group mb-8">
+                    <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
+                    <div className="flex flex-col">
+                    <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">HR</span>
+                    <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Management</span>
                     </div>
-                    {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
-                  </div>
                 </Link>
-              );
-            })}
-          </nav>
+
+                <nav className="space-y-1 mb-8">
+                    {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                        <Link key={item.href} href={item.href}>
+                        <div className={cn(
+                            "flex items-center justify-between px-4 py-3 rounded-xl transition-all group",
+                            isActive 
+                            ? "bg-slate-100 text-slate-900 shadow-sm" 
+                            : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                        )}>
+                            <div className="flex items-center gap-3">
+                            <Icon className={cn("h-5 w-5", isActive ? "text-primary" : "group-hover:text-slate-900")} />
+                            <span className="text-sm font-semibold tracking-tight">{item.label}</span>
+                            </div>
+                            {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
+                        </div>
+                        </Link>
+                    );
+                    })}
+                </nav>
+
+                {/* Learning Hub Card in Sidebar */}
+                <Card asChild className="border-none shadow-xl rounded-3xl bg-gradient-to-br from-primary to-blue-700 text-white overflow-hidden relative cursor-pointer group hover:scale-[1.02] transition-all">
+                    <Link href="/hr-dashboard/modules">
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+                            <BookOpen className="h-20 w-20" />
+                        </div>
+                        <CardHeader className="p-5">
+                            <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
+                                <BookOpen className="h-5 w-5" />
+                            </div>
+                            <CardTitle className="text-base font-black uppercase tracking-tight leading-tight">Learning Hub</CardTitle>
+                            <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-5 pt-0">
+                            <p className="text-[11px] font-medium text-white/80 leading-relaxed mb-4">
+                                Access exclusive technical documentation and video training.
+                            </p>
+                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest">
+                                Open Library <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                            </div>
+                        </CardContent>
+                    </Link>
+                </Card>
+            </div>
         </div>
       </aside>
 
