@@ -201,7 +201,7 @@ async function generateInvoiceForUser(user, userRef, billingPeriod, billingCycle
                 const compSnap = await db.collection('waterStations').doc(user.assignedWaterStationId).collection('complianceReports').limit(5).get();
                 compliance = compSnap.docs.map(d => d.data());
             }
-            const pdfBuffer = await (0, index_1.generatePasswordProtectedSOA)(user, billingPeriod, deliveries, sanitation, compliance);
+            const pdfBuffer = await (0, index_1.generateSOAPDF)(user, billingPeriod, deliveries, sanitation, compliance);
             const template = (0, email_1.getNewInvoiceTemplate)(user.businessName, invoiceId, amount, billingPeriod);
             const ccList = getCCList(user.clientId);
             const bccList = getBCCList();
