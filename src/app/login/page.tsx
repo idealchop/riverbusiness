@@ -154,7 +154,7 @@ export default function LoginPage() {
                         The platform to run <span className="text-primary">essential needs</span> for business workforce.
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-md">
-                        Everything in a single platform for Filipino businesses.
+                        Simplifying how modern teams operate.
                     </p>
                 </div>
             </div>
@@ -162,7 +162,7 @@ export default function LoginPage() {
 
         {/* Login Form Side (Right) - 35% width */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 md:p-20 bg-white">
-            <div className="w-full max-w-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-full max-sm space-y-12 animate-in fade-in zoom-in-95 duration-500">
                 <div className="space-y-2">
                     <h2 className="text-4xl font-black tracking-tight text-slate-900">Sign in</h2>
                     <p className="text-slate-500 font-bold text-lg">Welcome back! Please enter your details.</p>
