@@ -14,7 +14,7 @@ interface SendEmailOptions {
 
 const BRAND_PRIMARY = '#538ec2';
 const BRAND_ACCENT = '#7ea9d2';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-white-v2.png?alt=media&token=6c25e9e2-9375-4f03-a066-5a666d546d81';
+const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-white-v2.png?alt=media&token=6c25e9e2-9375-4f03-a0ab-e32cd98b8b49';
 
 const GCASH_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2FRiver_gcash.png?alt=media&token=13c80b31-8f08-4857-a066-5a666d546d81';
 const BPI_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_BPI.png?alt=media&token=6ac4fd16-2014-40fe-b7cf-1fdf3e94a61e';

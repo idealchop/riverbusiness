@@ -113,12 +113,11 @@ export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery):
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = doc.internalPageConfig?.width || 612; // Standard letter fallback
         const margin = 40;
         const liters = delivery.liters || (delivery.volumeContainers * LITER_RATIO);
 
         // Header
-        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 100).fill(); // Simple rect for header
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 100).fill(); 
         doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text('River Philippines', margin, 40);
         doc.fontSize(12).font('Helvetica').text('Delivery Receipt & Confirmation', margin, 68);
 
@@ -180,7 +179,7 @@ export async function generateSOAPDF(
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = 612; // Standard letter fallback
+        const pageWidth = 612; 
         const margin = 40;
 
         // 1. High-Fidelity Header (Solid Blue Banner)
