@@ -88,5 +88,5 @@ export default function OnboardingPage() {
 
   }, [authUser, isUserLoading, firestore, router, toast]);
 
-  return <FullScreenLoader text="Initializing your workspace" />;
+  return <FullScreenLoader text="Initializing workspace" />;
 }

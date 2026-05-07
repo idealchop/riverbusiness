@@ -32,16 +32,14 @@ function SignupContent() {
   const initialEmail = searchParams.get('email') || '';
   const isInvited = !!initialEmail;
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<SignupFormValues>({
+  const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       email: initialEmail
     }
   });
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = form;
 
   const onSubmit = async (data: SignupFormValues) => {
     if (!auth) {

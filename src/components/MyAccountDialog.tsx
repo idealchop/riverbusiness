@@ -445,7 +445,7 @@ const PlanTab = ({ user, planImage, dispatch, setIsSoaDialogOpen, isParent }) =>
   </div>
 );
 
-const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }) => (
+const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, allInvoices, showCurrentMonthInvoice, currentMonthInvoice, getInvoiceDisplayDate, handleViewBreakdown, onPayNow, handleViewInvoice, invoiceCurrentPage, setInvoiceCurrentPage, totalInvoicePages }) => (
     <div className="space-y-4">
     {user.accountType === 'Branch' && (
         <div className="flex items-center gap-2 p-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg">
@@ -587,26 +587,28 @@ const InvoicesTab = ({ user, paymentsLoading, paginatedInvoices, showCurrentMont
            <p className="text-center py-10 text-sm text-muted-foreground">No invoices found.</p>
         )}
     </div>
-    <div className="flex items-center justify-end space-x-2 pt-4">
-        <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
-            disabled={invoiceCurrentPage === 1}
-        >
-            Previous
-        </Button>
-        <span className="text-sm text-muted-foreground">
-            Page {invoiceCurrentPage} of {totalInvoicePages > 0 ? totalInvoicePages : 1}
-        </span>
-        <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
-            disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
-        >
-            Next
-        </Button>
+    <div className="flex items-center justify-between px-2 pt-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Showing {paginatedInvoices.length} of {allInvoices.length} Statements</p>
+        <div className="flex items-center gap-3">
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                onClick={() => setInvoiceCurrentPage(p => Math.max(1, p - 1))}
+                disabled={invoiceCurrentPage === 1}
+            >
+                Previous
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-4 rounded-xl font-bold text-xs shadow-sm"
+                onClick={() => setInvoiceCurrentPage(p => Math.min(totalInvoicePages, p + 1))}
+                disabled={invoiceCurrentPage === totalInvoicePages || totalInvoicePages === 0}
+            >
+                Next
+            </Button>
+        </div>
     </div>
   </div>
 );
@@ -784,12 +786,12 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const [paymentProofPreview, setPaymentProofPreview] = React.useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
 
   const { toast } = useToast();
   const firestore = useFirestore();
   const storage = useStorage();
   const auth = useAuth();
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [invoiceCurrentPage, setInvoiceCurrentPage] = useState(1);
   const INVOICES_PER_PAGE = 5;
 
@@ -1163,7 +1165,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
   }, [TABS_CONFIG]);
 
   if (!user) {
-    return <>{children}</>;
+    return null;
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1221,9 +1223,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     }
 
     try {
-      // To satisfy the "zero friction" requirement and bypass Client SDK's mandatory verification emails,
-      // we update the Firestore record. A Cloud Function trigger (onuserupdate)
-      // handles the actual Authentication email sync using the Admin SDK.
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await updateDoc(userDocRef, { email: emailToSet });
 
@@ -1450,7 +1449,6 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
     return format(subMonths(safeDate, 1), 'MMMM yyyy');
   };
   
-  const userFirstName = user.name.split(' ')[0];
   const displayPhoto = user.photoURL;
 
   const handleTopUpSubmit = async () => {
@@ -1539,6 +1537,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                     user={user}
                     paymentsLoading={paymentsLoading}
                     paginatedInvoices={paginatedInvoices}
+                    allInvoices={allInvoices}
                     showCurrentMonthInvoice={showCurrentMonthInvoice}
                     currentMonthInvoice={currentMonthInvoice}
                     getInvoiceDisplayDate={getInvoiceDisplayDate}
@@ -1891,7 +1890,7 @@ export function MyAccountDialog({ user, authUser, planImage, paymentHistory, pay
                             <p className="font-bold text-lg">{user.pendingPlan.name}</p>
                             <p className="text-muted-foreground">on</p>
                             <p className="font-bold text-lg">{user.planChangeEffectiveDate ? format(user.planChangeEffectiveDate.toDate(), 'MMMM d, yyyy') : ''}</p>
-                            <p className="text-xs text-muted-foreground pt-4">Hi {userFirstName}, you can undo this request anytime before the effective date if you change your mind.</p>
+                            <p className="text-xs text-muted-foreground pt-4">Hi there, you can undo this request anytime before the effective date if you change your mind.</p>
                         </CardContent>
                          <CardFooter className="flex flex-col gap-2">
                             <Button variant="outline" onClick={handleUndoPlanChange}>
