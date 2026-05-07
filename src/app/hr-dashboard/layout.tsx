@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'link';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Users, 
@@ -125,7 +125,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                             <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
                                 <BookOpen className="h-5 w-5" />
                             </div>
-                            <CardTitle className="text-base font-bold tracking-tight leading-tight">Learning Hub</CardTitle>
+                            <CardTitle className="text-base font-bold tracking-tight leading-tight text-white">Learning Hub</CardTitle>
                             <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
                         </CardHeader>
                         <CardContent className="p-5 pt-0">
