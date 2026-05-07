@@ -91,7 +91,7 @@ function SignupContent() {
 
             <div className="relative z-10 space-y-12 animate-in fade-in slide-in-from-left-4 duration-700">
                 <div className="mb-16">
-                    <Logo className="h-10 w-32" />
+                    <Logo className="h-16 w-48" />
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
