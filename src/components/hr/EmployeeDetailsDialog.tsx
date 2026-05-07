@@ -191,8 +191,8 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                 <TableHeader className="bg-slate-50/50">
                                     <TableRow className="border-none">
                                         <TableHead className="text-xs font-bold text-slate-400 pl-6">Work Date</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400">Entry Time</TableHead>
-                                        <TableHead className="text-xs font-bold text-slate-400">Exit Time</TableHead>
+                                        <TableHead className="text-xs font-bold text-slate-400">Clock In</TableHead>
+                                        <TableHead className="text-xs font-bold text-slate-400">Clock Out</TableHead>
                                         <TableHead className="text-xs font-bold text-slate-400 text-right pr-6">Performance</TableHead>
                                     </TableRow>
                                 </TableHeader>

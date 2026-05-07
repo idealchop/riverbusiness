@@ -62,7 +62,7 @@ const DEMO_PAYROLL: Partial<HRPayrollRun>[] = [
 export default function AttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const [searchTerm, setSearchTerm] = setSearchTerm('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveTab] = useState('attendance');
 
   const companyId = user?.companyId || user?.clientId || 'default';
@@ -174,8 +174,8 @@ export default function AttendancePage() {
                   <TableRow className="border-none hover:bg-transparent">
                     <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Date</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time-In</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time-Out</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Clock In</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Clock Out</TableHead>
                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
