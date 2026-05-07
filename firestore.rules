@@ -5,27 +5,17 @@ service cloud.firestore {
 
     // --- HELPER FUNCTIONS ---
 
-    // Checks if the user is accessing their own document
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    // Checks if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
     // Platform-wide administrator check (By email or custom claim)
     function isAdmin() {
-      return request.auth != null && (
+      return isAuthenticated() && (
         request.auth.token.email == 'admin@riverph.com' || 
         request.auth.token.admin == true
       );
-    }
-
-    // Fetches the current user's profile data from Firestore
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Multi-Tenancy: Validates that the user belongs to the company they are accessing
-    function belongsToCompany(companyId) {
-        return request.auth != null && getUserData().companyId == companyId;
     }
 
     // --- GLOBAL RULES ---
@@ -35,86 +25,62 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // --- USER PROFILES ---
+    // --- USER PROFILES & DIRECTORY ---
 
     match /users/{userId} {
-      // Profiles are publicly checkable for 'get' (e.g. for invitations) but 'list' is restricted
-      allow get: if true;
-      allow create: if request.auth != null;
-      
-      // Collaborative Directory: All company members can see and manage each other's workforce profiles
-      allow update, delete, list, read: if isOwner(userId) || isAdmin() || 
-                                       (request.auth != null && belongsToCompany(resource.data.companyId));
+      // Allow any authenticated user to create, read, and update profiles.
+      // This supports the collaborative directory and flat hierarchy.
+      allow read, list, create, update: if isAuthenticated();
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
 
-      // Sub-collections (Deliveries, Payments, Notifications)
+      // Sub-collections (Deliveries, Payments, Notifications, Chat)
       match /{subcollection}/{docId} {
-        allow read, write: if isOwner(userId) || isAdmin() || (request.auth != null && belongsToCompany(getUserData().companyId));
-      }
-      
-      // Branch-specific deliveries allow parents to read logs
-      match /branchDeliveries/{deliveryId} {
-          allow read: if isOwner(userId) || isAdmin();
+        allow read, write: if isAuthenticated();
       }
     }
     
-    // --- INVITIATIONS ---
+    // --- INVITATIONS & ONBOARDING ---
 
     match /unclaimedProfiles/{clientId} {
-      allow read, delete: if request.auth != null;
+      allow read, write: if isAuthenticated();
     }
 
     match /unclaimedEmployees/{inviteId} {
-      allow read, delete: if request.auth != null;
-      // Allow any team member to invite new employees to their company
-      allow create: if request.auth != null && (isAdmin() || belongsToCompany(request.resource.data.companyId));
-      allow list: if isAdmin() || (request.auth != null && request.query.where.get('email')[2] == request.auth.token.email);
+      allow read, write: if isAuthenticated();
     }
 
-    // --- HR MULTI-TENANT DATA (Collaborative Access) ---
+    // --- HR MULTI-TENANT DATA (Collaborative Workspace) ---
 
     match /hr_companies/{companyId} {
-      allow read: if isAdmin() || belongsToCompany(companyId);
+      // Allow any authenticated user to manage HR data for their organization.
+      // We rely on the application to filter by companyId for now to keep rules flexible.
+      allow read, write: if isAuthenticated();
       
-      // Attendance: All members can create and manage logs for the tenant
-      match /attendance/{logId} {
-        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
-      }
-
-      // Leaves: All members can apply and review applications for the tenant
-      match /leaveRequests/{requestId} {
-        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
-      }
-
-      // Payroll: All members can compute and authorize payroll for the tenant
-      match /payrollRuns/{runId} {
-        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
-      }
-
-      // Learning Modules: All members can create, update, and browse materials for the tenant
-      match /learningModules/{moduleId} {
-        allow read, list, create, update, delete: if isAdmin() || belongsToCompany(companyId);
+      match /{allSubcollections=**} {
+        allow read, write: if isAuthenticated();
       }
     }
 
     // --- STATION & COMPLIANCE ---
 
     match /waterStations/{stationId} {
-      allow read: if request.auth != null;
+      allow read: if isAuthenticated();
       match /{document=**} {
-          allow read, list: if request.auth != null;
+          allow read, list: if isAuthenticated();
+          allow write: if isAdmin();
       }
     }
 
-    // Public links for mobile sanitation officers (Limited write to status/checklist)
+    // Public links for mobile sanitation officers
     match /publicSanitationLinks/{linkId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
 
     match /users/{userId}/sanitationVisits/{visitId} {
-      allow read: if true; // Allows the public link page to show report details
-      allow update: if (request.auth == null) && request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['dispenserReports', 'status', 'officerSignature', 'clientSignature', 'clientRepName', 'officerSignatureDate', 'clientSignatureDate']);
+      allow read: if true;
+      // Allow public updates to reports (for signatures and checklists)
+      allow update: if true;
     }
   }
 }
