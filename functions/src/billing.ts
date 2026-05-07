@@ -4,7 +4,7 @@ import { format, subMonths, startOfMonth, endOfMonth, isToday, getYear, getMonth
 import { sendEmail, getNewInvoiceTemplate } from './email';
 import * as logger from 'firebase-functions/logger';
 import type { ManualCharge, Delivery, SanitationVisit, ComplianceReport } from './types'; 
-import { generatePasswordProtectedSOA } from './index';
+import { generateSOAPDF } from './index';
 
 const containerToLiter = (containers: number) => (containers || 0) * 19.5;
 
@@ -195,7 +195,7 @@ async function generateInvoiceForUser(
                 compliance = compSnap.docs.map(d => d.data() as ComplianceReport);
             }
 
-            const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriod, deliveries, sanitation, compliance);
+            const pdfBuffer = await generateSOAPDF(user, billingPeriod, deliveries, sanitation, compliance);
             const template = getNewInvoiceTemplate(user.businessName, invoiceId, amount, billingPeriod);
             
             const ccList = getCCList(user.clientId);

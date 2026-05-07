@@ -113,13 +113,13 @@ export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery):
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = doc.page.width;
+        const pageWidth = doc.internalPageConfig?.width || 612; // Standard letter fallback
         const margin = 40;
         const liters = delivery.liters || (delivery.volumeContainers * LITER_RATIO);
 
         // Header
-        doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 100).fill();
-        doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text('River Tech Inc.', margin, 40);
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 100).fill(); // Simple rect for header
+        doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text('River Philippines', margin, 40);
         doc.fontSize(12).font('Helvetica').text('Delivery Receipt & Confirmation', margin, 68);
 
         // Meta Info
@@ -135,13 +135,13 @@ export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery):
         const stakeholderY = doc.y;
         doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('DELIVERED TO:', margin, stakeholderY);
         doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold').text(user.businessName || 'N/A', margin, stakeholderY + 15);
-        doc.fontSize(9).font('Helvetica').text(user.address || 'N/A', margin, stakeholderY + 28, { width: pageWidth - margin * 2 });
+        doc.fontSize(9).font('Helvetica').text(user.address || 'N/A', margin, stakeholderY + 28, { width: 500 });
         doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin, doc.y + 2);
 
         // Logistics Table
         doc.moveDown(3);
         const tableTop = doc.y;
-        doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
+        doc.rect(margin, tableTop, 530, 20).fill(BRAND_PRIMARY);
         doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
         doc.text('Logistics Item', margin + 5, tableTop + 6);
         doc.text('Quantity', margin + 250, tableTop + 6);
@@ -155,16 +155,16 @@ export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery):
 
         // Footer
         doc.moveDown(4);
-        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This document serves as proof of supply fulfillment within the River ecosystem. Digital signatures and timestamps are archived in the Command Center.', margin, doc.y, { align: 'center', width: pageWidth - margin * 2 });
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This document serves as proof of supply fulfillment within the River ecosystem. Digital records are archived in the Command Center.', margin, doc.y, { align: 'center', width: 530 });
         
         doc.end();
     });
 }
 
 /**
- * Generates a high-fidelity, password-protected PDF Statement of Account.
+ * Generates a high-fidelity PDF Statement of Account.
  */
-export async function generatePasswordProtectedSOA(
+export async function generateSOAPDF(
     user: any, 
     period: string, 
     deliveries: Delivery[], 
@@ -173,23 +173,18 @@ export async function generatePasswordProtectedSOA(
     transactions?: Transaction[]
 ): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
-        const doc = new PDFDocument({
-            userPassword: user.clientId || 'password',
-            ownerPassword: 'river-admin-secret',
-            permissions: { printing: 'highResolution', copying: true, modifying: false },
-            margin: 40
-        });
+        const doc = new PDFDocument({ margin: 40 });
 
         const chunks: Buffer[] = [];
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = doc.page.width;
+        const pageWidth = 612; // Standard letter fallback
         const margin = 40;
 
         // 1. High-Fidelity Header (Solid Blue Banner)
-        doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 120).fill();
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 120).fill();
 
         const pricePerLiter = user.plan?.price || 0;
         const pricePerContainer = pricePerLiter * LITER_RATIO;
@@ -200,11 +195,11 @@ export async function generatePasswordProtectedSOA(
         doc.fontSize(10).font('Helvetica').text(`Plan: ${user.plan?.name || 'N/A'}`, margin, 92);
         
         // Right Side Banner Metadata
-        doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: pageWidth - margin * 2 });
-        doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: pageWidth - margin * 2 });
+        doc.fontSize(10).font('Helvetica-Bold').text('STATEMENT DATE:', margin, 45, { align: 'right', width: 530 });
+        doc.font('Helvetica').text(format(new Date(), 'MMM d, yyyy'), margin, 58, { align: 'right', width: 530 });
         
-        doc.font('Helvetica-Bold').text('BILLING PERIOD:', margin, 75, { align: 'right', width: pageWidth - margin * 2 });
-        doc.font('Helvetica').text(period, margin, 88, { align: 'right', width: pageWidth - margin * 2 });
+        doc.font('Helvetica-Bold').text('BILLING PERIOD:', margin, 75, { align: 'right', width: 530 });
+        doc.font('Helvetica').text(period, margin, 88, { align: 'right', width: 530 });
 
         doc.fillColor('#000000').moveDown(4.5);
         
@@ -231,16 +226,16 @@ export async function generatePasswordProtectedSOA(
         const drawTable = (title: string, headers: string[], rows: any[][]) => {
             if (rows.length === 0) return;
             
-            if (doc.y > doc.page.height - 120) doc.addPage();
+            if (doc.y > 650) doc.addPage();
 
             doc.moveDown(1);
             doc.fontSize(11).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text(title, margin);
             doc.moveDown(0.5);
 
             const tableTop = doc.y;
-            const colWidth = (pageWidth - margin * 2) / headers.length;
+            const colWidth = 530 / headers.length;
 
-            doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
+            doc.rect(margin, tableTop, 530, 20).fill(BRAND_PRIMARY);
             doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
             
             headers.forEach((h, i) => {
@@ -252,12 +247,12 @@ export async function generatePasswordProtectedSOA(
             doc.fillColor('#000000').font('Helvetica').fontSize(8);
 
             rows.forEach((row, rowIndex) => {
-                if (doc.y > doc.page.height - 40) {
+                if (doc.y > 720) {
                     doc.addPage();
                 }
                 const rowY = doc.y;
                 if (rowIndex % 2 !== 0) {
-                    doc.rect(margin, rowY - 2, pageWidth - margin * 2, 15).fill('#f8fafc');
+                    doc.rect(margin, rowY - 2, 530, 15).fill('#f8fafc');
                     doc.fillColor('#000000');
                 }
                 row.forEach((cell, i) => {
@@ -329,7 +324,7 @@ export async function generatePasswordProtectedSOA(
             });
             drawTable('Water Refill Logs', ['Ref ID', 'Date', 'Qty', 'Price/Unit', 'Volume', 'Amount', 'Status'], refillRows);
 
-            if (doc.y > doc.page.height - 100) doc.addPage();
+            if (doc.y > 650) doc.addPage();
             
             const finalY = doc.y;
             doc.fontSize(10).font('Helvetica-Bold').text('TOTAL CONSUMPTION:', margin + 150, finalY);
@@ -339,7 +334,7 @@ export async function generatePasswordProtectedSOA(
 
             const vatAmount = totalAmount * (12/112);
             doc.moveDown(1.5).fontSize(8).font('Helvetica-Oblique').fillColor('#666666');
-            doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}`, 0, doc.y, { align: 'right', width: pageWidth - margin });
+            doc.text(`VAT (12% Included): P ${vatAmount.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3})}`, 0, doc.y, { align: 'right', width: 530 });
         }
 
         doc.end();
@@ -357,13 +352,11 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', (err) => reject(err));
 
-        const pageWidth = doc.page.width;
         const margin = 40;
-
         const finalAmount = customAmount !== undefined ? customAmount : invoice.amount;
 
         // Header (Solid Blue Banner)
-        doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 100).fill();
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, 800, 100).fill();
         doc.fillColor('#ffffff').fontSize(22).font('Helvetica-Bold').text('River Tech Inc.', margin, 45);
         doc.fontSize(12).font('Helvetica').text('Invoice Receipt', margin, 72);
 
@@ -380,7 +373,7 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
         doc.moveDown(2);
         const stakeholderY = doc.y;
         doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('BILL FROM:', margin, stakeholderY);
-        doc.text('BILL TO:', pageWidth / 2 + 20, stakeholderY);
+        doc.text('BILL TO:', 320, stakeholderY);
 
         doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold');
         doc.text('River Tech Inc.', margin, stakeholderY + 15);
@@ -388,15 +381,15 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
         doc.text('Filinvest Axis Tower 1, Alabang', margin, stakeholderY + 39);
         doc.text('customers@riverph.com', margin, stakeholderY + 51);
 
-        doc.font('Helvetica-Bold').text(user.businessName || 'N/A', pageWidth / 2 + 20, stakeholderY + 15);
-        doc.font('Helvetica').text(user.address || 'N/A', pageWidth / 2 + 20, stakeholderY + 27, { width: pageWidth / 2 - 60 });
-        doc.text(`Client ID: ${user.clientId || 'N/A'}`, pageWidth / 2 + 20, doc.y + 2);
-        doc.text(user.email || '', pageWidth / 2 + 20, doc.y + 12);
+        doc.font('Helvetica-Bold').text(user.businessName || 'N/A', 320, stakeholderY + 15);
+        doc.font('Helvetica').text(user.address || 'N/A', 320, stakeholderY + 27, { width: 250 });
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, 320, doc.y + 2);
+        doc.text(user.email || '', 320, doc.y + 12);
 
         // Table
         doc.moveDown(3);
         const tableTop = doc.y + 20;
-        doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
+        doc.rect(margin, tableTop, 530, 20).fill(BRAND_PRIMARY);
         doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
         doc.text('Description', margin + 5, tableTop + 6);
         doc.text('Qty', margin + 300, tableTop + 6);
@@ -412,25 +405,25 @@ export async function generateInvoiceReceiptPDF(user: any, invoice: any, customA
 
         // Summary Totals
         doc.moveDown(4);
-        const totalsX = pageWidth - margin - 200;
+        const totalsX = 350;
         const vatIncluded = finalAmount * (12 / 112);
         
         doc.fontSize(10).font('Helvetica').text('Subtotal (VAT Included)', totalsX, doc.y);
-        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: 530 });
         
         doc.moveDown(0.5);
         doc.text('VAT (12% Included)', totalsX, doc.y);
-        doc.text(`P ${vatIncluded.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${vatIncluded.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: 530 });
         
         if (totalContainers !== undefined) {
             doc.moveDown(0.5);
             doc.text('Total Volume', totalsX, doc.y);
-            doc.text(`${totalContainers} Containers`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+            doc.text(`${totalContainers} Containers`, margin, doc.y - 10, { align: 'right', width: 530 });
         }
 
         doc.moveDown(1);
         doc.font('Helvetica-Bold').text('Total Paid', totalsX, doc.y);
-        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: pageWidth - margin * 2 });
+        doc.text(`P ${finalAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}`, margin, doc.y - 10, { align: 'right', width: 530 });
 
         doc.end();
     });
@@ -530,7 +523,7 @@ export const onpaymentremindercreate = onDocumentCreated({
     const pricePerLiter = user.plan?.price || 0;
     const totalAmount = deliveries.reduce((sum, d) => sum + (d.amount || (d.volumeContainers * LITER_RATIO * pricePerLiter)), 0);
 
-    const pdfBuffer = await generatePasswordProtectedSOA(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
+    const pdfBuffer = await generateSOAPDF(user, billingPeriodLabel, deliveries, sanitation, complianceReports, transactions);
     const template = getPaymentReminderTemplate(user.businessName, totalAmount.toFixed(2), billingPeriodLabel);
     
     // Email Config - Financial Restriction
@@ -761,7 +754,7 @@ export const ondeliveryupdate = onDocumentUpdated({
 
         await sendEmail({ 
             to: targetEmails, 
-            bcc: bccList,
+            bcc: bccList, 
             subject: template.subject, 
             text: `Delivery complete`, 
             html: template.html,
