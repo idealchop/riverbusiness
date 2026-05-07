@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
-import { useUser, useDoc, useFirestore, useMemoFirebase, useAuth, useCollection } from '@/firebase';
+import { useUser, useDoc, useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LogoBlack } from '@/components/icons';
@@ -134,7 +134,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                             <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
                                 <BookOpen className="h-5 w-5" />
                             </div>
-                            <CardTitle className="text-base font-black uppercase tracking-tight leading-tight">Learning Hub</CardTitle>
+                            <CardTitle className="text-base font-black tracking-tight leading-tight">Learning Hub</CardTitle>
                             <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
                         </CardHeader>
                         <CardContent className="p-5 pt-0">
