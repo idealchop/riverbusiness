@@ -58,6 +58,7 @@ export interface HRAttendanceLog {
     date: string;
     timeIn: any;
     timeOut?: any;
+    totalMinutes?: number;
     method: 'QR' | 'manual';
     status: 'present' | 'late' | 'absent' | 'leave';
 }

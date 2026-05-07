@@ -8,7 +8,9 @@ import {
   AlertCircle,
   Timer,
   ScanLine,
-  ShieldCheck
+  ShieldCheck,
+  Activity,
+  LogOut
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,12 +22,21 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { HRAttendanceLog } from '@/lib/types';
 
+const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+};
+
 export default function AttendancePage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [liveDuration, setLiveDuration] = useState<string>('00:00:00');
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -48,6 +59,28 @@ export default function AttendancePage() {
   );
   const { data: attendanceLogs } = useCollection<HRAttendanceLog>(todayLogQuery);
   const currentLog = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs[0] : null;
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (currentLog && currentLog.timeIn && !currentLog.timeOut) {
+      const startTime = toSafeDate(currentLog.timeIn);
+      if (startTime) {
+        interval = setInterval(() => {
+          const now = new Date();
+          const diffMs = now.getTime() - startTime.getTime();
+          const diffHrs = Math.floor(diffMs / 3600000);
+          const diffMins = Math.floor((diffMs % 3600000) / 60000);
+          const diffSecs = Math.floor((diffMs % 60000) / 1000);
+          setLiveDuration(
+            `${diffHrs.toString().padStart(2, '0')}:${diffMins.toString().padStart(2, '0')}:${diffSecs.toString().padStart(2, '0')}`
+          );
+        }, 1000);
+      }
+    } else {
+        setLiveDuration('00:00:00');
+    }
+    return () => clearInterval(interval);
+  }, [currentLog]);
 
   const handleTimeIn = async () => {
     if (!firestore || !user?.id || !companyId) {
@@ -84,9 +117,18 @@ export default function AttendancePage() {
     if (!firestore || !currentLog || !companyId) return;
     setIsProcessing(true);
     try {
+        const startTime = toSafeDate(currentLog.timeIn);
+        const endTime = new Date();
+        let totalMinutes = 0;
+        
+        if (startTime) {
+            totalMinutes = Math.floor((endTime.getTime() - startTime.getTime()) / 60000);
+        }
+
         const logRef = doc(firestore, 'hr_companies', companyId, 'attendance', currentLog.id);
         await updateDoc(logRef, {
-            timeOut: serverTimestamp()
+            timeOut: serverTimestamp(),
+            totalMinutes: totalMinutes
         });
         toast({ title: 'Clock-out successful', description: 'Have a great evening!' });
     } catch (error) {
@@ -123,6 +165,26 @@ export default function AttendancePage() {
                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] pt-2">Operational Time-Sync</p>
               </div>
 
+              {currentLog && currentLog.timeIn && !currentLog.timeOut && (
+                <div className="w-full bg-slate-900 rounded-[2rem] p-6 text-white space-y-4 animate-in zoom-in-95 shadow-2xl shadow-slate-900/20">
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-green-400 animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Shift Active</span>
+                        </div>
+                        <Badge variant="outline" className="border-white/20 text-white font-mono text-[10px] h-6 px-3">
+                            In: {format(toSafeDate(currentLog.timeIn) || new Date(), 'hh:mm a')}
+                        </Badge>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-4xl font-black tracking-tighter tabular-nums text-white">
+                            {liveDuration}
+                        </p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 mt-2">Current Duration</p>
+                    </div>
+                </div>
+              )}
+
               <div className="w-full space-y-4 z-10">
                   {!currentLog ? (
                     <Button 
@@ -138,6 +200,7 @@ export default function AttendancePage() {
                         disabled={isProcessing}
                         className="w-full h-16 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-slate-900/20"
                     >
+                        <LogOut className="mr-2 h-4 w-4" />
                         {isProcessing ? 'Processing...' : 'Authorize Shift Exit'}
                     </Button>
                   ) : (
@@ -148,6 +211,9 @@ export default function AttendancePage() {
                         <div className="space-y-1">
                             <p className="font-black text-slate-900 uppercase text-xs tracking-wider">Shift Secured</p>
                             <p className="text-[10px] font-bold text-green-600/70 uppercase">Daily logs finalized and stored.</p>
+                            {currentLog.totalMinutes && (
+                                <p className="text-[10px] font-black text-slate-900 mt-1">Total: {Math.floor(currentLog.totalMinutes / 60)}h {currentLog.totalMinutes % 60}m</p>
+                            )}
                         </div>
                     </div>
                   )}
