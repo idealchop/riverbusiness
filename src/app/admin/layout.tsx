@@ -72,11 +72,12 @@ export default function AdminLayout({
   return (
     <div className="flex flex-col h-screen bg-slate-50/50">
       <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-        <Link href="/admin" className="flex items-center group">
-            <div className="flex items-center gap-2">
-                <LogoBlack className="h-12 w-12 transition-transform group-hover:scale-105" />
-                <Badge variant="outline" className="text-[10px] uppercase font-black bg-blue-50 text-blue-600 border-blue-200 px-2 py-0">Admin</Badge>
-            </div>
+        <Link href="/admin" className="flex items-center gap-3 group">
+          <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
+          <div className="flex flex-col">
+              <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Command</span>
+              <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Center</span>
+          </div>
         </Link>
         <div className="flex-1" />
         <div className="flex items-center gap-2 sm:gap-4">

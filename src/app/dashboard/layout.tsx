@@ -212,8 +212,12 @@ export default function DashboardLayout({
   return (
       <div className="flex flex-col h-full bg-slate-50/50">
           <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md shadow-sm sm:h-16 sm:px-6">
-            <Link href="/dashboard" className="flex items-center group">
-              <LogoBlack className="h-12 w-12 transition-transform group-hover:scale-105" />
+            <Link href="/dashboard" className="flex items-center gap-3 group">
+              <LogoBlack className="h-10 w-10 transition-transform group-hover:scale-105" />
+              <div className="flex flex-col">
+                <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-900 leading-tight">Water</span>
+                <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400 leading-tight">Refill</span>
+              </div>
             </Link>
             <div className="flex-1" />
             
