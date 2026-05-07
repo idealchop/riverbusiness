@@ -431,29 +431,59 @@ function getRefillRequestTemplate(businessName, status, requestId, date) {
     };
 }
 function getEmployeeInvitationTemplate(employeeName, businessName, signupUrl) {
-    const content = `
-    <p class="greeting">Hello ${employeeName}, 👋</p>
-    <p class="body-text">
-      You've been invited to join the <strong>${businessName}</strong> team on River Business.
-    </p>
-    <p class="body-text">
-      River is our centralized platform for managing team operations. Once you join, you'll be able to:
-    </p>
-    <ul style="color: #475569; font-size: 14px; line-height: 1.8; margin-bottom: 24px;">
-      <li>Clock in and out from the station</li>
-      <li>File and track leave applications</li>
-      <li>View your 360 employment profile and logs</li>
-    </ul>
-    <div class="btn-container">
-      <a href="${signupUrl}" class="btn">Activate my account</a>
-    </div>
-    <p class="next-step">
-      Click the button above to set up your password and launch your workspace. Please ensure you use this email address during sign-up.
-    </p>
-  `;
+    const timestamp = Date.now();
     return {
         subject: `Invitation: Join ${businessName} on River Business 🌊`,
-        html: getEmailWrapper(content, 'Welcome to the Team')
+        html: `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 20px auto; border-radius: 16px; overflow: hidden; background-color: #ffffff; border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%); padding: 40px 24px; text-align: center; color: #ffffff; }
+        .logo { width: 60px; height: auto; margin-bottom: 12px; }
+        .header-title { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+        .content { padding: 40px; text-align: center; }
+        .main-title { color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 24px; }
+        .greeting { color: #0f172a; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+        .body-text { color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
+        .btn-container { text-align: center; margin-top: 30px; margin-bottom: 30px; }
+        .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 16px; display: inline-block; }
+        .footer { text-align: center; padding: 0 40px 40px 40px; }
+        .footer-text { font-size: 12px; color: #94a3b8; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${LOGO_URL}" alt="River Logo" class="logo">
+          <h1 class="header-title">River Philippines</h1>
+        </div>
+        <div class="content">
+          <h2 class="main-title">Welcome to the Team</h2>
+          <p class="greeting">Hello ${employeeName}, 👋</p>
+          <p class="body-text">
+            You've been invited to join the <strong>${businessName}</strong> team on River Business.
+          </p>
+          <div class="btn-container">
+            <a href="${signupUrl}" class="btn">Activate my account</a>
+          </div>
+          <p class="footer-text" style="color: #64748b; font-weight: 600;">
+            Click the button above to set up your password and launch your workspace.
+          </p>
+        </div>
+        <div class="footer">
+          <p class="footer-text">River PH - Automated, Connected, Convenient.</p>
+        </div>
+      </div>
+      <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Invitation ID: ${timestamp} - </div>
+    </body>
+    </html>
+    `
     };
 }
 function getSanitationScheduledTemplate(businessName, assignedTo, date) {
@@ -543,4 +573,3 @@ function getPaymentReminderTemplate(businessName, amount, period) {
         html: getEmailWrapper(content, 'Payment Follow-up')
     };
 }
-//# sourceMappingURL=email.js.map
