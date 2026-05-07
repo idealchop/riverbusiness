@@ -30,6 +30,12 @@ import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
 
+const DEMO_PAYROLL_RUNS: any[] = [
+    { id: 'pr1', periodStart: '2024-05-01', periodEnd: '2024-05-31', status: 'paid', totalNetSalary: 245000, createdAt: new Date('2024-06-01') },
+    { id: 'pr2', periodStart: '2024-04-01', periodEnd: '2024-04-30', status: 'paid', totalNetSalary: 238000, createdAt: new Date('2024-05-01') },
+    { id: 'pr3', periodStart: '2024-03-01', periodEnd: '2024-03-31', status: 'paid', totalNetSalary: 232000, createdAt: new Date('2024-04-01') },
+];
+
 export default function PayrollPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -39,7 +45,6 @@ export default function PayrollPage() {
   const companyId = user?.companyId || user?.clientId || 'default';
   const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
-  // Strict role protection: Redirect employees back to their workspace
   useEffect(() => {
     if (!isUserLoading && user && !isManagement) {
       router.replace('/hr-dashboard');
@@ -52,10 +57,13 @@ export default function PayrollPage() {
   );
   const { data: payrollRuns, isLoading } = useCollection(payrollQuery);
 
-  const totalDisbursed = useMemo(() => {
-    if (!payrollRuns) return 0;
-    return payrollRuns.reduce((sum, run) => sum + (Number(run?.totalNetSalary) || 0), 0);
+  const displayPayroll = useMemo(() => {
+    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL_RUNS;
   }, [payrollRuns]);
+
+  const totalDisbursed = useMemo(() => {
+    return displayPayroll.reduce((sum, run) => sum + (Number(run?.totalNetSalary) || 0), 0);
+  }, [displayPayroll]);
 
   const isOwner = user?.hrRole === 'owner';
 
@@ -67,7 +75,7 @@ export default function PayrollPage() {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payroll Engine</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payroll</h1>
           <p className="text-slate-500 font-medium">Automated salary computation and disbursement logs.</p>
         </div>
         {isOwner && (
@@ -122,8 +130,7 @@ export default function PayrollPage() {
                  <TableBody>
                    {isLoading ? (
                       <TableRow><TableCell colSpan={4} className="text-center py-10 opacity-50 font-medium">Accessing secure records...</TableCell></TableRow>
-                   ) : payrollRuns && payrollRuns.length > 0 ? (
-                      payrollRuns.map(run => (
+                   ) : displayPayroll.map(run => (
                         <TableRow key={run.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0">
                           <TableCell className="pl-6 py-4">
                             <p className="text-sm font-semibold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : 'N/A'} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : 'N/A'}</p>
@@ -146,17 +153,7 @@ export default function PayrollPage() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                   ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-20">
-                         <div className="flex flex-col items-center gap-2 opacity-20">
-                           <History className="h-10 w-10 text-slate-400" />
-                           <p className="text-sm font-bold uppercase tracking-widest">No payroll history found</p>
-                         </div>
-                      </TableCell>
-                    </TableRow>
-                   )}
+                      ))}
                  </TableBody>
                </Table>
             </CardContent>

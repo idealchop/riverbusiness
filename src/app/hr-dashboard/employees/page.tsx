@@ -40,6 +40,14 @@ import { cn } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 
+const DEMO_EMPLOYEES: Partial<AppUser>[] = [
+    { id: 'demo1', name: 'John Doe', email: 'john@riverph.com', hrProfile: { firstName: 'John', lastName: 'Doe', position: 'Operations Manager', department: 'Management', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15', status: 'Active' } },
+    { id: 'demo2', name: 'Jane Smith', email: 'jane@riverph.com', hrProfile: { firstName: 'Jane', lastName: 'Smith', position: 'Customer Success', department: 'Service', salaryType: 'monthly', rate: 35000, startDate: '2024-02-10', status: 'Active' } },
+    { id: 'demo3', name: 'Robert Johnson', email: 'robert@riverph.com', hrProfile: { firstName: 'Robert', lastName: 'Johnson', position: 'Logistics Lead', department: 'Operations', salaryType: 'daily', rate: 1200, startDate: '2024-03-01', status: 'Active' } },
+    { id: 'demo4', name: 'Maria Garcia', email: 'maria@riverph.com', hrProfile: { firstName: 'Maria', lastName: 'Garcia', position: 'Quality Officer', department: 'Compliance', salaryType: 'monthly', rate: 32000, startDate: '2024-04-15', status: 'Active' } },
+    { id: 'demo5', name: 'David Wilson', email: 'david@riverph.com', hrProfile: { firstName: 'David', lastName: 'Wilson', position: 'Delivery Driver', department: 'Operations', salaryType: 'daily', rate: 800, startDate: '2024-05-20', status: 'Active' } },
+];
+
 export default function EmployeesPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -51,7 +59,6 @@ export default function EmployeesPage() {
   const companyId = user?.companyId || user?.clientId || 'default';
   const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
-  // Strict role protection: Redirect employees back to their workspace
   useEffect(() => {
     if (!isUserLoading && user && !isManagement) {
       router.replace('/hr-dashboard');
@@ -65,7 +72,7 @@ export default function EmployeesPage() {
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
   const filteredEmployees = useMemo(() => {
-    const list = employees || [];
+    const list = employees && employees.length > 0 ? employees : (DEMO_EMPLOYEES as AppUser[]);
     const search = searchTerm.toLowerCase().trim();
     if (!search) return list;
     return list.filter(emp => {
@@ -85,7 +92,7 @@ export default function EmployeesPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employee Directory</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employees</h1>
           <p className="text-slate-500 font-medium">Manage Your Workforce And Employment Details.</p>
         </div>
         <Button 
@@ -127,8 +134,7 @@ export default function EmployeesPage() {
             <TableBody>
               {isLoading ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-medium">Syncing Directory...</TableCell></TableRow>
-              ) : filteredEmployees.length > 0 ? (
-                filteredEmployees.map((emp) => (
+              ) : filteredEmployees.map((emp) => (
                 <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                   <TableCell className="pl-6 py-4">
                     <div className="flex items-center gap-3">
@@ -186,16 +192,7 @@ export default function EmployeesPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-20">
-                    <div className="flex flex-col items-center gap-2 opacity-20">
-                        <Users className="h-10 w-10 text-slate-400" />
-                        <p className="text-sm font-bold uppercase tracking-widest">No Employees Found</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </CardContent>

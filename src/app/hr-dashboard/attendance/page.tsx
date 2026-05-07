@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
 import type { HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/lib/types';
@@ -41,10 +41,28 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+// --- DEMO DATA ---
+const DEMO_ATTENDANCE: Partial<HRAttendanceLog>[] = [
+    { id: 'a1', employeeName: 'John Doe', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 30)), timeOut: new Date(new Date().setHours(17, 30)), method: 'QR', status: 'present' },
+    { id: 'a2', employeeName: 'Jane Smith', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(9, 15)), timeOut: new Date(new Date().setHours(18, 15)), method: 'manual', status: 'late' },
+    { id: 'a3', employeeName: 'Robert Johnson', date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 45)), timeOut: new Date(new Date().setHours(17, 45)), method: 'QR', status: 'present' },
+    { id: 'a4', employeeName: 'Maria Garcia', date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 55)), timeOut: new Date(new Date().setHours(18, 0)), method: 'QR', status: 'present' },
+];
+
+const DEMO_LEAVES: Partial<HRLeaveRequest>[] = [
+    { id: 'l1', employeeName: 'David Wilson', type: 'Vacation', startDate: '2024-06-01', endDate: '2024-06-05', reason: 'Family trip to Palawan', status: 'approved', appliedAt: Timestamp.now() },
+    { id: 'l2', employeeName: 'Maria Garcia', type: 'Sick', startDate: '2024-05-20', endDate: '2024-05-21', reason: 'Fever and flu', status: 'approved', appliedAt: Timestamp.now() },
+];
+
+const DEMO_PAYROLL: Partial<HRPayrollRun>[] = [
+    { id: 'p1', periodStart: '2024-05-01', periodEnd: '2024-05-31', status: 'paid', totalNetSalary: 245000, createdAt: Timestamp.now() },
+    { id: 'p2', periodStart: '2024-04-01', periodEnd: '2024-04-30', status: 'paid', totalNetSalary: 238000, createdAt: Timestamp.now() },
+];
+
 export default function AttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = setSearchTerm('');
   const [activeCategory, setActiveTab] = useState('attendance');
 
   const companyId = user?.companyId || user?.clientId || 'default';
@@ -79,15 +97,23 @@ export default function AttendancePage() {
   );
   const { data: payrollRuns, isLoading: loadingPayroll } = useCollection<HRPayrollRun>(payrollQuery);
 
-  // --- Filtering Logic ---
-  const filteredAttendance = useMemo(() => {
-    if (!attendanceLogs) return [];
-    if (!searchTerm) return attendanceLogs;
-    return attendanceLogs.filter(log => 
+  // --- Display Logic ---
+  const displayAttendance = useMemo(() => {
+    const list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : (DEMO_ATTENDANCE as HRAttendanceLog[]);
+    if (!searchTerm) return list;
+    return list.filter(log => 
         log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         log.date.includes(searchTerm)
     );
   }, [attendanceLogs, searchTerm]);
+
+  const displayLeaves = useMemo(() => {
+    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVES as HRLeaveRequest[]);
+  }, [leaveRequests]);
+
+  const displayPayroll = useMemo(() => {
+    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : (DEMO_PAYROLL as HRPayrollRun[]);
+  }, [payrollRuns]);
 
   if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
 
@@ -96,7 +122,7 @@ export default function AttendancePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-             Attendance History
+             Attendance
           </h1>
           <p className="text-slate-500 font-medium text-sm">
              View Your Records For Work, Leave, and Payments
@@ -142,7 +168,6 @@ export default function AttendancePage() {
           </CardHeader>
           
           <CardContent className="p-0">
-            {/* --- ATTENDANCE CONTENT --- */}
             <TabsContent value="attendance" className="m-0">
               <Table>
                 <TableHeader className="bg-slate-50/50">
@@ -151,64 +176,47 @@ export default function AttendancePage() {
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Employee</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time-In</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Time-Out</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Duration</TableHead>
                     <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-slate-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingAttendance ? (
                     <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Logs...</TableCell></TableRow>
-                  ) : filteredAttendance.length > 0 ? (
-                    filteredAttendance.map((log) => {
-                      const timeIn = toSafeDate(log.timeIn);
-                      const timeOut = toSafeDate(log.timeOut);
-                      return (
-                        <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
-                          <TableCell className="pl-6 py-4">
-                             <div className="flex flex-col">
-                                <span className="font-bold text-slate-900 text-sm">{format(new Date(log.date), 'MMM d, yyyy')}</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: {log.id.substring(0, 6)}</span>
-                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs uppercase">
-                                {log.employeeName?.charAt(0) || 'E'}
-                              </div>
-                              <p className="text-sm font-semibold text-slate-700">{log.employeeName}</p>
+                  ) : displayAttendance.map((log) => {
+                    const timeIn = toSafeDate(log.timeIn);
+                    const timeOut = toSafeDate(log.timeOut);
+                    return (
+                      <TableRow key={log.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
+                        <TableCell className="pl-6 py-4">
+                           <div className="flex flex-col">
+                              <span className="font-bold text-slate-900 text-sm">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'N/A'}</span>
+                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-400 text-xs uppercase">
+                              {log.employeeName?.charAt(0) || 'E'}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
-                          <TableCell className="text-sm font-medium text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
-                          <TableCell>
-                            <span className="text-xs font-bold tabular-nums text-slate-900">
-                                {log.totalMinutes ? `${Math.floor(log.totalMinutes / 60)}h ${log.totalMinutes % 60}m` : '--'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right pr-6">
-                            <Badge className={cn(
-                              "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
-                              log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                            )}>
-                              {log.status || 'N/A'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-32 opacity-20">
-                        <Clock className="h-12 w-12 mx-auto mb-4" />
-                        <p className="font-bold uppercase tracking-widest text-xs">No Records Found</p>
-                      </TableCell>
-                    </TableRow>
-                  )}
+                            <p className="text-sm font-semibold text-slate-700">{log.employeeName}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-slate-600">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
+                        <TableCell className="text-sm font-medium text-slate-600">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
+                        <TableCell className="text-right pr-6">
+                          <Badge className={cn(
+                            "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
+                            log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                          )}>
+                            {log.status || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TabsContent>
 
-            {/* --- LEAVES CONTENT --- */}
             <TabsContent value="leaves" className="m-0">
                <Table>
                 <TableHeader className="bg-slate-50/50">
@@ -223,40 +231,29 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingLeaves ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Logs...</TableCell></TableRow>
-                  ) : leaveRequests && leaveRequests.length > 0 ? (
-                    leaveRequests.map(req => (
-                      <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
-                        <TableCell className="pl-6 py-4">
-                          <p className="text-sm font-bold text-slate-900">{format(new Date(req.startDate), 'MMM d')} - {format(new Date(req.endDate), 'MMM d')}</p>
-                          <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Applied {req.appliedAt ? format(toSafeDate(req.appliedAt) || new Date(), 'PP') : ''}</p>
-                        </TableCell>
-                        <TableCell className="text-sm font-semibold text-slate-700">{req.employeeName}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
-                        <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
-                        <TableCell className="text-right pr-6">
-                            <Badge className={cn(
-                                "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
-                                req.status === 'approved' ? "bg-green-50 text-green-700" : 
-                                req.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
-                            )}>
-                                {req.status}
-                            </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-32 opacity-20">
-                        <CalendarDays className="h-12 w-12 mx-auto mb-4" />
-                        <p className="font-bold uppercase tracking-widest text-xs">No Leave History Found</p>
+                  ) : displayLeaves.map(req => (
+                    <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                      <TableCell className="pl-6 py-4">
+                        <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d') : ''}</p>
+                      </TableCell>
+                      <TableCell className="text-sm font-semibold text-slate-700">{req.employeeName}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[9px] font-bold uppercase bg-slate-50">{req.type}</Badge></TableCell>
+                      <TableCell className="max-w-xs"><p className="text-xs text-slate-500 italic truncate">"{req.reason}"</p></TableCell>
+                      <TableCell className="text-right pr-6">
+                          <Badge className={cn(
+                              "text-[10px] font-bold uppercase border-none px-3 h-6 shadow-sm",
+                              req.status === 'approved' ? "bg-green-50 text-green-700" : 
+                              req.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                          )}>
+                              {req.status}
+                          </Badge>
                       </TableCell>
                     </TableRow>
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </TabsContent>
 
-            {/* --- PAYROLL CONTENT --- */}
             <TabsContent value="payroll" className="m-0">
                <Table>
                 <TableHeader className="bg-slate-50/50">
@@ -270,35 +267,26 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingPayroll ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Records...</TableCell></TableRow>
-                  ) : payrollRuns && payrollRuns.length > 0 ? (
-                    payrollRuns.map(run => (
-                      <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
-                        <TableCell className="pl-6 py-4">
-                          <p className="text-sm font-bold text-slate-900">{format(new Date(run.periodStart), 'MMM d')} - {format(new Date(run.periodEnd), 'MMM d, yyyy')}</p>
-                          <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100">Settled</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary.toLocaleString()}</span>
-                        </TableCell>
-                        <TableCell className="text-xs font-medium text-slate-400 uppercase">
-                           {run.createdAt ? format(toSafeDate(run.createdAt) || new Date(), 'MMM d, p') : 'Pending'}
-                        </TableCell>
-                        <TableCell className="text-right pr-6">
-                            <Button size="sm" variant="ghost" className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
-                                <FileText className="h-3.5 w-3.5" />
-                                Payslips
-                            </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-32 opacity-20">
-                        <DollarSign className="h-12 w-12 mx-auto mb-4" />
-                        <p className="font-bold uppercase tracking-widest text-xs">No Payment History Found</p>
+                  ) : displayPayroll.map(run => (
+                    <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
+                      <TableCell className="pl-6 py-4">
+                        <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
+                        <Badge variant="outline" className="text-[8px] font-bold uppercase bg-green-50 text-green-700 border-green-100">Settled</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-bold text-slate-900 tabular-nums">₱{run.totalNetSalary?.toLocaleString()}</span>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-slate-400 uppercase">
+                         {run.createdAt ? format(toSafeDate(run.createdAt) || new Date(), 'MMM d, p') : 'Pending'}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                          <Button size="sm" variant="ghost" className="h-8 font-bold text-[10px] uppercase tracking-widest gap-2 text-primary hover:bg-primary/5">
+                              <FileText className="h-3.5 w-3.5" />
+                              Payslips
+                          </Button>
                       </TableCell>
                     </TableRow>
-                  )}
+                  ))}
                 </TableBody>
               </Table>
             </TabsContent>

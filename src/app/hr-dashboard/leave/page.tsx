@@ -31,6 +31,12 @@ import { useToast } from '@/hooks/use-toast';
 import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 import type { HRLeaveRequest } from '@/lib/types';
 
+const DEMO_LEAVE_REQUESTS: Partial<HRLeaveRequest>[] = [
+    { id: 'lr1', employeeName: 'David Wilson', type: 'Vacation', startDate: '2024-06-15', endDate: '2024-06-20', reason: 'Annual family vacation', status: 'pending', appliedAt: Timestamp.now() },
+    { id: 'lr2', employeeName: 'Jane Smith', type: 'Sick', startDate: '2024-06-10', endDate: '2024-06-11', reason: 'Dental appointment', status: 'approved', appliedAt: Timestamp.now() },
+    { id: 'lr3', employeeName: 'Robert Johnson', type: 'Emergency', startDate: '2024-06-05', endDate: '2024-06-05', reason: 'Family emergency', status: 'rejected', appliedAt: Timestamp.now() },
+];
+
 export default function LeavePage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -54,6 +60,10 @@ export default function LeavePage() {
   );
   const { data: leaveRequests, isLoading } = useCollection<HRLeaveRequest>(leaveQuery);
 
+  const displayLeaves = useMemo(() => {
+    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVE_REQUESTS as HRLeaveRequest[]);
+  }, [leaveRequests]);
+
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
     if (!firestore || !companyId || !requestId) return;
     try {
@@ -70,7 +80,7 @@ export default function LeavePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              {isManagement ? 'Leave Management' : 'My Leave Applications'}
+              Leave Review
           </h1>
           <p className="text-slate-500 font-medium">
               {isManagement ? 'Review applications and manage team availability.' : 'Submit and track your time-off requests.'}
@@ -89,7 +99,7 @@ export default function LeavePage() {
             <div className="flex items-center justify-between">
                 <div>
                    <CardTitle className="text-lg font-bold text-slate-900">
-                       {isManagement ? 'Request Queue' : 'My Applications'}
+                       Request Queue
                    </CardTitle>
                    <CardDescription className="text-xs font-medium text-slate-500">
                        {isManagement ? 'Review pending team applications' : 'History of your leave requests'}
@@ -116,8 +126,7 @@ export default function LeavePage() {
                 <TableBody>
                    {isLoading ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing Request Data...</TableCell></TableRow>
-                   ) : leaveRequests && leaveRequests.length > 0 ? (
-                      leaveRequests.map(request => (
+                   ) : displayLeaves.map(request => (
                         <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0">
                            <TableCell className="pl-6 py-5">
                               <div className="flex items-center gap-3">
@@ -170,17 +179,7 @@ export default function LeavePage() {
                               )}
                            </TableCell>
                         </TableRow>
-                      ))
-                   ) : (
-                      <TableRow>
-                         <TableCell colSpan={5} className="text-center py-24">
-                            <div className="flex flex-col items-center gap-3 opacity-20">
-                               <CalendarDays className="h-10 w-10 text-slate-400" />
-                               <p className="text-sm font-bold uppercase tracking-widest">No leave requests found</p>
-                            </div>
-                         </TableCell>
-                      </TableRow>
-                   )}
+                      ))}
                 </TableBody>
             </Table>
          </CardContent>

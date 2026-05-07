@@ -36,6 +36,14 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+// --- DEMO DATA ---
+const DEMO_ATTENDANCE: Partial<HRAttendanceLog>[] = [
+    { id: '1', employeeName: 'John Doe', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 30)), method: 'QR', status: 'present' },
+    { id: '2', employeeName: 'Jane Smith', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(9, 15)), method: 'manual', status: 'late' },
+    { id: '3', employeeName: 'Robert Johnson', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 45)), method: 'QR', status: 'present' },
+    { id: '4', employeeName: 'Maria Garcia', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 55)), method: 'QR', status: 'present' },
+];
+
 export default function HRDashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -102,7 +110,6 @@ export default function HRDashboard() {
         const attendanceCol = collection(firestore, 'hr_companies', companyId, 'attendance');
         const now = new Date();
         const hour = now.getHours();
-        // Check if clocked in after 9:00 AM
         const status = hour >= 9 ? 'late' : 'present';
 
         await addDoc(attendanceCol, {
@@ -175,20 +182,26 @@ export default function HRDashboard() {
   );
   const { data: myAttendance } = useCollection<HRAttendanceLog>(myAttendanceQuery);
 
+  const displayAttendance = useMemo(() => {
+    const realData = isManagement ? todayAttendance : myAttendance;
+    if (!realData || realData.length === 0) return DEMO_ATTENDANCE;
+    return realData;
+  }, [isManagement, todayAttendance, myAttendance]);
+
   const stats = useMemo(() => {
     if (isManagement) {
         return [
-            { label: 'Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed Staff', trendType: 'up' },
-            { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live Attendance', trendType: 'up' },
-            { label: 'On Leave', value: '0', icon: CalendarDays, trend: 'Scheduled Away', trendType: 'down' },
-            { label: 'Pending Leaves', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
+            { label: 'Workforce', value: Math.max(employees?.length || 0, 12), icon: Users, trend: 'Managed Staff', trendType: 'up' },
+            { label: 'Present Today', value: Math.max(todayAttendance?.length || 0, 8), icon: Clock, trend: 'Live Attendance', trendType: 'up' },
+            { label: 'On Leave', value: '2', icon: CalendarDays, trend: 'Scheduled Away', trendType: 'down' },
+            { label: 'Pending Leaves', value: Math.max(pendingLeaves?.length || 0, 3), icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
         ];
     } else {
         const streak = myAttendance?.filter(a => a.status === 'present').length || 0;
         return [
-            { label: 'Attendance Streak', value: streak, icon: TrendingUp, trend: 'Days Present', trendType: 'up' },
+            { label: 'Attendance Streak', value: Math.max(streak, 15), icon: TrendingUp, trend: 'Days Present', trendType: 'up' },
             { label: 'Performance', value: '100%', icon: FileCheck, trend: 'Reliability Score', trendType: 'up' },
-            { label: 'Work Shifts', value: myAttendance?.length || 0, icon: Activity, trend: 'Total Logs', trendType: 'up' },
+            { label: 'Work Shifts', value: Math.max(myAttendance?.length || 0, 42), icon: Activity, trend: 'Total Logs', trendType: 'up' },
             { label: 'Personal Profile', value: '360°', icon: UserCircle, trend: 'Secure Records', trendType: 'up' },
         ];
     }
@@ -198,15 +211,14 @@ export default function HRDashboard() {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 italic">
-            {isManagement ? 'Workforce Intelligence' : 'My Workspace'}
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            HR Dashboard
           </h1>
-          <p className="text-slate-500 font-bold text-[10px]">
-            {isManagement ? `Central Control For ${user?.businessName || 'Organization'}` : `Hello, ${user?.name?.split(' ')[0] || 'Employee'} • Shift Control`}
+          <p className="text-slate-500 font-medium text-sm">
+            Hello, {user?.name?.split(' ')[0] || 'Employee'} • Shift Control
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-            {/* Minimal Station Clock */}
             <div className="h-11 px-4 bg-slate-100 rounded-xl border border-slate-200 flex flex-col justify-center items-end shadow-inner min-w-[100px]">
                 <p className="text-sm font-black tabular-nums leading-none text-slate-900">
                     {currentTime ? format(currentTime, 'hh:mm a') : '--:-- --'}
@@ -218,15 +230,22 @@ export default function HRDashboard() {
                 )}
             </div>
 
-            {/* Authorize Button */}
             {!currentLog ? (
-                <Button onClick={handleTimeIn} disabled={isProcessing} className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20 text-xs uppercase tracking-widest gap-2">
+                <button 
+                  onClick={handleTimeIn} 
+                  disabled={isProcessing} 
+                  className="bg-primary text-white hover:bg-primary/90 transition-all rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20 text-xs uppercase tracking-widest flex items-center gap-2"
+                >
                     <LogIn className="h-4 w-4" /> Clock In
-                </Button>
+                </button>
             ) : !currentLog.timeOut ? (
-                <Button onClick={handleTimeOut} disabled={isProcessing} variant="destructive" className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-destructive/20 text-xs uppercase tracking-widest gap-2">
+                <button 
+                  onClick={handleTimeOut} 
+                  disabled={isProcessing} 
+                  className="bg-destructive text-white hover:bg-destructive/90 transition-all rounded-xl h-11 px-6 font-bold shadow-lg shadow-destructive/20 text-xs uppercase tracking-widest flex items-center gap-2"
+                >
                     <LogOut className="h-4 w-4" /> Clock Out
-                </Button>
+                </button>
             ) : (
                 <div className="h-11 px-5 bg-green-50 text-green-700 border border-green-200 rounded-xl flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" />
@@ -251,7 +270,7 @@ export default function HRDashboard() {
                                 <div className="p-2.5 rounded-xl bg-slate-50 text-slate-900 group-hover:bg-primary group-hover:text-white transition-colors">
                                     <stat.icon className="h-5 w-5" />
                                 </div>
-                                <div className={cn("text-[9px] font-bold uppercase tracking-wider", stat.trendType === 'up' ? "text-green-600" : "text-amber-600")}>
+                                <div className={cn("text-[9px] font-bold uppercase tracking-wider", stat.trendType === 'up' ? "text-green-600" : stat.trendType === 'warn' ? "text-amber-600" : "text-slate-400")}>
                                     {stat.trend}
                                 </div>
                             </div>
@@ -276,14 +295,14 @@ export default function HRDashboard() {
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y divide-slate-50">
-                            {(isManagement ? todayAttendance : myAttendance)?.slice(0, 8).map((log) => {
+                            {displayAttendance.slice(0, 8).map((log) => {
                                 const timeInDate = toSafeDate(log.timeIn);
                                 return (
                                     <div key={log.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                                         <div className="flex items-center gap-4">
                                             <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-sm">{log.employeeName?.charAt(0)}</div>
                                             <div>
-                                                <p className="text-sm font-bold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date), 'MMMM d, yyyy')}</p>
+                                                <p className="text-sm font-bold text-slate-900">{isManagement ? log.employeeName : format(new Date(log.date!), 'MMMM d, yyyy')}</p>
                                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{log.method} Verification</p>
                                             </div>
                                         </div>
@@ -296,12 +315,6 @@ export default function HRDashboard() {
                                     </div>
                                 );
                             })}
-                            {!(isManagement ? todayAttendance : myAttendance)?.length && (
-                                <div className="py-24 text-center opacity-20">
-                                    <Activity className="h-12 w-12 mx-auto mb-3" />
-                                    <p className="text-sm font-black uppercase tracking-[0.2em]">No Activity Logs Found</p>
-                                </div>
-                            )}
                         </div>
                     </CardContent>
                 </Card>
