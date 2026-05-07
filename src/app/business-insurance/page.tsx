@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Rocket } from 'lucide-react';
+import { ArrowLeft, Rocket, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { AppLauncher } from '@/components/dashboard/layout/AppLauncher';
 import Image from 'next/image';
@@ -36,15 +36,15 @@ export default function BusinessInsurancePage() {
             PS <span className="text-blue-700">Vault</span>
           </h1>
           <p className="text-lg text-slate-500 font-medium max-w-md mx-auto">
-            Automated corporate record protection and employee benefit systems are in the design phase.
+            High-security corporate record protection and credential secrets management are currently being optimized.
           </p>
         </div>
 
         <Card className="border-none shadow-2xl rounded-3xl bg-white/80 backdrop-blur-xl">
           <CardContent className="p-8 space-y-6">
             <div className="flex flex-col items-center gap-2">
-              <Rocket className="h-6 w-6 text-blue-700 animate-bounce" />
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Status: Protocol Design</p>
+              <ShieldCheck className="h-6 w-6 text-blue-700 animate-bounce" />
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Status: Security Protocol Design</p>
             </div>
             <div className="w-full h-[2px] bg-slate-100 rounded-full overflow-hidden">
               <div className="h-full bg-blue-700 w-[5%] animate-pulse" />

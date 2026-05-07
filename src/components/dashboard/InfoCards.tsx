@@ -22,12 +22,12 @@ const apps = [
     { 
       id: '01', 
       name: 'Water Refill', 
-      description: 'Your core hydration management engine.',
+      description: 'Professional hydration management for modern teams.',
       features: [
-          'Real-time consumption monitoring',
-          'Automated & on-demand refill requests',
-          'DOH compliance & sanitation reports',
-          'Consolidated billing & SOA management'
+          'Live consumption and credit monitoring',
+          'Automated and priority refill requests',
+          'DOH quality and sanitation auditing',
+          'Consolidated billing and SOA management'
       ],
       href: '/dashboard', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fwater.svg?alt=media&token=fe3a77fb-7ae5-4568-93f7-7a3e2340288f' 
@@ -35,12 +35,12 @@ const apps = [
     { 
       id: '02', 
       name: 'HR Management', 
-      description: 'Workforce intelligence command center.',
+      description: 'Unified workforce intelligence and payroll engine.',
       features: [
-          'Station-based biometric attendance',
-          'Automated payroll processing',
-          'Digital leave management',
-          '360° employee performance logs'
+          'Station-based biometric attendance terminal',
+          'Automated payroll and tax computation',
+          'Collaborative leave and time-off management',
+          '360° employee performance and growth logs'
       ],
       href: '/hr-dashboard', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FEmployee.svg?alt=media&token=f56983da-df57-429c-b67e-e57faa2ce2a6' 
@@ -48,12 +48,12 @@ const apps = [
     { 
       id: '03', 
       name: 'Collaboration', 
-      description: 'Next-gen office synchronization.',
+      description: 'Interactive operational canvases for team synchronization.',
       features: [
-          'Team-wide task management',
-          'Shared office resource scheduling',
-          'Unified internal communication',
-          'Role-based permission controls'
+          'Live collaborative team documentation',
+          'Page-based operational workspaces',
+          'Automated approval and checklist flows',
+          'Real-time presence and operational feeds'
       ],
       href: '/workspace', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FCollaboration.svg?alt=media&token=6d687bc0-125b-4ad1-ad48-fc2ceb1b07d9' 
@@ -61,12 +61,12 @@ const apps = [
     { 
       id: '04', 
       name: 'Files', 
-      description: 'Secure cloud storage for corporate records.',
+      description: 'Secure cloud infrastructure for business record storage.',
       features: [
-          'Centralized contract management',
-          'Automatic POD & Receipt archiving',
-          'End-to-end document encryption',
-          'One-click document sharing'
+          'End-to-end encrypted document storage',
+          'Automated POD and receipt archiving',
+          'One-click secure document sharing',
+          'In-app high-fidelity document previews'
       ],
       href: '/files', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FFiles.svg?alt=media&token=7f746199-877e-455f-a96f-91b619f9c66a' 
@@ -74,12 +74,12 @@ const apps = [
     { 
       id: '05', 
       name: 'PS Vault', 
-      description: 'Automated corporate benefit systems.',
+      description: 'Private secure vault for sensitive corporate data protection.',
       features: [
-          'Health coverage administration',
-          'Corporate insurance management',
-          'Benefit claim processing',
-          'Employee perk synchronization'
+          'Encrypted credential and secrets vault',
+          'High-security business notes and records',
+          'Granular role-based access controls',
+          'Full audit logging and recovery systems'
       ],
       href: '/business-insurance', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2FBenefits.svg?alt=media&token=e0a007ac-1929-4a32-afda-8e91c416b62c' 
@@ -87,12 +87,12 @@ const apps = [
     { 
       id: '06', 
       name: 'Upgrades', 
-      description: 'Business intelligence & logistics upgrades.',
+      description: 'Continuous digital and physical infrastructure evolution.',
       features: [
-          'Solar energy infrastructure upgrades',
-          'Employee health benefit plan upgrades',
-          'Custom business scalability tools',
-          'Asset and facility modernization'
+          'Solar energy infrastructure monitoring',
+          'Automated corporate benefit systems',
+          'Advanced business intelligence modules',
+          'Custom operational scalability upgrades'
       ],
       href: '/solar-upgrades', 
       iconUrl: 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/app-icons%2Fsolar-energy.svg?alt=media&token=2afce575-87ba-40c8-b7f9-5ebd6c5ee284' 
@@ -181,7 +181,9 @@ export function InfoCards() {
                         <h2 className="text-4xl font-black tracking-tighter text-slate-900">
                             {currentApp.name}
                         </h2>
-                        <p className="text-lg font-bold text-slate-400">{currentApp.description}</p>
+                        <h2 className="text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight">
+                            {currentApp.description}
+                        </h2>
                     </div>
 
                     <div className="space-y-4 pt-4 border-t border-slate-50">
