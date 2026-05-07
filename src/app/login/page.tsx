@@ -14,6 +14,7 @@ import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { FullScreenLoader, Loader } from '@/components/ui/loader';
+import { Logo } from '@/components/icons';
 import {
   Dialog,
   DialogContent,
@@ -147,7 +148,7 @@ export default function LoginPage() {
 
             <div className="relative z-10 animate-in fade-in slide-in-from-left-4 duration-700">
                 <div className="mb-16">
-                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/80">RIVER PHILIPPINES</span>
+                    <Logo className="h-10 w-32" />
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">

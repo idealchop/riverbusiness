@@ -5,7 +5,7 @@ export function Logo(props: SVGProps<SVGSVGElement> & { className?: string }) {
   return (
     <div className={`relative ${props.className || ''}`}>
       <Image
-        src="https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c"
+        src="https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-logo.png?alt=media&token=acd98ddc-59df-485e-93aa-d70424ff6ad8"
         alt="River Business Logo"
         fill
         style={{ objectFit: 'contain' }}
