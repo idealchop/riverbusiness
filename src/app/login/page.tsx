@@ -151,7 +151,7 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-6 max-w-xl">
                     <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05] text-white">
-                        The platform to run <span className="text-primary">essential needs</span> for business.
+                        The platform to run <span className="text-primary">essential needs</span> for business workforce.
                     </h1>
                     <p className="text-lg sm:text-xl text-slate-400 font-bold leading-relaxed max-md">
                         Everything in a single platform for Filipino businesses.
