@@ -93,9 +93,10 @@ export interface HRLearningModule {
     description: string;
     category: string;
     contentType: 'video' | 'image' | 'article';
-    contentUrl?: string; // For video or image
+    contentUrl?: string;
     textContent?: string;
     createdAt: any;
+    updatedAt?: any;
     isPublished: boolean;
 }
 
@@ -139,8 +140,6 @@ export interface ChatMessage {
   text?: string;
   role: 'user' | 'admin';
   timestamp: FieldValue | Timestamp;
-  attachmentUrl?: string;
-  attachmentType?: string;
 }
 
 export interface WaterStation {

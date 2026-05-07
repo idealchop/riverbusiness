@@ -33,25 +33,23 @@ import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebas
 import { collection, query, where, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LearningModuleDialog } from '@/components/hr/LearningModuleDialog';
+import { ModuleViewerDialog } from '@/components/hr/ModuleViewerDialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import type { HRLearningModule } from '@/lib/types';
 
-const DEMO_MODULES: Partial<HRLearningModule>[] = [
-    { id: 'm1', title: 'Station Safety Protocols', description: 'Essential safety procedures for daily water refilling operations.', category: 'Safety', contentType: 'video', contentUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', createdAt: Timestamp.now(), isPublished: true },
-    { id: 'm2', title: 'Customer Success Guide', description: 'How to handle client inquiries and technical support effectively.', category: 'Service', contentType: 'article', textContent: 'Treat every client with radical transparency...', createdAt: Timestamp.now(), isPublished: true },
-    { id: 'm3', title: 'Equipment Maintenance', description: 'Monthly checklist for dispenser sanitation and container quality.', category: 'Compliance', contentType: 'image', contentUrl: 'https://picsum.photos/seed/river/800/400', createdAt: Timestamp.now(), isPublished: true },
-];
-
 export default function LearningHubPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [moduleToEdit, setModuleToEdit] = useState<HRLearningModule | null>(null);
+  const [moduleToView, setModuleToView] = useState<HRLearningModule | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
   const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
@@ -66,11 +64,12 @@ export default function LearningHubPage() {
   const { data: modules, isLoading } = useCollection<HRLearningModule>(modulesQuery);
 
   const displayModules = useMemo(() => {
-    const list = modules && modules.length > 0 ? modules : (DEMO_MODULES as HRLearningModule[]);
-    if (!searchTerm) return list;
-    return list.filter(m => 
-        m.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        m.category.toLowerCase().includes(searchTerm.toLowerCase())
+    if (!modules) return [];
+    if (!searchTerm) return modules;
+    const search = searchTerm.toLowerCase();
+    return modules.filter(m => 
+        m.title.toLowerCase().includes(search) || 
+        m.category.toLowerCase().includes(search)
     );
   }, [modules, searchTerm]);
 
@@ -78,18 +77,29 @@ export default function LearningHubPage() {
     if (!firestore || !companyId) return;
     try {
         await deleteDoc(doc(firestore, 'hr_companies', companyId, 'learningModules', moduleId));
-        toast({ title: 'Module removed' });
+        toast({ title: 'Module removed', description: 'The training material has been deleted.' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Action failed' });
+        toast({ variant: 'destructive', title: 'Action failed', description: 'Could not remove module.' });
     }
   };
 
   const handleEditModule = (module: HRLearningModule) => {
     setModuleToEdit(module);
-    setIsDialogOpen(true);
+    setIsManageDialogOpen(true);
   };
 
-  if (isUserLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
+  const handleLaunchModule = (module: HRLearningModule) => {
+    setModuleToView(module);
+    setIsViewerOpen(true);
+  };
+
+  const handleShareModule = (module: HRLearningModule) => {
+      // In a real app, this might copy a specific deep-link or trigger a notification
+      navigator.clipboard.writeText(`${window.location.origin}/hr-dashboard/modules?view=${module.id}`);
+      toast({ title: 'Link Copied', description: 'Training link copied to clipboard for sharing.' });
+  };
+
+  if (isUserLoading || isLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -100,7 +110,7 @@ export default function LearningHubPage() {
         </div>
         {isManagement && (
             <Button 
-                onClick={() => { setModuleToEdit(null); setIsDialogOpen(true); }}
+                onClick={() => { setModuleToEdit(null); setIsManageDialogOpen(true); }}
                 className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
             >
                 <Plus className="mr-2 h-4 w-4" /> Create Module
@@ -118,15 +128,15 @@ export default function LearningHubPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
         </div>
-        <Button variant="outline" className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white">
+        <Button variant="outline" className="rounded-xl h-11 px-6 font-bold border-slate-200 bg-white shadow-sm">
             <Filter className="mr-2 h-4 w-4" /> Filters
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {displayModules.map((module) => (
-            <Card key={module.id} className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white flex flex-col group hover:shadow-xl transition-all duration-500">
-                <div className="relative h-48 bg-slate-100 overflow-hidden">
+            <Card key={module.id} className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white flex flex-col group hover:shadow-xl transition-all duration-500 border border-slate-50">
+                <div className="relative h-48 bg-slate-100 overflow-hidden cursor-pointer" onClick={() => handleLaunchModule(module)}>
                     {module.contentType === 'image' && module.contentUrl ? (
                         <Image src={module.contentUrl} alt={module.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" data-ai-hint="training material" />
                     ) : module.contentType === 'video' ? (
@@ -146,56 +156,72 @@ export default function LearningHubPage() {
                     </Badge>
                 </div>
 
-                <CardHeader className="flex-1">
+                <CardHeader className="flex-1 cursor-pointer" onClick={() => handleLaunchModule(module)}>
                     <div className="flex items-start justify-between gap-4">
-                        <CardTitle className="text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight">
+                        <CardTitle className="text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                             {module.title}
                         </CardTitle>
                         {isManagement && (
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400">
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-50 shrink-0">
                                         <MoreVertical className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="rounded-xl border-slate-200">
-                                    <DropdownMenuItem onClick={() => handleEditModule(module)} className="gap-2 font-semibold text-xs py-2.5">
+                                <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
+                                    <DropdownMenuItem onClick={() => handleEditModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
                                         <Edit className="h-3.5 w-3.5" /> Edit Module
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="gap-2 font-semibold text-xs py-2.5">
+                                    <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
                                         <Share2 className="h-3.5 w-3.5" /> Share to Team
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator className="bg-slate-50" />
-                                    <DropdownMenuItem onClick={() => handleDeleteModule(module.id)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600">
+                                    <DropdownMenuItem onClick={() => handleDeleteModule(module.id)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
                                         <Trash2 className="h-3.5 w-3.5" /> Delete
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}
                     </div>
-                    <CardDescription className="text-sm font-medium text-slate-500 line-clamp-3 mt-2">
+                    <CardDescription className="text-sm font-medium text-slate-500 line-clamp-2 mt-2 leading-relaxed">
                         {module.description}
                     </CardDescription>
                 </CardHeader>
 
-                <CardFooter className="pt-0 pb-8 flex items-center justify-between">
+                <CardFooter className="pt-0 pb-8 flex items-center justify-between px-6">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         <Clock className="h-3 w-3" /> 
-                        {module.createdAt instanceof Timestamp ? format(module.createdAt.toDate(), 'MMM d') : 'Active'}
+                        {module.createdAt instanceof Timestamp ? format(module.createdAt.toDate(), 'MMM d') : 'Recently Added'}
                     </div>
-                    <Button variant="ghost" className="rounded-xl font-bold text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors">
-                        Launch <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                    <Button onClick={() => handleLaunchModule(module)} variant="ghost" className="rounded-xl font-bold text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors h-9 px-4">
+                        Open Training <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                     </Button>
                 </CardFooter>
             </Card>
         ))}
+
+        {displayModules.length === 0 && (
+            <div className="col-span-full py-24 text-center space-y-4 opacity-40">
+                <BookOpen className="h-12 w-12 mx-auto text-slate-300" />
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">No training materials found</p>
+                {isManagement && (
+                    <Button onClick={() => setIsManageDialogOpen(true)} variant="link" className="text-primary font-bold uppercase text-[10px]">Create your first module</Button>
+                )}
+            </div>
+        )}
       </div>
 
       <LearningModuleDialog 
-        isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        isOpen={isManageDialogOpen}
+        onOpenChange={setIsManageDialogOpen}
         companyId={companyId}
         moduleToEdit={moduleToEdit}
+      />
+
+      <ModuleViewerDialog
+        isOpen={isViewerOpen}
+        onOpenChange={setIsViewerOpen}
+        module={moduleToView}
       />
     </div>
   );
