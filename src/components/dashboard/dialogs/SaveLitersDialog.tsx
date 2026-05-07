@@ -59,7 +59,7 @@ export function SaveLitersDialog({ isOpen, onOpenChange }: { isOpen: boolean; on
                     </Badge>
                 </div>
                 <div className="space-y-1">
-                    <DialogTitle className="text-3xl font-black tracking-tight text-white uppercase">
+                    <DialogTitle className="text-3xl font-bold tracking-tight text-white">
                         Water Quality
                     </DialogTitle>
                     <DialogDescription className="text-blue-100 font-bold text-sm">
