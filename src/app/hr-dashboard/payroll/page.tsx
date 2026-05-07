@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   DollarSign, 
-  Search, 
   PlayCircle,
   FileText,
   TrendingUp,
@@ -24,50 +23,33 @@ import {
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
 
-const DEMO_PAYROLL_RUNS: any[] = [
-    { id: 'pr1', periodStart: '2024-05-01', periodEnd: '2024-05-31', status: 'paid', totalNetSalary: 245000, createdAt: new Date('2024-06-01') },
-    { id: 'pr2', periodStart: '2024-04-01', periodEnd: '2024-04-30', status: 'paid', totalNetSalary: 238000, createdAt: new Date('2024-05-01') },
-    { id: 'pr3', periodStart: '2024-03-01', periodEnd: '2024-03-31', status: 'paid', totalNetSalary: 232000, createdAt: new Date('2024-04-01') },
-];
-
 export default function PayrollPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   
   const companyId = user?.companyId || user?.clientId || 'default';
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
-
-  useEffect(() => {
-    if (!isUserLoading && user && !isManagement) {
-      router.replace('/hr-dashboard');
-    }
-  }, [user, isUserLoading, isManagement, router]);
 
   const payrollQuery = useMemoFirebase(
-    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
-    [firestore, companyId, isManagement]
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
+    [firestore, companyId]
   );
   const { data: payrollRuns, isLoading } = useCollection(payrollQuery);
 
   const displayPayroll = useMemo(() => {
-    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL_RUNS;
+    return payrollRuns || [];
   }, [payrollRuns]);
 
   const totalDisbursed = useMemo(() => {
     return displayPayroll.reduce((sum, run) => sum + (Number(run?.totalNetSalary) || 0), 0);
   }, [displayPayroll]);
 
-  const isOwner = user?.hrRole === 'owner';
-
-  if (isUserLoading || (user && !isManagement)) {
+  if (isUserLoading) {
     return <FullScreenLoader text="Verifying credentials..." />;
   }
 
@@ -76,16 +58,14 @@ export default function PayrollPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payroll</h1>
-          <p className="text-slate-500 font-medium">Automated salary computation and disbursement logs.</p>
+          <p className="text-slate-500 font-medium text-sm">Collaborative Salary Computation and Organizational Disbursement Logs.</p>
         </div>
-        {isOwner && (
-            <Button 
-                onClick={() => setIsPayrollDialogOpen(true)}
-                className="rounded-xl h-11 px-6 font-bold shadow-md"
-            >
-            <PlayCircle className="mr-2 h-4 w-4" /> Run New Period
-            </Button>
-        )}
+        <Button 
+            onClick={() => setIsPayrollDialogOpen(true)}
+            className="rounded-xl h-11 px-6 font-bold shadow-md"
+        >
+        <PlayCircle className="mr-2 h-4 w-4" /> Run New Period
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -100,7 +80,7 @@ export default function PayrollPage() {
                 </div>
                 <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                     <TrendingUp className="h-3 w-3 text-green-400" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-white/30">Verified cycles</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-white/30">Verified Ledger</span>
                 </div>
             </CardContent>
           </Card>
@@ -110,10 +90,10 @@ export default function PayrollPage() {
                <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg font-bold text-slate-900">Historical Cycles</CardTitle>
-                    <CardDescription className="text-xs font-medium text-slate-500">Past payment logs</CardDescription>
+                    <CardDescription className="text-xs font-medium text-slate-500">Company-wide payment logs</CardDescription>
                   </div>
                   <Button variant="ghost" size="sm" className="text-xs font-bold text-primary">
-                    Export All CSV
+                    Export Ledger (CSV)
                   </Button>
                </div>
             </CardHeader>
@@ -138,7 +118,7 @@ export default function PayrollPage() {
                           </TableCell>
                           <TableCell>
                             <Badge className={cn(
-                              "text-[9px] font-bold uppercase border-none px-2 h-5",
+                              "text-[10px] font-bold uppercase border-none px-2 h-5",
                               run.status === 'paid' ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"
                             )}>
                               {run.status || 'Pending'}
@@ -154,6 +134,9 @@ export default function PayrollPage() {
                           </TableCell>
                         </TableRow>
                       ))}
+                      {!isLoading && displayPayroll.length === 0 && (
+                          <TableRow><TableCell colSpan={4} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Cycles Found</TableCell></TableRow>
+                      )}
                  </TableBody>
                </Table>
             </CardContent>

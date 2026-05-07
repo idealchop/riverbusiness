@@ -41,24 +41,6 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
-// --- DEMO DATA ---
-const DEMO_ATTENDANCE: Partial<HRAttendanceLog>[] = [
-    { id: 'a1', employeeName: 'John Doe', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 30)), timeOut: new Date(new Date().setHours(17, 30)), method: 'QR', status: 'present' },
-    { id: 'a2', employeeName: 'Jane Smith', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(9, 15)), timeOut: new Date(new Date().setHours(18, 15)), method: 'manual', status: 'late' },
-    { id: 'a3', employeeName: 'Robert Johnson', date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 45)), timeOut: new Date(new Date().setHours(17, 45)), method: 'QR', status: 'present' },
-    { id: 'a4', employeeName: 'Maria Garcia', date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 55)), timeOut: new Date(new Date().setHours(18, 0)), method: 'QR', status: 'present' },
-];
-
-const DEMO_LEAVES: Partial<HRLeaveRequest>[] = [
-    { id: 'l1', employeeName: 'David Wilson', type: 'Vacation', startDate: '2024-06-01', endDate: '2024-06-05', reason: 'Family trip to Palawan', status: 'approved', appliedAt: Timestamp.now() },
-    { id: 'l2', employeeName: 'Maria Garcia', type: 'Sick', startDate: '2024-05-20', endDate: '2024-05-21', reason: 'Fever and flu', status: 'approved', appliedAt: Timestamp.now() },
-];
-
-const DEMO_PAYROLL: Partial<HRPayrollRun>[] = [
-    { id: 'p1', periodStart: '2024-05-01', periodEnd: '2024-05-31', status: 'paid', totalNetSalary: 245000, createdAt: Timestamp.now() },
-    { id: 'p2', periodStart: '2024-04-01', periodEnd: '2024-04-30', status: 'paid', totalNetSalary: 238000, createdAt: Timestamp.now() },
-];
-
 export default function AttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -66,28 +48,23 @@ export default function AttendancePage() {
   const [activeCategory, setActiveTab] = useState('attendance');
 
   const companyId = user?.companyId || user?.clientId || 'default';
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
-  // --- Data Queries ---
+  // --- Data Queries (Universal access for the tenant) ---
   const attendanceQuery = useMemoFirebase(
     () => {
         if (!firestore || !companyId) return null;
-        const col = collection(firestore, 'hr_companies', companyId, 'attendance');
-        if (isManagement) return query(col, orderBy('date', 'desc'));
-        return query(col, where('employeeId', '==', user?.id || ''), orderBy('date', 'desc'));
+        return query(collection(firestore, 'hr_companies', companyId, 'attendance'), orderBy('date', 'desc'));
     },
-    [firestore, companyId, isManagement, user?.id]
+    [firestore, companyId]
   );
   const { data: attendanceLogs, isLoading: loadingAttendance } = useCollection<HRAttendanceLog>(attendanceQuery);
 
   const leaveQuery = useMemoFirebase(
     () => {
         if (!firestore || !companyId) return null;
-        const col = collection(firestore, 'hr_companies', companyId, 'leaveRequests');
-        if (isManagement) return query(col, orderBy('appliedAt', 'desc'));
-        return query(col, where('employeeId', '==', user?.id || ''), orderBy('appliedAt', 'desc'));
+        return query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc'));
     },
-    [firestore, companyId, isManagement, user?.id]
+    [firestore, companyId]
   );
   const { data: leaveRequests, isLoading: loadingLeaves } = useCollection<HRLeaveRequest>(leaveQuery);
 
@@ -99,21 +76,13 @@ export default function AttendancePage() {
 
   // --- Display Logic ---
   const displayAttendance = useMemo(() => {
-    const list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : (DEMO_ATTENDANCE as HRAttendanceLog[]);
+    const list = attendanceLogs || [];
     if (!searchTerm) return list;
     return list.filter(log => 
         log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         log.date.includes(searchTerm)
     );
   }, [attendanceLogs, searchTerm]);
-
-  const displayLeaves = useMemo(() => {
-    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVES as HRLeaveRequest[]);
-  }, [leaveRequests]);
-
-  const displayPayroll = useMemo(() => {
-    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : (DEMO_PAYROLL as HRPayrollRun[]);
-  }, [payrollRuns]);
 
   if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
 
@@ -125,12 +94,12 @@ export default function AttendancePage() {
              Attendance
           </h1>
           <p className="text-slate-500 font-medium text-sm">
-             View Your Records For Work, Leave, and Payments
+             Browse Work, Leave, and Payment Records Across the Organization.
           </p>
         </div>
         <div className="flex gap-2">
             <Button variant="outline" className="rounded-xl font-bold text-xs h-10 border-slate-200 shadow-sm" onClick={() => window.print()}>
-                <Download className="mr-2 h-4 w-4" /> Export Records
+                <Download className="mr-2 h-4 w-4" /> Export Ledger
             </Button>
         </div>
       </div>
@@ -154,7 +123,7 @@ export default function AttendancePage() {
               <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input 
-                  placeholder="Search by Name or Date..." 
+                  placeholder="Search by Employee or Date..." 
                   className="pl-10 h-10 bg-white border-slate-200 rounded-xl font-medium shadow-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -162,7 +131,7 @@ export default function AttendancePage() {
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-lg border border-blue-100">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Live Update Active</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Consolidated View Active</span>
               </div>
             </div>
           </CardHeader>
@@ -181,7 +150,7 @@ export default function AttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {loadingAttendance ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Logs...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Ledger...</TableCell></TableRow>
                   ) : displayAttendance.map((log) => {
                     const timeIn = toSafeDate(log.timeIn);
                     const timeOut = toSafeDate(log.timeOut);
@@ -213,6 +182,9 @@ export default function AttendancePage() {
                       </TableRow>
                     );
                   })}
+                  {!loadingAttendance && displayAttendance.length === 0 && (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Records Found</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -230,8 +202,8 @@ export default function AttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {loadingLeaves ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Logs...</TableCell></TableRow>
-                  ) : displayLeaves.map(req => (
+                    <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading History...</TableCell></TableRow>
+                  ) : (leaveRequests || []).map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d') : ''}</p>
@@ -250,6 +222,9 @@ export default function AttendancePage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {!loadingLeaves && (!leaveRequests || leaveRequests.length === 0) && (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Leave Records</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -267,7 +242,7 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingPayroll ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Records...</TableCell></TableRow>
-                  ) : displayPayroll.map(run => (
+                  ) : (payrollRuns || []).map(run => (
                     <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
@@ -287,6 +262,9 @@ export default function AttendancePage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {!loadingPayroll && (!payrollRuns || payrollRuns.length === 0) && (
+                      <TableRow><TableCell colSpan={4} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Payroll Records</TableCell></TableRow>
+                  )}
                 </TableBody>
               </Table>
             </TabsContent>

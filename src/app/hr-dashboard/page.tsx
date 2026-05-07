@@ -40,14 +40,6 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
-// --- DEMO DATA ---
-const DEMO_ATTENDANCE: Partial<HRAttendanceLog>[] = [
-    { id: '1', employeeName: 'John Doe', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 30)), timeOut: new Date(new Date().setHours(17, 30)), method: 'QR', status: 'present' },
-    { id: '2', employeeName: 'Jane Smith', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(9, 15)), timeOut: new Date(new Date().setHours(18, 15)), method: 'manual', status: 'late' },
-    { id: '3', employeeName: 'Robert Johnson', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 45)), method: 'QR', status: 'present' },
-    { id: '4', employeeName: 'Maria Garcia', date: format(new Date(), 'yyyy-MM-dd'), timeIn: new Date(new Date().setHours(8, 55)), method: 'QR', status: 'present' },
-];
-
 export default function HRDashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -68,7 +60,6 @@ export default function HRDashboard() {
 
   const companyId = user?.companyId || user?.clientId || 'default';
   const today = format(new Date(), 'yyyy-MM-dd');
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   // --- Clock Logic ---
   const todayLogQuery = useMemoFirebase(
@@ -157,45 +148,28 @@ export default function HRDashboard() {
     }
   };
 
-  // --- Dashboard Data Queries ---
+  // --- Dashboard Data Queries (Universal) ---
   const employeesQuery = useMemoFirebase(
-    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
-    [firestore, companyId, isManagement]
+    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    [firestore, companyId]
   );
   const { data: employees } = useCollection(employeesQuery);
 
   const leavesQuery = useMemoFirebase(
-    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), where('status', '==', 'pending')) : null,
-    [firestore, companyId, isManagement]
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), where('status', '==', 'pending')) : null,
+    [firestore, companyId]
   );
   const { data: pendingLeaves } = useCollection(leavesQuery);
   
   const companyAttendanceQuery = useMemoFirebase(
-    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', today)) : null,
-    [firestore, companyId, isManagement, today]
+    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'attendance'), where('date', '==', today)) : null,
+    [firestore, companyId, today]
   );
-  const { data: todayAttendance } = useCollection(companyAttendanceQuery);
+  const { data: todayAttendance } = useCollection<HRAttendanceLog>(companyAttendanceQuery);
 
-  const myAttendanceQuery = useMemoFirebase(
-    () => (firestore && companyId && !isManagement && user?.id) ? query(
-        collection(firestore, 'hr_companies', companyId, 'attendance'), 
-        where('employeeId', '==', user.id),
-        orderBy('date', 'desc')
-    ) : null,
-    [firestore, companyId, isManagement, user?.id]
-  );
-  const { data: myAttendance } = useCollection<HRAttendanceLog>(myAttendanceQuery);
-
-  const displayAttendance = useMemo(() => {
-    const realData = isManagement ? todayAttendance : myAttendance;
-    if (!realData || realData.length === 0) return DEMO_ATTENDANCE;
-    return realData;
-  }, [isManagement, todayAttendance, myAttendance]);
-
-  // Derived Feed Items: Transform single shift logs into separate Clock In/Out events
   const feedItems = useMemo(() => {
     const items: any[] = [];
-    displayAttendance.forEach(log => {
+    (todayAttendance || []).forEach(log => {
         if (log.timeOut) {
             items.push({
                 id: `${log.id}-out`,
@@ -220,26 +194,16 @@ export default function HRDashboard() {
         }
     });
     return items.sort((a, b) => (b.time?.getTime() || 0) - (a.time?.getTime() || 0));
-  }, [displayAttendance]);
+  }, [todayAttendance]);
 
   const stats = useMemo(() => {
-    if (isManagement) {
-        return [
-            { label: 'Workforce', value: Math.max(employees?.length || 0, 12), icon: Users, trend: 'Managed Staff', trendType: 'up' },
-            { label: 'Present Today', value: Math.max(todayAttendance?.length || 0, 8), icon: Clock, trend: 'Live Attendance', trendType: 'up' },
-            { label: 'On Leave', value: '2', icon: CalendarDays, trend: 'Scheduled Away', trendType: 'down' },
-            { label: 'Pending Leaves', value: Math.max(pendingLeaves?.length || 0, 3), icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
-        ];
-    } else {
-        const streak = myAttendance?.filter(a => a.status === 'present').length || 0;
-        return [
-            { label: 'Attendance Streak', value: Math.max(streak, 15), icon: TrendingUp, trend: 'Days Present', trendType: 'up' },
-            { label: 'Performance', value: '100%', icon: FileCheck, trend: 'Reliability Score', trendType: 'up' },
-            { label: 'Work Shifts', value: Math.max(myAttendance?.length || 0, 42), icon: Activity, trend: 'Total Logs', trendType: 'up' },
-            { label: 'Personal Profile', value: '360°', icon: UserCircle, trend: 'Secure Records', trendType: 'up' },
-        ];
-    }
-  }, [isManagement, employees, todayAttendance, pendingLeaves, myAttendance]);
+    return [
+        { label: 'Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed Staff', trendType: 'up' },
+        { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live Attendance', trendType: 'up' },
+        { label: 'Pending Leaves', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
+        { label: 'Work Shifts', value: todayAttendance?.length || 0, icon: Activity, trend: 'Total Logs Today', trendType: 'up' },
+    ];
+  }, [employees, todayAttendance, pendingLeaves]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -249,7 +213,7 @@ export default function HRDashboard() {
             HR Dashboard
           </h1>
           <p className="text-slate-500 font-medium text-sm">
-            Hello, {user?.name?.split(' ')[0] || 'Employee'} • Shift Control
+            Hello, {user?.name?.split(' ')[0] || 'Employee'} • Universal Access Active
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -287,11 +251,9 @@ export default function HRDashboard() {
                 </div>
             )}
             
-            {isManagement && (
-                <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
-                    Payroll
-                </Button>
-            )}
+            <Button onClick={() => router.push('/hr-dashboard/payroll')} variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm text-xs uppercase tracking-widest border-slate-200 bg-white">
+                Payroll
+            </Button>
         </div>
       </div>
 
@@ -322,19 +284,19 @@ export default function HRDashboard() {
                     <CardHeader className="bg-slate-50/30 pb-6 border-b">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle className="text-lg font-black tracking-tight">Recent Activity Feed</CardTitle>
+                                <CardTitle className="text-lg font-bold tracking-tight">Recent Activity Feed</CardTitle>
                                 <CardDescription className="text-xs font-medium text-slate-500">Real-Time Operational Summary</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="divide-y divide-slate-50">
-                            {feedItems.slice(0, 10).map((item) => (
+                            {feedItems.length > 0 ? feedItems.slice(0, 10).map((item) => (
                                 <div key={item.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                                     <div className="flex items-center gap-4">
                                         <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 uppercase text-sm">{item.employeeName?.charAt(0)}</div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-900">{isManagement ? item.employeeName : format(new Date(item.date!), 'MMMM d, yyyy')}</p>
+                                            <p className="text-sm font-bold text-slate-900">{item.employeeName}</p>
                                             <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
                                               {item.action} • {item.method} Verification
                                             </p>
@@ -347,7 +309,12 @@ export default function HRDashboard() {
                                         </Badge>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
+                                    <Activity className="h-10 w-10 text-slate-300" />
+                                    <p className="text-xs font-bold uppercase tracking-widest">Feed is quiet today</p>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -355,7 +322,7 @@ export default function HRDashboard() {
                 <div className="space-y-6">
                     <Card className="border-none shadow-sm rounded-3xl bg-slate-900 text-white overflow-hidden relative group">
                         <div className="absolute top-0 right-0 p-8 opacity-10"><ScanLine className="h-24 w-24" /></div>
-                        <CardHeader><CardTitle className="text-lg font-black tracking-tight">Operational Protocol</CardTitle></CardHeader>
+                        <CardHeader><CardTitle className="text-lg font-bold tracking-tight">Recent Activity Feed</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 transition-colors hover:bg-white/10">
                                 <div className="h-10 w-10 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-green-400"><Timer className="h-5 w-5" /></div>

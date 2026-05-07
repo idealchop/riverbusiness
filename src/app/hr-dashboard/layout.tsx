@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import Link from 'link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Users, 
@@ -32,18 +32,12 @@ import { signOut } from 'firebase/auth';
 import type { Notification as NotificationType, AppUser } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
-const managerNavItems = [
+const navItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
   { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database },
   { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign },
   { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays },
-];
-
-const employeeNavItems = [
-  { href: '/hr-dashboard', label: 'My Workspace', icon: LayoutDashboard },
-  { href: '/hr-dashboard/attendance', label: 'My Records', icon: Database },
-  { href: '/hr-dashboard/leave', label: 'File Leave', icon: CalendarDays },
 ];
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {
@@ -80,9 +74,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
       router.push('/login');
     })
   }
-
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
-  const navItems = isManagement ? managerNavItems : employeeNavItems;
 
   return (
     <div className="flex h-screen bg-slate-50/30 overflow-hidden font-sans">
@@ -134,7 +125,7 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
                             <div className="p-2 rounded-xl bg-white/10 w-fit mb-3">
                                 <BookOpen className="h-5 w-5" />
                             </div>
-                            <CardTitle className="text-base font-black tracking-tight leading-tight">Learning Hub</CardTitle>
+                            <CardTitle className="text-base font-bold tracking-tight leading-tight">Learning Hub</CardTitle>
                             <CardDescription className="text-white/60 font-bold text-[10px] uppercase tracking-widest">Training Modules</CardDescription>
                         </CardHeader>
                         <CardContent className="p-5 pt-0">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Users, 
   Search, 
@@ -33,46 +33,29 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
 import { cn } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 
-const DEMO_EMPLOYEES: Partial<AppUser>[] = [
-    { id: 'demo1', name: 'John Doe', email: 'john@riverph.com', hrProfile: { firstName: 'John', lastName: 'Doe', position: 'Operations Manager', department: 'Management', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15', status: 'Active' } },
-    { id: 'demo2', name: 'Jane Smith', email: 'jane@riverph.com', hrProfile: { firstName: 'Jane', lastName: 'Smith', position: 'Customer Success', department: 'Service', salaryType: 'monthly', rate: 35000, startDate: '2024-02-10', status: 'Active' } },
-    { id: 'demo3', name: 'Robert Johnson', email: 'robert@riverph.com', hrProfile: { firstName: 'Robert', lastName: 'Johnson', position: 'Logistics Lead', department: 'Operations', salaryType: 'daily', rate: 1200, startDate: '2024-03-01', status: 'Active' } },
-    { id: 'demo4', name: 'Maria Garcia', email: 'maria@riverph.com', hrProfile: { firstName: 'Maria', lastName: 'Garcia', position: 'Quality Officer', department: 'Compliance', salaryType: 'monthly', rate: 32000, startDate: '2024-04-15', status: 'Active' } },
-    { id: 'demo5', name: 'David Wilson', email: 'david@riverph.com', hrProfile: { firstName: 'David', lastName: 'Wilson', position: 'Delivery Driver', department: 'Operations', salaryType: 'daily', rate: 800, startDate: '2024-05-20', status: 'Active' } },
-];
-
 export default function EmployeesPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
-
-  useEffect(() => {
-    if (!isUserLoading && user && !isManagement) {
-      router.replace('/hr-dashboard');
-    }
-  }, [user, isUserLoading, isManagement, router]);
 
   const employeesQuery = useMemoFirebase(
-    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
-    [firestore, companyId, isManagement]
+    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    [firestore, companyId]
   );
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
   const filteredEmployees = useMemo(() => {
-    const list = employees && employees.length > 0 ? employees : (DEMO_EMPLOYEES as AppUser[]);
+    const list = employees || [];
     const search = searchTerm.toLowerCase().trim();
     if (!search) return list;
     return list.filter(emp => {
@@ -84,8 +67,8 @@ export default function EmployeesPage() {
     });
   }, [employees, searchTerm]);
 
-  if (isUserLoading || (user && !isManagement)) {
-    return <FullScreenLoader text="Verifying Credentials..." />;
+  if (isUserLoading) {
+    return <FullScreenLoader text="Syncing Directory..." />;
   }
 
   return (
@@ -93,7 +76,7 @@ export default function EmployeesPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Employees</h1>
-          <p className="text-slate-500 font-medium">Manage Your Workforce And Employment Details.</p>
+          <p className="text-slate-500 font-medium">Collaboratively Manage Your Team and Workforce Profiles.</p>
         </div>
         <Button 
             onClick={() => setIsAddDialogOpen(true)}
@@ -133,7 +116,7 @@ export default function EmployeesPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-medium">Syncing Directory...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-50 font-medium">Synchronizing records...</TableCell></TableRow>
               ) : filteredEmployees.map((emp) => (
                 <TableRow key={emp.id} className="hover:bg-slate-50/30 transition-colors group border-b border-slate-50 last:border-0">
                   <TableCell className="pl-6 py-4">
@@ -185,7 +168,7 @@ export default function EmployeesPage() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-slate-50" />
                             <DropdownMenuItem className="gap-2 font-semibold text-sm py-2.5 text-red-600 focus:text-red-600 cursor-pointer">
-                                Terminate
+                                Remove Access
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
@@ -193,6 +176,9 @@ export default function EmployeesPage() {
                   </TableCell>
                 </TableRow>
               ))}
+              {!isLoading && filteredEmployees.length === 0 && (
+                  <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Employees Found</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

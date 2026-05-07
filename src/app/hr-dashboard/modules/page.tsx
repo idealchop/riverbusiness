@@ -6,7 +6,6 @@ import {
   Plus, 
   Search, 
   Video, 
-  ImageIcon, 
   FileText, 
   PlayCircle,
   MoreVertical,
@@ -14,9 +13,9 @@ import {
   Trash2,
   Share2,
   Filter,
-  CheckCircle2,
+  ArrowRight,
   Clock,
-  ArrowRight
+  Globe
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { FullScreenLoader } from '@/components/ui/loader';
 import { LearningModuleDialog } from '@/components/hr/LearningModuleDialog';
 import { ModuleViewerDialog } from '@/components/hr/ModuleViewerDialog';
@@ -52,7 +51,6 @@ export default function LearningHubPage() {
   const [moduleToView, setModuleToView] = useState<HRLearningModule | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   const modulesQuery = useMemoFirebase(
     () => (firestore && companyId) ? query(
@@ -94,7 +92,6 @@ export default function LearningHubPage() {
   };
 
   const handleShareModule = (module: HRLearningModule) => {
-      // In a real app, this might copy a specific deep-link or trigger a notification
       navigator.clipboard.writeText(`${window.location.origin}/hr-dashboard/modules?view=${module.id}`);
       toast({ title: 'Link Copied', description: 'Training link copied to clipboard for sharing.' });
   };
@@ -106,16 +103,14 @@ export default function LearningHubPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Hub</h1>
-          <p className="text-slate-500 font-medium">Browse authorized training materials and company modules.</p>
+          <p className="text-slate-500 font-medium text-sm">Design and Browse Authorized Training Materials Collaboratively.</p>
         </div>
-        {isManagement && (
-            <Button 
-                onClick={() => { setModuleToEdit(null); setIsManageDialogOpen(true); }}
-                className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
-            >
-                <Plus className="mr-2 h-4 w-4" /> Create Module
-            </Button>
-        )}
+        <Button 
+            onClick={() => { setModuleToEdit(null); setIsManageDialogOpen(true); }}
+            className="rounded-xl h-11 px-6 font-bold shadow-md shadow-primary/10"
+        >
+            <Plus className="mr-2 h-4 w-4" /> Create Module
+        </Button>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
@@ -161,27 +156,25 @@ export default function LearningHubPage() {
                         <CardTitle className="text-xl font-bold tracking-tight text-slate-900 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
                             {module.title}
                         </CardTitle>
-                        {isManagement && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-50 shrink-0">
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
-                                    <DropdownMenuItem onClick={() => handleEditModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                        <Edit className="h-3.5 w-3.5" /> Edit Module
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
-                                        <Share2 className="h-3.5 w-3.5" /> Share to Team
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator className="bg-slate-50" />
-                                    <DropdownMenuItem onClick={() => handleDeleteModule(module.id)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
-                                        <Trash2 className="h-3.5 w-3.5" /> Delete
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:bg-slate-50 shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl border-slate-200 p-1 shadow-2xl">
+                                <DropdownMenuItem onClick={() => handleEditModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
+                                    <Edit className="h-3.5 w-3.5" /> Edit Module
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleShareModule(module)} className="gap-2 font-semibold text-xs py-2.5 rounded-lg cursor-pointer">
+                                    <Share2 className="h-3.5 w-3.5" /> Share to Team
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-slate-50" />
+                                <DropdownMenuItem onClick={() => handleDeleteModule(module.id)} className="gap-2 font-semibold text-xs py-2.5 text-red-600 focus:text-red-600 rounded-lg cursor-pointer">
+                                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                     <CardDescription className="text-sm font-medium text-slate-500 line-clamp-2 mt-2 leading-relaxed">
                         {module.description}
@@ -191,7 +184,7 @@ export default function LearningHubPage() {
                 <CardFooter className="pt-0 pb-8 flex items-center justify-between px-6">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         <Clock className="h-3 w-3" /> 
-                        {module.createdAt instanceof Timestamp ? format(module.createdAt.toDate(), 'MMM d') : 'Recently Added'}
+                        {module.createdAt instanceof Timestamp ? format(module.createdAt.toDate(), 'MMM d') : 'Active'}
                     </div>
                     <Button onClick={() => handleLaunchModule(module)} variant="ghost" className="rounded-xl font-bold text-xs gap-2 group/btn hover:bg-primary/5 hover:text-primary transition-colors h-9 px-4">
                         Open Training <ArrowRight className="h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
@@ -204,9 +197,7 @@ export default function LearningHubPage() {
             <div className="col-span-full py-24 text-center space-y-4 opacity-40">
                 <BookOpen className="h-12 w-12 mx-auto text-slate-300" />
                 <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">No training materials found</p>
-                {isManagement && (
-                    <Button onClick={() => setIsManageDialogOpen(true)} variant="link" className="text-primary font-bold uppercase text-[10px]">Create your first module</Button>
-                )}
+                <Button onClick={() => setIsManageDialogOpen(true)} variant="link" className="text-primary font-bold uppercase text-[10px]">Create your first module</Button>
             </div>
         )}
       </div>

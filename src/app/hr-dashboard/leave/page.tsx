@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   CalendarDays, 
   Search, 
   Plus, 
-  MoreHorizontal, 
   CheckCircle2,
   XCircle,
   Clock,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Table, 
@@ -24,44 +22,33 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 import type { HRLeaveRequest } from '@/lib/types';
-
-const DEMO_LEAVE_REQUESTS: Partial<HRLeaveRequest>[] = [
-    { id: 'lr1', employeeName: 'David Wilson', type: 'Vacation', startDate: '2024-06-15', endDate: '2024-06-20', reason: 'Annual family vacation', status: 'pending', appliedAt: Timestamp.now() },
-    { id: 'lr2', employeeName: 'Jane Smith', type: 'Sick', startDate: '2024-06-10', endDate: '2024-06-11', reason: 'Dental appointment', status: 'approved', appliedAt: Timestamp.now() },
-    { id: 'lr3', employeeName: 'Robert Johnson', type: 'Emergency', startDate: '2024-06-05', endDate: '2024-06-05', reason: 'Family emergency', status: 'rejected', appliedAt: Timestamp.now() },
-];
+import { FullScreenLoader } from '@/components/ui/loader';
 
 export default function LeavePage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   
   const companyId = user?.companyId || user?.clientId || 'default';
-  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
 
   const leaveQuery = useMemoFirebase(
     () => {
         if (!firestore || !companyId) return null;
-        const col = collection(firestore, 'hr_companies', companyId, 'leaveRequests');
-        if (isManagement) {
-            return query(col, orderBy('appliedAt', 'desc'));
-        } else {
-            return query(col, where('employeeId', '==', user?.id || ''), orderBy('appliedAt', 'desc'));
-        }
+        return query(collection(firestore, 'hr_companies', companyId, 'leaveRequests'), orderBy('appliedAt', 'desc'));
     },
-    [firestore, companyId, isManagement, user?.id]
+    [firestore, companyId]
   );
   const { data: leaveRequests, isLoading } = useCollection<HRLeaveRequest>(leaveQuery);
 
   const displayLeaves = useMemo(() => {
-    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVE_REQUESTS as HRLeaveRequest[]);
+    return leaveRequests || [];
   }, [leaveRequests]);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
@@ -75,6 +62,8 @@ export default function LeavePage() {
     }
   };
 
+  if (isUserLoading) return <FullScreenLoader text="Syncing Applications..." />;
+
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -83,7 +72,7 @@ export default function LeavePage() {
               Leave Review
           </h1>
           <p className="text-slate-500 font-medium">
-              {isManagement ? 'Review applications and manage team availability.' : 'Submit and track your time-off requests.'}
+              Review company-wide applications and manage team availability collaboratively.
           </p>
         </div>
         <Button 
@@ -99,10 +88,10 @@ export default function LeavePage() {
             <div className="flex items-center justify-between">
                 <div>
                    <CardTitle className="text-lg font-bold text-slate-900">
-                       Request Queue
+                       Organization Queue
                    </CardTitle>
                    <CardDescription className="text-xs font-medium text-slate-500">
-                       {isManagement ? 'Review pending team applications' : 'History of your leave requests'}
+                       All pending team applications requiring review.
                    </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -139,7 +128,7 @@ export default function LeavePage() {
                            <TableCell>
                               <p className="text-xs font-bold text-slate-900">{request.type || 'General'}</p>
                               <p className="text-[10px] font-semibold text-slate-400 uppercase mt-0.5">
-                                  {request.startDate ? format(new Date(request.startDate), 'MMM d') : '??'} - {request.endDate ? format(new Date(request.endDate), 'MMM d') : '??'}
+                                  {request.startDate ? format(new Date(request.startDate), 'MMM d') : '??'} - {request.endDate ? format(new Date(request.endDate), 'MMM d, yyyy') : '??'}
                               </p>
                            </TableCell>
                            <TableCell>
@@ -155,13 +144,14 @@ export default function LeavePage() {
                               </Badge>
                            </TableCell>
                            <TableCell className="text-right pr-6">
-                              {(request.status === 'pending' && isManagement) ? (
+                              {(request.status === 'pending') ? (
                                  <div className="flex items-center justify-end gap-2">
                                     <Button 
                                         onClick={() => handleStatusUpdate(request.id, 'approved')}
                                         variant="outline" 
                                         size="sm" 
                                         className="h-8 w-8 p-0 rounded-lg text-green-600 border-green-100 hover:bg-green-50"
+                                        title="Approve Request"
                                     >
                                        <CheckCircle2 className="h-4 w-4" />
                                     </Button>
@@ -170,16 +160,20 @@ export default function LeavePage() {
                                         variant="outline" 
                                         size="sm" 
                                         className="h-8 w-8 p-0 rounded-lg text-red-600 border-red-100 hover:bg-red-50"
+                                        title="Reject Request"
                                     >
                                        <XCircle className="h-4 w-4" />
                                     </Button>
                                  </div>
                               ) : (
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pr-4">Processed</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pr-4">Resolved</p>
                               )}
                            </TableCell>
                         </TableRow>
                       ))}
+                      {!isLoading && displayLeaves.length === 0 && (
+                          <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Leave Applications Found</TableCell></TableRow>
+                      )}
                 </TableBody>
             </Table>
          </CardContent>
