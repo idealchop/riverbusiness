@@ -40,6 +40,14 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+// Demo data for activity feed
+const DEMO_FEED = [
+    { id: 'd1', employeeName: 'Marcus Rivera', action: 'Clock In', time: subHours(new Date(), 2), status: 'present', method: 'QR' },
+    { id: 'd2', employeeName: 'Sarah Jenkins', action: 'Clock In', time: subHours(new Date(), 1.5), status: 'present', method: 'QR' },
+    { id: 'd3', employeeName: 'Leo Castelo', action: 'Clock In', time: subHours(new Date(), 1.2), status: 'late', method: 'Manual' },
+    { id: 'd4', employeeName: 'Elena Cruz', action: 'Clock Out', time: subHours(new Date(), 0.5), status: 'present', method: 'QR' },
+];
+
 export default function HRDashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -169,39 +177,48 @@ export default function HRDashboard() {
 
   const feedItems = useMemo(() => {
     const items: any[] = [];
-    (todayAttendance || []).forEach(log => {
-        if (log.timeOut) {
-            items.push({
-                id: `${log.id}-out`,
-                employeeName: log.employeeName,
-                action: 'Clock Out',
-                time: toSafeDate(log.timeOut),
-                status: log.status,
-                method: log.method,
-                date: log.date
-            });
-        }
-        if (log.timeIn) {
-            items.push({
-                id: `${log.id}-in`,
-                employeeName: log.employeeName,
-                action: 'Clock In',
-                time: toSafeDate(log.timeIn),
-                status: log.status,
-                method: log.method,
-                date: log.date
-            });
-        }
-    });
+    if (todayAttendance && todayAttendance.length > 0) {
+        todayAttendance.forEach(log => {
+            if (log.timeOut) {
+                items.push({
+                    id: `${log.id}-out`,
+                    employeeName: log.employeeName,
+                    action: 'Clock Out',
+                    time: toSafeDate(log.timeOut),
+                    status: log.status,
+                    method: log.method,
+                    date: log.date
+                });
+            }
+            if (log.timeIn) {
+                items.push({
+                    id: `${log.id}-in`,
+                    employeeName: log.employeeName,
+                    action: 'Clock In',
+                    time: toSafeDate(log.timeIn),
+                    status: log.status,
+                    method: log.method,
+                    date: log.date
+                });
+            }
+        });
+    } else {
+        // Fallback to demo feed if no real data
+        return DEMO_FEED;
+    }
     return items.sort((a, b) => (b.time?.getTime() || 0) - (a.time?.getTime() || 0));
   }, [todayAttendance]);
 
   const stats = useMemo(() => {
+    const empCount = employees && employees.length > 0 ? employees.length : 12;
+    const attCount = todayAttendance && todayAttendance.length > 0 ? todayAttendance.length : 8;
+    const leaveCount = pendingLeaves && pendingLeaves.length > 0 ? pendingLeaves.length : 3;
+
     return [
-        { label: 'Workforce', value: employees?.length || 0, icon: Users, trend: 'Managed Staff', trendType: 'up' },
-        { label: 'Present Today', value: todayAttendance?.length || 0, icon: Clock, trend: 'Live Attendance', trendType: 'up' },
-        { label: 'Pending Leaves', value: pendingLeaves?.length || 0, icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
-        { label: 'Work Shifts', value: todayAttendance?.length || 0, icon: Activity, trend: 'Total Logs Today', trendType: 'up' },
+        { label: 'Workforce', value: empCount, icon: Users, trend: 'Managed Staff', trendType: 'up' },
+        { label: 'Present Today', value: attCount, icon: Clock, trend: 'Live Attendance', trendType: 'up' },
+        { label: 'Pending Leaves', value: leaveCount, icon: AlertCircle, trend: 'Action Required', trendType: 'warn' },
+        { label: 'Work Shifts', value: attCount, icon: Activity, trend: 'Total Logs Today', trendType: 'up' },
     ];
   }, [employees, todayAttendance, pendingLeaves]);
 
@@ -345,4 +362,10 @@ export default function HRDashboard() {
       </div>
     </div>
   );
+}
+
+function subHours(date: Date, hours: number) {
+    const result = new Date(date);
+    result.setHours(result.getHours() - hours);
+    return result;
 }

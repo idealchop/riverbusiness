@@ -23,12 +23,18 @@ import {
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { FileLeaveDialog } from '@/components/hr/FileLeaveDialog';
 import type { HRLeaveRequest } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
+
+const DEMO_LEAVES: Partial<HRLeaveRequest>[] = [
+    { id: 'l1', employeeName: 'Marcus Rivera', type: 'Vacation', startDate: format(addDays(new Date(), 10), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), 14), 'yyyy-MM-dd'), reason: 'Family trip', status: 'pending' },
+    { id: 'l2', employeeName: 'Sarah Jenkins', type: 'Emergency', startDate: format(new Date(), 'yyyy-MM-dd'), endDate: format(new Date(), 'yyyy-MM-dd'), reason: 'Personal matters', status: 'pending' },
+    { id: 'l3', employeeName: 'Elena Cruz', type: 'Sick', startDate: format(addDays(new Date(), -5), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), -4), 'yyyy-MM-dd'), reason: 'Medical appointment', status: 'approved' },
+];
 
 export default function LeavePage() {
   const { user, isUserLoading } = useUser();
@@ -48,11 +54,14 @@ export default function LeavePage() {
   const { data: leaveRequests, isLoading } = useCollection<HRLeaveRequest>(leaveQuery);
 
   const displayLeaves = useMemo(() => {
-    return leaveRequests || [];
+    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : (DEMO_LEAVES as HRLeaveRequest[]);
   }, [leaveRequests]);
 
   const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
-    if (!firestore || !companyId || !requestId) return;
+    if (!firestore || !companyId || !requestId || requestId.startsWith('l')) {
+        toast({ title: 'Demo Mode', description: 'Status updates are simulated for demo records.' });
+        return;
+    }
     try {
         const leaveRef = doc(firestore, 'hr_companies', companyId, 'leaveRequests', requestId);
         await updateDoc(leaveRef, { status: newStatus });
@@ -116,7 +125,7 @@ export default function LeavePage() {
                    {isLoading ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10 font-medium opacity-50">Processing Request Data...</TableCell></TableRow>
                    ) : displayLeaves.map(request => (
-                        <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0">
+                        <TableRow key={request.id} className="hover:bg-slate-50/30 transition-colors border-b border-slate-50 last:border-0 group">
                            <TableCell className="pl-6 py-5">
                               <div className="flex items-center gap-3">
                                  <div className="h-9 w-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs uppercase">
@@ -171,9 +180,6 @@ export default function LeavePage() {
                            </TableCell>
                         </TableRow>
                       ))}
-                      {!isLoading && displayLeaves.length === 0 && (
-                          <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Leave Applications Found</TableCell></TableRow>
-                      )}
                 </TableBody>
             </Table>
          </CardContent>

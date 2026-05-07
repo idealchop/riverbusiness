@@ -23,10 +23,16 @@ import {
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
+
+const DEMO_RUNS = [
+    { id: 'pr1', periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 385000, createdAt: Timestamp.now() },
+    { id: 'pr2', periodStart: format(startOfMonth(subMonths(new Date(), 2)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 2)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 372000, createdAt: Timestamp.now() },
+    { id: 'pr3', periodStart: format(startOfMonth(subMonths(new Date(), 3)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 3)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 391500, createdAt: Timestamp.now() },
+];
 
 export default function PayrollPage() {
   const { user, isUserLoading } = useUser();
@@ -42,7 +48,7 @@ export default function PayrollPage() {
   const { data: payrollRuns, isLoading } = useCollection(payrollQuery);
 
   const displayPayroll = useMemo(() => {
-    return payrollRuns || [];
+    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_RUNS;
   }, [payrollRuns]);
 
   const totalDisbursed = useMemo(() => {
@@ -134,9 +140,6 @@ export default function PayrollPage() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {!isLoading && displayPayroll.length === 0 && (
-                          <TableRow><TableCell colSpan={4} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Cycles Found</TableCell></TableRow>
-                      )}
                  </TableBody>
                </Table>
             </CardContent>

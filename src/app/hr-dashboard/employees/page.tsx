@@ -39,6 +39,14 @@ import { cn } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
 import { FullScreenLoader } from '@/components/ui/loader';
 
+const DEMO_EMPLOYEES: Partial<AppUser>[] = [
+    { id: 'e1', name: 'Marcus Rivera', email: 'marcus@riverph.com', hrProfile: { position: 'Operations Lead', department: 'Logistics', status: 'Active', salaryType: 'monthly', rate: 45000, startDate: '2024-01-15' } },
+    { id: 'e2', name: 'Sarah Jenkins', email: 'sarah.j@riverph.com', hrProfile: { position: 'Customer Success', department: 'Support', status: 'Active', salaryType: 'monthly', rate: 38000, startDate: '2024-02-01' } },
+    { id: 'e3', name: 'Leo Castelo', email: 'leo.c@riverph.com', hrProfile: { position: 'Delivery Officer', department: 'Fleet', status: 'Active', salaryType: 'daily', rate: 850, startDate: '2024-03-10' } },
+    { id: 'e4', name: 'Elena Cruz', email: 'elena@riverph.com', hrProfile: { position: 'Admin Assistant', department: 'Admin', status: 'Active', salaryType: 'monthly', rate: 30000, startDate: '2023-11-20' } },
+    { id: 'e5', name: 'David Sy', email: 'david.sy@riverph.com', hrProfile: { position: 'Quality Inspector', department: 'Compliance', status: 'Active', salaryType: 'monthly', rate: 42000, startDate: '2024-01-05' } },
+];
+
 export default function EmployeesPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -55,7 +63,7 @@ export default function EmployeesPage() {
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
   const filteredEmployees = useMemo(() => {
-    const list = employees || [];
+    const list = employees && employees.length > 0 ? employees : (DEMO_EMPLOYEES as AppUser[]);
     const search = searchTerm.toLowerCase().trim();
     if (!search) return list;
     return list.filter(emp => {

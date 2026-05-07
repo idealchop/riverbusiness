@@ -39,6 +39,12 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import type { HRLearningModule } from '@/lib/types';
 
+const DEMO_MODULES: Partial<HRLearningModule>[] = [
+    { id: 'm1', title: 'Daily Sanitation Flow', description: 'Step-by-step guide for equipment maintenance.', category: 'Safety', contentType: 'video', contentUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+    { id: 'm2', title: 'Customer Interaction Protocols', description: 'Best practices for fleet-to-client communication.', category: 'Support', contentType: 'article', textContent: 'Standard protocols for all team members...' },
+    { id: 'm3', title: 'Emergency Leak Response', description: 'What to do when equipment failures occur.', category: 'Operational', contentType: 'image', contentUrl: 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FApp%20Image%2FRiver_v1.png?alt=media&token=dee32636-aaaf-4a4f-8780-cc43f54f8d27' },
+];
+
 export default function LearningHubPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -62,10 +68,10 @@ export default function LearningHubPage() {
   const { data: modules, isLoading } = useCollection<HRLearningModule>(modulesQuery);
 
   const displayModules = useMemo(() => {
-    if (!modules) return [];
-    if (!searchTerm) return modules;
+    const list = modules && modules.length > 0 ? modules : (DEMO_MODULES as HRLearningModule[]);
+    if (!searchTerm) return list;
     const search = searchTerm.toLowerCase();
-    return modules.filter(m => 
+    return list.filter(m => 
         m.title.toLowerCase().includes(search) || 
         m.category.toLowerCase().includes(search)
     );
@@ -96,7 +102,7 @@ export default function LearningHubPage() {
       toast({ title: 'Link Copied', description: 'Training link copied to clipboard for sharing.' });
   };
 
-  if (isUserLoading || isLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
+  if (isUserLoading) return <FullScreenLoader text="Syncing Learning Hub..." />;
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -192,14 +198,6 @@ export default function LearningHubPage() {
                 </CardFooter>
             </Card>
         ))}
-
-        {displayModules.length === 0 && (
-            <div className="col-span-full py-24 text-center space-y-4 opacity-40">
-                <BookOpen className="h-12 w-12 mx-auto text-slate-300" />
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-500">No training materials found</p>
-                <Button onClick={() => setIsManageDialogOpen(true)} variant="link" className="text-primary font-bold uppercase text-[10px]">Create your first module</Button>
-            </div>
-        )}
       </div>
 
       <LearningModuleDialog 

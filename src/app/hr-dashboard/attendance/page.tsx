@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/table';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { format, subDays } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { FullScreenLoader } from '@/components/ui/loader';
 import type { HRAttendanceLog, HRLeaveRequest, HRPayrollRun } from '@/lib/types';
@@ -41,6 +41,22 @@ const toSafeDate = (val: any): Date | null => {
     return isNaN(d.getTime()) ? null : d;
 };
 
+const DEMO_ATTENDANCE: HRAttendanceLog[] = [
+    { id: 'att1', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(new Date(), 'yyyy-MM-dd'), timeIn: subHours(new Date(), 2), status: 'present', method: 'QR' },
+    { id: 'att2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', date: format(new Date(), 'yyyy-MM-dd'), timeIn: subHours(new Date(), 1.5), status: 'present', method: 'QR' },
+    { id: 'att3', companyId: 'demo', employeeId: 'e3', employeeName: 'Leo Castelo', date: format(new Date(), 'yyyy-MM-dd'), timeIn: subHours(new Date(), 1.2), status: 'late', method: 'manual' },
+    { id: 'att4', companyId: 'demo', employeeId: 'e1', employeeName: 'Marcus Rivera', date: format(subDays(new Date(), 1), 'yyyy-MM-dd'), timeIn: subHours(subDays(new Date(), 1), 8), timeOut: subHours(subDays(new Date(), 1), 1), status: 'present', method: 'QR' },
+];
+
+const DEMO_LEAVES: HRLeaveRequest[] = [
+    { id: 'l1', companyId: 'demo', employeeId: 'e4', employeeName: 'Elena Cruz', type: 'Vacation', startDate: format(addDays(new Date(), 5), 'yyyy-MM-dd'), endDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'), reason: 'Family Reunion', status: 'pending', appliedAt: Timestamp.now() },
+    { id: 'l2', companyId: 'demo', employeeId: 'e2', employeeName: 'Sarah Jenkins', type: 'Sick', startDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), endDate: format(subDays(new Date(), 2), 'yyyy-MM-dd'), reason: 'Fever', status: 'approved', appliedAt: Timestamp.now() },
+];
+
+const DEMO_PAYROLL: HRPayrollRun[] = [
+    { id: 'pr1', companyId: 'demo', periodStart: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), periodEnd: format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'), status: 'paid', totalNetSalary: 385000, createdAt: Timestamp.now() },
+];
+
 export default function AttendancePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -49,7 +65,7 @@ export default function AttendancePage() {
 
   const companyId = user?.companyId || user?.clientId || 'default';
 
-  // --- Data Queries (Universal access for the tenant) ---
+  // --- Data Queries ---
   const attendanceQuery = useMemoFirebase(
     () => {
         if (!firestore || !companyId) return null;
@@ -76,13 +92,21 @@ export default function AttendancePage() {
 
   // --- Display Logic ---
   const displayAttendance = useMemo(() => {
-    const list = attendanceLogs || [];
+    const list = attendanceLogs && attendanceLogs.length > 0 ? attendanceLogs : DEMO_ATTENDANCE;
     if (!searchTerm) return list;
     return list.filter(log => 
         log.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         log.date.includes(searchTerm)
     );
   }, [attendanceLogs, searchTerm]);
+
+  const displayLeaves = useMemo(() => {
+    return leaveRequests && leaveRequests.length > 0 ? leaveRequests : DEMO_LEAVES;
+  }, [leaveRequests]);
+
+  const displayPayroll = useMemo(() => {
+    return payrollRuns && payrollRuns.length > 0 ? payrollRuns : DEMO_PAYROLL;
+  }, [payrollRuns]);
 
   if (isUserLoading) return <FullScreenLoader text="Loading Records..." />;
 
@@ -182,9 +206,6 @@ export default function AttendancePage() {
                       </TableRow>
                     );
                   })}
-                  {!loadingAttendance && displayAttendance.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Records Found</TableCell></TableRow>
-                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -203,7 +224,7 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingLeaves ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading History...</TableCell></TableRow>
-                  ) : (leaveRequests || []).map(req => (
+                  ) : displayLeaves.map(req => (
                     <TableRow key={req.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{req.startDate ? format(new Date(req.startDate), 'MMM d') : ''} - {req.endDate ? format(new Date(req.endDate), 'MMM d') : ''}</p>
@@ -222,9 +243,6 @@ export default function AttendancePage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!loadingLeaves && (!leaveRequests || leaveRequests.length === 0) && (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Leave Records</TableCell></TableRow>
-                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -242,7 +260,7 @@ export default function AttendancePage() {
                 <TableBody>
                   {loadingPayroll ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-20 animate-pulse font-medium text-slate-400">Loading Records...</TableCell></TableRow>
-                  ) : (payrollRuns || []).map(run => (
+                  ) : displayPayroll.map(run => (
                     <TableRow key={run.id} className="hover:bg-slate-50/30 border-b border-slate-50 last:border-0 group">
                       <TableCell className="pl-6 py-4">
                         <p className="text-sm font-bold text-slate-900">{run.periodStart ? format(new Date(run.periodStart), 'MMM d') : ''} - {run.periodEnd ? format(new Date(run.periodEnd), 'MMM d, yyyy') : ''}</p>
@@ -262,9 +280,6 @@ export default function AttendancePage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {!loadingPayroll && (!payrollRuns || payrollRuns.length === 0) && (
-                      <TableRow><TableCell colSpan={4} className="text-center py-20 font-medium text-slate-300 italic uppercase text-[10px] tracking-widest">No Payroll Records</TableCell></TableRow>
-                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -273,4 +288,22 @@ export default function AttendancePage() {
       </Tabs>
     </div>
   );
+}
+
+function subHours(date: Date, hours: number) {
+    const result = new Date(date);
+    result.setHours(result.getHours() - hours);
+    return result;
+}
+
+function addDays(date: Date, days: number) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
+function subMonths(date: Date, months: number) {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() - months);
+    return result;
 }
