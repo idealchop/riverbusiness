@@ -33,7 +33,7 @@ import type { Notification as NotificationType, AppUser } from '@/lib/types';
 const managerNavItems = [
   { href: '/hr-dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/hr-dashboard/employees', label: 'Employees', icon: Users },
-  { href: '/hr-dashboard/attendance', label: 'Attendance Ledger', icon: Database },
+  { href: '/hr-dashboard/attendance', label: 'Attendance', icon: Database },
   { href: '/hr-dashboard/payroll', label: 'Payroll Engine', icon: DollarSign },
   { href: '/hr-dashboard/leave', label: 'Leave Review', icon: CalendarDays },
 ];
