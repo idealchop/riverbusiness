@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   BookOpen, 
   Plus, 
   Search, 
   Video, 
-  Image as ImageIcon, 
+  ImageIcon, 
   FileText, 
   PlayCircle,
   MoreVertical,
