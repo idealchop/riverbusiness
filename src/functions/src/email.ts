@@ -11,7 +11,7 @@ interface SendEmailOptions {
 
 const BRAND_PRIMARY = '#156391';
 const BRAND_ACCENT = '#22d3ee';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FLogo%2FRiverAI_Icon_Blue_HQ.png?alt=media&token=2d84c0cb-3515-4c4c-b62d-2b61ef75c35c';
+const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-white-v2.png?alt=media&token=6c25e9e2-9375-4f03-a0ab-e32cd98b8b49';
 
 /**
  * Sends an email using the Brevo SMTP relay.
@@ -53,9 +53,9 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
 }
 
 /**
- * Generates the common HTML wrapper for all River Business emails with Manrope font and consistent branding.
+ * Generates the common HTML wrapper for all River Business emails.
  */
-function getEmailWrapper(content: string, header: string, subheader: string = '') {
+function getEmailWrapper(content: string, header: string, subheader: string = '', buttonText: string = 'Login to Dashboard', buttonUrl: string = 'https://app.riverph.com') {
   return `
     <!DOCTYPE html>
     <html>
@@ -68,32 +68,18 @@ function getEmailWrapper(content: string, header: string, subheader: string = ''
         .container { max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .top-bar { height: 8px; background: linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%); }
         .header { padding: 32px 24px 20px 24px; text-align: center; }
-        .logo { width: 140px; height: auto; }
+        .logo { width: 50px; height: auto; }
         .content { padding: 0 40px 40px 40px; }
-        .h2 { color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px; text-align: center; margin-top: 0; letter-spacing: -0.5px; }
-        .tracking-id { color: #64748b; font-size: 14px; text-align: center; margin-bottom: 32px; }
-        .tracking-id span { color: ${BRAND_PRIMARY}; font-weight: 600; }
-        .greeting { color: #0f172a; font-size: 18px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; }
-        .body-text { color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 24px; }
-        .status-badge { text-align: center; margin: 24px 0; }
-        .badge { padding: 12px 28px; border-radius: 50px; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 1.2px; display: inline-block; }
-        .details-box { background-color: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #e2e8f0; }
-        .details-title { margin: 0 0 16px 0; font-size: 13px; color: ${BRAND_PRIMARY}; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-        .detail-item { display: flex; align-items: center; margin-bottom: 15px; }
-        .detail-icon { background-color: #ffffff; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-right: 15px; font-size: 20px; }
-        .detail-label { margin: 0; font-size: 12px; color: #64748b; }
-        .detail-value { margin: 2px 0 0 0; font-size: 18px; font-weight: 700; color: #0f172a; }
-        .next-step { padding-top: 16px; border-top: 1px dashed #cbd5e1; margin: 0; font-size: 14px; color: #475569; line-height: 1.5; }
-        .btn-container { text-align: center; margin-top: 30px; }
-        .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(21, 99, 145, 0.3); }
-        .support-link { font-size: 13px; color: #94a3b8; text-align: center; margin-top: 32px; }
-        .support-link a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 600; }
+        .h2 { color: #0f172a; font-size: 22px; font-weight: 800; margin-bottom: 8px; text-align: center; margin-top: 0; letter-spacing: -0.5px; }
+        .greeting { color: #0f172a; font-size: 17px; font-weight: 700; line-height: 1.6; margin-bottom: 16px; }
+        .body-text { color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+        .btn-container { text-align: center; margin-top: 32px; }
+        .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; display: inline-block; }
         .footer { text-align: center; margin-top: 40px; }
         .footer-line { border: none; border-top: 1px solid #f1f5f9; margin: 40px 0; }
-        .footer-company { font-size: 14px; font-weight: 700; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
+        .footer-company { font-size: 15px; font-weight: 800; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
         .footer-sub { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6; }
-        .footer-sub a { color: #94a3b8; text-decoration: none; }
-        .automated-note { font-size: 11px; color: #cbd5e1; margin-top: 20px; font-style: italic; }
+        .automated-note { font-size: 10px; color: #cbd5e1; margin-top: 20px; font-style: italic; }
       </style>
     </head>
     <body>
@@ -107,19 +93,16 @@ function getEmailWrapper(content: string, header: string, subheader: string = ''
           ${subheader}
           ${content}
           <div class="btn-container">
-            <a href="https://app.riverph.com" class="btn">See Dashboard</a>
+            <a href="${buttonUrl}" class="btn">${buttonText}</a>
           </div>
-          <p class="support-link">
-            Questions? We're here to help. <a href="mailto:customers@riverph.com">Contact Support</a>
-          </p>
           <hr class="footer-line" />
           <div class="footer">
-            <p class="footer-company">River Tech Inc.</p>
+            <p class="footer-company">River PH - Automated, Connected, Convenient.</p>
             <p class="footer-sub">
-              Turn Everyday Needs Into Automatic Experience<br>
-              Manila, Philippines | <a href="https://www.riverph.com">www.riverph.com</a>
+              A unified business operating system connecting operations, people, and security.<br>
+              <a href="https://www.riverph.com" style="color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700;">www.riverph.com</a>
             </p>
-            <p class="automated-note">This is an automated message from River Business. Please do not reply directly to this email.</p>
+            <p class="automated-note">This is an automated system message. Please do not reply.</p>
           </div>
         </div>
       </div>
@@ -129,181 +112,78 @@ function getEmailWrapper(content: string, header: string, subheader: string = ''
 }
 
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
-  const color = '#10b981'; // Green for Delivered
-  const subheader = `<p class="tracking-id">Tracking ID: <span>${trackingId}</span></p>`;
-  
   const content = `
     <p class="greeting">Stay Hydrated, ${businessName}! 💧</p>
-    
     <p class="body-text">
-      Great news! Your fresh water supply has been successfully replenished. Ensuring your team stays focused, healthy, and productive is our top priority.
+      Your fresh water supply has been successfully replenished. Your digital Proof of Delivery (POD) is now available for tracking.
     </p>
-
-    <div class="status-badge">
-      <span class="badge" style="background-color: ${color}15; color: ${color}; border: 1.5px solid ${color};">
-        ${status}
-      </span>
-    </div>
-
-    <div class="details-box">
-      <h3 class="details-title">Shipment Summary</h3>
-      <div class="detail-item">
-        <div class="detail-icon">📦</div>
-        <div>
-          <p class="detail-label">Total Volume</p>
-          <p class="detail-value">${volume} Containers</p>
-        </div>
-      </div>
-      <p class="next-step">
-        <strong>Transparency Check:</strong> Your digital <strong>Proof of Delivery (POD)</strong> is now available. Log in to track your real-time consumption and keep your office overhead optimized.
-      </p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Delivered Volume</p>
+      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">${volume} Containers</p>
     </div>
   `;
-
   return {
     subject: `Hydration Delivered to ${businessName} 🚚`,
-    html: getEmailWrapper(content, 'Fresh Water Delivered', subheader)
+    html: getEmailWrapper(content, 'Supply Replenished', `<p style="text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px;">Ref: ${trackingId}</p>`)
   };
 }
 
 export function getPaymentStatusTemplate(businessName: string, invoiceId: string, amount: number, status: string) {
   const isPaid = status === 'Paid';
-  const color = isPaid ? '#10b981' : '#f59e0b';
-  const title = isPaid ? 'Payment Confirmed' : 'Review in Progress';
-  const subheader = `<p class="tracking-id">Invoice ID: <span>${invoiceId}</span></p>`;
-  
   const content = `
-    <p class="greeting">Hi ${businessName}, ${isPaid ? '✅' : '⏳'}</p>
-    
-    <p class="body-text">
-      ${isPaid 
-        ? "Your account is in excellent standing! We've successfully processed your payment, ensuring your automated water management continues without interruption." 
-        : "We've received your proof of payment. Our finance team is now reviewing the details to finalize your record and update your balance."}
-    </p>
-
-    <div class="status-badge">
-      <span class="badge" style="background-color: ${color}15; color: ${color}; border: 1.5px solid ${color};">
-        ${status}
-      </span>
-    </div>
-
-    <div class="details-box">
-      <h3 class="details-title">Financial Summary</h3>
-      <div class="detail-item">
-        <div class="detail-icon">💰</div>
-        <div>
-          <p class="detail-label">Amount Received</p>
-          <p class="detail-value">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        Maintaining a healthy balance keeps your office running smoothly. You can download your official digital receipt anytime in the billing section.
-      </p>
+    <p class="greeting">Hi ${businessName}, ${isPaid ? "your payment is confirmed." : "we've received your proof of payment."}</p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Amount Processed</p>
+      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
   `;
-
   return {
-    subject: `${title} - Invoice ${invoiceId}`,
-    html: getEmailWrapper(content, title, subheader)
+    subject: isPaid ? `Payment Confirmed ✅` : `Processing Payment ⏳`,
+    html: getEmailWrapper(content, isPaid ? 'Payment Successful' : 'Review in Progress', `<p style="text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px;">Invoice: ${invoiceId}</p>`)
   };
 }
 
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
   const content = `
     <p class="greeting">Balance Boosted, ${businessName}! 💳</p>
-    
-    <p class="body-text">
-      Your central wallet has been topped up! You're all set for your upcoming deliveries. No more manual approvals needed for every container—just pure, automated efficiency for your business.
-    </p>
-
-    <div class="details-box">
-      <h3 class="details-title">Wallet Update</h3>
-      <div class="detail-item">
-        <div class="detail-icon">💵</div>
-        <div>
-          <p class="detail-label">Amount Credited</p>
-          <p class="detail-value">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        We will automatically deduct from this balance for every container delivered across all your branches, keeping your admin work to an absolute minimum.
-      </p>
+    <p class="body-text">Your central wallet has been topped up. You're ready for your upcoming automated branch deliveries.</p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Wallet Credit</p>
+      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">+ ₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
   `;
-
   return {
-    subject: `Credits Added Successfully to your Wallet 💰`,
-    html: getEmailWrapper(content, 'Wallet Topped Up!')
+    subject: `Credits Added Successfully 💰`,
+    html: getEmailWrapper(content, 'Balance Updated')
   };
 }
 
 export function getNewInvoiceTemplate(businessName: string, invoiceId: string, amount: number, period: string) {
-  const subheader = `<p class="tracking-id">Statement ID: <span>${invoiceId}</span></p>`;
-  
   const content = `
     <p class="greeting">Hi ${businessName}, 📄</p>
-    
-    <p class="body-text">
-      Transparency is the key to good management. Your automated monthly statement for <strong>${period}</strong> is now ready. Review your consumption patterns and keep your office records organized.
-    </p>
-
-    <div class="details-box">
-      <h3 class="details-title">Statement Summary</h3>
-      <div class="detail-item">
-        <div class="detail-icon">📊</div>
-        <div>
-          <p class="detail-label">Total Amount Due</p>
-          <p class="detail-value">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        Log in to your dashboard to settle this statement via GCash, Maya, or Bank Transfer instantly and keep your service flowing.
-      </p>
+    <p class="body-text">Your automated monthly statement for <strong>${period}</strong> is now ready for review and settlement.</p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Total Due</p>
+      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
   `;
-
   return {
-    subject: `Monthly Statement Ready for ${period} 📑`,
-    html: getEmailWrapper(content, 'New Statement Available', subheader)
+    subject: `Monthly Statement Ready 📑`,
+    html: getEmailWrapper(content, 'Statement Available', `<p style="text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px;">Ref: ${invoiceId}</p>`, 'Pay via Dashboard')
   };
 }
 
 export function getRefillRequestTemplate(businessName: string, status: string, requestId: string, date?: string) {
-  const isReceived = status === 'Requested';
-  const subheader = `<p class="tracking-id">Request ID: <span>${requestId}</span></p>`;
-  
   const content = `
-    <p class="greeting">Hello ${businessName}, ${isReceived ? '🌊' : '🚀'}</p>
-    
-    <p class="body-text">
-      ${isReceived 
-        ? "We've prioritized your extra water refill request. Our fulfillment team has been alerted and is already preparing your containers for dispatch to ensure you never run dry." 
-        : `Your on-demand refill request is moving through our system and is currently <strong>${status}</strong>.`}
-    </p>
-
-    <div class="status-badge">
-      <span class="badge" style="background-color: ${BRAND_PRIMARY}15; color: ${BRAND_PRIMARY}; border: 1.5px solid ${BRAND_PRIMARY};">
-        ${status}
-      </span>
-    </div>
-
-    <div class="details-box">
-      <h3 class="details-title">Request Details</h3>
-      <div class="detail-item">
-        <div class="detail-icon">🚚</div>
-        <div>
-          <p class="detail-label">Requested Priority</p>
-          <p class="detail-value">${date ? format(new Date(date), 'PP') : 'ASAP Refill'}</p>
-        </div>
-      </div>
-      <p class="next-step">
-        You can track the real-time progress of our delivery truck through the live tracker in your dashboard.
-      </p>
+    <p class="greeting">Hello ${businessName}, 🌊</p>
+    <p class="body-text">We've received your extra refill request. Our fulfillment team is now preparing your dispatch.</p>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 800; text-transform: uppercase;">Status</p>
+      <p style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: ${BRAND_PRIMARY};">${status}</p>
     </div>
   `;
-
   return {
-    subject: `Update: Refill Request ${requestId} ${isReceived ? '🌊' : '🚀'}`,
-    html: getEmailWrapper(content, isReceived ? 'Refill Priority Confirmed' : 'Refill Request Updated', subheader)
+    subject: `Refill Request Received 🚀`,
+    html: getEmailWrapper(content, 'Priority Received', `<p style="text-align: center; color: #64748b; font-size: 13px; margin-bottom: 24px;">ID: ${requestId}</p>`, 'Track Request')
   };
 }
