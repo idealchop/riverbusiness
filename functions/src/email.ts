@@ -14,7 +14,7 @@ interface SendEmailOptions {
 
 const BRAND_PRIMARY = '#538ec2';
 const BRAND_ACCENT = '#7ea9d2';
-const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-white-v2.png?alt=media&token=6c25e9e2-9375-4f03-a0ab-e32cd98b8b49';
+const LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/studio-911553385-80027.firebasestorage.app/o/Logo%2Friver-icon-white-v2.png?alt=media&token=6c25e9e2-9375-4f03-a066-5a666d546d81';
 
 const GCASH_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2FRiver_gcash.png?alt=media&token=13c80b31-8f08-4857-a066-5a666d546d81';
 const BPI_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapore/o/River%20Mobile%2FPayments%2Friver_BPI.png?alt=media&token=6ac4fd16-2014-40fe-b7cf-1fdf3e94a61e';
@@ -22,11 +22,9 @@ const MAYA_QR = 'https://firebasestorage.googleapis.com/v0/b/smartrefill-singapo
 
 const PAYMENT_OPTIONS_BLOCK = `
     <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-top: 32px; margin-bottom: 20px;">
-      <h3 style="margin: 0 0 16px 0; font-size: 13px; color: ${BRAND_PRIMARY}; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Payment Instructions</h3>
+      <h3 style="margin: 0 0 16px 0; font-size: 13px; color: ${BRAND_PRIMARY}; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Settlement Instructions</h3>
       <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-        1. <strong>Pay:</strong> Scan a QR code or use account details.<br>
-        2. <strong>Capture:</strong> Screenshot your transaction receipt.<br>
-        3. <strong>Upload:</strong> Submit proof via your dashboard.
+        To ensure uninterrupted service within the ecosystem, please use any of our accredited channels:
       </p>
       
       <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -99,7 +97,7 @@ export async function sendEmail({ to, cc, bcc, subject, text, html, attachments 
 /**
  * Generates the common HTML wrapper for all River Philippines emails.
  */
-function getEmailWrapper(content: string, headerTitle: string, subheader: string = '', buttonText: string = 'Login to Dashboard', buttonUrl: string = 'https://app.riverph.com') {
+function getEmailWrapper(content: string, headerTitle: string, subheader: string = '', buttonText: string = 'Launch Dashboard', buttonUrl: string = 'https://app.riverph.com') {
   const timestamp = Date.now();
   return `
     <!DOCTYPE html>
@@ -142,14 +140,14 @@ function getEmailWrapper(content: string, headerTitle: string, subheader: string
         </div>
       </div>
       <div class="footer">
-        <p class="footer-brand">River PH - Automated, Connected, Convenient.</p>
+        <p class="footer-brand">River Philippines</p>
         <p class="footer-sub">
-          A unified business operating system connecting operations, people, and security.<br>
+          One ecosystem. One data layer. One operating system for your business.<br>
           <a href="https://riverph.com">riverph.com</a>
         </p>
       </div>
       <div class="legal-disclaimer">
-        DISCLAIMER: This is an automated communication intended for the exclusive use of the addressee.
+        DISCLAIMER: This is a secure communication intended for the exclusive use of the addressee.
       </div>
       <div style="display:none; white-space:nowrap; font:15px courier; line-height:0; color: #ffffff;"> - Notification ID: ${timestamp} - </div>
     </body>
@@ -161,45 +159,45 @@ export function getWelcomeUnclaimedTemplate( businessName: string, clientId: str
   const content = `
     <p class="body-text">Hello <strong>${businessName}</strong>,</p>
     <p class="body-text">
-      Welcome to River Philippines! Your account is ready for activation. Your smart refill system is now active, ensuring your workspace is always supplied with clean water.
+      Welcome to your new business operating system. By joining River, you're unifying your operations, people, and data into one intelligent ecosystem. Your account is ready for activation.
     </p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #e2e8f0;">
         <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Client ID:</span> <span style="font-family: monospace; font-weight: 800; color: ${BRAND_PRIMARY};">${clientId}</span></div>
-        <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Plan:</span> ${planName}</div>
-        <div style="font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Address:</span> ${address}</div>
+        <div style="margin-bottom: 8px; font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Initial Plan:</span> ${planName}</div>
+        <div style="font-size: 14px;"><span style="color: #64748b; font-weight: bold;">Service Point:</span> ${address}</div>
     </div>
   `;
 
   return {
-    subject: `Welcome to River Philippines: Your Smart Refill is Ready! 🌊`,
-    html: getEmailWrapper(content, 'Welcome to the Future of Hydration', '', 'Activate My Dashboard', 'https://app.riverph.com')
+    subject: `Welcome to the River Ecosystem: Your Workspace is Ready 🌊`,
+    html: getEmailWrapper(content, 'A New Standard for Business Operations', '', 'Activate My Workspace', 'https://app.riverph.com')
   };
 }
 
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
   const content = `
-    <p class="body-text">Hi ${businessName}, your water supply has been successfully replenished. Keeping your team healthy and productive is our top priority.</p>
+    <p class="body-text">Hi ${businessName}, your supply fulfillment has been verified. Maintaining high-fidelity operations is our top priority, ensuring your team has the resources they need to succeed.</p>
     <div style="text-align: center; margin: 32px 0;">
       <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 12px 24px; border-radius: 50px; font-weight: 800; display: inline-block; font-size: 14px; text-transform: uppercase;">
         ${status}
       </div>
     </div>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
-      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Volume Delivered</p>
+      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Volume Logged</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">${volume} Containers</p>
     </div>
   `;
 
   return {
-    subject: `Fresh Water Delivered to ${businessName} 🚚`,
-    html: getEmailWrapper(content, 'Supply Replenished', `<p style="text-align: center; color: #64748b; font-size: 14px;">Tracking ID: ${trackingId}</p>`)
+    subject: `Supply Fulfillment Complete for ${businessName} 🚚`,
+    html: getEmailWrapper(content, 'Logistics Update', `<p style="text-align: center; color: #64748b; font-size: 14px;">Log ID: ${trackingId}</p>`)
   };
 }
 
 export function getPaymentStatusTemplate(businessName: string, invoiceId: string, amount: number, status: string) {
   const isPaid = status === 'Paid';
   const content = `
-    <p class="body-text">Hi ${businessName}, ${isPaid ? "your payment has been confirmed. Your account remains in excellent standing." : "we've received your proof of payment and our finance team is currently reviewing it."}</p>
+    <p class="body-text">Hi ${businessName}, ${isPaid ? "your financial status is confirmed. Your account remains in excellent standing within the River ecosystem." : "we've received your settlement proof and our audit team is currently verifying the transaction."}</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; margin-top: 24px; border: 1px solid #e2e8f0;">
       <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Amount Processed</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -207,14 +205,14 @@ export function getPaymentStatusTemplate(businessName: string, invoiceId: string
   `;
 
   return {
-    subject: isPaid ? `Payment Confirmed ✅` : `Payment Received ⏳`,
-    html: getEmailWrapper(content, isPaid ? 'Payment Successful' : 'Processing Payment', `<p style="text-align: center; color: #64748b; font-size: 14px;">Invoice ID: ${invoiceId}</p>`)
+    subject: isPaid ? `Financial Verification Complete ✅` : `Settlement Logged ⏳`,
+    html: getEmailWrapper(content, isPaid ? 'Transaction Verified' : 'Processing Settlement', `<p style="text-align: center; color: #64748b; font-size: 14px;">Invoice ID: ${invoiceId}</p>`)
   };
 }
 
 export function getTopUpConfirmationTemplate(businessName: string, amount: number) {
   const content = `
-    <p class="body-text">Hi ${businessName}, your central wallet has been successfully topped up. You're now fully prepared for your upcoming automated deliveries.</p>
+    <p class="body-text">Hi ${businessName}, your central operational wallet has been successfully credited. Your workforce is now fully provisioned for upcoming automated supply cycles.</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
       <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Wallet Credit</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">+ ₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -222,47 +220,46 @@ export function getTopUpConfirmationTemplate(businessName: string, amount: numbe
   `;
 
   return {
-    subject: `Wallet Topped Up! 💰`,
-    html: getEmailWrapper(content, 'Balance Updated')
+    subject: `Operational Wallet Credited! 💰`,
+    html: getEmailWrapper(content, 'Liquidity Updated')
   };
 }
 
 export function getNewInvoiceTemplate(businessName: string, invoiceId: string, amount: number, period: string) {
   const content = `
-    <p class="body-text">Hi ${businessName}, your monthly statement for <strong>${period}</strong> is now ready. Please settle this balance to ensure uninterrupted hydration services.</p>
+    <p class="body-text">Hi ${businessName}, transparency is core to the River ecosystem. Your automated monthly statement for <strong>${period}</strong> is now ready for review.</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
-      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Amount Due</p>
+      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Total Balance Due</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
     ${PAYMENT_OPTIONS_BLOCK}
   `;
 
   return {
-    subject: `New Invoice for ${period} 🌊`,
-    html: getEmailWrapper(content, 'New Statement Available', `<p style="text-align: center; color: #64748b; font-size: 14px;">Ref: ${invoiceId}</p>`, 'Pay via Dashboard')
+    subject: `New Statement for ${period} 🌊`,
+    html: getEmailWrapper(content, 'Statement Ready', `<p style="text-align: center; color: #64748b; font-size: 14px;">Reference: ${invoiceId}</p>`, 'Settle via Workspace')
   };
 }
 
 export function getRefillRequestTemplate(businessName: string, status: string, requestId: string, date?: string) {
-  const isReceived = status === 'Requested';
   const content = `
-    <p class="body-text">Hello ${businessName}, we've received your refill request. Our fulfillment team is now preparing your containers for dispatch.</p>
+    <p class="body-text">Hello ${businessName}, we've received your request for supplemental resources. Our fulfillment layer is now prepping your dispatch to ensure zero operational downtime.</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
-      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Request Status</p>
+      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: bold; text-transform: uppercase;">Status</p>
       <p style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: ${BRAND_PRIMARY};">${status}</p>
     </div>
   `;
 
   return {
-    subject: `Refill Request Received 🌊`,
-    html: getEmailWrapper(content, 'Priority Confirmed', `<p style="text-align: center; color: #64748b; font-size: 14px;">ID: ${requestId}</p>`, 'Track Progress')
+    subject: `Supplemental Resource Request Received 🌊`,
+    html: getEmailWrapper(content, 'Logistics Authorized', `<p style="text-align: center; color: #64748b; font-size: 14px;">Request: ${requestId}</p>`, 'Track Logistics')
   };
 }
 
 export function getEmployeeInvitationTemplate(employeeName: string, businessName: string, signupUrl: string) {
   const content = `
     <p class="body-text">Hello ${employeeName},</p>
-    <p class="body-text">You've been invited to join the <strong>${businessName}</strong> team on River Business. Activate your account to start managing your workspace.</p>
+    <p class="body-text">You've been invited to join the <strong>${businessName}</strong> team on River Business. As part of this workspace, you'll have unified access to all operational tools.</p>
   `;
   return {
     subject: `Invitation: Join ${businessName} on River 🌊`,
@@ -272,35 +269,35 @@ export function getEmployeeInvitationTemplate(employeeName: string, businessName
 
 export function getSanitationScheduledTemplate(businessName: string, assignedTo: string, date: string) {
   const content = `
-    <p class="body-text">Hi ${businessName}, we've scheduled a professional sanitation visit for your office hydration equipment.</p>
+    <p class="body-text">Hi ${businessName}, we've scheduled a professional quality check for your office infrastructure to ensure 100% compliance with ecosystem health standards.</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
         <div style="margin-bottom: 8px;"><span style="color: #64748b; font-weight: bold; font-size: 12px; text-transform: uppercase;">Target Date:</span><br><span style="font-weight: 700; font-size: 16px;">${date}</span></div>
-        <div><span style="color: #64748b; font-weight: bold; font-size: 12px; text-transform: uppercase;">Officer:</span><br><span style="font-weight: 700; font-size: 16px;">${assignedTo}</span></div>
+        <div><span style="color: #64748b; font-weight: bold; font-size: 12px; text-transform: uppercase;">Assigned Officer:</span><br><span style="font-weight: 700; font-size: 16px;">${assignedTo}</span></div>
     </div>
   `;
   return {
-    subject: `Sanitation Scheduled for ${businessName} 🛡️`,
-    html: getEmailWrapper(content, 'Quality Check Scheduled')
+    subject: `Quality Audit Scheduled for ${businessName} 🛡️`,
+    html: getEmailWrapper(content, 'Standard Maintenance')
   };
 }
 
 export function getSanitationReportTemplate(businessName: string, assignedTo: string, date: string, score: string) {
   const content = `
-    <p class="body-text">Hi ${businessName}, your latest equipment quality report is now available. Our officer has finalized the sanitation for your units.</p>
+    <p class="body-text">Hi ${businessName}, your latest equipment quality analysis is now available. Our officer has finalized the audit for your business units.</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px; text-align: center;">
       <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">Intelligence Score</p>
       <p style="margin: 4px 0 0 0; font-size: 32px; font-weight: 800; color: #10b981;">${score}</p>
     </div>
   `;
   return {
-    subject: `Sanitation Report Ready 💧`,
-    html: getEmailWrapper(content, 'Quality Assessment Finalized', '', 'View Full Report')
+    subject: `Quality Analysis Verified 💧`,
+    html: getEmailWrapper(content, 'Assessment Finalized', '', 'View Intelligence Report')
   };
 }
 
 export function getPaymentReminderTemplate(businessName: string, amount: string, period: string) {
   const content = `
-    <p class="body-text">Hi ${businessName}, this is a follow-up regarding your statement for <strong>${period}</strong>. Please settle your balance to maintain active service.</p>
+    <p class="body-text">Hi ${businessName}, this is a follow-up regarding your statement for <strong>${period}</strong>. Maintaining a balanced ledger ensures zero delays in your supply fulfillment.</p>
     <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-top: 24px;">
       <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">Amount Due</p>
       <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 800; color: #0f172a;">₱${amount}</p>
@@ -309,6 +306,6 @@ export function getPaymentReminderTemplate(businessName: string, amount: string,
   `;
   return {
     subject: `Action Required: Statement for ${period} 🌊`,
-    html: getEmailWrapper(content, 'Payment Reminder', '', 'Settle via Dashboard')
+    html: getEmailWrapper(content, 'Financial Follow-up', '', 'Settle via Workspace')
   };
 }
