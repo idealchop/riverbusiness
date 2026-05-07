@@ -103,6 +103,65 @@ const getSanitationPassRate = (v: SanitationVisit) => {
 };
 
 /**
+ * Generates a professional Delivery Receipt PDF.
+ */
+export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 40 });
+        const chunks: Buffer[] = [];
+        doc.on('data', (chunk) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (err) => reject(err));
+
+        const pageWidth = doc.page.width;
+        const margin = 40;
+        const liters = delivery.liters || (delivery.volumeContainers * LITER_RATIO);
+
+        // Header
+        doc.fillColor(BRAND_PRIMARY).rect(0, 0, pageWidth, 100).fill();
+        doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text('River Tech Inc.', margin, 40);
+        doc.fontSize(12).font('Helvetica').text('Delivery Receipt & Confirmation', margin, 68);
+
+        // Meta Info
+        doc.fillColor('#000000').moveDown(4);
+        const topY = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').text('Tracking #:', margin, topY);
+        doc.font('Helvetica').text(delivery.id, margin + 80, topY);
+        doc.font('Helvetica-Bold').text('Date:', margin, topY + 15);
+        doc.font('Helvetica').text(format(toSafeDate(delivery.date), 'MMMM d, yyyy'), margin + 80, topY + 15);
+
+        // Client Info
+        doc.moveDown(2);
+        const stakeholderY = doc.y;
+        doc.fontSize(10).font('Helvetica-Bold').fillColor(BRAND_PRIMARY).text('DELIVERED TO:', margin, stakeholderY);
+        doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold').text(user.businessName || 'N/A', margin, stakeholderY + 15);
+        doc.fontSize(9).font('Helvetica').text(user.address || 'N/A', margin, stakeholderY + 28, { width: pageWidth - margin * 2 });
+        doc.text(`Client ID: ${user.clientId || 'N/A'}`, margin, doc.y + 2);
+
+        // Logistics Table
+        doc.moveDown(3);
+        const tableTop = doc.y;
+        doc.rect(margin, tableTop, pageWidth - margin * 2, 20).fill(BRAND_PRIMARY);
+        doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
+        doc.text('Logistics Item', margin + 5, tableTop + 6);
+        doc.text('Quantity', margin + 250, tableTop + 6);
+        doc.text('Volume (Liters)', margin + 350, tableTop + 6, { align: 'right', width: 120 });
+
+        doc.y = tableTop + 25;
+        doc.fillColor('#000000').font('Helvetica').fontSize(10);
+        doc.text('5-Gallon Water Container Refill', margin + 5, doc.y);
+        doc.text(delivery.volumeContainers.toString(), margin + 250, doc.y - 12);
+        doc.text(`${liters.toFixed(1)} L`, margin + 350, doc.y - 12, { align: 'right', width: 120 });
+
+        // Footer
+        doc.moveDown(4);
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This document serves as proof of supply fulfillment within the River ecosystem. Digital signatures and timestamps are archived in the Command Center.', margin, doc.y, { align: 'center', width: pageWidth - margin * 2 });
+        
+        doc.end();
+    });
+}
+
+/**
  * Generates a high-fidelity, password-protected PDF Statement of Account.
  */
 export async function generatePasswordProtectedSOA(
@@ -651,18 +710,27 @@ export const ondeliverycreate = onDocumentCreated({
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
+    
     await createNotification(userId, { type: 'delivery', title: 'Delivery Scheduled', description: `Delivery of ${delivery.volumeContainers} containers scheduled.`, data: { deliveryId } });
     
     const targetEmails = getRecipients(userData);
     if (targetEmails.length > 0 && delivery.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData!.businessName, 'Delivered', deliveryId, delivery.volumeContainers);
         const bccList = getBCCList();
+        
+        // Generate Delivery Receipt PDF
+        const pdfBuffer = await generateDeliveryReceiptPDF(userData, delivery);
+
         await sendEmail({ 
             to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
-            html: template.html 
+            html: template.html,
+            attachments: [{
+                filename: `Receipt_${deliveryId}.pdf`,
+                content: pdfBuffer
+            }]
         });
     }
 });
@@ -680,18 +748,27 @@ export const ondeliveryupdate = onDocumentUpdated({
     const db = getFirestore();
     const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data();
+    
     await createNotification(userId, { type: 'delivery', title: `Delivery ${after.status}`, description: `Your delivery is now ${after.status}.`, data: { deliveryId } });
     
     const targetEmails = getRecipients(userData);
     if (targetEmails.length > 0 && after.status === 'Delivered') {
         const template = getDeliveryStatusTemplate(userData!.businessName, 'Delivered', deliveryId, after.volumeContainers);
         const bccList = getBCCList();
+
+        // Generate Delivery Receipt PDF
+        const pdfBuffer = await generateDeliveryReceiptPDF(userData, after);
+
         await sendEmail({ 
             to: targetEmails, 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
-            html: template.html 
+            html: template.html,
+            attachments: [{
+                filename: `Receipt_${deliveryId}.pdf`,
+                content: pdfBuffer
+            }]
         });
     }
 });

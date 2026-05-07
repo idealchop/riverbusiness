@@ -177,6 +177,7 @@ export function getWelcomeUnclaimedTemplate( businessName: string, clientId: str
 export function getDeliveryStatusTemplate(businessName: string, status: string, trackingId: string, volume: number) {
   const content = `
     <p class="body-text">Hi ${businessName}, your supply fulfillment has been verified. Maintaining high-fidelity operations is our top priority, ensuring your team has the resources they need to succeed.</p>
+    <p class="body-text">Attached to this email is your official <strong>Delivery Receipt</strong> for your records.</p>
     <div style="text-align: center; margin: 32px 0;">
       <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 12px 24px; border-radius: 50px; font-weight: 800; display: inline-block; font-size: 14px; text-transform: uppercase;">
         ${status}
