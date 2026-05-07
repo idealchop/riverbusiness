@@ -135,18 +135,15 @@ function getEmailWrapper(content, headerTitle, subheader = '', buttonText = 'Lau
       <style>
         body { font-family: 'Manrope', 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; -webkit-font-smoothing: antialiased; }
         .container { max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff; }
-        .header { background: linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%); padding: 32px 24px; text-align: center; }
-        .logo { width: 50px; height: auto; margin-bottom: 12px; }
-        .header-title { color: #ffffff; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        .header { background: linear-gradient(90deg, ${BRAND_PRIMARY} 0%, ${BRAND_ACCENT} 100%); padding: 48px 24px; text-align: center; }
+        .logo { width: 100px; height: auto; display: inline-block; }
         .content { padding: 40px; }
         .main-title { color: #0f172a; font-size: 20px; font-weight: 800; margin-bottom: 24px; text-align: center; }
         .body-text { color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
         .btn-container { text-align: center; margin-top: 32px; }
         .btn { background-color: ${BRAND_PRIMARY}; color: #ffffff !important; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; display: inline-block; }
         .footer { text-align: center; margin-top: 40px; padding: 0 40px 40px 40px; }
-        .footer-brand { font-size: 15px; font-weight: 800; color: ${BRAND_PRIMARY}; margin-bottom: 4px; }
-        .footer-sub { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6; }
-        .footer-sub a { color: ${BRAND_PRIMARY}; text-decoration: none; font-weight: 700; }
+        .footer-sub { font-size: 12px; color: #94a3b8; margin: 0; line-height: 1.6; font-weight: 600; }
         .legal-disclaimer { max-width: 600px; margin: 0 auto 40px auto; padding: 0 24px; color: #cbd5e1; font-size: 10px; line-height: 1.4; text-align: center; }
       </style>
     </head>
@@ -154,7 +151,6 @@ function getEmailWrapper(content, headerTitle, subheader = '', buttonText = 'Lau
       <div class="container">
         <div class="header">
           <img src="${LOGO_URL}" alt="River Logo" class="logo">
-          <h1 class="header-title">River Philippines</h1>
         </div>
         <div class="content">
           <h2 class="main-title">${headerTitle}</h2>
@@ -166,10 +162,8 @@ function getEmailWrapper(content, headerTitle, subheader = '', buttonText = 'Lau
         </div>
       </div>
       <div class="footer">
-        <p class="footer-brand">River Philippines</p>
         <p class="footer-sub">
-          One ecosystem. One data layer. One operating system for your business.<br>
-          <a href="https://riverph.com">riverph.com</a>
+          The platform to run essential needs for business workforce.
         </p>
       </div>
       <div class="legal-disclaimer">

@@ -154,7 +154,7 @@ export async function generateDeliveryReceiptPDF(user: any, delivery: Delivery):
 
         // Footer
         doc.moveDown(4);
-        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('This document serves as proof of supply fulfillment within the River ecosystem. Digital records are archived in the Command Center.', margin, doc.y, { align: 'center', width: 530 });
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#64748b').text('The platform to run essential needs for business workforce.', margin, doc.y, { align: 'center', width: 530 });
         
         doc.end();
     });
@@ -665,11 +665,13 @@ export const onunclaimedemployeecreate = onDocumentCreated({
     const db = getFirestore();
     
     const companyId = invite.companyId;
-    let businessName = "your company";
+    let businessName = invite.inviterBusinessName || "your company";
     
-    const companyDoc = await db.collection('users').where('clientId', '==', companyId).limit(1).get();
-    if (!companyDoc.empty) {
-        businessName = companyDoc.docs[0].data().businessName;
+    if (!invite.inviterBusinessName) {
+        const companyDoc = await db.collection('users').where('clientId', '==', companyId).limit(1).get();
+        if (!companyDoc.empty) {
+            businessName = companyDoc.docs[0].data().businessName;
+        }
     }
 
     const signupUrl = `https://app.riverph.com/signup?email=${encodeURIComponent(invite.email)}&type=employee`;
@@ -714,7 +716,7 @@ export const ondeliverycreate = onDocumentCreated({
         const pdfBuffer = await generateDeliveryReceiptPDF(userData, delivery);
 
         await sendEmail({ 
-            to: targetEmails, 
+            to: targetEmails.join(','), 
             bcc: bccList,
             subject: template.subject, 
             text: `Delivery complete`, 
@@ -752,7 +754,7 @@ export const ondeliveryupdate = onDocumentUpdated({
         const pdfBuffer = await generateDeliveryReceiptPDF(userData, after);
 
         await sendEmail({ 
-            to: targetEmails, 
+            to: targetEmails.join(','), 
             bcc: bccList, 
             subject: template.subject, 
             text: `Delivery complete`, 
@@ -801,7 +803,7 @@ export const ontopuprequestupdate = onDocumentUpdated({
         const ccList = getFinancialCCList(userData!.clientId);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: targetEmails, 
+            to: targetEmails.join(','), 
             cc: ccList, 
             bcc: bccList,
             subject: template.subject, 
@@ -835,7 +837,7 @@ export const onrefillrequestcreate = onDocumentCreated({
         const template = getRefillRequestTemplate(userData!.businessName, 'Requested', requestId, request.requestedDate);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: targetEmails, 
+            to: targetEmails.join(','), 
             bcc: bccList,
             subject: template.subject, 
             text: `Refill request received`, 
@@ -872,7 +874,7 @@ export const onrefillrequestupdate = onDocumentUpdated({
         const template = getRefillRequestTemplate(userData!.businessName, after.status, requestId, after.requestedDate);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: targetEmails, 
+            to: targetEmails.join(','), 
             bcc: bccList,
             subject: template.subject, 
             text: `Refill request updated`, 
@@ -898,7 +900,7 @@ export const onsanitationcreate = onDocumentCreated({
         const template = getSanitationScheduledTemplate(userData!.businessName, visit.assignedTo, dateStr);
         const bccList = getBCCList();
         await sendEmail({ 
-            to: targetEmails, 
+            to: targetEmails.join(','), 
             bcc: bccList,
             subject: template.subject, 
             text: `Visit scheduled`, 
@@ -952,7 +954,7 @@ export const onsanitationupdate = onDocumentUpdated({
             const template = getSanitationReportTemplate(userData!.businessName, after.assignedTo, dateStr, passRate);
             const bccList = getBCCList();
             await sendEmail({ 
-                to: targetEmails, 
+                to: targetEmails.join(','), 
                 bcc: bccList,
                 subject: template.subject, 
                 text: `Report ready. Score: ${passRate}`, 

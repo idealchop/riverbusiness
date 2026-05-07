@@ -2,7 +2,7 @@ import * as nodemailer from 'nodemailer';
 import * as logger from 'firebase-functions/logger';
 
 interface SendEmailOptions {
-  to: string | string[];
+  to: string;
   cc?: string | string[];
   bcc?: string | string[];
   subject: string;
@@ -71,9 +71,6 @@ export async function sendEmail({ to, cc, bcc, subject, text, html, attachments 
       },
     });
     
-    const recipients = Array.isArray(to) ? to.join(', ') : to;
-    logger.info(`Attempting to send email to ${recipients}. CC: ${cc || 'None'}. BCC: ${bcc || 'None'}`);
-
     const info = await transporter.sendMail({
       from: '"River Philippines" <customers@riverph.com>',
       to,

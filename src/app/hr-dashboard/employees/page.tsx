@@ -2,17 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  Users, 
-  Search, 
   Plus, 
+  Search, 
   MoreHorizontal, 
-  Briefcase, 
-  Calendar,
   Filter,
   ArrowRight,
   Trash2,
   UserCog,
-  ChevronRight,
   Activity
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,7 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
 import { cn } from '@/lib/utils';
@@ -236,7 +232,7 @@ export default function EmployeesPage() {
                                   <Activity className="h-4 w-4 opacity-50" /> Performance Analysis
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => handleOpenDetails(emp as AppUser, 'attendance')}>
-                                  <Calendar className="h-4 w-4 opacity-50" /> Attendance Record
+                                  <Activity className="h-4 w-4 opacity-50" /> Attendance Record
                               </DropdownMenuItem>
                               <DropdownMenuItem className="gap-3 font-semibold text-xs py-3 rounded-lg cursor-pointer" onClick={() => { setEmployeeToEdit(emp as AppUser); setIsAddDialogOpen(true); }}>
                                   <UserCog className="h-4 w-4 opacity-50" /> Edit Credentials
@@ -264,6 +260,7 @@ export default function EmployeesPage() {
         isOpen={isAddDialogOpen} 
         onOpenChange={setIsAddDialogOpen} 
         companyId={companyId}
+        inviterBusinessName={user?.businessName}
         employeeToEdit={employeeToEdit}
       />
 

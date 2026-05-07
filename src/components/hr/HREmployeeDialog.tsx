@@ -53,10 +53,11 @@ interface HREmployeeDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   companyId: string;
+  inviterBusinessName?: string;
   employeeToEdit?: AppUser | null;
 }
 
-export function HREmployeeDialog({ isOpen, onOpenChange, companyId, employeeToEdit }: HREmployeeDialogProps) {
+export function HREmployeeDialog({ isOpen, onOpenChange, companyId, inviterBusinessName, employeeToEdit }: HREmployeeDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -145,6 +146,7 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, employeeToEd
       email: values.email?.toLowerCase().trim() ?? '',
       contactNumber: values.contactNumber ?? '',
       businessName: 'Employee Profile',
+      inviterBusinessName: inviterBusinessName || 'Your Team',
       companyId: companyId,
       hrRole: 'employee',
       role: 'User',
