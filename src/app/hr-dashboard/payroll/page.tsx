@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   DollarSign, 
   Search, 
@@ -25,19 +25,30 @@ import {
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { useRouter } from 'next/navigation';
 import { RunPayrollDialog } from '@/components/hr/RunPayrollDialog';
 import { cn } from '@/lib/utils';
+import { FullScreenLoader } from '@/components/ui/loader';
 
 export default function PayrollPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   
   const companyId = user?.companyId || user?.clientId || 'default';
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+
+  // Strict role protection: Redirect employees back to their workspace
+  useEffect(() => {
+    if (!isUserLoading && user && !isManagement) {
+      router.replace('/hr-dashboard');
+    }
+  }, [user, isUserLoading, isManagement, router]);
 
   const payrollQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
-    [firestore, companyId]
+    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'hr_companies', companyId, 'payrollRuns'), orderBy('createdAt', 'desc')) : null,
+    [firestore, companyId, isManagement]
   );
   const { data: payrollRuns, isLoading } = useCollection(payrollQuery);
 
@@ -47,6 +58,10 @@ export default function PayrollPage() {
   }, [payrollRuns]);
 
   const isOwner = user?.hrRole === 'owner';
+
+  if (isUserLoading || (user && !isManagement)) {
+    return <FullScreenLoader text="Verifying credentials..." />;
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">

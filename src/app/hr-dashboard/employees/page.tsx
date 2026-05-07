@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Search, 
@@ -33,23 +33,34 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { HREmployeeDialog } from '@/components/hr/HREmployeeDialog';
 import { EmployeeDetailsDialog } from '@/components/hr/EmployeeDetailsDialog';
 import { cn } from '@/lib/utils';
 import type { AppUser } from '@/lib/types';
+import { FullScreenLoader } from '@/components/ui/loader';
 
 export default function EmployeesPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<AppUser | null>(null);
 
   const companyId = user?.companyId || user?.clientId || 'default';
+  const isManagement = user?.hrRole === 'owner' || user?.hrRole === 'admin';
+
+  // Strict role protection: Redirect employees back to their workspace
+  useEffect(() => {
+    if (!isUserLoading && user && !isManagement) {
+      router.replace('/hr-dashboard');
+    }
+  }, [user, isUserLoading, isManagement, router]);
 
   const employeesQuery = useMemoFirebase(
-    () => (firestore && companyId) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
-    [firestore, companyId]
+    () => (firestore && companyId && isManagement) ? query(collection(firestore, 'users'), where('companyId', '==', companyId)) : null,
+    [firestore, companyId, isManagement]
   );
   const { data: employees, isLoading } = useCollection<AppUser>(employeesQuery);
 
@@ -60,6 +71,10 @@ export default function EmployeesPage() {
       emp.hrProfile?.position?.toLowerCase().includes(search)
     );
   });
+
+  if (isUserLoading || (user && !isManagement)) {
+    return <FullScreenLoader text="Verifying credentials..." />;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
