@@ -65,6 +65,10 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, employeeToEd
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
+      name: '',
+      email: '',
+      position: '',
+      department: '',
       salaryType: 'monthly',
       rate: 0,
       startDate: new Date().toISOString().split('T')[0],
@@ -75,8 +79,8 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, employeeToEd
   React.useEffect(() => {
     if (isOpen && employeeToEdit) {
       form.reset({
-        name: employeeToEdit.name,
-        email: employeeToEdit.email,
+        name: employeeToEdit.name || '',
+        email: employeeToEdit.email || '',
         position: employeeToEdit.hrProfile?.position || '',
         department: employeeToEdit.hrProfile?.department || '',
         salaryType: employeeToEdit.hrProfile?.salaryType || 'monthly',
@@ -86,6 +90,10 @@ export function HREmployeeDialog({ isOpen, onOpenChange, companyId, employeeToEd
       });
     } else if (isOpen) {
       form.reset({
+          name: '',
+          email: '',
+          position: '',
+          department: '',
           salaryType: 'monthly',
           rate: 0,
           startDate: new Date().toISOString().split('T')[0],
