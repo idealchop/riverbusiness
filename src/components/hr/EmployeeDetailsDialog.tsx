@@ -32,6 +32,16 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
+// Safe date conversion helper
+const toSafeDate = (val: any): Date | null => {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val.toDate();
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    if (typeof val === 'object' && 'seconds' in val) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+};
+
 interface EmployeeDetailsDialogProps {
   employee: AppUser | null;
   isOpen: boolean;
@@ -66,6 +76,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
   if (!employee) return null;
 
   const profile = employee.hrProfile;
+  const initials = employee.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -74,7 +85,7 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
             <DialogHeader>
                 <div className="flex items-center gap-6 mb-6">
                     <div className="h-20 w-20 rounded-3xl bg-slate-100 flex items-center justify-center text-2xl font-bold text-slate-400 shadow-inner">
-                        {employee.name?.split(' ').map(n => n[0]).join('') || '?'}
+                        {initials}
                     </div>
                     <div className="space-y-1">
                         <DialogTitle className="text-3xl font-bold tracking-tight text-slate-900">{employee.name || 'Anonymous'}</DialogTitle>
@@ -160,7 +171,9 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                     </div>
                                     <div>
                                         <p className="text-xs font-bold text-slate-900">Date Signed</p>
-                                        <p className="text-xs font-medium text-slate-400 mt-1">{profile?.startDate ? format(new Date(profile.startDate), 'MMMM do, yyyy') : 'Pending'}</p>
+                                        <p className="text-xs font-medium text-slate-400 mt-1">
+                                          {profile?.startDate ? (toSafeDate(profile.startDate) ? format(toSafeDate(profile.startDate)!, 'MMMM do, yyyy') : 'Invalid Date') : 'Pending'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="p-6 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center gap-4 bg-white shadow-sm hover:shadow-md transition-all">
@@ -199,16 +212,19 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                 <TableBody>
                                     {attendanceLogs && attendanceLogs.length > 0 ? (
                                         attendanceLogs.map(log => {
-                                            const timeIn = log.timeIn instanceof Timestamp ? log.timeIn.toDate() : (log.timeIn ? new Date(log.timeIn) : null);
-                                            const timeOut = log.timeOut instanceof Timestamp ? log.timeOut.toDate() : (log.timeOut ? new Date(log.timeOut) : null);
+                                            const workDate = toSafeDate(log.date);
+                                            const timeIn = toSafeDate(log.timeIn);
+                                            const timeOut = toSafeDate(log.timeOut);
                                             return (
                                                 <TableRow key={log.id} className="hover:bg-white transition-colors border-b border-slate-50 last:border-0 group">
-                                                    <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">{log.date ? format(new Date(log.date), 'MMM d, yyyy') : 'No Date'}</TableCell>
+                                                    <TableCell className="text-sm font-bold text-slate-600 pl-6 py-5 group-hover:text-slate-900">
+                                                      {workDate ? format(workDate, 'MMM d, yyyy') : 'No Date'}
+                                                    </TableCell>
                                                     <TableCell className="text-sm font-semibold text-slate-700">{timeIn ? format(timeIn, 'hh:mm a') : '--:--'}</TableCell>
                                                     <TableCell className="text-sm font-semibold text-slate-700">{timeOut ? format(timeOut, 'hh:mm a') : '--:--'}</TableCell>
                                                     <TableCell className="text-right pr-6">
                                                         <Badge className={cn(
-                                                            "text-[10px] font-bold uppercase border-none px-3 py-1",
+                                                            "text-[10px] font-bold uppercase border-none px-3 py-1 shadow-none",
                                                             log.status === 'present' ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                                                         )}>
                                                             {log.status || 'N/A'}
@@ -219,8 +235,8 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                                         })
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center py-20 text-sm font-medium text-slate-300">
-                                                No Attendance Data Has Been Logged For This Period.
+                                            <TableCell colSpan={4} className="text-center py-20 text-sm font-medium text-slate-300 uppercase tracking-widest">
+                                                No Attendance Data Logged.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -232,31 +248,36 @@ export function EmployeeDetailsDialog({ employee, isOpen, onOpenChange }: Employ
                     <TabsContent value="leaves" className="mt-0 animate-in fade-in duration-500">
                          <div className="space-y-4">
                             {leaveRequests && leaveRequests.length > 0 ? (
-                                leaveRequests.map(request => (
-                                    <div key={request.id} className="p-6 rounded-[2rem] border border-slate-50 bg-slate-50/30 flex items-center justify-between hover:bg-white hover:border-slate-100 transition-all shadow-none hover:shadow-md">
-                                        <div className="flex items-center gap-5">
-                                            <div className="h-12 w-12 rounded-2xl bg-white border border-slate-50 flex items-center justify-center text-slate-400 shadow-sm">
-                                                <CalendarDays className="h-6 w-6" />
+                                leaveRequests.map(request => {
+                                    const start = toSafeDate(request.startDate);
+                                    const end = toSafeDate(request.endDate);
+                                    const applied = toSafeDate(request.appliedAt);
+                                    return (
+                                        <div key={request.id} className="p-6 rounded-[2rem] border border-slate-50 bg-slate-50/30 flex items-center justify-between hover:bg-white hover:border-slate-100 transition-all shadow-none hover:shadow-md">
+                                            <div className="flex items-center gap-5">
+                                                <div className="h-12 w-12 rounded-2xl bg-white border border-slate-50 flex items-center justify-center text-slate-400 shadow-sm">
+                                                    <CalendarDays className="h-6 w-6" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-base font-bold text-slate-900">{request.type || 'Leave'}</p>
+                                                    <p className="text-xs font-semibold text-slate-400">
+                                                        {start ? format(start, 'MMM d') : '?'} — {end ? format(end, 'MMM d, yyyy') : '?'}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="space-y-1">
-                                                <p className="text-base font-bold text-slate-900">{request.type || 'Leave'}</p>
-                                                <p className="text-xs font-semibold text-slate-400">
-                                                    {request.startDate ? format(new Date(request.startDate), 'MMM d') : '?'} — {request.endDate ? format(new Date(request.endDate), 'MMM d, yyyy') : '?'}
-                                                </p>
+                                            <div className="text-right space-y-2">
+                                                <Badge className={cn(
+                                                    "text-[10px] font-bold uppercase border-none px-4 py-1 shadow-none",
+                                                    request.status === 'approved' ? "bg-green-50 text-green-700" : 
+                                                    request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
+                                                )}>
+                                                    {request.status || 'Pending'}
+                                                </Badge>
+                                                <p className="text-[10px] text-slate-400 font-medium italic">Applied {applied ? format(applied, 'PP') : 'Recently'}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right space-y-2">
-                                            <Badge className={cn(
-                                                "text-[10px] font-bold uppercase border-none px-4 py-1",
-                                                request.status === 'approved' ? "bg-green-50 text-green-700" : 
-                                                request.status === 'pending' ? "bg-blue-50 text-blue-700" : "bg-red-50 text-red-700"
-                                            )}>
-                                                {request.status || 'Pending'}
-                                            </Badge>
-                                            <p className="text-[10px] text-slate-400 font-medium italic">Applied {request.appliedAt ? format(request.appliedAt.toDate(), 'PP') : 'Today'}</p>
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <div className="py-24 text-center flex flex-col items-center gap-4 opacity-20">
                                     <CalendarDays className="h-12 w-12 text-slate-400" />
