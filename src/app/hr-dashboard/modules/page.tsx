@@ -36,6 +36,7 @@ import { LearningModuleDialog } from '@/components/hr/LearningModuleDialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { format } from 'date-fns';
 import type { HRLearningModule } from '@/lib/types';
 
 const DEMO_MODULES: Partial<HRLearningModule>[] = [
