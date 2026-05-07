@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat } from 'lucide-react';
+import { History, Edit, Calendar as CalendarIcon, Info, Users, Droplets, MapPin, BarChart3, HelpCircle, Wallet, TrendingUp, TrendingDown, ArrowRight, Repeat, ShieldCheck } from 'lucide-react';
 import { AppUser, Delivery } from '@/lib/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths, isBefore, getYear, getMonth } from 'date-fns';
 import { useFirestore } from '@/firebase';
@@ -268,8 +268,9 @@ export function StatCards({
             <CardHeader className="pb-2">
               <CardTitle className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <span className="flex items-center gap-2"><Droplets className="h-4 w-4 text-primary" />Available Credits</span>
-                <button onClick={onSaveLitersClick} className="text-primary hover:underline flex items-center gap-1 z-50">
-                  <HelpCircle className="h-3 w-3" />
+                <button onClick={onSaveLitersClick} className="flex items-center gap-1.5 p-1 rounded-lg bg-blue-50 text-primary border border-blue-100 hover:bg-blue-100 transition-all z-50">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span className="text-[8px] font-black uppercase tracking-widest pr-1">Live Quality</span>
                 </button>
               </CardTitle>
             </CardHeader>
